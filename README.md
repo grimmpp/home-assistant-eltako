@@ -88,3 +88,7 @@ Recognized over the air:
 * FGW14MS
 
   Those devices participate on the bus, but report their status only using telegrams whose ID depends on the switch state which can be read from the bus. For the purpose of reading it, the FGW14MS on the bus is a no-op entity, and has to be taught in like any other radio object.
+
+Credits
+=======
+Credits for this code goes to chrysn (https://gitlab.com/chrysn) who made this code publicly available on his Gitlab repo, and shared it in the Home Assistant community. This repository here on Github is meant to keep the Eltako integration alive, make it work again with the latest Home Asssistant Core and potentially add functionalities.
