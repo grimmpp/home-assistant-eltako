@@ -7,9 +7,9 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import discovery
 from homeassistant.util import slugify
 
-from homeassistant.components.light import Light, SUPPORT_BRIGHTNESS, ATTR_BRIGHTNESS
-from homeassistant.components.switch import SwitchDevice
-from homeassistant.components import cover
+from homeassistant.components.light import LightEntity, SUPPORT_BRIGHTNESS, ATTR_BRIGHTNESS
+from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.cover import CoverEntity, CoverEntityFeature
 from homeassistant.helpers.entity import Entity
 
 REQUIREMENTS = ['eltakobus[serial] == 0.0.7']
@@ -588,7 +588,7 @@ class EltakoEntity:
     entity_id = None # set in constructor
     name = property(lambda self: self._name)
 
-class DimmerEntity(EltakoEntity, Light):
+class DimmerEntity(EltakoEntity, LightEntity):
     def __init__(self, typename, busobject, subchannel, bus_id_part):
         self.busobject = busobject
         self.subchannel = subchannel
@@ -650,7 +650,7 @@ class DimmerEntity(EltakoEntity, Light):
     async def async_turn_off(self, **kwargs):
         await self.busobject.set_state(self.subchannel, 0)
 
-class FSR14Entity(EltakoEntity, SwitchDevice):
+class FSR14Entity(EltakoEntity, SwitchEntity):
     def __init__(self, busobject, subchannel, bus_id_part):
         self.busobject = busobject
         self.subchannel = subchannel
@@ -723,10 +723,10 @@ class BusSensorEntity(EltakoEntity, Entity):
             self.state = energy
             self.async_schedule_update_ha_state(False)
 
-class FSB14Entity(EltakoEntity, cover.CoverDevice):
+class FSB14Entity(EltakoEntity, CoverEntity):
     assumed_state = True
     device_class = 'window'
-    supported_features = cover.SUPPORT_OPEN | cover.SUPPORT_CLOSE
+    supported_features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
     def __init__(self, busobject, subchannel, bus_id_part):
         self.busobject = busobject
