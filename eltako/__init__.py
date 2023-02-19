@@ -149,6 +149,8 @@ class EltakoBusController:
         self.platforms = platforms
 
     async def setup_from_configuration(self, config):
+        logger.debug("Setting things up with config: %s", config)
+        
         for k, v in config.items():
             logger.info("Trying to process config for %s", k)
             
