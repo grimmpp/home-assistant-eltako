@@ -175,16 +175,16 @@ class EltakoBusController:
             programming_config = item_config.get('programming', None)
             
             if programming_config is not None:
-                programming = parse_programming(programming_config)
+                programming = self.parse_programming(programming_config)
                 bus_object.programming = programming
                 
             eep_config = item_config.get('eep', None)
             
             if eep_config is not None:
-                eep = parse_eep(eep_config)
+                eep = self.parse_eep(eep_config)
                 bus_object.eep = eep
                 
-            create_entity(bus_object)
+            self.create_entity(bus_object)
             
     def parse_programming(self, config):
         programming = {}
