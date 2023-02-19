@@ -12,8 +12,8 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature
 from homeassistant.helpers.entity import Entity
 
-REQUIREMENTS = ['eltakobus[serial] == 0.0.7']
-DEVELOPMENT_MODE = False
+REQUIREMENTS = ['eltakobus[serial] == 0.0.8']
+DEVELOPMENT_MODE = True
 if DEVELOPMENT_MODE:
     import sys
     # quick hack to allow local overrides during development
@@ -105,6 +105,7 @@ class EltakoBusController:
         self.config = config
         self._main_task = asyncio.ensure_future(self.wrapped_main(platforms), loop=loop)
         self._bus_task = None
+        self.entities_for_status = {}
 
     async def initialize_bus_task(self, run):
         """Call bus.run in a task that takes down main if it crashes, and is
@@ -147,171 +148,156 @@ class EltakoBusController:
         logger.debug("Platforms registered")
         self.platforms = platforms
 
-    async def sweep(self, bus, programming):
-        """With the bus locked, enumerate all devices on the bus, register them
-        as entities and do any necessary configuration on them.
-
-        Must only be called once because the duplicate entities created
-        otherwise are not taken into consideration."""
-
-        logger.debug("Locking bus")
-        bus_status = await locking.lock_bus(bus)
-
-        logger.debug("Bus locked (%s), enumerating devices", bus_status)
-
-        self.entities_for_status = {}
-
-        i = 1
-        while i < 256:
+    async def setup_from_configuration(self, config):
+        for k, v in config.items():
             try:
-                d = await device.create_busobject(bus, i)
-            except TimeoutError:
-                i += 1
+                address_expression = AddressExpression.parse(k)
+                address = address_expression.plain_address()
+                item_config = v
+            except ValueError:
+                logger.error('Invalid configuration entry %s: %s -- expected format is "01-23-45-67" for addresses.', k, v)
+                continue
+            
+            if address is None or item_config is None:
+                logger.error("The configuration for item %s is wrong.", k)
+                continue
+            
+            type = item_config.get('type', None)
+            
+            if type is None:
+                logger.error("Type is missing for %s.", k)
+                continue
+            
+            bus_object = device.create_busobject(bus, address, type)
+            
+            programming_config = item_config.get('programming', None)
+            
+            if programming_config is not None:
+                programming = parse_programming(programming_config)
+                bus_object.programming = programming
+                
+            eep_config = item_config.get('eep', None)
+            
+            if eep_config is not None:
+                eep = parse_eep(eep_config)
+                bus_object.eep = eep
+                
+            create_entity(bus_object)
+            
+    def parse_programming(self, config):
+        programming = {}
+        
+        for k, v in config.items():
+            try:
+                function = k
+                address = AddressExpression.parse(v)
+            except ValueError:
+                logger.error('Invalid configuration entry %s: %s -- expected format is 32 for function and "01-23-45-67" (or "01-23-45-67 left") for addresses.', k, v)
                 continue
             else:
-                # Skipping over hidden ones also takes care of fake-8-long
-                # deviceds like the FDG14
-                i += d.size
-
-            logger.debug("Found device %s", d)
-
-            # reading ahead so all the configuration data needed during
-            # find_direct_command_address and similar are available at once
-            try:
-                await d.read_mem()
-            except TimeoutError:
-                logger.info("Device %s announces readable memory but does not permit readouts", d)
-
-            # Creating the entities while the bus is locked so they can process
-            # their initial messages right away
-
-            if isinstance(d, device.DimmerStyle):
-                await d.ensure_direct_command_addresses()
-                for subchannel in range(d.size):
-                    e = DimmerEntity(type(d).__name__, d, subchannel, self.bus_id_part)
-                    self.platforms['light']([e])
-                    self.entities_for_status[d.address + subchannel] = [e]
-
-                    for source, profile in programming.get(d.address + subchannel, {}).items():
-                        logger.debug("Verifying programming on subchannel %s %s: %s", subchannel, source, profile)
-                        await d.ensure_programmed(subchannel, source, profile)
-                logger.info("Created dimmer entity(s) for %s", d)
-            elif isinstance(d, device.FSR14):
-                await d.ensure_direct_command_addresses()
-                for subchannel in range(d.size):
-                    e = FSR14Entity(d, subchannel, self.bus_id_part)
-                    self.platforms['switch']([e])
-                    self.entities_for_status[d.address + subchannel] = [e]
-
-                    for source, profile in programming.get(d.address + subchannel, {}).items():
-                        logger.debug("Verifying programming on subchannel %s %s: %s", subchannel, source, profile)
-                        await d.ensure_programmed(subchannel, source, profile)
-                logger.info("Created FSR14 entity(s) for %s", d)
-            elif isinstance(d, device.FWZ14_65A):
-                serial = await d.read_serial()
-                additional_state = {
-                        'serial-number': serial,
-                        }
-                prefix = "sensor.%s_%s_%s" % (self.bus_id_part, d.address, serial.replace(' ', ''))
-                e_cum = BusSensorEntity(
-                        'FWZ14 65A [%s] cummulative' % d.address,
-                        prefix + '_cum',
-                        'kWh',
-                        (0, 'energy'),
-                        additional_state,
-                        d,
-                        )
-                e_cur = BusSensorEntity(
-                        'FWZ14 65A [%s] current' % d.address,
-                        prefix + '_cur',
-                        'W',
-                        (0, 'power'),
-                        additional_state,
-                        d,
-                        )
-                self.platforms['sensor']([e_cum, e_cur])
-                self.entities_for_status[d.address] = [e_cum, e_cur]
-                logger.info("Created FWZ14 entities")
-            elif isinstance(d, device.FSB14):
-                await d.ensure_direct_command_addresses()
-
-                for subchannel in range(d.size):
-                    e = FSB14Entity(d, subchannel, self.bus_id_part)
-                    self.platforms['cover']([e])
-                    self.entities_for_status[d.address + subchannel] = [e]
-
-                    for source, profile in programming.get(d.address + subchannel, {}).items():
-                        logger.debug("Verifying programming on subchannel %s %s: %s", subchannel, source, profile)
-                        await d.ensure_programmed(subchannel, source, profile)
-
-                logger.info("Created FSB14 entities for %s", d)
-            else:
-                logger.info("Device %s is not implemented for Home Assistant, not adding.", d)
-
-        logger.debug("Forcing status messages from %d known channels" % len(self.entities_for_status))
-        for addr, entities in self.entities_for_status.items():
-            for entity in entities:
-                try:
-                    forced_answer = await bus.exchange(message.EltakoPollForced(addr))
-                except TimeoutError:
-                    logger.info("No response to forced poll of %s, hoping that's OK for the device class", addr)
-                else:
-                    logger.debug("Answer to forced poll on %d is %s", addr, forced_answer)
-                    # FIXME who's responsible for making this into an RPS/4BS message?
-                    # This is implicit prettify use here.
-                    #
-                    # notify=True: As the entities were already registered, the
-                    # notification may be sent. If this is ever re-ordered again to
-                    # make the entities only show up in an initialized state,
-                    # this'd need to be False.
-                    await entity.process_message(forced_answer, notify=True)
-
-        logger.debug("Unlocking bus")
-        bus_status = await locking.unlock_bus(bus)
-        logger.debug("Bus unlocked (%s)", bus_status)
+                programming[function] = address
+        
+        return programming
+    
+    def parse_eep(self, config):
+        try:
+            profile = ProfileExpression.parse(v)
+        except ValueError:
+            logger.error('Invalid configuration entry %s -- expected format is "a5-02-16".', config)
+            return None
+        
+        try:
+            eep = EEP.find(profile)
+        except KeyError:
+            logger.warning("Unknown profile %s, not processing any further", profile)
+        else:
+            return eep
+    
+    def create_entity(self, bus_object):
+        if isinstance(bus_object, device.DimmerStyle):
+            entity = DimmerEntity(bus_object, self.bus_id_part)
+            self.platforms['light']([entity])
+            self.entities_for_status[bus_object.address] = [entity]
+            logger.info("Created dimmer entity for %s", bus_object)
+        elif isinstance(bus_object, device.FSR14):
+            entity = FSR14Entity(bus_object, self.bus_id_part)
+            self.platforms['switch']([entity])
+            self.entities_for_status[bus_object.address] = [entity]
+            logger.info("Created FSR14 entity for %s", bus_object)
+        elif isinstance(bus_object, device.FSB14):
+            entity = FSB14Entity(bus_object, self.bus_id_part)
+            self.platforms['cover']([entity])
+            self.entities_for_status[bus_object.address] = [entity]
+            logger.info("Created FSB14 entity for %s", bus_object)
+        else:
+            logger.info("Device %s is not implemented for Home Assistant, not adding.", bus_object)
 
     async def main(self, platforms):
         await self.wait_for_platforms(platforms)
 
         serial_dev = self.config['eltako'].get(CONF_DEVICE)
-        teachin_preconfigured = self.config['eltako'].get('teach-in', {})
-        programming_config = self.config['eltako'].get('programming', {})
-
-        programming = {k: Programming(v) for (k, v) in programming_config.items()}
-        teachins = TeachInCollection(self.hass, teachin_preconfigured, programming_config, self.platforms['sensor'])
-
+        items = self.config['eltako'].get('items', {})
+        
         bus = RS485SerialInterface(serial_dev, log=logger.getChild('serial'))
         self.bus_id_part = into_entity_id_part(serial_dev.replace('/dev/', ''))
 
         await self.initialize_bus_task(bus.run)
 
-        logger.info("Serial device detected and ready")
+        logger.info("Serial device detected and ready. Settings things up according to configuration.")
 
-        await self.sweep(bus, programming)
+        self.setup_from_configuration(items)
 
-        logger.info("Bus ready. Full operational readiness may take a few seconds while the FAM scans the bus.")
+        logger.info("Configuration read. Bus ready.")
 
         while True:
-            await self.step(bus, teachins)
+            await self.step(bus)
 
-    async def step(self, bus, teachins):
+    async def step(self, bus):
         """Process a single bus message"""
         msg = await bus.received.get()
 
-        address = None
         try:
             msg = message.EltakoWrappedRPS.parse(msg.serialize())
         except ParseError:
             pass
         else:
-            address = msg.address[-1]
+            self.pass_message_to_entities(msg.address, msg)
+            return
+            
         try:
             msg = message.EltakoWrapped4BS.parse(msg.serialize())
         except ParseError:
             pass
         else:
-            address = msg.address[-1]
+            self.pass_message_to_entities(msg.address, msg)
+            return
+            
+        # so it's not an eltakowrapped message... maybe regular 4bs/rps?
+#        try:
+#            msg = message.RPSMessage.parse(msg.serialize())
+#        except ParseError as e:
+#            pass
+#        else:
+#            teachins.feed_rps(msg)
+#            return
 
+#        try:
+#            msg = message.Regular4BSMessage.parse(msg.serialize())
+#        except ParseError:
+#            pass
+#        else:
+#            self.pass_message_to_entities(msg.address, msg)
+#            return
+
+#        try:
+#            msg = message.TeachIn4BSMessage2.parse(msg.serialize())
+#        except ParseError:
+#            pass
+#        else:
+#            teachins.feed_4bs(msg)
+#            return
+    
+    async def pass_message_to_entities(self, address, msg):
         if address in self.entities_for_status:
             for entity in self.entities_for_status[address]:
                 try:
@@ -319,268 +305,11 @@ class EltakoBusController:
                 except UnrecognizedUpdate as e:
                     logger.error("Update to %s could not be processed: %s", entity, msg)
                     logger.exception(e)
-
-            return
-
-        # so it's not an eltakowrapped message... maybe regular 4bs/rps?
-        try:
-            msg = message.RPSMessage.parse(msg.serialize())
-        except ParseError as e:
-            pass
         else:
-            teachins.feed_rps(msg)
-            return
-
-        try:
-            msg = message.Regular4BSMessage.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            teachins.dispatch_4bs(msg)
-            return
-
-        try:
-            msg = message.TeachIn4BSMessage2.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            teachins.feed_4bs(msg)
-            return
-
-        # It's for debug only, prettify is OK here
-        msg = message.prettify(msg)
-        if type(msg) not in (message.EltakoPoll, message.EltakoPollForced):
-            logger.debug("Discarding message %s", message.prettify(msg))
-
-def parse_address_profile_pair(k, v):
-    """Given an address and a profile in string form as they occur in the keys
-    and values of teach-in or programming lines, return them parsed or log an
-    error and ignore them (returng None, None)"""
-
-    try:
-        address = AddressExpression.parse(k)
-        profile = ProfileExpression.parse(v)
-    except ValueError:
-        logger.error('Invalid configuration entry %s: %s -- expected format is "01-23-45-67" (of "01-23-45-67 left") for addresses and "a5-02-16" for values.', k, v)
-        return None, None
-
-    return address, profile
-
-class Programming(dict):
-    def __init__(self, config):
-        for k, v in config.items():
-            address, profile = parse_address_profile_pair(k, v)
-            if address is None:
-                continue
-            try:
-                profile = EEP.find(profile)
-            except KeyError:
-                logger.warning("Unknown profile %s, not processing any further", profile)
-                return
-            if address is not None:
-                self[address] = profile
-
-class TeachInCollection:
-    def __init__(self, hass, preconfigured, programming, add_entities_callback):
-        self.hass = hass
-        self._statically_known = set()
-        self._announced = set()
-        self._4bs_profiles = {}
-        self._add_entities_callback = add_entities_callback
-        self._entities = {} # address -> list of entities
-
-        # Not only use the stored teach-in telegrams, but also the ones
-        # explicitly configure to do something in any of the actuators.
-        #
-        # Not using the parsed Programming data because that went a step too
-        # far by already resolving the profile expressions into EEPs
-        items = itertools.chain(
-                preconfigured.items(),
-                *(p.items() for p in programming.values())
-                )
-
-        for k, v in items:
-            address, profile = parse_address_profile_pair(k, v)
-            if address is None:
-                continue
-
-            self._statically_known.add(address)
-            if profile[0] == 0xf6:
-                # not creating entities; right now they're only logged
-                pass
-            elif profile[0] == 0xa5:
-                self.create_entity(address, profile)
-            else:
-                logger.error('Invalid profile %s: Only RPS and 4BS (f6-... and a5-...) supported', (profile,))
-
-    def reset_messages(self):
-        """Reset the to-be-shown messages, and rewind the _seen_rps and _4bs_profiles ... @@@"""
-        self._messages_teach_in = [] # list of (address, profile) pairs
-        self._messages_assignable = [] # like teach_in, but probably go into a programming section
-        self._announced = set()
-
-    def announce(self, address, profile):
-        """Announce the address/profile combination to the user interface. This
-        checks if it has been announced previously, but before doing so asks
-        back whether the UI dismissed the notifications."""
-
-        # Poll whether there might have been a "dismissed" event (or just never present)
-        #
-        # If we could get a callback here instead to clean up (would be nice),
-        # then we could move the checks for already having been announced
-        # outside of announce again, and especially the special case below
-        # could have its checking where it is created.
-        was_dismissed = self.hass.states.get('persistent_notification.eltakoteachin') is None
-        if was_dismissed:
-            # was not shown, or was dismissed
-            logger.debug("Teach-in notification was dismissed")
-            self.reset_messages()
-
-        if address in self._announced or address in self._statically_known:
-            return
-        # Special case for RPS: Don't announce fallback profiles if any more specific profile is present
-        if profile == ProfileExpression((0xf6, 0x01, 0x01)):
-            if any(a[0] == address[0] for a in self._announced.union(self._statically_known)):
-                return
-
-
-        self._announced.add(address)
-
-        if profile == ProfileExpression((0xf6, 0x02, 0x01)) and address[1] in ('left', 'right'):
-            self._messages_assignable.append((address, profile))
-        else:
-            self._messages_teach_in.append((address, profile))
-
-        if self._messages_teach_in:
-            teach_in_part = "<br />  teach-in:<br />""" + \
-                "<br />".join(
-                    '    "%s": "%s"' % (a, p) for (a, p) in self._messages_teach_in
-                )
-        else:
-            teach_in_part = ""
-
-        if self._messages_assignable:
-            programming_part = "<br />  programming:<br />    <i>some channel number</i>:<br />""" + \
-                "<br />".join(
-                    '      "%s": "%s"' % (a, p) for (a, p) in self._messages_assignable
-                )
-        else:
-            programming_part = ""
-
-        full_text = """To make the resulting sensors persistent and remove this
-            message, append the following lines in your
-            <code>configuration.yaml</code> file:
-            <pre>eltako:""" + teach_in_part + programming_part + """</pre>"""
-
-        if programming_part:
-            full_text += """where the channel number can be picked from the
-                <code>eltako-bus-address</code> property of supported
-                actuators."""
-
-        self.hass.components.persistent_notification.async_create(
-                full_text,
-                title="New EnOcean devices detected",
-                notification_id="eltako-teach-in"
-                )
-
-    def feed_4bs(self, msg):
-        address = AddressExpression((msg.address, None))
-        profile = ProfileExpression(msg.profile)
-
-        if msg.address not in self._4bs_profiles:
-            self.create_entity(address, profile)
-
-        self.announce(address, profile)
-
-    def feed_rps(self, msg):
-        if msg.data[0] in (0x30, 0x20): # a left key
-            address = AddressExpression((msg.address, "left"))
-            profile = ProfileExpression((0xf6, 0x02, 0x01))
-        elif msg.data[0] in (0x50, 0x70): # a right key
-            address = AddressExpression((msg.address, "right"))
-            profile = ProfileExpression((0xf6, 0x02, 0x01))
-        else:
-            address = AddressExpression((msg.address, None))
-            # or any other F6 profile, I'm out of heuristics here
-            profile = ProfileExpression((0xf6, 0x01, 0x01))
-
-        self.announce(address, profile)
-
-    def create_entity(self, address: AddressExpression, profile: ProfileExpression):
-        """Create and register appropriate entity(ies) based on an address and
-        profile obtained from a teach-in telegram or configuration"""
-
-        a_plain = address.plain_address()
-        try:
-            eep = EEP.find(profile)
-        except KeyError:
-            logger.error("No EEP support available for %s, ignoring values from that sensor", profile)
-            self._4bs_profiles[a_plain] = None # don't report again
-            return
-
-        self._4bs_profiles[a_plain] = eep
-
-        field_to_unit = {
-                'temperature': '°C',
-                'humitity': '%',
-                'wind speed': 'm/s',
-                'illuminance (dawn)': 'lux',
-                'illuminance (west)': 'lux',
-                'illuminance (central)': 'lux',
-                'illuminance (east)': 'lux',
-                'energy': 'W',
-                'power': 'kWh',
-                }
-        for field in eep.fields:
-            unit = field_to_unit.get(field, '')
-            if not unit and isinstance(field, tuple):
-                # Workaround for the field structure of eep.MeterReading
-                unit = field_to_unit.get(field[1], '')
-            entity_class = type("CustomSensor", (Entity,), {
-                "should_poll": False,
-                "name": "%s Sensor %s" % (str(field).capitalize(), address),
-                "entity_id": "sensor.enocean_%s_%s" % (str(address).replace('-', ''), into_entity_id_part(str(field))),
-                "state": None,
-                "assumed_state": True,
-                "unit_of_measurement": unit,
-                "state_attributes": {'enocean-address': str(address), 'enocean-profile': str(profile)},
-                })
-            instance = entity_class()
-            self._entities.setdefault(a_plain, {})[field] = instance
-            self._add_entities_callback([instance])
-
-    def dispatch_4bs(self, msg):
-        try:
-            profile = self._4bs_profiles[msg.address]
-        except KeyError:
-            logger.warning("4BS from unknown source %s, discarding", b2a(msg.address))
-            return
-
-        if profile is None:
-            # "No EEP support available for..." was already returned
-            return
-
-        try:
-            decoded = profile.decode(msg.data)
-            if not isinstance(decoded, dict):
-                # Could duck-typingly check, but meh
-                raise ValueError("decode function did not return a dictionary")
-        except Exception as e:
-            logger.error("Failed to decode 4BS message %s according to %s; continuing normally", msg, profile)
-            logger.exception(e)
-
-        # Apply some rounding while home assistant does not know of precisison
-        # or sane rounding
-        field_to_round = {
-                'temperature': lambda v: round(v, 1),
-                'humidity': lambda v: round(v, 1),
-                }
-
-        for k, v in decoded.items():
-            entity = self._entities[msg.address][k]
-            entity.assumed_state = False
-            entity.state = field_to_round.get(k, lambda x: round(v, 1))(v)
-            entity.async_schedule_update_ha_state(False)
+            # It's for debug only, prettify is OK here
+            msg = message.prettify(msg)
+            if type(msg) not in (message.EltakoPoll, message.EltakoPollForced):
+                logger.debug("Discarding message %s", message.prettify(msg))
 
 class EltakoEntity:
     should_poll = False
@@ -589,11 +318,10 @@ class EltakoEntity:
     name = property(lambda self: self._name)
 
 class DimmerEntity(EltakoEntity, LightEntity):
-    def __init__(self, typename, busobject, subchannel, bus_id_part):
+    def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
-        self.subchannel = subchannel
-        self.entity_id = "light.%s_%s" % (bus_id_part, busobject.address + subchannel)
-        self._name = "%s [%s/%s]" % (typename, busobject.address, subchannel)
+        self.entity_id = "light.%s_%s" % (bus_id_part, busobject.address)
+        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address)
         self._state = None
 
         # would need to do that outside, and even then
@@ -622,15 +350,11 @@ class DimmerEntity(EltakoEntity, LightEntity):
     def state_attributes(self):
         base = super().state_attributes or {}
         return {**base,
-                'eltako-bus-address': self.busobject.address + self.subchannel,
-                'eltako-bus-address-base': self.busobject.address,
-                'eltako-device-version': ".".join(map(str, self.busobject.version)),
+                'eltako-bus-address': self.busobject.address,
                 }
 
     async def process_message(self, msg, notify=True):
         processed = self.busobject.interpret_status_update(msg)
-        if processed['channel'] != self.subchannel:
-            return
 
         if 'dim' in processed:
             self._state = processed['dim']
@@ -645,17 +369,16 @@ class DimmerEntity(EltakoEntity, LightEntity):
             brightness = 255
         brightness = brightness * 100 / 255
         logger.debug("Setting brightness to %s", brightness)
-        await self.busobject.set_state(self.subchannel, brightness)
+        await self.busobject.set_state(brightness)
 
     async def async_turn_off(self, **kwargs):
-        await self.busobject.set_state(self.subchannel, 0)
+        await self.busobject.set_state(0)
 
 class FSR14Entity(EltakoEntity, SwitchEntity):
-    def __init__(self, busobject, subchannel, bus_id_part):
+    def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
-        self.subchannel = subchannel
-        self.entity_id = "switch.%s_%s" % (bus_id_part, busobject.address + subchannel)
-        self._name = "%s [%s/%s]" % (type(busobject).__name__, busobject.address, subchannel)
+        self.entity_id = "switch.%s_%s" % (bus_id_part, busobject.address)
+        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address)
         self._state = None
 
     @property
@@ -670,23 +393,20 @@ class FSR14Entity(EltakoEntity, SwitchEntity):
     def state_attributes(self):
         base = super().state_attributes or {}
         return {**base,
-                'eltako-bus-address': self.busobject.address + self.subchannel,
-                'eltako-bus-address-base': self.busobject.address,
-                'eltako-device-version': ".".join(map(str, self.busobject.version)),
+                'eltako-bus-address': self.busobject.address,
                 }
 
     async def process_message(self, msg, notify=True):
         processed = self.busobject.interpret_status_update(msg)
-        if self.subchannel in processed:
-            self._state = processed[self.subchannel]
-            if notify:
-                self.async_schedule_update_ha_state(False)
+        self._state = processed["state"]
+        if notify:
+            self.async_schedule_update_ha_state(False)
 
     async def async_turn_on(self, **kwargs):
-        await self.busobject.set_state(self.subchannel, True)
+        await self.busobject.set_state(True)
 
     async def async_turn_off(self, **kwargs):
-        await self.busobject.set_state(self.subchannel, False)
+        await self.busobject.set_state(False)
 
 class BusSensorEntity(EltakoEntity, Entity):
     # no I don't want to implement a property right now; the first two also
@@ -709,8 +429,6 @@ class BusSensorEntity(EltakoEntity, Entity):
         return {**base,
                 **self.additional_state,
                 'eltako-bus-address': self.busobject.address,
-                'eltako-bus-address-base': self.busobject.address,
-                'eltako-device-version': ".".join(map(str, self.busobject.version)),
                 }
 
     async def process_message(self, msg, notify=True):
@@ -728,11 +446,10 @@ class FSB14Entity(EltakoEntity, CoverEntity):
     device_class = 'window'
     supported_features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
-    def __init__(self, busobject, subchannel, bus_id_part):
+    def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
-        self.subchannel = subchannel
-        self.entity_id = "cover.%s_%s" % (bus_id_part, busobject.address + subchannel)
-        self._name = "%s [%s/%s]" % (type(busobject).__name__, busobject.address, subchannel)
+        self.entity_id = "cover.%s_%s" % (bus_id_part, busobject.address)
+        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address)
         self._state = None # compatible with current_cover_position: None is unknown, 0 is closed, 100 is open
 
     async def process_message(self, msg, notify=True):
@@ -740,9 +457,7 @@ class FSB14Entity(EltakoEntity, CoverEntity):
         if processed is None:
             return
 
-        channel, state = processed
-        if channel != self.subchannel:
-            return
+        state = processed["state"]
 
         if state == 'top':
             self._state = 100
@@ -775,11 +490,11 @@ class FSB14Entity(EltakoEntity, CoverEntity):
         # Scheduling state as we updated it.
         self._state = None
         self.async_schedule_update_ha_state(False)
-        await self.busobject.set_state(self.subchannel, True)
+        await self.busobject.set_state(True)
 
     async def async_close_cover(self):
         self._state = None
         self.async_schedule_update_ha_state(False)
-        await self.busobject.set_state(self.subchannel, False)
+        await self.busobject.set_state(False)
 
     # might be able to implement stop cover too -- but that's hard to tell
