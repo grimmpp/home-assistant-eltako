@@ -328,7 +328,7 @@ class DimmerEntity(EltakoEntity, LightEntity):
     def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
         self.entity_id = "light.%s_%s" % (bus_id_part, busobject.address.hex())
-        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address.hex())
+        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address.hex('-'))
         self._state = None
 
         # would need to do that outside, and even then
@@ -357,7 +357,7 @@ class DimmerEntity(EltakoEntity, LightEntity):
     def state_attributes(self):
         base = super().state_attributes or {}
         return {**base,
-                'eltako-bus-address': self.busobject.address.hex(),
+                'eltako-bus-address': self.busobject.address.hex('-'),
                 }
 
     async def process_message(self, msg, notify=True):
@@ -385,7 +385,7 @@ class FSR14Entity(EltakoEntity, SwitchEntity):
     def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
         self.entity_id = "switch.%s_%s" % (bus_id_part, busobject.address.hex())
-        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address.hex())
+        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address.hex('-'))
         self._state = None
 
     @property
@@ -400,7 +400,7 @@ class FSR14Entity(EltakoEntity, SwitchEntity):
     def state_attributes(self):
         base = super().state_attributes or {}
         return {**base,
-                'eltako-bus-address': self.busobject.address.hex(),
+                'eltako-bus-address': self.busobject.address.hex('-'),
                 }
 
     async def process_message(self, msg, notify=True):
@@ -435,7 +435,7 @@ class BusSensorEntity(EltakoEntity, Entity):
         base = super().state_attributes or {}
         return {**base,
                 **self.additional_state,
-                'eltako-bus-address': self.busobject.address.hex(),
+                'eltako-bus-address': self.busobject.address.hex('-'),
                 }
 
     async def process_message(self, msg, notify=True):
@@ -456,7 +456,7 @@ class FSB14Entity(EltakoEntity, CoverEntity):
     def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
         self.entity_id = "cover.%s_%s" % (bus_id_part, busobject.address.hex())
-        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address.hex())
+        self._name = "%s [%s]" % (type(busobject).__name__, busobject.address.hex('-'))
         self._state = None # compatible with current_cover_position: None is unknown, 0 is closed, 100 is open
 
     async def process_message(self, msg, notify=True):
