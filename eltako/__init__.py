@@ -170,19 +170,19 @@ class EltakoBusController:
                 logger.error("Type is missing for %s.", k)
                 continue
             
-            bus_object = device.create_busobject(bus, address, type)
+            bus_object = await device.create_busobject(bus, address, type)
             
             programming_config = item_config.get('programming', None)
             
             if programming_config is not None:
                 programming = self.parse_programming(programming_config)
-                bus_object.set_programming(programming)
+                bus_object.programming = programming
                 
             eep_config = item_config.get('eep', None)
             
             if eep_config is not None:
                 eep = self.parse_eep(eep_config)
-                bus_object.set_eep(eep)
+                bus_object.eep = eep
                 
             self.create_entity(bus_object)
             
