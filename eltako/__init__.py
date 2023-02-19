@@ -150,6 +150,8 @@ class EltakoBusController:
 
     async def setup_from_configuration(self, config):
         for k, v in config.items():
+            logger.info("Trying to process config for %s", k)
+            
             try:
                 address_expression = AddressExpression.parse(k)
                 address = address_expression.plain_address()
@@ -297,6 +299,11 @@ class EltakoBusController:
 #            teachins.feed_4bs(msg)
 #            return
     
+        # It's for debug only, prettify is OK here
+        msg = message.prettify(msg)
+        if type(msg) not in (message.EltakoPoll, message.EltakoPollForced):
+            logger.debug("Discarding message %s", message.prettify(msg))
+
     async def pass_message_to_entities(self, address, msg):
         if address in self.entities_for_status:
             for entity in self.entities_for_status[address]:
