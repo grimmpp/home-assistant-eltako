@@ -249,7 +249,7 @@ class EltakoBusController:
 
         logger.info("Serial device detected and ready. Settings things up according to configuration.")
 
-        self.setup_from_configuration(items)
+        await self.setup_from_configuration(items)
 
         logger.info("Configuration read. Bus ready.")
 
@@ -265,7 +265,7 @@ class EltakoBusController:
         except ParseError:
             pass
         else:
-            self.pass_message_to_entities(msg.address, msg)
+            await self.pass_message_to_entities(msg.address, msg)
             return
             
         try:
@@ -273,7 +273,7 @@ class EltakoBusController:
         except ParseError:
             pass
         else:
-            self.pass_message_to_entities(msg.address, msg)
+            await self.pass_message_to_entities(msg.address, msg)
             return
             
         # so it's not an eltakowrapped message... maybe regular 4bs/rps?
