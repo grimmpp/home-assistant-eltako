@@ -148,9 +148,7 @@ class EltakoBusController:
         logger.debug("Platforms registered")
         self.platforms = platforms
 
-    async def setup_from_configuration(self, config):
-        logger.debug("Setting things up with config: %s", config)
-        
+    async def setup_from_configuration(self, bus, config):
         for k, v in config.items():
             logger.info("Trying to process config for %s", k)
             
@@ -249,7 +247,7 @@ class EltakoBusController:
 
         logger.info("Serial device detected and ready. Settings things up according to configuration.")
 
-        await self.setup_from_configuration(items)
+        await self.setup_from_configuration(bus, items)
 
         logger.info("Configuration read. Bus ready.")
 
