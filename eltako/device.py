@@ -10,7 +10,7 @@ from eltakobus.util import combine_hex
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
 
-from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE
+from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER
 
 
 class EltakoEntity(Entity):
@@ -38,7 +38,8 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address[-1] == self.dev_id:
+            LOGGER.debug("We got a Eltako wrapped RPS message with address %s. Device address is %s.", msg.address, self.dev_id)
+            if msg.address == self.dev_id:
                 self.value_changed(msg)
             return
         
@@ -48,7 +49,8 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address[-1] == self.dev_id:
+            LOGGER.debug("We got a Eltako wrapped 4BS message with address %s. Device address is %s.", msg.address, self.dev_id)
+            if msg.address == self.dev_id:
                 self.value_changed(msg)
             return
     
@@ -58,7 +60,8 @@ class EltakoEntity(Entity):
         except ParseError as e:
             pass
         else:
-            if msg.address[-1] == self.dev_id:
+            LOGGER.debug("We got a RPS message with address %s. Device address is %s.", msg.address, self.dev_id)
+            if msg.address == self.dev_id:
                 self.value_changed(msg)
             return
 
@@ -68,7 +71,8 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address[-1] == self.dev_id:
+            LOGGER.debug("We got a 4BS message with address %s. Device address is %s.", msg.address, self.dev_id)
+            if msg.address == self.dev_id:
                 self.value_changed(msg)
             return
 
