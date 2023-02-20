@@ -88,7 +88,7 @@ class EltakoGateway:
         while True:
             await self._step(bus)
 
-    def _step(self, bus):
+    async def _step(self, bus):
         message = await bus.received.get()
         self._callback(message)
 
