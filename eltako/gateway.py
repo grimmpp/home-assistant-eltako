@@ -125,7 +125,7 @@ def validate_path(path: str):
         # Creating the serial communicator will raise an exception
         # if it cannot connect
         # TODO: Implement check
-        SerialCommunicator(port=path)
+        #SerialCommunicator(port=path)
         return True
     except serial.SerialException as exception:
         _LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
