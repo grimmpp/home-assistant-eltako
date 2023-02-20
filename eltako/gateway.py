@@ -25,6 +25,7 @@ class EltakoGateway:
     def __init__(self, hass, serial_path):
         """Initialize the Eltako gateway."""
 
+        self._loop = asyncio.get_event_loop()
         self._bus_task = None
         self._bus = RS485SerialInterface(serial_path)
         self.serial_path = serial_path
@@ -34,8 +35,7 @@ class EltakoGateway:
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
-        loop = asyncio.get_event_loop()
-        self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=loop)
+        self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
         
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
@@ -58,7 +58,7 @@ class EltakoGateway:
             self._bus_task.cancel()
 
         conn_made = asyncio.Future()
-        self._bus_task = asyncio.ensure_future(run(self.loop, conn_made=conn_made))
+        self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
         def bus_done(bus_future, _task=self._main_task):
             self._bus_task = None
             try:
