@@ -64,10 +64,10 @@ class EltakoGateway:
             try:
                 result = bus_future.result()
             except Exception as e:
-                logger.error("Bus task terminated with %s, removing main task", bus_future.exception())
-                logger.exception(e)
+                _LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
+                _LOGGER.exception(e)
             else:
-                logger.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
+                _LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
             _task.cancel()
         self._bus_task.add_done_callback(bus_done)
         await conn_made
@@ -76,13 +76,14 @@ class EltakoGateway:
         try:
             await self._main(*args)
         except Exception as e:
-            logger.exception(e)
+            _LOGGER.exception(e)
             # FIXME should I just restart with back-off?
 
         if self._bus_task is not None:
             self._bus_task.cancel()
 
     async def _main(self):
+        bus = self._bus
         await self._initialize_bus_task(bus.run)
 
         while True:
