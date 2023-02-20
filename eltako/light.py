@@ -61,7 +61,7 @@ class EltakoLight(EltakoEntity, LightEntity):
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
-        self._attr_unique_id = f"{dev_id.plain_address.hex()}"
+        self._attr_unique_id = f"{dev_id.plain_address().hex()}"
 
     @property
     def name(self):

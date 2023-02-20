@@ -32,12 +32,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 def generate_unique_id(dev_id: list[int], channel: int) -> str:
     """Generate a valid unique id."""
-    return f"{dev_id.plain_address.hex()}-{channel}"
+    return f"{dev_id.plain_address().hex()}-{channel}"
 
 
 def _migrate_to_new_unique_id(hass: HomeAssistant, dev_id, channel) -> None:
     """Migrate old unique ids to new unique ids."""
-    old_unique_id = f"{dev_id.plain_address.hex()}"
+    old_unique_id = f"{dev_id.plain_address().hex()}"
 
     ent_reg = entity_registry.async_get(hass)
     entity_id = ent_reg.async_get_entity_id(Platform.SWITCH, DOMAIN, old_unique_id)

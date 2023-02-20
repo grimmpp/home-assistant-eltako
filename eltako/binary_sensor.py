@@ -59,7 +59,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
-        self._attr_unique_id = f"{dev_id.plain_address.hex()}-{device_class}"
+        self._attr_unique_id = f"{dev_id.plain_address().hex()}-{device_class}"
 
     @property
     def name(self):
