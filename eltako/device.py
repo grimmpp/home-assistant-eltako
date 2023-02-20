@@ -4,6 +4,7 @@ from eltakobus.message import EltakoWrappedRPS
 from eltakobus.message import EltakoWrapped4BS
 from eltakobus.message import RPSMessage
 from eltakobus.message import Regular4BSMessage
+from eltakobus.error import ParseError
 from eltakobus.util import combine_hex
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
