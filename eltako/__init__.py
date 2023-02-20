@@ -221,16 +221,21 @@ class EltakoBusController:
             self.platforms['light']([entity])
             self.entities_for_status[bus_object.address] = [entity]
             logger.info("Created dimmer entity for %s", bus_object)
-        elif isinstance(bus_object, device.FSR14):
-            entity = FSR14Entity(bus_object, self.bus_id_part)
+        elif isinstance(bus_object, device.RelayStyle):
+            entity = RelayEntity(bus_object, self.bus_id_part)
             self.platforms['switch']([entity])
             self.entities_for_status[bus_object.address] = [entity]
-            logger.info("Created FSR14 entity for %s", bus_object)
-        elif isinstance(bus_object, device.FSB14):
-            entity = FSB14Entity(bus_object, self.bus_id_part)
+            logger.info("Created relay entity for %s", bus_object)
+        elif isinstance(bus_object, device.CoverStyle):
+            entity = CoverEntity(bus_object, self.bus_id_part)
             self.platforms['cover']([entity])
             self.entities_for_status[bus_object.address] = [entity]
-            logger.info("Created FSB14 entity for %s", bus_object)
+            logger.info("Created cover entity for %s", bus_object)
+#        elif isinstance(bus_object, device.WeatherSensorStyle):
+#            entity = WeatherSensorEntity(bus_object, self.bus_id_part)
+#            self.platforms['sensor']([entity])
+#            self.entities_for_status[bus_object.address] = [entity]
+#            logger.info("Created weather entity for %s", bus_object)
         else:
             logger.info("Device %s is not implemented for Home Assistant, not adding.", bus_object)
 
@@ -381,7 +386,7 @@ class DimmerEntity(EltakoEntity, LightEntity):
     async def async_turn_off(self, **kwargs):
         await self.busobject.set_state(0)
 
-class FSR14Entity(EltakoEntity, SwitchEntity):
+class RelayEntity(EltakoEntity, SwitchEntity):
     def __init__(self, busobject, bus_id_part):
         self.busobject = busobject
         self.entity_id = "switch.%s_%s" % (bus_id_part, busobject.address.hex())
@@ -448,7 +453,7 @@ class BusSensorEntity(EltakoEntity, Entity):
             self.state = energy
             self.async_schedule_update_ha_state(False)
 
-class FSB14Entity(EltakoEntity, CoverEntity):
+class CoverEntity(EltakoEntity, CoverEntity):
     assumed_state = True
     device_class = 'window'
     supported_features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
