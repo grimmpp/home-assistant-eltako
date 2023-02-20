@@ -38,8 +38,8 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            LOGGER.debug("We got a Eltako wrapped RPS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.hex("-"))
-            if msg.address == self.dev_id:
+            LOGGER.debug("We got a Eltako wrapped RPS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address.hex("-"))
+            if msg.address == self.dev_id.plain_address:
                 self.value_changed(msg)
             return
         
@@ -49,8 +49,8 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            LOGGER.debug("We got a Eltako wrapped 4BS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.hex("-"))
-            if msg.address == self.dev_id:
+            LOGGER.debug("We got a Eltako wrapped 4BS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address.hex("-"))
+            if msg.address == self.dev_id.plain_address:
                 self.value_changed(msg)
             return
     
@@ -60,8 +60,8 @@ class EltakoEntity(Entity):
         except ParseError as e:
             pass
         else:
-            LOGGER.debug("We got a RPS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.hex("-"))
-            if msg.address == self.dev_id:
+            LOGGER.debug("We got a RPS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address.hex("-"))
+            if msg.address == self.dev_id.plain_address:
                 self.value_changed(msg)
             return
 
@@ -71,8 +71,8 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            LOGGER.debug("We got a 4BS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.hex("-"))
-            if msg.address == self.dev_id:
+            LOGGER.debug("We got a 4BS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address.hex("-"))
+            if msg.address == self.dev_id.plain_address:
                 self.value_changed(msg)
             return
 
