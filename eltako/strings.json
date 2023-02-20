@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "detect": {
+        "title": "Select the path to your Eltako gateway",
+        "data": {
+          "path": "USB gateway path"
+        }
+      },
+      "manual": {
+        "title": "Enter the path to your Eltako gateway",
+        "data": {
+          "path": "USB gateway path"
+        }
+      }
+    },
+    "error": {
+      "invalid_gateway_path": "No valid gateway found for this path"
+    },
+    "abort": {
+      "invalid_gateway_path": "Invalid gateway path",
+      "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+    }
+  }
+}
