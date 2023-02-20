@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from eltakobus.util import combine_hex
+from eltakobus.util import AddressExpression
 import voluptuous as vol
 
 from homeassistant.components.binary_sensor import (
@@ -23,7 +24,7 @@ EVENT_BUTTON_PRESSED = "button_pressed"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(CONF_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
+        vol.Required(CONF_ID): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
     }
@@ -37,7 +38,7 @@ def setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
-    dev_id = config.get(CONF_ID)
+    dev_id = AddressExpression.parse(config.get(CONF_ID))
     dev_name = config.get(CONF_NAME)
     device_class = config.get(CONF_DEVICE_CLASS)
 
@@ -58,7 +59,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
-        self._attr_unique_id = f"{combine_hex(dev_id)}-{device_class}"
+        self._attr_unique_id = f"{dev_id.hex()}-{device_class}"
 
     @property
     def name(self):

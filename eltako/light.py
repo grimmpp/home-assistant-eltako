@@ -5,6 +5,7 @@ import math
 from typing import Any
 
 from eltakobus.util import combine_hex
+from eltakobus.util import AddressExpression
 import voluptuous as vol
 
 from homeassistant.components.light import (
@@ -27,8 +28,8 @@ DEFAULT_NAME = "Eltako Light"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Optional(CONF_ID, default=[]): vol.All(cv.ensure_list, [vol.Coerce(int)]),
-        vol.Required(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
+        vol.Required(CONF_ID): cv.string,
+        vol.Required(CONF_SENDER_ID): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     }
 )
@@ -43,7 +44,7 @@ def setup_platform(
     """Set up the Eltako light platform."""
     sender_id = config.get(CONF_SENDER_ID)
     dev_name = config.get(CONF_NAME)
-    dev_id = config.get(CONF_ID)
+    dev_id = AddressExpression.parse(config.get(CONF_ID))
 
     add_entities([EltakoLight(sender_id, dev_id, dev_name)])
 
@@ -60,7 +61,7 @@ class EltakoLight(EltakoEntity, LightEntity):
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
-        self._attr_unique_id = f"{combine_hex(dev_id)}"
+        self._attr_unique_id = f"{dev_id.hex()}"
 
     @property
     def name(self):

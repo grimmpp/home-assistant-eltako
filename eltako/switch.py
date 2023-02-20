@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from eltakobus.util import combine_hex
+from eltakobus.util import AddressExpression
 import voluptuous as vol
 
 from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
@@ -22,7 +23,7 @@ DEFAULT_NAME = "Eltako Switch"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(CONF_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
+        vol.Required(CONF_ID): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_CHANNEL, default=0): cv.positive_int,
     }
@@ -31,12 +32,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 def generate_unique_id(dev_id: list[int], channel: int) -> str:
     """Generate a valid unique id."""
-    return f"{combine_hex(dev_id)}-{channel}"
+    return f"{dev_id.hex()}-{channel}"
 
 
 def _migrate_to_new_unique_id(hass: HomeAssistant, dev_id, channel) -> None:
     """Migrate old unique ids to new unique ids."""
-    old_unique_id = f"{combine_hex(dev_id)}"
+    old_unique_id = f"{dev_id.hex()}"
 
     ent_reg = entity_registry.async_get(hass)
     entity_id = ent_reg.async_get_entity_id(Platform.SWITCH, DOMAIN, old_unique_id)
@@ -67,7 +68,7 @@ async def async_setup_platform(
 ) -> None:
     """Set up the Eltako switch platform."""
     channel = config.get(CONF_CHANNEL)
-    dev_id = config.get(CONF_ID)
+    dev_id = AddressExpression.parse(config.get(CONF_ID))
     dev_name = config.get(CONF_NAME)
 
     _migrate_to_new_unique_id(hass, dev_id, channel)

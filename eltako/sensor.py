@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from eltakobus.util import combine_hex
+from eltakobus.util import AddressExpression
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
@@ -66,7 +67,7 @@ SENSOR_DESC_TEMPERATURE = EltakoSensorEntityDescription(
     icon="mdi:thermometer",
     device_class=SensorDeviceClass.TEMPERATURE,
     state_class=SensorStateClass.MEASUREMENT,
-    unique_id=lambda dev_id: f"{combine_hex(dev_id)}-{SENSOR_TYPE_TEMPERATURE}",
+    unique_id=lambda dev_id: f"{dev_id.hex()}-{SENSOR_TYPE_TEMPERATURE}",
 )
 
 SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
@@ -76,7 +77,7 @@ SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
     icon="mdi:water-percent",
     device_class=SensorDeviceClass.HUMIDITY,
     state_class=SensorStateClass.MEASUREMENT,
-    unique_id=lambda dev_id: f"{combine_hex(dev_id)}-{SENSOR_TYPE_HUMIDITY}",
+    unique_id=lambda dev_id: f"{dev_id.hex()}-{SENSOR_TYPE_HUMIDITY}",
 )
 
 SENSOR_DESC_POWER = EltakoSensorEntityDescription(
@@ -86,20 +87,20 @@ SENSOR_DESC_POWER = EltakoSensorEntityDescription(
     icon="mdi:power-plug",
     device_class=SensorDeviceClass.POWER,
     state_class=SensorStateClass.MEASUREMENT,
-    unique_id=lambda dev_id: f"{combine_hex(dev_id)}-{SENSOR_TYPE_POWER}",
+    unique_id=lambda dev_id: f"{dev_id.hex()}-{SENSOR_TYPE_POWER}",
 )
 
 SENSOR_DESC_WINDOWHANDLE = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WINDOWHANDLE,
     name="WindowHandle",
     icon="mdi:window-open-variant",
-    unique_id=lambda dev_id: f"{combine_hex(dev_id)}-{SENSOR_TYPE_WINDOWHANDLE}",
+    unique_id=lambda dev_id: f"{dev_id.hex()}-{SENSOR_TYPE_WINDOWHANDLE}",
 )
 
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(CONF_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
+        vol.Required(CONF_ID): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DEVICE_CLASS, default=SENSOR_TYPE_POWER): cv.string,
         vol.Optional(CONF_MAX_TEMP, default=40): vol.Coerce(int),
@@ -117,7 +118,7 @@ def setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up an Eltako sensor device."""
-    dev_id = config[CONF_ID]
+    dev_id = AddressExpression.parse(config.get(CONF_ID))
     dev_name = config[CONF_NAME]
     sensor_type = config[CONF_DEVICE_CLASS]
 
