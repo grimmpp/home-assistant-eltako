@@ -111,8 +111,16 @@ class EltakoLight(EltakoEntity, LightEntity):
         """
         if msg.org != 0xA5:
             return
-            
-        val = msg.data[2]
+        
+        if msg.data[0] != 0x02:
+            return
+        
+        # Bits should be data (0x08), absolute (not 0x04), don't store (not 0x02), and on or off fitting the dim value (0x01)
+        expected_3 = 0x09 if msg.data[1] != 0 else 0x08
+        if msg.data[3] != expected_3:
+            return
+
+        val = msg.data[1]
         self._brightness = math.floor(val / 100.0 * 256.0)
         self._on_state = bool(val != 0)
         self.schedule_update_ha_state()
