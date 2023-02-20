@@ -10,9 +10,7 @@ import serial
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 
-from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE
-
-_LOGGER = logging.getLogger(__name__)
+from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER
 
 
 class EltakoGateway:
@@ -64,10 +62,10 @@ class EltakoGateway:
             try:
                 result = bus_future.result()
             except Exception as e:
-                _LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
-                _LOGGER.exception(e)
+                LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
+                LOGGER.exception(e)
             else:
-                _LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
+                LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
             _task.cancel()
         self._bus_task.add_done_callback(bus_done)
         await conn_made
@@ -76,7 +74,7 @@ class EltakoGateway:
         try:
             await self._main(*args)
         except Exception as e:
-            _LOGGER.exception(e)
+            LOGGER.exception(e)
             # FIXME should I just restart with back-off?
 
         if self._bus_task is not None:
@@ -101,7 +99,7 @@ class EltakoGateway:
         """
 
         if isinstance(message, ESP2Message):
-            _LOGGER.debug("Received message: %s", message)
+            LOGGER.debug("Received message: %s", message)
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
 
 
@@ -129,5 +127,5 @@ def validate_path(path: str):
         #SerialCommunicator(port=path)
         return True
     except serial.SerialException as exception:
-        _LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
+        LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
         return False
