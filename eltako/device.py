@@ -38,7 +38,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id:
+            if msg.address[-1] == self.dev_id:
                 self.value_changed(msg)
             return
         
@@ -48,7 +48,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id:
+            if msg.address[-1] == self.dev_id:
                 self.value_changed(msg)
             return
     
@@ -58,7 +58,7 @@ class EltakoEntity(Entity):
         except ParseError as e:
             pass
         else:
-            if msg.address == self.dev_id:
+            if msg.address[-1] == self.dev_id:
                 self.value_changed(msg)
             return
 
@@ -68,7 +68,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id:
+            if msg.address[-1] == self.dev_id:
                 self.value_changed(msg)
             return
 
