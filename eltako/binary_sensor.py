@@ -125,8 +125,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             )
         elif msg.org == 0x06:
             if msg.data[0] == 0x09:
-                self._attr_is_on = false
+                self._attr_is_on = False
             elif msg.data[0] == 0x08:
-                self._attr_is_on = true
+                self._attr_is_on = True
 
             self.schedule_update_ha_state()
