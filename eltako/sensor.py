@@ -281,7 +281,7 @@ class EltakoWindowHandle(EltakoSensor):
         if msg.org != 0x05:
             return
 
-        action = (msg.data[1] & 0x70) >> 4
+        action = (msg.data[0] & 0x70) >> 4
 
         if action == 0x07:
             self._attr_native_value = STATE_CLOSED
