@@ -1,6 +1,7 @@
 """Representation of an Eltako device."""
 from eltakobus.message import ESP2Message
 from eltakobus.message import EltakoWrappedRPS
+from eltakobus.message import EltakoWrapped1BS
 from eltakobus.message import EltakoWrapped4BS
 from eltakobus.message import RPSMessage
 from eltakobus.message import Regular4BSMessage
@@ -38,18 +39,26 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            LOGGER.debug("We got a Eltako wrapped RPS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address().hex("-"))
             if msg.address == self.dev_id.plain_address():
                 self.value_changed(msg)
             return
         
+        # Eltako wrapped 1BS
+        try:
+            msg = EltakoWrapped1BS.parse(msg.serialize())
+        except ParseError:
+            pass
+        else:
+            if msg.address == self.dev_id.plain_address():
+                self.value_changed(msg)
+            return
+
         # Eltako wrapped 4BS
         try:
             msg = EltakoWrapped4BS.parse(msg.serialize())
         except ParseError:
             pass
         else:
-            LOGGER.debug("We got a Eltako wrapped 4BS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address().hex("-"))
             if msg.address == self.dev_id.plain_address():
                 self.value_changed(msg)
             return
@@ -60,7 +69,6 @@ class EltakoEntity(Entity):
         except ParseError as e:
             pass
         else:
-            LOGGER.debug("We got a RPS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address().hex("-"))
             if msg.address == self.dev_id.plain_address():
                 self.value_changed(msg)
             return
@@ -71,7 +79,6 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            LOGGER.debug("We got a 4BS message with address %s. Device address is %s.", msg.address.hex("-"), self.dev_id.plain_address().hex("-"))
             if msg.address == self.dev_id.plain_address():
                 self.value_changed(msg)
             return

@@ -187,7 +187,7 @@ class EltakoPowerSensor(EltakoSensor):
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        if msg.org != 0xA5:
+        if msg.org != 0x07:
             return
         # TODO: Implement parsing
 #        msg.parse_eep(0x12, 0x01)
@@ -237,7 +237,7 @@ class EltakoTemperatureSensor(EltakoSensor):
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        if msg.org != 0xA5:
+        if msg.org != 0x07:
             return
 
         temp_scale = self._scale_max - self._scale_min
@@ -260,7 +260,7 @@ class EltakoHumiditySensor(EltakoSensor):
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        if msg.org != 0xA5:
+        if msg.org != 0x07:
             return
         humidity = msg.data[2] * 100 / 250
         self._attr_native_value = round(humidity, 1)

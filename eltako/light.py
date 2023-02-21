@@ -110,7 +110,7 @@ class EltakoLight(EltakoEntity, LightEntity):
         Dimmer devices like Eltako FUD61 send telegram in different RORGs.
         We only care about the 4BS (0xA5).
         """
-        if msg.org != 0xA5:
+        if msg.org != 0x07:
             return
         
         if msg.data[0] != 0x02:

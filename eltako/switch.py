@@ -123,7 +123,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
 
     def value_changed(self, msg):
         """Update the internal state of the switch."""
-        if msg.org == 0xA5:
+        if msg.org == 0x07:
             pass
             # TODO: Implement parsing
             # power meter telegram, turn on if > 10 watts
@@ -135,7 +135,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
 #                if watts > 1:
 #                    self._on_state = True
 #                    self.schedule_update_ha_state()
-        elif msg.data[0] == 0xD2:
+        elif msg.data[0] == 0x05:
             pass
             # TODO: Implement parsing
             # actuator status telegram
