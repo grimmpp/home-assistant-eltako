@@ -59,7 +59,7 @@ class EltakoLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, dev_id, dev_name, sender_id):
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id):
         """Initialize the Eltako light source."""
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
