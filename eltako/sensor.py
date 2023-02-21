@@ -92,7 +92,7 @@ SENSOR_DESC_POWER = EltakoSensorEntityDescription(
 
 SENSOR_DESC_WINDOWHANDLE = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WINDOWHANDLE,
-    name="WindowHandle",
+    name="Window handle",
     icon="mdi:window-open-variant",
     unique_id=lambda dev_id: f"{dev_id.plain_address().hex()}-{SENSOR_TYPE_WINDOWHANDLE}",
 )
@@ -278,12 +278,10 @@ class EltakoWindowHandle(EltakoSensor):
         """Update the internal state of the sensor."""
         if msg.org != 0x06:
             return
-            
-        contact_closed = (msg.data[1] & 1) == 1
         
-        if contact_closed:
+        if msg.data[0] == 0x09:
             self._attr_native_value = STATE_CLOSED
-        else:
+        elif msg.data[0] == 0x08:
             self._attr_native_value = STATE_OPEN
 
         self.schedule_update_ha_state()
