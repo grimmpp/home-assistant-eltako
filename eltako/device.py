@@ -5,6 +5,7 @@ from eltakobus.message import EltakoWrapped1BS
 from eltakobus.message import EltakoWrapped4BS
 from eltakobus.message import RPSMessage
 from eltakobus.message import Regular4BSMessage
+from eltakobus.message import Regular1BSMessage
 from eltakobus.error import ParseError
 from eltakobus.util import combine_hex
 
@@ -46,8 +47,7 @@ class EltakoEntity(Entity):
         # Eltako wrapped 1BS
         try:
             msg = EltakoWrapped1BS.parse(msg.serialize())
-        except ParseError as e:
-            LOGGER.debug(e)
+        except ParseError:
             pass
         else:
             if msg.address == self.dev_id.plain_address():
@@ -67,6 +67,16 @@ class EltakoEntity(Entity):
         # RPS
         try:
             msg = RPSMessage.parse(msg.serialize())
+        except ParseError:
+            pass
+        else:
+            if msg.address == self.dev_id.plain_address():
+                self.value_changed(msg)
+            return
+
+        # 1BS
+        try:
+            msg = Regular1BSMessage.parse(msg.serialize())
         except ParseError:
             pass
         else:
