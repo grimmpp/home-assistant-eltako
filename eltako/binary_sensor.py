@@ -18,8 +18,8 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
 
-CONF_TYPE = "type"
-CONF_TYPE_SUPPORTED = ["F6-02-01", "F6-02-02", "D5-00-01", "A5-08-01"]
+CONF_EEP = "eep"
+CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "D5-00-01", "A5-08-01"]
 
 DEFAULT_NAME = "Eltako binary sensor"
 DEPENDENCIES = ["eltakobus"]
@@ -28,7 +28,7 @@ EVENT_BUTTON_PRESSED = "button_pressed"
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ID): cv.string,
-        vol.Required(CONF_TYPE): vol.In(CONF_TYPE_SUPPORTED),
+        vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
     }
@@ -44,10 +44,10 @@ def setup_platform(
     """Set up the Binary Sensor platform for Eltako."""
     dev_id = AddressExpression.parse(config.get(CONF_ID))
     dev_name = config.get(CONF_NAME)
-    dev_type = config.get(CONF_TYPE)
+    dev_eep = config.get(CONF_EEP)
     device_class = config.get(CONF_DEVICE_CLASS)
 
-    add_entities([EltakoBinarySensor(dev_id, dev_name, dev_type, device_class)])
+    add_entities([EltakoBinarySensor(dev_id, dev_name, dev_eep, device_class)])
 
 
 class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
@@ -58,10 +58,10 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - F6-02-02 (Light and Blind Control - Application Style 1)
     """
 
-    def __init__(self, dev_id, dev_name, dev_type, device_class):
+    def __init__(self, dev_id, dev_name, dev_eep, device_class):
         """Initialize the Eltako binary sensor."""
         super().__init__(dev_id, dev_name)
-        self._dev_type = dev_type
+        self._dev_eep = dev_eep
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
@@ -90,7 +90,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             ['0xf6', '0x00', '0x00', '0x2d', '0xcf', '0x45', '0x20']
         """
         
-        if self._dev_type in ["F6-02-01", "F6-02-02"]:
+        if self._dev_eep in ["F6-02-01", "F6-02-02"]:
             if msg.org == 0x05:
                 # Energy Bow
                 pushed = None
@@ -130,7 +130,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                         "onoff": self.onoff,
                     },
                 )
-        elif self._dev_type in ["D5-00-01"]:
+        elif self._dev_eep in ["D5-00-01"]:
             if msg.org == 0x06:
                 if msg.data[0] == 0x09:
                     self._attr_is_on = False
@@ -138,7 +138,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     self._attr_is_on = True
 
                 self.schedule_update_ha_state()
-        elif self._dev_type in ["A5-08-01"]:
+        elif self._dev_eep in ["A5-08-01"]:
             if msg.org == 0x07:
                 if msg.data[3] == 0x0f:
                     self._attr_is_on = False

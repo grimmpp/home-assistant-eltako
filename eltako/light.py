@@ -22,6 +22,8 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
 
+CONF_EEP = "eep"
+CONF_EEP_SUPPORTED = ["A5-38-08", "M5-38-08"]
 CONF_SENDER_ID = "sender_id"
 
 DEFAULT_NAME = "Eltako Light"
@@ -29,6 +31,7 @@ DEFAULT_NAME = "Eltako Light"
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ID): cv.string,
+        vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
         vol.Required(CONF_SENDER_ID): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     }
@@ -44,9 +47,10 @@ def setup_platform(
     """Set up the Eltako light platform."""
     sender_id = config.get(CONF_SENDER_ID)
     dev_name = config.get(CONF_NAME)
+    dev_eep = config.get(CONF_EEP)
     dev_id = AddressExpression.parse(config.get(CONF_ID))
 
-    add_entities([EltakoLight(sender_id, dev_id, dev_name)])
+    add_entities([EltakoLight(dev_id, dev_name, dev_eep, sender_id)])
 
 
 class EltakoLight(EltakoEntity, LightEntity):
@@ -55,9 +59,10 @@ class EltakoLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, sender_id, dev_id, dev_name):
+    def __init__(self, dev_id, dev_name, sender_id):
         """Initialize the Eltako light source."""
         super().__init__(dev_id, dev_name)
+        self._dev_eep = dev_eep
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
@@ -75,7 +80,10 @@ class EltakoLight(EltakoEntity, LightEntity):
         This method is optional. Removing it indicates to Home Assistant
         that brightness is not supported for this light.
         """
-        return self._brightness
+        if self._dev_eep in ["A5-38-08"]:
+            return self._brightness
+        else:
+            return None
 
     @property
     def is_on(self):
@@ -110,18 +118,25 @@ class EltakoLight(EltakoEntity, LightEntity):
         Dimmer devices like Eltako FUD61 send telegram in different RORGs.
         We only care about the 4BS (0xA5).
         """
-        if msg.org != 0x07:
-            return
-        
-        if msg.data[0] != 0x02:
-            return
-        
-        # Bits should be data (0x08), absolute (not 0x04), don't store (not 0x02), and on or off fitting the dim value (0x01)
-        expected_3 = 0x09 if msg.data[1] != 0 else 0x08
-        if msg.data[3] != expected_3:
-            return
+        if self._dev_eep in ["A5-38-08"]:
+            if msg.org != 0x07 or msg.data[0] != 0x02:
+                return
+            
+            # Bits should be data (0x08), absolute (not 0x04), don't store (not 0x02), and on or off fitting the dim value (0x01)
+            expected_3 = 0x09 if msg.data[1] != 0 else 0x08
+            if msg.data[3] != expected_3:
+                return
 
-        val = msg.data[1]
-        self._brightness = math.floor(val / 100.0 * 256.0)
-        self._on_state = bool(val != 0)
-        self.schedule_update_ha_state()
+            val = msg.data[1]
+            self._brightness = math.floor(val / 100.0 * 256.0)
+            self._on_state = bool(val != 0)
+            self.schedule_update_ha_state()
+        elif self._dev_eep in ["M5-38-08"]:
+            if msg.org != 0x05:
+                return
+                
+            if msg.data[0] == 0x70:
+                self._on_state = True
+            elif msg.data[0] == 0x50:
+                self._on_state = False
+            self.schedule_update_ha_state()
