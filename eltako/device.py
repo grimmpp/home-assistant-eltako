@@ -46,7 +46,8 @@ class EltakoEntity(Entity):
         # Eltako wrapped 1BS
         try:
             msg = EltakoWrapped1BS.parse(msg.serialize())
-        except ParseError:
+        except ParseError as e:
+            LOGGER.debug(e)
             pass
         else:
             if msg.address == self.dev_id.plain_address():
@@ -66,7 +67,7 @@ class EltakoEntity(Entity):
         # RPS
         try:
             msg = RPSMessage.parse(msg.serialize())
-        except ParseError as e:
+        except ParseError:
             pass
         else:
             if msg.address == self.dev_id.plain_address():
