@@ -262,6 +262,7 @@ class EltakoHumiditySensor(EltakoSensor):
         """Update the internal state of the sensor."""
         if msg.org != 0x07:
             return
+            
         humidity = msg.data[2] * 100 / 250
         self._attr_native_value = round(humidity, 1)
         self.schedule_update_ha_state()
@@ -271,17 +272,22 @@ class EltakoWindowHandle(EltakoSensor):
     """Representation of an Eltako window handle device.
 
     EEPs (EnOcean Equipment Profiles):
-    - D5-00-01 (Single Input Contact)
+    - F6-10-00 (Mechanical handle / Hoppe AG)
     """
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        if msg.org != 0x06:
-            return
         
-        if msg.data[0] == 0x09:
+        if msg.org != 0x05:
+            return
+
+        action = (msg.data[1] & 0x70) >> 4
+
+        if action == 0x07:
             self._attr_native_value = STATE_CLOSED
-        elif msg.data[0] == 0x08:
+        if action in (0x04, 0x06):
             self._attr_native_value = STATE_OPEN
+        if action == 0x05:
+            self._attr_native_value = "tilt"
 
         self.schedule_update_ha_state()
