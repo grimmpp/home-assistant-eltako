@@ -271,18 +271,19 @@ class EltakoWindowHandle(EltakoSensor):
     """Representation of an Eltako window handle device.
 
     EEPs (EnOcean Equipment Profiles):
-    - F6-10-00 (Mechanical handle / Hoppe AG)
+    - D5-00-01 (Single Input Contact)
     """
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        action = (msg.data[1] & 0x70) >> 4
-
-        if action == 0x07:
+        if msg.org != 0x06:
+            return
+            
+        contact_closed = (msg.data[1] & 1) == 1
+        
+        if contact_closed:
             self._attr_native_value = STATE_CLOSED
-        if action in (0x04, 0x06):
+        else:
             self._attr_native_value = STATE_OPEN
-        if action == 0x05:
-            self._attr_native_value = "tilt"
 
         self.schedule_update_ha_state()
