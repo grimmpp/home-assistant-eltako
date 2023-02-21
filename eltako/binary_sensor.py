@@ -83,41 +83,50 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         - button released
             ['0xf6', '0x00', '0x00', '0x2d', '0xcf', '0x45', '0x20']
         """
-        # Energy Bow
-        pushed = None
+        
+        if msg.org == 0x05:
+            # Energy Bow
+            pushed = None
 
-        if msg.data[6] == 0x30:
-            pushed = 1
-        elif msg.data[6] == 0x20:
-            pushed = 0
+            if msg.data[6] == 0x30:
+                pushed = 1
+            elif msg.data[6] == 0x20:
+                pushed = 0
 
-        self.schedule_update_ha_state()
+            self.schedule_update_ha_state()
 
-        action = msg.data[1]
-        if action == 0x70:
-            self.which = 0
-            self.onoff = 0
-        elif action == 0x50:
-            self.which = 0
-            self.onoff = 1
-        elif action == 0x30:
-            self.which = 1
-            self.onoff = 0
-        elif action == 0x10:
-            self.which = 1
-            self.onoff = 1
-        elif action == 0x37:
-            self.which = 10
-            self.onoff = 0
-        elif action == 0x15:
-            self.which = 10
-            self.onoff = 1
-        self.hass.bus.fire(
-            EVENT_BUTTON_PRESSED,
-            {
-                "id": self.dev_id,
-                "pushed": pushed,
-                "which": self.which,
-                "onoff": self.onoff,
-            },
-        )
+            action = msg.data[1]
+            if action == 0x70:
+                self.which = 0
+                self.onoff = 0
+            elif action == 0x50:
+                self.which = 0
+                self.onoff = 1
+            elif action == 0x30:
+                self.which = 1
+                self.onoff = 0
+            elif action == 0x10:
+                self.which = 1
+                self.onoff = 1
+            elif action == 0x37:
+                self.which = 10
+                self.onoff = 0
+            elif action == 0x15:
+                self.which = 10
+                self.onoff = 1
+            self.hass.bus.fire(
+                EVENT_BUTTON_PRESSED,
+                {
+                    "id": self.dev_id,
+                    "pushed": pushed,
+                    "which": self.which,
+                    "onoff": self.onoff,
+                },
+            )
+        elif msg.org == 0x06:
+            if msg.data[0] == 0x09:
+                self._attr_is_on = false
+            elif msg.data[0] == 0x08:
+                self._attr_is_on = true
+
+            self.schedule_update_ha_state()
