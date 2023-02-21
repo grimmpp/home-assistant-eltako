@@ -18,6 +18,9 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
 
+CONF_TYPE = "type"
+CONF_TYPE_SUPPORTED = ["F6-02-01", "F6-02-02", "D5-00-01", "A5-08-01"]
+
 DEFAULT_NAME = "Eltako binary sensor"
 DEPENDENCIES = ["eltakobus"]
 EVENT_BUTTON_PRESSED = "button_pressed"
@@ -25,6 +28,7 @@ EVENT_BUTTON_PRESSED = "button_pressed"
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ID): cv.string,
+        vol.Required(CONF_TYPE): vol.In(CONF_TYPE_SUPPORTED),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
     }
@@ -40,9 +44,10 @@ def setup_platform(
     """Set up the Binary Sensor platform for Eltako."""
     dev_id = AddressExpression.parse(config.get(CONF_ID))
     dev_name = config.get(CONF_NAME)
+    dev_type = config.get(CONF_TYPE)
     device_class = config.get(CONF_DEVICE_CLASS)
 
-    add_entities([EltakoBinarySensor(dev_id, dev_name, device_class)])
+    add_entities([EltakoBinarySensor(dev_id, dev_name, dev_type, device_class)])
 
 
 class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
@@ -53,9 +58,10 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - F6-02-02 (Light and Blind Control - Application Style 1)
     """
 
-    def __init__(self, dev_id, dev_name, device_class):
+    def __init__(self, dev_id, dev_name, dev_type, device_class):
         """Initialize the Eltako binary sensor."""
         super().__init__(dev_id, dev_name)
+        self._dev_type = dev_type
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
@@ -84,54 +90,57 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             ['0xf6', '0x00', '0x00', '0x2d', '0xcf', '0x45', '0x20']
         """
         
-        if msg.org == 0x05:
-            # Energy Bow
-            pushed = None
+        if self._dev_type in ["F6-02-01", "F6-02-02"]:
+            if msg.org == 0x05:
+                # Energy Bow
+                pushed = None
 
-            if msg.data[6] == 0x30:
-                pushed = 1
-            elif msg.data[6] == 0x20:
-                pushed = 0
+                if msg.data[6] == 0x30:
+                    pushed = 1
+                elif msg.data[6] == 0x20:
+                    pushed = 0
 
-            self.schedule_update_ha_state()
+                self.schedule_update_ha_state()
 
-            action = msg.data[1]
-            if action == 0x70:
-                self.which = 0
-                self.onoff = 0
-            elif action == 0x50:
-                self.which = 0
-                self.onoff = 1
-            elif action == 0x30:
-                self.which = 1
-                self.onoff = 0
-            elif action == 0x10:
-                self.which = 1
-                self.onoff = 1
-            elif action == 0x37:
-                self.which = 10
-                self.onoff = 0
-            elif action == 0x15:
-                self.which = 10
-                self.onoff = 1
-            self.hass.bus.fire(
-                EVENT_BUTTON_PRESSED,
-                {
-                    "id": self.dev_id,
-                    "pushed": pushed,
-                    "which": self.which,
-                    "onoff": self.onoff,
-                },
-            )
-        elif msg.org == 0x06:
-            if msg.data[0] == 0x09:
-                self._attr_is_on = False
-            elif msg.data[0] == 0x08:
-                self._attr_is_on = True
+                action = msg.data[1]
+                if action == 0x70:
+                    self.which = 0
+                    self.onoff = 0
+                elif action == 0x50:
+                    self.which = 0
+                    self.onoff = 1
+                elif action == 0x30:
+                    self.which = 1
+                    self.onoff = 0
+                elif action == 0x10:
+                    self.which = 1
+                    self.onoff = 1
+                elif action == 0x37:
+                    self.which = 10
+                    self.onoff = 0
+                elif action == 0x15:
+                    self.which = 10
+                    self.onoff = 1
+                self.hass.bus.fire(
+                    EVENT_BUTTON_PRESSED,
+                    {
+                        "id": self.dev_id,
+                        "pushed": pushed,
+                        "which": self.which,
+                        "onoff": self.onoff,
+                    },
+                )
+        elif self._dev_type in ["D5-00-01"]:
+            if msg.org == 0x06:
+                if msg.data[0] == 0x09:
+                    self._attr_is_on = False
+                elif msg.data[0] == 0x08:
+                    self._attr_is_on = True
 
-            self.schedule_update_ha_state()
-        elif msg.org == 0x07:
-            if msg.data[0] == 0x0f:
-                self._attr_is_on = False
-            elif msg.data[0] == 0x0d:
-                self._attr_is_on = True
+                self.schedule_update_ha_state()
+        elif self._dev_type in ["A5-08-01"]:
+            if msg.org == 0x07:
+                if msg.data[3] == 0x0f:
+                    self._attr_is_on = False
+                elif msg.data[3] == 0x0d:
+                    self._attr_is_on = True
