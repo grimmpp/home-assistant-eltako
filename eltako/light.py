@@ -21,9 +21,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX
+from .const import CONF_ID_REGEX, CONF_EEP
 
-CONF_EEP = "eep"
 CONF_EEP_SUPPORTED = ["A5-38-08", "M5-38-08"]
 CONF_SENDER_ID = "sender_id"
 
@@ -50,11 +49,13 @@ def setup_platform(
     dev_name = config.get(CONF_NAME)
     dev_eep = config.get(CONF_EEP)
     dev_id = AddressExpression.parse(config.get(CONF_ID))
+    
+    if dev_eep in ["A5-38-08"]:
+        add_entities([EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id)])
+    elif dev_eep in ["AM-38-08"]:
+        add_entities([EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id)])
 
-    add_entities([EltakoLight(dev_id, dev_name, dev_eep, sender_id)])
-
-
-class EltakoLight(EltakoEntity, LightEntity):
+class EltakoDimmableLight(EltakoEntity, LightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.BRIGHTNESS
@@ -81,10 +82,7 @@ class EltakoLight(EltakoEntity, LightEntity):
         This method is optional. Removing it indicates to Home Assistant
         that brightness is not supported for this light.
         """
-        if self._dev_eep in ["A5-38-08"]:
-            return self._brightness
-        else:
-            return None
+        return self._brightness
 
     @property
     def is_on(self):
@@ -132,7 +130,56 @@ class EltakoLight(EltakoEntity, LightEntity):
             self._brightness = math.floor(val / 100.0 * 256.0)
             self._on_state = bool(val != 0)
             self.schedule_update_ha_state()
-        elif self._dev_eep in ["M5-38-08"]:
+
+class EltakoSwitchableLight(EltakoEntity, LightEntity):
+    """Representation of an Eltako light source."""
+
+    _attr_color_mode = ColorMode.ONOFF
+    _attr_supported_color_modes = {ColorMode.ONOFF}
+
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id):
+        """Initialize the Eltako light source."""
+        super().__init__(dev_id, dev_name)
+        self._dev_eep = dev_eep
+        self._on_state = False
+        self._sender_id = sender_id
+        self._attr_unique_id = f"{dev_id.plain_address().hex()}"
+
+    @property
+    def name(self):
+        """Return the name of the device if any."""
+        return self.dev_name
+
+    @property
+    def is_on(self):
+        """If light is on."""
+        return self._on_state
+
+    def turn_on(self, **kwargs: Any) -> None:
+        """Turn the light source on or sets a specific dimmer value."""
+        if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
+            self._brightness = brightness
+
+        bval = math.floor(self._brightness / 256.0 * 100.0)
+        if bval == 0:
+            bval = 1
+        command = [0xA5, 0x02, bval, 0x01, 0x09]
+        command.extend(self._sender_id)
+        command.extend([0x00])
+        self.send_command(command, [], 0x01)
+        self._on_state = True
+
+    def turn_off(self, **kwargs: Any) -> None:
+        """Turn the light source off."""
+        command = [0xA5, 0x02, 0x00, 0x01, 0x09]
+        command.extend(self._sender_id)
+        command.extend([0x00])
+        self.send_command(command, [], 0x01)
+        self._on_state = False
+
+    def value_changed(self, msg):
+        """Update the internal state of this device."""
+        if self._dev_eep in ["M5-38-08"]:
             if msg.org != 0x05:
                 return
                 

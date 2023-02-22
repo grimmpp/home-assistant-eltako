@@ -17,48 +17,18 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, LOGGER
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX
+from .const import CONF_ID_REGEX, CONF_EEP
 
-CONF_CHANNEL = "channel"
+CONF_EEP_SUPPORTED = ["M5-38-08"]
 DEFAULT_NAME = "Eltako Switch"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+        vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_CHANNEL, default=0): cv.positive_int,
     }
 )
-
-
-def generate_unique_id(dev_id: list[int], channel: int) -> str:
-    """Generate a valid unique id."""
-    return f"{dev_id.plain_address().hex()}-{channel}"
-
-
-def _migrate_to_new_unique_id(hass: HomeAssistant, dev_id, channel) -> None:
-    """Migrate old unique ids to new unique ids."""
-    old_unique_id = f"{dev_id.plain_address().hex()}"
-
-    ent_reg = entity_registry.async_get(hass)
-    entity_id = ent_reg.async_get_entity_id(Platform.SWITCH, DOMAIN, old_unique_id)
-
-    if entity_id is not None:
-        new_unique_id = generate_unique_id(dev_id, channel)
-        try:
-            ent_reg.async_update_entity(entity_id, new_unique_id=new_unique_id)
-        except ValueError:
-            LOGGER.warning(
-                "Skip migration of id [%s] to [%s] because it already exists",
-                old_unique_id,
-                new_unique_id,
-            )
-        else:
-            LOGGER.debug(
-                "Migrating unique_id from [%s] to [%s]",
-                old_unique_id,
-                new_unique_id,
-            )
 
 
 async def async_setup_platform(
@@ -68,25 +38,22 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Eltako switch platform."""
-    channel = config.get(CONF_CHANNEL)
     dev_id = AddressExpression.parse(config.get(CONF_ID))
     dev_name = config.get(CONF_NAME)
+    dev_eep = config.get(CONF_EEP)
 
-    _migrate_to_new_unique_id(hass, dev_id, channel)
-    async_add_entities([EltakoSwitch(dev_id, dev_name, channel)])
+    async_add_entities([EltakoSwitch(dev_id, dev_name, dev_eep)])
 
 
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, dev_id, dev_name, channel):
+    def __init__(self, dev_id, dev_name, dev_eep):
         """Initialize the Eltako switch device."""
         super().__init__(dev_id, dev_name)
-        self._light = None
+        self._dev_eep = dev_eep
         self._on_state = False
-        self._on_state2 = False
-        self.channel = channel
-        self._attr_unique_id = generate_unique_id(dev_id, channel)
+        self._attr_unique_id = f"{dev_id.plain_address().hex()}"
 
     @property
     def is_on(self):
@@ -104,7 +71,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         optional.extend(self.dev_id)
         optional.extend([0xFF, 0x00])
         self.send_command(
-            data=[0xD2, 0x01, self.channel & 0xFF, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00],
+            data=[0xD2, 0x01, 0xFF, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00],
             optional=optional,
             packet_type=0x01,
         )
@@ -116,7 +83,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         optional.extend(self.dev_id)
         optional.extend([0xFF, 0x00])
         self.send_command(
-            data=[0xD2, 0x01, self.channel & 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+            data=[0xD2, 0x01, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
             optional=optional,
             packet_type=0x01,
         )
@@ -124,26 +91,12 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
 
     def value_changed(self, msg):
         """Update the internal state of the switch."""
-        if msg.org == 0x07:
-            pass
-            # TODO: Implement parsing
-            # power meter telegram, turn on if > 10 watts
-#            msg.parse_eep(0x12, 0x01)
-#            if msg.parsed["DT"]["raw_value"] == 1:
-#                raw_val = msg.parsed["MR"]["raw_value"]
-#                divisor = msg.parsed["DIV"]["raw_value"]
-#                watts = raw_val / (10**divisor)
-#                if watts > 1:
-#                    self._on_state = True
-#                    self.schedule_update_ha_state()
-        elif msg.data[0] == 0x05:
-            pass
-            # TODO: Implement parsing
-            # actuator status telegram
-#            msg.parse_eep(0x01, 0x01)
-#            if msg.parsed["CMD"]["raw_value"] == 4:
-#                channel = msg.parsed["IO"]["raw_value"]
-#                output = msg.parsed["OV"]["raw_value"]
-#                if channel == self.channel:
-#                    self._on_state = output > 0
-#                    self.schedule_update_ha_state()
+        if self._dev_eep in ["M5-38-08"]:
+            if msg.org != 0x05:
+                return
+                
+            if msg.data[0] == 0x70:
+                self._on_state = True
+            elif msg.data[0] == 0x50:
+                self._on_state = False
+            self.schedule_update_ha_state()

@@ -17,9 +17,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX
+from .const import CONF_ID_REGEX, CONF_EEP
 
-CONF_EEP = "eep"
 CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "F6-10-00", "D5-00-01", "A5-08-01"]
 
 DEFAULT_NAME = "Eltako binary sensor"
@@ -57,6 +56,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     Supported EEPs (EnOcean Equipment Profiles):
     - F6-02-01 (Light and Blind Control - Application Style 2)
     - F6-02-02 (Light and Blind Control - Application Style 1)
+    - F6-10-00
+    - D5-00-01
     """
 
     def __init__(self, dev_id, dev_name, dev_eep, device_class):
