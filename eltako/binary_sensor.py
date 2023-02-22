@@ -17,6 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
+from .const import CONF_ID_REGEX
 
 CONF_EEP = "eep"
 CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "F6-10-00", "D5-00-01", "A5-08-01"]
@@ -27,7 +28,7 @@ EVENT_BUTTON_PRESSED = "button_pressed"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(CONF_ID): cv.string,
+        vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
         vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,

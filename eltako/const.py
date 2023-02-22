@@ -14,6 +14,8 @@ SIGNAL_SEND_MESSAGE = "eltako.send_message"
 
 LOGGER = logging.getLogger("eltako")
 
+CONF_ID_REGEX = "([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})"
+
 PLATFORMS = [
     Platform.LIGHT,
     Platform.BINARY_SENSOR,
