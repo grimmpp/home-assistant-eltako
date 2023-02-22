@@ -326,9 +326,9 @@ class EltakoMeterSensor(EltakoSensor):
     - A5-12-02 (Automated Meter Reading, Gas)
     - A5-12-03 (Automated Meter Reading, Water)
     """
-    def __init__(self, dev_id, dev_name, description: EltakoSensorEntityDescription, *, tariff) -> None:
+    def __init__(self, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription, *, tariff) -> None:
         """Initialize the Eltako temperature sensor device."""
-        super().__init__(dev_id, dev_name, description)
+        super().__init__(dev_id, dev_name, dev_eep, description)
         self._tariff = tariff
 
     def value_changed(self, msg):
