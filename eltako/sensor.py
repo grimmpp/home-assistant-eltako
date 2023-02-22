@@ -342,15 +342,15 @@ class EltakoMeterSensor(EltakoSensor):
         calculatedValue = value / divisor
         
         if cumulative and (
-            self.description.key == SENSOR_TYPE_ELECTRICITY_CUMULATIVE or
-            self.description.key == SENSOR_TYPE_GAS_CUMULATIVE or
-            self.description.key == SENSOR_DESC_WATER_CUMULATIVE):
+            self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CUMULATIVE or
+            self.entity_description.key == SENSOR_TYPE_GAS_CUMULATIVE or
+            self.entity_description.key == SENSOR_DESC_WATER_CUMULATIVE):
             self._attr_native_value = calculatedValue
-        elif not cumulative and self.description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
+        elif not cumulative and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
             self._attr_native_value = calculatedValue
         elif not cumulative and (
-            self.description.key == SENSOR_TYPE_GAS_CURRENT or
-            self.description.key == SENSOR_DESC_WATER_CURRENT):
+            self.entity_description.key == SENSOR_TYPE_GAS_CURRENT or
+            self.entity_description.key == SENSOR_DESC_WATER_CURRENT):
             # l/s -> m3/h
             self._attr_native_value = calculatedValue * 3.6
             
