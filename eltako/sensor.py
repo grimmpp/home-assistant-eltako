@@ -208,7 +208,7 @@ SENSOR_DESC_WEATHER_STATION_RAIN = EltakoSensorEntityDescription(
 
 SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST,
-    name="Illuminance (dawn)",
+    name="Illuminance (west)",
     native_unit_of_measurement=LIGHT_LUX,
     icon="mdi:weather-sunset",
     device_class=SensorDeviceClass.ILLUMINANCE,
@@ -218,7 +218,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST = EltakoSensorEntityDescription(
 
 SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL,
-    name="Illuminance (dawn)",
+    name="Illuminance (central)",
     native_unit_of_measurement=LIGHT_LUX,
     icon="mdi:weather-sunset",
     device_class=SensorDeviceClass.ILLUMINANCE,
@@ -228,7 +228,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL = EltakoSensorEntityDescription(
 
 SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST,
-    name="Illuminance (dawn)",
+    name="Illuminance (east)",
     native_unit_of_measurement=LIGHT_LUX,
     icon="mdi:weather-sunset",
     device_class=SensorDeviceClass.ILLUMINANCE,
