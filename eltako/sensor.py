@@ -262,31 +262,31 @@ def setup_platform(
     entities: list[EltakoSensor] = []
     
     if dev_eep in ["A5-13-01"]:
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN)]
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE)]
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED)]
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN)]
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST)]
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL)]
-        entities = [EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST)]
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
+        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
         
     elif dev_eep in ["F6-10-00"]:
-        entities = [EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE)]
+        entities.append(EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
         
     elif dev_eep in ["A5-12-01"]:
         for tariff in meter_tariffs:
-            entities = [EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff - 1)]
-            entities = [EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff - 1)]
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff - 1))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff - 1))
 
     elif dev_eep in ["A5-12-02"]:
         for tariff in meter_tariffs:
-            entities = [EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff - 1)]
-            entities = [EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff - 1)]
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff - 1))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff - 1))
 
     elif dev_eep in ["A5-12-03"]:
         for tariff in meter_tariffs:
-            entities = [EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff - 1)]
-            entities = [EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff - 1)]
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff - 1))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff - 1))
 
     add_entities(entities)
 
@@ -333,12 +333,12 @@ class EltakoMeterSensor(EltakoSensor):
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        if msg.org != 0x07 or self._tariff != data[3] >> 4:
+        if msg.org != 0x07 or self._tariff != msg.data[3] >> 4:
             return
         
-        cumulative = not (data[3] & 0x04)
-        value = (data[0] << 16) + (data[1] << 8) + data[2]
-        divisor = 10 ** (data[3] & 0x03)
+        cumulative = not (msg.data[3] & 0x04)
+        value = (msg.data[0] << 16) + (msg.data[1] << 8) + msg.data[2]
+        divisor = 10 ** (msg.data[3] & 0x03)
         calculatedValue = value / divisor
         
         if cumulative and (
@@ -461,43 +461,43 @@ class EltakoWeatherStation(EltakoSensor):
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
         
-        if msg.org != 0x07 or data == bytes((0, 0, 0xff, 0x1a)):
+        if msg.org != 0x07 or msg.data == bytes((0, 0, 0xff, 0x1a)):
             return
 
         if self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_DAWN:
-            if data[3] >> 4 != 1:
+            if msg.data[3] >> 4 != 1:
                 return
             
-            self._attr_native_value = 999 * data[0] / 255
+            self._attr_native_value = 999 * msg.data[0] / 255
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_TEMPERATURE:
-            if data[3] >> 4 != 1:
+            if msg.data[3] >> 4 != 1:
                 return
             
-            self._attr_native_value = -40 + 120 * data[1] / 255
+            self._attr_native_value = -40 + 120 * msg.data[1] / 255
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_WIND_SPEED:
-            if data[3] >> 4 != 1:
+            if msg.data[3] >> 4 != 1:
                 return
             
-            self._attr_native_value = 70 * data[2] / 255
+            self._attr_native_value = 70 * msg.data[2] / 255
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_RAIN:
-            if data[3] >> 4 != 1:
+            if msg.data[3] >> 4 != 1:
                 return
             
-            self._attr_native_value = bool(data[3] & 0x02)
+            self._attr_native_value = bool(msg.data[3] & 0x02)
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST:
-            if data[3] >> 4 != 2:
+            if msg.data[3] >> 4 != 2:
                 return
             
-            self._attr_native_value = 150000 * data[0] / 255
+            self._attr_native_value = 150000 * msg.data[0] / 255
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL:
-            if data[3] >> 4 != 2:
+            if msg.data[3] >> 4 != 2:
                 return
             
-            self._attr_native_value = 150000 * data[1] / 255
+            self._attr_native_value = 150000 * msg.data[1] / 255
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST:
-            if data[3] >> 4 != 2:
+            if msg.data[3] >> 4 != 2:
                 return
             
-            self._attr_native_value = 150000 * data[2] / 255
+            self._attr_native_value = 150000 * msg.data[2] / 255
 
         self.schedule_update_ha_state()
