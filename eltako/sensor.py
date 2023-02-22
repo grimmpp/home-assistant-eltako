@@ -275,18 +275,18 @@ def setup_platform(
         
     elif dev_eep in ["A5-12-01"]:
         for tariff in meter_tariffs:
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff - 1))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff - 1))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=(tariff - 1)))
 
     elif dev_eep in ["A5-12-02"]:
         for tariff in meter_tariffs:
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff - 1))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff - 1))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
 
     elif dev_eep in ["A5-12-03"]:
         for tariff in meter_tariffs:
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff - 1))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff - 1))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
     add_entities(entities)
 
