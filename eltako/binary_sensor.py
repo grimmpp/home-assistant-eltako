@@ -19,7 +19,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .device import EltakoEntity
 
 CONF_EEP = "eep"
-CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "D5-00-01", "A5-08-01"]
+CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "F6-10-00", "D5-00-01", "A5-08-01"]
 
 DEFAULT_NAME = "Eltako binary sensor"
 DEPENDENCIES = ["eltakobus"]
@@ -130,6 +130,18 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                         "onoff": self.onoff,
                     },
                 )
+        elif self._dev_eep in ["F6-10-00"]:
+            if msg.org != 0x05:
+                return
+
+            action = (msg.data[0] & 0x70) >> 4
+
+            if action == 0x07:
+                    self._attr_is_on = False
+            elif action in (0x04, 0x06):
+                    self._attr_is_on = True
+
+            self.schedule_update_ha_state()
         elif self._dev_eep in ["D5-00-01"]:
             if msg.org == 0x06:
                 if msg.data[0] == 0x09:

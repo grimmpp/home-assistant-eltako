@@ -285,9 +285,9 @@ class EltakoWindowHandle(EltakoSensor):
 
         if action == 0x07:
             self._attr_native_value = STATE_CLOSED
-        if action in (0x04, 0x06):
+        elif action in (0x04, 0x06):
             self._attr_native_value = STATE_OPEN
-        if action == 0x05:
+        elif action == 0x05:
             self._attr_native_value = "tilt"
 
         self.schedule_update_ha_state()
