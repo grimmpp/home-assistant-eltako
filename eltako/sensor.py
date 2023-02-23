@@ -276,7 +276,7 @@ def setup_platform(
     elif dev_eep in ["A5-12-01"]:
         for tariff in meter_tariffs:
             entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=(tariff - 1)))
+        entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
     elif dev_eep in ["A5-12-02"]:
         for tariff in meter_tariffs:
@@ -332,29 +332,34 @@ class EltakoMeterSensor(EltakoSensor):
         self._tariff = tariff
 
     def value_changed(self, msg):
-        """Update the internal state of the sensor."""
-        if msg.org != 0x07 or self._tariff != msg.data[3] >> 4:
+        """Update the internal state of the sensor.
+        For cumulative values, we alway respect the channel.
+        For current values, we respect the channel just for gas and water.
+        """
+        if msg.org != 0x07:
             return
         
+        tariff = msg.data[3] >> 4
         cumulative = not (msg.data[3] & 0x04)
         value = (msg.data[0] << 16) + (msg.data[1] << 8) + msg.data[2]
         divisor = 10 ** (msg.data[3] & 0x03)
         calculatedValue = value / divisor
         
-        if cumulative and (
+        if cumulative and self._tariff == tariff and (
             self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CUMULATIVE or
             self.entity_description.key == SENSOR_TYPE_GAS_CUMULATIVE or
             self.entity_description.key == SENSOR_TYPE_WATER_CUMULATIVE):
-            self._attr_native_value = calculatedValue
+            self._attr_native_value = round(calculatedValue, 2)
+            self.schedule_update_ha_state()
         elif (not cumulative) and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
-            self._attr_native_value = calculatedValue
-        elif (not cumulative) and (
+            self._attr_native_value = round(calculatedValue, 2)
+            self.schedule_update_ha_state()
+        elif (not cumulative) and self._tariff == tariff and (
             self.entity_description.key == SENSOR_TYPE_GAS_CURRENT or
             self.entity_description.key == SENSOR_TYPE_WATER_CURRENT):
             # l/s -> m3/h
-            self._attr_native_value = calculatedValue * 3.6
-            
-        self.schedule_update_ha_state()
+            self._attr_native_value = round(calculatedValue * 3.6, 2)
+            self.schedule_update_ha_state()
 
 
 class EltakoTemperatureSensor(EltakoSensor):
