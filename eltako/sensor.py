@@ -351,7 +351,7 @@ class EltakoMeterSensor(EltakoSensor):
             self.entity_description.key == SENSOR_TYPE_WATER_CUMULATIVE):
             self._attr_native_value = round(calculatedValue, 2)
             self.schedule_update_ha_state()
-        elif (not cumulative) and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
+        elif (not cumulative) and msg.data[3] != 0x8f and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
             self._attr_native_value = round(calculatedValue, 2)
             self.schedule_update_ha_state()
         elif (not cumulative) and self._tariff == tariff and (
