@@ -210,7 +210,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST,
     name="Illuminance (west)",
     native_unit_of_measurement=LIGHT_LUX,
-    icon="mdi:weather-sunset",
+    icon="mdi:weather-sunny",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
     unique_id=lambda dev_id: f"{dev_id.plain_address().hex()}-{SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST}",
@@ -220,7 +220,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL,
     name="Illuminance (central)",
     native_unit_of_measurement=LIGHT_LUX,
-    icon="mdi:weather-sunset",
+    icon="mdi:weather-sunny",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
     unique_id=lambda dev_id: f"{dev_id.plain_address().hex()}-{SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL}",
@@ -230,7 +230,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST,
     name="Illuminance (east)",
     native_unit_of_measurement=LIGHT_LUX,
-    icon="mdi:weather-sunset",
+    icon="mdi:weather-sunny",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
     unique_id=lambda dev_id: f"{dev_id.plain_address().hex()}-{SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST}",
@@ -344,13 +344,13 @@ class EltakoMeterSensor(EltakoSensor):
         if cumulative and (
             self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CUMULATIVE or
             self.entity_description.key == SENSOR_TYPE_GAS_CUMULATIVE or
-            self.entity_description.key == SENSOR_DESC_WATER_CUMULATIVE):
+            self.entity_description.key == SENSOR_TYPE_WATER_CUMULATIVE):
             self._attr_native_value = calculatedValue
         elif (not cumulative) and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
             self._attr_native_value = calculatedValue
         elif (not cumulative) and (
             self.entity_description.key == SENSOR_TYPE_GAS_CURRENT or
-            self.entity_description.key == SENSOR_DESC_WATER_CURRENT):
+            self.entity_description.key == SENSOR_TYPE_WATER_CURRENT):
             # l/s -> m3/h
             self._attr_native_value = calculatedValue * 3.6
             
