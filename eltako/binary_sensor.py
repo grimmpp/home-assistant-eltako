@@ -70,6 +70,12 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self.onoff = -1
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
 
     @property
     def name(self):
@@ -80,18 +86,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     def device_class(self):
         """Return the class of this sensor."""
         return self._device_class
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self._dev_eep,
-        )
 
     def value_changed(self, msg):
         """Fire an event with the data that have changed.

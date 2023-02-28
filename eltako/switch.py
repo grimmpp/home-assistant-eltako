@@ -56,6 +56,12 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         self._on_state = False
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"switch.{self.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
 
     @property
     def is_on(self):
@@ -66,18 +72,6 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
     def name(self):
         """Return the device name."""
         return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self._dev_eep,
-        )
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""

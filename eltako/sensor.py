@@ -306,25 +306,18 @@ class EltakoMeterSensor(EltakoSensor):
         super().__init__(dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}_{tariff}"
         self.entity_id = f"sensor.{self.unique_id}"
-
         self._tariff = tariff
-        
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
+
     @property
     def name(self):
         """Return the default name for the sensor."""
         return f"{self.entity_description.name} (Tariff {self._tariff + 1})"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep,
-        )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor.
@@ -370,23 +363,17 @@ class EltakoWindowHandle(EltakoSensor):
         
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
 
     @property
     def name(self):
         """Return the default name for the sensor."""
         return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep,
-        )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
@@ -418,23 +405,17 @@ class EltakoWeatherStation(EltakoSensor):
         super().__init__(dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
 
     @property
     def name(self):
         """Return the default name for the sensor."""
         return self.entity_description.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep,
-        )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""

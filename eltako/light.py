@@ -71,23 +71,17 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         self._sender_id = sender_id
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
 
     @property
     def name(self):
         """Return the name of the device if any."""
         return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self._dev_eep,
-        )
 
     @property
     def brightness(self):
@@ -159,23 +153,17 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         self._sender_id = sender_id
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            manufacturer=MANUFACTURER,
+            name=dev_name,
+            model=dev_eep,
+        )
 
     @property
     def name(self):
         """Return the name of the device if any."""
         return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self._dev_eep,
-        )
 
     @property
     def is_on(self):
