@@ -6,6 +6,7 @@ from homeassistant.const import Platform
 DOMAIN = "eltako"
 DATA_ELTAKO = "eltako"
 ELTAKO_GATEWAY = "gateway"
+MANUFACTURER = "Eltako"
 
 ERROR_INVALID_GATEWAY_PATH = "invalid_gateway_path"
 

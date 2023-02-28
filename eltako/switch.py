@@ -13,14 +13,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, LOGGER
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP
+from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER
 
 CONF_EEP_SUPPORTED = ["M5-38-08"]
-DEFAULT_NAME = "Eltako Switch"
+DEFAULT_NAME = "Switch"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -53,7 +54,8 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
         self._on_state = False
-        self._attr_unique_id = f"{dev_id.plain_address().hex()}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
+        self.entity_id = f"switch.{self.unique_id}"
 
     @property
     def is_on(self):
@@ -63,7 +65,19 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
     @property
     def name(self):
         """Return the device name."""
-        return self.dev_name
+        return None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.unique_id)
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self._dev_eep,
+        )
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""

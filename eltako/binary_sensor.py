@@ -14,14 +14,15 @@ from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP
+from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER
 
 CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "F6-10-00", "D5-00-01", "A5-08-01"]
 
-DEFAULT_NAME = "Eltako binary sensor"
+DEFAULT_NAME = "Binary sensor"
 DEPENDENCIES = ["eltakobus"]
 EVENT_BUTTON_PRESSED = "button_pressed"
 
@@ -67,17 +68,30 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
-        self._attr_unique_id = f"{dev_id.plain_address().hex()}-{device_class}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
+        self.entity_id = f"binary_sensor.{self.unique_id}"
 
     @property
     def name(self):
         """Return the default name for the binary sensor."""
-        return self.dev_name
+        return None
 
     @property
     def device_class(self):
         """Return the class of this sensor."""
         return self._device_class
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.unique_id)
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self._dev_eep,
+        )
 
     def value_changed(self, msg):
         """Fire an event with the data that have changed.

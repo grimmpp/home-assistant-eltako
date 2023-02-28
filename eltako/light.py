@@ -18,15 +18,16 @@ from homeassistant.const import CONF_ID, CONF_NAME
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP
+from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER
 
 CONF_EEP_SUPPORTED = ["A5-38-08", "M5-38-08"]
 CONF_SENDER_ID = "sender_id"
 
-DEFAULT_NAME = "Eltako Light"
+DEFAULT_NAME = "Light"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -68,12 +69,25 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
-        self._attr_unique_id = f"{dev_id.plain_address().hex()}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
+        self.entity_id = f"light.{self.unique_id}"
 
     @property
     def name(self):
         """Return the name of the device if any."""
-        return self.dev_name
+        return None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.unique_id)
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self._dev_eep,
+        )
 
     @property
     def brightness(self):
@@ -143,12 +157,25 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         self._dev_eep = dev_eep
         self._on_state = False
         self._sender_id = sender_id
-        self._attr_unique_id = f"{dev_id.plain_address().hex()}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
+        self.entity_id = f"light.{self.unique_id}"
 
     @property
     def name(self):
         """Return the name of the device if any."""
-        return self.dev_name
+        return None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.unique_id)
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self._dev_eep,
+        )
 
     @property
     def is_on(self):
