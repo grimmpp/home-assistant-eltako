@@ -82,7 +82,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, self.dev_id.plain_address().hex())
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -170,7 +170,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, self.dev_id.plain_address().hex())
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,

@@ -319,7 +319,7 @@ class EltakoMeterSensor(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, self.dev_id.plain_address().hex())
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -381,7 +381,7 @@ class EltakoWindowHandle(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, self.dev_id.plain_address().hex())
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -429,7 +429,7 @@ class EltakoWeatherStation(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, self.dev_id.plain_address().hex())
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,

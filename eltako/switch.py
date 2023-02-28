@@ -72,7 +72,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, self.dev_id.plain_address().hex())
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
