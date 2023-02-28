@@ -308,7 +308,7 @@ class EltakoMeterSensor(EltakoSensor):
         self.entity_id = f"sensor.{self.unique_id}"
         self._tariff = tariff
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            identifiers={(DOMAIN, dev_id.plain_address().hex())},
             manufacturer=MANUFACTURER,
             name=dev_name,
             model=dev_eep,
@@ -364,7 +364,7 @@ class EltakoWindowHandle(EltakoSensor):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            identifiers={(DOMAIN, dev_id.plain_address().hex())},
             manufacturer=MANUFACTURER,
             name=dev_name,
             model=dev_eep,
@@ -406,7 +406,7 @@ class EltakoWeatherStation(EltakoSensor):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            identifiers={(DOMAIN, dev_id.plain_address().hex())},
             manufacturer=MANUFACTURER,
             name=dev_name,
             model=dev_eep,

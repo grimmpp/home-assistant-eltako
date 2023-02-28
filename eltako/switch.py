@@ -57,7 +57,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"switch.{self.unique_id}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex()},
+            identifiers={(DOMAIN, dev_id.plain_address().hex())},
             manufacturer=MANUFACTURER,
             name=dev_name,
             model=dev_eep,
