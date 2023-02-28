@@ -323,7 +323,7 @@ class EltakoMeterSensor(EltakoSensor):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep,
+            model=self.dev_eep,
         )
 
     def value_changed(self, msg):
@@ -385,7 +385,7 @@ class EltakoWindowHandle(EltakoSensor):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep,
+            model=self.dev_eep,
         )
 
     def value_changed(self, msg):
@@ -433,7 +433,7 @@ class EltakoWeatherStation(EltakoSensor):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep,
+            model=self.dev_eep,
         )
 
     def value_changed(self, msg):
