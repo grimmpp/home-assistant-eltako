@@ -212,8 +212,6 @@ async def async_setup_entry(
             dev_eep = entity_config.get(CONF_EEP)
             meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
 
-            entities: list[EltakoSensor] = []
-
             if dev_eep in ["A5-13-01"]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
