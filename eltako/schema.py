@@ -1,6 +1,7 @@
 """Voluptuous schemas for the Eltako integration."""
 
 from abc import ABC
+from typing import ClassVar
 import voluptuous as vol
 
 from homeassistant.components.binary_sensor import (
