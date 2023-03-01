@@ -33,14 +33,15 @@ async def async_setup_entry(
     
     entities: list[EltakoSensor] = []
     
-    for entity_config in config[Platform.BINARY_SENSOR]:
-        dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-        dev_name = entity_config.get(CONF_NAME)
-        dev_eep = entity_config.get(CONF_EEP)
-        device_class = entity_config.get(CONF_DEVICE_CLASS)
-        
-        entities.append(EltakoBinarySensor(dev_id, dev_name, dev_eep, device_class))
-        
+    if Platform.BINARY_SENSOR in config:
+        for entity_config in config[Platform.BINARY_SENSOR]:
+            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+            dev_name = entity_config.get(CONF_NAME)
+            dev_eep = entity_config.get(CONF_EEP)
+            device_class = entity_config.get(CONF_DEVICE_CLASS)
+            
+            entities.append(EltakoBinarySensor(dev_id, dev_name, dev_eep, device_class))
+
     async_add_entities(entities)
     
 

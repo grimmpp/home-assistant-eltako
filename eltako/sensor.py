@@ -205,55 +205,56 @@ async def async_setup_entry(
     
     entities: list[EltakoSensor] = []
     
-    for entity_config in config[Platform.SENSOR]:
-        dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-        dev_name = entity_config[CONF_NAME]
-        dev_eep = entity_config.get(CONF_EEP)
-        meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
+    if Platform.SENSOR in config:
+        for entity_config in config[Platform.SENSOR]:
+            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+            dev_name = entity_config[CONF_NAME]
+            dev_eep = entity_config.get(CONF_EEP)
+            meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
 
-        entities: list[EltakoSensor] = []
+            entities: list[EltakoSensor] = []
 
-        if dev_eep in ["A5-13-01"]:
-            if dev_name == "":
-                dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
+            if dev_eep in ["A5-13-01"]:
+                if dev_name == "":
+                    dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
+                    
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
+                entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
                 
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
-            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
-            
-        elif dev_eep in ["F6-10-00"]:
-            if dev_name == "":
-                dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
-            
-            entities.append(EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
-            
-        elif dev_eep in ["A5-12-01"]:
-            if dev_name == "":
-                dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
+            elif dev_eep in ["F6-10-00"]:
+                if dev_name == "":
+                    dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
                 
-            for tariff in meter_tariffs:
-                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+                entities.append(EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
+                
+            elif dev_eep in ["A5-12-01"]:
+                if dev_name == "":
+                    dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
+                    
+                for tariff in meter_tariffs:
+                    entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
+                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
-        elif dev_eep in ["A5-12-02"]:
-            if dev_name == "":
-                dev_name = DEFAULT_DEVICE_NAME_GAS_METER
-                
-            for tariff in meter_tariffs:
-                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
-                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
+            elif dev_eep in ["A5-12-02"]:
+                if dev_name == "":
+                    dev_name = DEFAULT_DEVICE_NAME_GAS_METER
+                    
+                for tariff in meter_tariffs:
+                    entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
 
-        elif dev_eep in ["A5-12-03"]:
-            if dev_name == "":
-                dev_name = DEFAULT_DEVICE_NAME_WATER_METER
-                
-            for tariff in meter_tariffs:
-                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
-                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+            elif dev_eep in ["A5-12-03"]:
+                if dev_name == "":
+                    dev_name = DEFAULT_DEVICE_NAME_WATER_METER
+                    
+                for tariff in meter_tariffs:
+                    entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
     async_add_entities(entities)
 

@@ -34,15 +34,16 @@ async def async_setup_entry(
     
     entities: list[EltakoSensor] = []
     
-    for entity_config in config[Platform.LIGHT]:
-        dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-        dev_name = entity_config.get(CONF_NAME)
-        dev_eep = entity_config.get(CONF_EEP)
-        
-        if dev_eep in ["A5-38-08"]:
-            entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
-        elif dev_eep in ["AM-38-08"]:
-            entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
+    if Platform.LIGHT in config:
+        for entity_config in config[Platform.LIGHT]:
+            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+            dev_name = entity_config.get(CONF_NAME)
+            dev_eep = entity_config.get(CONF_EEP)
+            
+            if dev_eep in ["A5-38-08"]:
+                entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
+            elif dev_eep in ["AM-38-08"]:
+                entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
         
     async_add_entities(entities)
 

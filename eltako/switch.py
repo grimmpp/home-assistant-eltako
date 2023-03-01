@@ -30,12 +30,13 @@ async def async_setup_entry(
     
     entities: list[EltakoSensor] = []
     
-    for entity_config in config[Platform.SWITCH]:
-        dev_id = AddressExpression.parse(entity_entity_config.get(CONF_ID))
-        dev_name = entity_config.get(CONF_NAME)
-        dev_eep = entity_config.get(CONF_EEP)
-        
-        entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
+    if Platform.SWITCH in config:
+        for entity_config in config[Platform.SWITCH]:
+            dev_id = AddressExpression.parse(entity_entity_config.get(CONF_ID))
+            dev_name = entity_config.get(CONF_NAME)
+            dev_eep = entity_config.get(CONF_EEP)
+            
+            entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
         
     async_add_entities(entities)
 
