@@ -39,7 +39,8 @@ async def async_setup_entry(
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
             dev_eep = entity_config.get(CONF_EEP)
-            
+            sender_id = entity_config.get(CONF_SENDER_ID)
+
             if dev_eep in ["A5-38-08"]:
                 entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
             elif dev_eep in ["AM-38-08"]:

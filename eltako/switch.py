@@ -35,7 +35,8 @@ async def async_setup_entry(
             dev_id = AddressExpression.parse(entity_entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
             dev_eep = entity_config.get(CONF_EEP)
-            
+            sender_id = entity_config.get(CONF_SENDER_ID)
+
             entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
         
     async_add_entities(entities)
