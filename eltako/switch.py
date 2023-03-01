@@ -5,45 +5,39 @@ from typing import Any
 
 from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
-import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.const import CONF_ID, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import DOMAIN, LOGGER
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER
-
-CONF_EEP_SUPPORTED = ["M5-38-08"]
-DEFAULT_NAME = "Switch"
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-        vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    }
-)
+from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG
 
 
-async def async_setup_platform(
+async def async_setup_entry(
     hass: HomeAssistant,
-    config: ConfigType,
+    config_entry: config_entries.ConfigEntry,
     async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Eltako switch platform."""
-    dev_id = AddressExpression.parse(config.get(CONF_ID))
-    dev_name = config.get(CONF_NAME)
-    dev_eep = config.get(CONF_EEP)
-
-    async_add_entities([EltakoSwitch(dev_id, dev_name, dev_eep)])
+    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
+    
+    entities: list[EltakoSensor] = []
+    
+    for entity_config in config[Platform.SWITCH]:
+        dev_id = AddressExpression.parse(entity_entity_config.get(CONF_ID))
+        dev_name = entity_config.get(CONF_NAME)
+        dev_eep = entity_config.get(CONF_EEP)
+        
+        entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
+        
+    async_add_entities(entities)
 
 
 class EltakoSwitch(EltakoEntity, SwitchEntity):

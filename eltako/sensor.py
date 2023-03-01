@@ -8,7 +8,6 @@ from dataclasses import dataclass
 
 from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
-import voluptuous as vol
 
 from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
@@ -31,20 +30,17 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfVolume,
     UnitOfVolumeFlowRate,
+    Platform,
 )
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER
-
-CONF_EEP_SUPPORTED = ["A5-13-01", "F6-10-00", "A5-12-01", "A5-12-02", "A5-12-03"]
-CONF_METER_TARIFFS = "meter_tariffs"
-CONF_METER_TARIFFS_DEFAULT = [1]
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG
 
 DEFAULT_DEVICE_NAME_WINDOW_HANDLE = "Window handle"
 DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"
@@ -199,73 +195,67 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
 )
 
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-        vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-        vol.Optional(CONF_NAME, default=''): cv.string,
-        vol.Optional(CONF_METER_TARIFFS, default=CONF_METER_TARIFFS_DEFAULT): vol.All(cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=1, max=16))]),
-    }
-)
-
-
-def setup_platform(
+async def async_setup_entry(
     hass: HomeAssistant,
-    config: ConfigType,
-    add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    config_entry: config_entries.ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako sensor device."""
-    dev_id = AddressExpression.parse(config.get(CONF_ID))
-    dev_name = config[CONF_NAME]
-    dev_eep = config.get(CONF_EEP)
-    meter_tariffs = config.get(CONF_METER_TARIFFS)
-
+    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
+    
     entities: list[EltakoSensor] = []
     
-    if dev_eep in ["A5-13-01"]:
-        if dev_name == '':
-            dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
-            
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
-        entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
-        
-    elif dev_eep in ["F6-10-00"]:
-        if dev_name == '':
-            dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
-        
-        entities.append(EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
-        
-    elif dev_eep in ["A5-12-01"]:
-        if dev_name == '':
-            dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
-            
-        for tariff in meter_tariffs:
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-        entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+    for entity_config in config[Platform.SENSOR]:
+        dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+        dev_name = entity_config[CONF_NAME]
+        dev_eep = entity_config.get(CONF_EEP)
+        meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
 
-    elif dev_eep in ["A5-12-02"]:
-        if dev_name == '':
-            dev_name = DEFAULT_DEVICE_NAME_GAS_METER
-            
-        for tariff in meter_tariffs:
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
+        entities: list[EltakoSensor] = []
 
-    elif dev_eep in ["A5-12-03"]:
-        if dev_name == '':
-            dev_name = DEFAULT_DEVICE_NAME_WATER_METER
+        if dev_eep in ["A5-13-01"]:
+            if dev_name == "":
+                dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
+                
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
+            entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
             
-        for tariff in meter_tariffs:
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
-            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+        elif dev_eep in ["F6-10-00"]:
+            if dev_name == "":
+                dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
+            
+            entities.append(EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
+            
+        elif dev_eep in ["A5-12-01"]:
+            if dev_name == "":
+                dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
+                
+            for tariff in meter_tariffs:
+                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
+            entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
-    add_entities(entities)
+        elif dev_eep in ["A5-12-02"]:
+            if dev_name == "":
+                dev_name = DEFAULT_DEVICE_NAME_GAS_METER
+                
+            for tariff in meter_tariffs:
+                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
+                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
+
+        elif dev_eep in ["A5-12-03"]:
+            if dev_name == "":
+                dev_name = DEFAULT_DEVICE_NAME_WATER_METER
+                
+            for tariff in meter_tariffs:
+                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
+                entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+
+    async_add_entities(entities)
 
 
 class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
@@ -307,17 +297,23 @@ class EltakoMeterSensor(EltakoSensor):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}_{tariff}"
         self.entity_id = f"sensor.{self.unique_id}"
         self._tariff = tariff
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex())},
-            manufacturer=MANUFACTURER,
-            name=dev_name,
-            model=dev_eep,
-        )
 
     @property
     def name(self):
         """Return the default name for the sensor."""
         return f"{self.entity_description.name} (Tariff {self._tariff + 1})"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep,
+        )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor.
@@ -363,17 +359,23 @@ class EltakoWindowHandle(EltakoSensor):
         
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex())},
-            manufacturer=MANUFACTURER,
-            name=dev_name,
-            model=dev_eep,
-        )
 
     @property
     def name(self):
         """Return the default name for the sensor."""
         return None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep,
+        )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
@@ -405,17 +407,23 @@ class EltakoWeatherStation(EltakoSensor):
         super().__init__(dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex())},
-            manufacturer=MANUFACTURER,
-            name=dev_name,
-            model=dev_eep,
-        )
 
     @property
     def name(self):
         """Return the default name for the sensor."""
         return self.entity_description.name
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep,
+        )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""

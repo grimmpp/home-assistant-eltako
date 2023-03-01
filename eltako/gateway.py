@@ -9,8 +9,11 @@ from eltakobus.message import ESP2Message
 import serial
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from homeassistant.helpers import device_registry as dr
 
-from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER
+from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER, MANUFACTURER
+
+DEFAULT_NAME = "Eltako gateway"
 
 
 class EltakoGateway:
@@ -20,7 +23,7 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass, serial_path):
+    def __init__(self, hass, serial_path, config_entry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
@@ -30,6 +33,14 @@ class EltakoGateway:
         self.identifier = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
+        
+        device_registry = dr.async_get(hass)
+        device_registry.async_get_or_create(
+            config_entry_id=config_entry.entry_id,
+            identifiers={(DOMAIN, serial_path)},
+            manufacturer=MANUFACTURER,
+            name=DEFAULT_NAME,
+        )
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""

@@ -6,7 +6,6 @@ from typing import Any
 
 from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
-import voluptuous as vol
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -14,47 +13,39 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
 )
-from homeassistant.const import CONF_ID, CONF_NAME
+from homeassistant import config_entries
+from homeassistant.const import CONF_ID, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER
-
-CONF_EEP_SUPPORTED = ["A5-38-08", "M5-38-08"]
-CONF_SENDER_ID = "sender_id"
-
-DEFAULT_NAME = "Light"
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-        vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-        vol.Required(CONF_SENDER_ID): cv.string,
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    }
-)
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER_ID, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG
 
 
-def setup_platform(
+async def async_setup_entry(
     hass: HomeAssistant,
-    config: ConfigType,
-    add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    config_entry: config_entries.ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako light platform."""
-    sender_id = config.get(CONF_SENDER_ID)
-    dev_name = config.get(CONF_NAME)
-    dev_eep = config.get(CONF_EEP)
-    dev_id = AddressExpression.parse(config.get(CONF_ID))
+    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     
-    if dev_eep in ["A5-38-08"]:
-        add_entities([EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id)])
-    elif dev_eep in ["AM-38-08"]:
-        add_entities([EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id)])
+    entities: list[EltakoSensor] = []
+    
+    for entity_config in config[Platform.LIGHT]:
+        dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+        dev_name = entity_config.get(CONF_NAME)
+        dev_eep = entity_config.get(CONF_EEP)
+        
+        if dev_eep in ["A5-38-08"]:
+            entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
+        elif dev_eep in ["AM-38-08"]:
+            entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
+        
+    async_add_entities(entities)
+
 
 class EltakoDimmableLight(EltakoEntity, LightEntity):
     """Representation of an Eltako light source."""
@@ -71,17 +62,23 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         self._sender_id = sender_id
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex())},
-            manufacturer=MANUFACTURER,
-            name=dev_name,
-            model=dev_eep,
-        )
 
     @property
     def name(self):
         """Return the name of the device if any."""
         return None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self._dev_eep,
+        )
 
     @property
     def brightness(self):
@@ -153,17 +150,23 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         self._sender_id = sender_id
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex())},
-            manufacturer=MANUFACTURER,
-            name=dev_name,
-            model=dev_eep,
-        )
 
     @property
     def name(self):
         """Return the name of the device if any."""
         return None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self._dev_eep,
+        )
 
     @property
     def is_on(self):
