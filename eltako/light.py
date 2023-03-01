@@ -43,7 +43,7 @@ async def async_setup_entry(
 
             if dev_eep in ["A5-38-08"]:
                 entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
-            elif dev_eep in ["AM-38-08"]:
+            elif dev_eep in ["M5-38-08"]:
                 entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
         
     async_add_entities(entities)
