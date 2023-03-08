@@ -140,9 +140,11 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 },
             )
         elif self._dev_eep in [F6_10_00]:
-            if decoded.movement == 0x07:
+            action = (decoded.movement & 0x70) >> 4
+            
+            if action == 0x07:
                 self._attr_is_on = False
-            elif decoded.movement in (0x04, 0x06):
+            elif action in (0x04, 0x06):
                 self._attr_is_on = False
             else:
                 return
