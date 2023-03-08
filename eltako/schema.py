@@ -3,6 +3,8 @@
 from abc import ABC
 from typing import ClassVar
 import voluptuous as vol
+from eltakobus.eep import *
+
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
@@ -57,7 +59,7 @@ class BinarySensorSchema(EltakoPlatformSchema):
     CONF_EEP = CONF_EEP
     CONF_ID_REGEX = CONF_ID_REGEX
     
-    CONF_EEP_SUPPORTED = ["F6-02-01", "F6-02-02", "F6-10-00", "D5-00-01", "A5-08-01"]
+    CONF_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 
     DEFAULT_NAME = "Binary sensor"
 
@@ -81,7 +83,7 @@ class LightSchema(EltakoPlatformSchema):
     CONF_ID_REGEX = CONF_ID_REGEX
     CONF_SENDER_ID = CONF_SENDER_ID
 
-    CONF_EEP_SUPPORTED = ["A5-38-08", "M5-38-08"]
+    CONF_EEP_SUPPORTED = [A5_38_08.eep_string, M5_38_08.eep_string]
 
     DEFAULT_NAME = "Light"
 
@@ -90,7 +92,7 @@ class LightSchema(EltakoPlatformSchema):
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER_ID): cv.string,
+                vol.Required(CONF_SENDER_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
@@ -105,7 +107,7 @@ class SwitchSchema(EltakoPlatformSchema):
     CONF_ID_REGEX = CONF_ID_REGEX
     CONF_SENDER_ID = CONF_SENDER_ID
 
-    CONF_EEP_SUPPORTED = ["M5-38-08"]
+    CONF_EEP_SUPPORTED = [M5_38_08.eep_string]
 
     DEFAULT_NAME = "Switch"
 
@@ -114,7 +116,7 @@ class SwitchSchema(EltakoPlatformSchema):
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER_ID): cv.string,
+                vol.Required(CONF_SENDER_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
@@ -129,7 +131,7 @@ class SensorSchema(EltakoPlatformSchema):
     CONF_ID_REGEX = CONF_ID_REGEX
     CONF_METER_TARIFFS = CONF_METER_TARIFFS
     
-    CONF_EEP_SUPPORTED = ["A5-13-01", "F6-10-00", "A5-12-01", "A5-12-02", "A5-12-03"]
+    CONF_EEP_SUPPORTED = [A5_13_01.eep_string, F6_10_00.eep_string, A5_12_01.eep_string, A5_12_02.eep_string, A5_12_03.eep_string]
 
     DEFAULT_NAME = ""
     DEFAULT_METER_TARIFFS = [1]
