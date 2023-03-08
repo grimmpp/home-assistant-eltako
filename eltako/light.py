@@ -204,7 +204,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         elif discriminator == "right":
             action = 2
         else:
-            discriminator = 0
+            action = 0
             
         msg = F6_02_01(action, 1, 0, 0).encode_message(address)
         self.send_message(msg)
@@ -220,7 +220,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         elif discriminator == "right":
             action = 3
         else:
-            discriminator = 1
+            action = 1
             
         msg = F6_02_01(action, 1, 0, 0).encode_message(address)
         self.send_message(msg)
