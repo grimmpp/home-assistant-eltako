@@ -5,6 +5,7 @@ from typing import Any
 
 from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
+from eltakobus.eep import *
 
 from homeassistant import config_entries
 from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
@@ -34,10 +35,16 @@ async def async_setup_entry(
         for entity_config in config[Platform.SWITCH]:
             dev_id = AddressExpression.parse(entity_entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
-            dev_eep = entity_config.get(CONF_EEP)
-            sender_id = entity_config.get(CONF_SENDER_ID)
+            sender_id = AddressExpression.parse(entity_config.get(CONF_SENDER_ID))
+            eep_string = entity_config.get(CONF_EEP)
 
-            entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
+            try:
+                dev_eep = EEP.find(eep_string)
+            except:
+                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                continue
+            else:
+                entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
         
     async_add_entities(entities)
 
@@ -45,10 +52,11 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, dev_id, dev_name, dev_eep):
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id):
         """Initialize the Eltako switch device."""
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
+        self._sender_id = sender_id
         self._on_state = False
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"switch.{self.unique_id}"
@@ -56,7 +64,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             identifiers={(DOMAIN, dev_id.plain_address().hex())},
             manufacturer=MANUFACTURER,
             name=dev_name,
-            model=dev_eep,
+            model=dev_eep.eep_string,
         )
 
     @property
@@ -71,36 +79,44 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
-        optional = [0x03]
-        optional.extend(self.dev_id)
-        optional.extend([0xFF, 0x00])
-        self.send_command(
-            data=[0xD2, 0x01, 0xFF, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00],
-            optional=optional,
-            packet_type=0x01,
-        )
+        address, discriminator = self._sender_id
+        
+        if discriminator == "left":
+            action = 0
+        elif discriminator == "right":
+            action = 2
+        else:
+            discriminator = 0
+            
+        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+        self.send_message(msg)
+        
         self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
-        optional = [0x03]
-        optional.extend(self.dev_id)
-        optional.extend([0xFF, 0x00])
-        self.send_command(
-            data=[0xD2, 0x01, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-            optional=optional,
-            packet_type=0x01,
-        )
+        address, discriminator = self._sender_id
+        
+        if discriminator == "left":
+            action = 1
+        elif discriminator == "right":
+            action = 3
+        else:
+            discriminator = 1
+            
+        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+        self.send_message(msg)
+        
         self._on_state = False
 
     def value_changed(self, msg):
         """Update the internal state of the switch."""
-        if self._dev_eep in ["M5-38-08"]:
-            if msg.org != 0x05:
-                return
-                
-            if msg.data[0] == 0x70:
-                self._on_state = True
-            elif msg.data[0] == 0x50:
-                self._on_state = False
+        try:
+            decoded = self._dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
+            return
+
+        if self._dev_eep in [M5_38_08]:
+            self._on_state = decoded.state
             self.schedule_update_ha_state()

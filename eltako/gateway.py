@@ -56,9 +56,9 @@ class EltakoGateway:
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
-    def _send_message_callback(self, request):
+    def _send_message_callback(self, msg):
         """Send a request through the Eltako gateway."""
-        self._bus.send(request)
+        self._bus.send(msg)
 
     async def _initialize_bus_task(self, run):
         """Call bus.run in a task that takes down main if it crashes, and is

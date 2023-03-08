@@ -97,7 +97,10 @@ class EltakoEntity(Entity):
 
     def value_changed(self, msg):
         """Update the internal state of the device when a message arrives."""
-
+    
+    def send_message(self, msg):
+        dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+        
     def send_command(self, data, optional, packet_type):
         """Send a command via the Eltako gateway."""
 # TODO: Replace packet with ESP2Message

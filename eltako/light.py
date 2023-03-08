@@ -39,7 +39,7 @@ async def async_setup_entry(
         for entity_config in config[Platform.LIGHT]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
-            sender_id = entity_config.get(CONF_SENDER_ID)
+            sender_id = AddressExpression.parse(entity_config.get(CONF_SENDER_ID))
             eep_string = entity_config.get(CONF_EEP)
 
             try:
@@ -197,24 +197,34 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
-        if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
-            self._brightness = brightness
-
-        bval = math.floor(self._brightness / 256.0 * 100.0)
-        if bval == 0:
-            bval = 1
-        command = [0xA5, 0x02, bval, 0x01, 0x09]
-        command.extend(self._sender_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
+        address, discriminator = self._sender_id
+        
+        if discriminator == "left":
+            action = 0
+        elif discriminator == "right":
+            action = 2
+        else:
+            discriminator = 0
+            
+        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+        self.send_message(msg)
+        
         self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
-        command = [0xA5, 0x02, 0x00, 0x01, 0x09]
-        command.extend(self._sender_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
+        address, discriminator = self._sender_id
+        
+        if discriminator == "left":
+            action = 1
+        elif discriminator == "right":
+            action = 3
+        else:
+            discriminator = 1
+            
+        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+        self.send_message(msg)
+        
         self._on_state = False
 
     def value_changed(self, msg):
