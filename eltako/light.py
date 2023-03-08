@@ -6,6 +6,7 @@ from typing import Any
 
 from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
+from eltakobus.eep import *
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -38,13 +39,19 @@ async def async_setup_entry(
         for entity_config in config[Platform.LIGHT]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
-            dev_eep = entity_config.get(CONF_EEP)
             sender_id = entity_config.get(CONF_SENDER_ID)
+            eep_string = entity_config.get(CONF_EEP)
 
-            if dev_eep in ["A5-38-08"]:
-                entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
-            elif dev_eep in ["M5-38-08"]:
-                entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
+            try:
+                dev_eep = EEP.find(eep_string)
+            except:
+                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                continue
+            else:
+                if dev_eep in ["A5-38-08"]:
+                    entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
+                elif dev_eep in ["M5-38-08"]:
+                    entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
         
     async_add_entities(entities)
 
@@ -79,7 +86,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep,
+            model=self._dev_eep.eep_string,
         )
 
     @property
@@ -124,18 +131,31 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         Dimmer devices like Eltako FUD61 send telegram in different RORGs.
         We only care about the 4BS (0xA5).
         """
-        if self._dev_eep in ["A5-38-08"]:
-            if msg.org != 0x07 or msg.data[0] != 0x02:
-                return
-            
-            # Bits should be data (0x08), absolute (not 0x04), don't store (not 0x02), and on or off fitting the dim value (0x01)
-            expected_3 = 0x09 if msg.data[1] != 0 else 0x08
-            if msg.data[3] != expected_3:
+        try:
+            decoded = self._dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
+            return
+
+        if self._dev_eep in [A5_38_08]:
+            if decoded.command == 0x01:
+                if decoded.switching.learn_button != 1:
+                    return
+                    
+                self._on_state = decoded.switching.switching_command
+            elif decoded.command == 0x02:
+                if decoded.dimming.learn_button != 1:
+                    return
+                    
+                if decoded.dimming.dimming_range == 0:
+                    self._brightness = math.floor(decoded.dimming.dimming_value / 255.0 * 256.0)
+                elif decoded.dimming.dimming_range == 1:
+                    self._brightness = math.floor(decoded.dimming.dimming_value / 100.0 * 256.0)
+
+                self._on_state = decoded.dimming.switching_command
+            else:
                 return
 
-            val = msg.data[1]
-            self._brightness = math.floor(val / 100.0 * 256.0)
-            self._on_state = bool(val != 0)
             self.schedule_update_ha_state()
 
 class EltakoSwitchableLight(EltakoEntity, LightEntity):
@@ -167,7 +187,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep,
+            model=self._dev_eep.eep_string,
         )
 
     @property
@@ -199,12 +219,12 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
-        if self._dev_eep in ["M5-38-08"]:
-            if msg.org != 0x05:
-                return
-                
-            if msg.data[0] == 0x70:
-                self._on_state = True
-            elif msg.data[0] == 0x50:
-                self._on_state = False
+        try:
+            decoded = self._dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
+            return
+
+        if self._dev_eep in [M5_38_08]:
+            self._on_state = decoded.state
             self.schedule_update_ha_state()
