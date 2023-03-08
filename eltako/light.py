@@ -48,9 +48,9 @@ async def async_setup_entry(
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                if dev_eep in ["A5-38-08"]:
+                if dev_eep in [A5_38_08]:
                     entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
-                elif dev_eep in ["M5-38-08"]:
+                elif dev_eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
         
     async_add_entities(entities)
