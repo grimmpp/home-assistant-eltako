@@ -199,7 +199,8 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         """Turn the light source on or sets a specific dimmer value."""
         address, _ = self._sender_id
         
-        msg = A5_38_08(command=1, switching=_CentralCommandSwitching(0, 1, 0, 0, 1)).encode_message(address)
+        switching = CentralCommandSwitching(0, 1, 0, 0, 1)
+        msg = A5_38_08(command=1, switching=switching).encode_message(address)
         self.send_message(msg)
 
         self._on_state = True
@@ -208,7 +209,8 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         """Turn the light source off."""
         address, _ = self._sender_id
         
-        msg = A5_38_08(command=1, switching=_CentralCommandSwitching(0, 1, 0, 0, 0)).encode_message(address)
+        switching = CentralCommandSwitching(0, 1, 0, 0, 0)
+        msg = A5_38_08(command=1, switching=switching).encode_message(address)
         self.send_message(msg)
         
         self._on_state = False
