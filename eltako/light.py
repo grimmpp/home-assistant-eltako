@@ -197,32 +197,18 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
-        address, discriminator = self._sender_id
+        address, _ = self._sender_id
         
-        if discriminator == "left":
-            action = 0
-        elif discriminator == "right":
-            action = 2
-        else:
-            action = 0
-            
-        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+        msg = A5_38_08(command=1, switching=_CentralCommandSwitching(0, 1, 0, 0, 1)).encode_message(address)
         self.send_message(msg)
-        
+
         self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
-        address, discriminator = self._sender_id
+        address, _ = self._sender_id
         
-        if discriminator == "left":
-            action = 1
-        elif discriminator == "right":
-            action = 3
-        else:
-            action = 1
-            
-        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+        msg = A5_38_08(command=1, switching=_CentralCommandSwitching(0, 1, 0, 0, 0)).encode_message(address)
         self.send_message(msg)
         
         self._on_state = False
