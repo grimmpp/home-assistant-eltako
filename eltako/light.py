@@ -119,7 +119,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         """Turn the light source off."""
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(0, 0, 1, 1, 0, 0)
+        dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
         msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
         self.send_message(msg)
         
