@@ -109,7 +109,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(self.brightness, 0, 1, 1, 0, 1)
+        dimming = CentralCommandDimming(int(self.brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
         msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
         self.send_message(msg)
         
