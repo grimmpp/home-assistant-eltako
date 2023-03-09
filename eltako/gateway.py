@@ -60,7 +60,7 @@ class EltakoGateway:
         """Send a request through the Eltako gateway."""
         if isinstance(msg, ESP2Message):
             LOGGER.debug("Send message: %s - Serialized: %s", msg, msg.serialize().hex())
-            await self._bus.send(msg)
+            asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
 
     async def _initialize_bus_task(self, run):
         """Call bus.run in a task that takes down main if it crashes, and is
