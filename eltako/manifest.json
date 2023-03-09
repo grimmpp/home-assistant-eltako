@@ -7,5 +7,5 @@
   "iot_class": "local_push",
   "loggers": ["eltako"],
   "version": "0.0.1",
-  "requirements": ["git+https://github.com/JBosecker/eltako14bus.git@fgw14-communication#eltakobus==0.0.20"]
+  "requirements": ["git+https://github.com/JBosecker/eltako14bus.git@fgw14-communication#eltakobus==0.0.21"]
 }
