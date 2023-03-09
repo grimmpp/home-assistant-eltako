@@ -108,11 +108,11 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
             self._brightness = brightness
         else:
-            self._brightness = 256.0
+            self._brightness = 100.0
         
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(math.floor(self._brightness / 256.0 * 255.0), 0, 1, 0, 0, 1)
+        dimming = CentralCommandDimming(self._brightness, 0, 1, 1, 0, 1)
         msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
         self.send_message(msg)
         
@@ -122,7 +122,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         """Turn the light source off."""
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
+        dimming = CentralCommandDimming(0, 0, 1, 1, 0, 0)
         msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
         self.send_message(msg)
         
@@ -152,9 +152,9 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                     return
                     
                 if decoded.dimming.dimming_range == 0:
-                    self._brightness = math.floor(decoded.dimming.dimming_value / 255.0 * 256.0)
+                    self._brightness = math.floor(decoded.dimming.dimming_value / 255.0 * 100.0)
                 elif decoded.dimming.dimming_range == 1:
-                    self._brightness = math.floor(decoded.dimming.dimming_value / 100.0 * 256.0)
+                    self._brightness = decoded.dimming.dimming_value
 
                 self._on_state = decoded.dimming.switching_command
             else:
