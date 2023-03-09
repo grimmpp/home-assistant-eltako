@@ -488,16 +488,16 @@ class EltakoWeatherStation(EltakoSensor):
             if decoded.identifier != 0x02:
                 return
             
-            self._attr_native_value = decoded.sun_west
+            self._attr_native_value = decoded.sun_west * 1000.0
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL:
             if decoded.identifier != 0x02:
                 return
             
-            self._attr_native_value = decoded.sun_south
+            self._attr_native_value = decoded.sun_south * 1000.0
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST:
             if decoded.identifier != 0x02:
                 return
             
-            self._attr_native_value = decoded.sun_east
+            self._attr_native_value = decoded.sun_east * 1000.0
 
         self.schedule_update_ha_state()
