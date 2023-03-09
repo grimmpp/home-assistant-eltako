@@ -152,7 +152,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                     return
                     
                 if decoded.dimming.dimming_range == 0:
-                    self._brightness = decoded.dimming.dimming_value)
+                    self._brightness = decoded.dimming.dimming_value
                 elif decoded.dimming.dimming_range == 1:
                     self._brightness = int((decoded.dimming.dimming_value / 100.0) * 255.0)
 
