@@ -107,22 +107,26 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         """Turn the light source on or sets a specific dimmer value."""
         if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
             self._brightness = brightness
-
-        bval = math.floor(self._brightness / 256.0 * 100.0)
-        if bval == 0:
-            bval = 1
-        command = [0xA5, 0x02, bval, 0x01, 0x09]
-        command.extend(self._sender_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
+        else:
+            self._brightness = 256.0
+        
+        address, _ = self._sender_id
+        
+        dimming = CentralCommandDimming(math.floor(self._brightness / 256.0 * 255.0), 0, 1, 0, 0, 1)
+        msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
+        self.send_message(msg)
+        
         self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
-        command = [0xA5, 0x02, 0x00, 0x01, 0x09]
-        command.extend(self._sender_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
+        address, _ = self._sender_id
+        
+        dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
+        msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
+        self.send_message(msg)
+        
+        self._brightness = 0.0
         self._on_state = False
 
     def value_changed(self, msg):
@@ -200,7 +204,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         address, _ = self._sender_id
         
         switching = CentralCommandSwitching(0, 1, 0, 0, 1)
-        msg = A5_38_08(command=1, switching=switching).encode_message(address)
+        msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
         self.send_message(msg)
 
         self._on_state = True
@@ -210,7 +214,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         address, _ = self._sender_id
         
         switching = CentralCommandSwitching(0, 1, 0, 0, 0)
-        msg = A5_38_08(command=1, switching=switching).encode_message(address)
+        msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
         self.send_message(msg)
         
         self._on_state = False
