@@ -105,14 +105,11 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
-        if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
-            self._brightness = brightness
-        else:
-            self._brightness = 255
+        self._brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(self._brightness, 0, 1, 0, 0, 1)
+        dimming = CentralCommandDimming(self.brightness, 0, 1, 0, 0, 1)
         msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
         self.send_message(msg)
         
@@ -126,7 +123,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
         self.send_message(msg)
         
-        self._brightness = 0.0
+        self._brightness = 0
         self._on_state = False
 
     def value_changed(self, msg):
