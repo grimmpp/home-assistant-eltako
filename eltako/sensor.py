@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
+from eltakobus.eep import *
 
 from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
@@ -138,6 +139,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN = EltakoSensorEntityDescription(
     icon="mdi:weather-sunset",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
 )
 
 SENSOR_DESC_WEATHER_STATION_TEMPERATURE = EltakoSensorEntityDescription(
@@ -147,6 +149,7 @@ SENSOR_DESC_WEATHER_STATION_TEMPERATURE = EltakoSensorEntityDescription(
     icon="mdi:thermometer",
     device_class=SensorDeviceClass.TEMPERATURE,
     state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=1,
 )
 
 SENSOR_DESC_WEATHER_STATION_WIND_SPEED = EltakoSensorEntityDescription(
@@ -156,6 +159,7 @@ SENSOR_DESC_WEATHER_STATION_WIND_SPEED = EltakoSensorEntityDescription(
     icon="mdi:windsock",
     device_class=SensorDeviceClass.WIND_SPEED,
     state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=2,
 )
 
 SENSOR_DESC_WEATHER_STATION_RAIN = EltakoSensorEntityDescription(
@@ -174,6 +178,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST = EltakoSensorEntityDescription(
     icon="mdi:weather-sunny",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
 )
 
 SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL = EltakoSensorEntityDescription(
@@ -183,6 +188,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL = EltakoSensorEntityDescription(
     icon="mdi:weather-sunny",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
 )
 
 SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
@@ -192,6 +198,7 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
     icon="mdi:weather-sunny",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
 )
 
 
@@ -209,10 +216,16 @@ async def async_setup_entry(
         for entity_config in config[Platform.SENSOR]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config[CONF_NAME]
-            dev_eep = entity_config.get(CONF_EEP)
             meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
+            eep_string = entity_config.get(CONF_EEP)
 
-            if dev_eep in ["A5-13-01"]:
+            try:
+                dev_eep = EEP.find(eep_string)
+            except:
+                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                continue
+
+            if dev_eep in [A5_13_01]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
                     
@@ -224,13 +237,13 @@ async def async_setup_entry(
                 entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
                 entities.append(EltakoWeatherStation(dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
                 
-            elif dev_eep in ["F6-10-00"]:
+            elif dev_eep in [F6_10_00]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
                 
                 entities.append(EltakoWindowHandle(dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
                 
-            elif dev_eep in ["A5-12-01"]:
+            elif dev_eep in [A5_12_01]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
                     
@@ -238,7 +251,7 @@ async def async_setup_entry(
                     entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
                 entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
-            elif dev_eep in ["A5-12-02"]:
+            elif dev_eep in [A5_12_02]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_GAS_METER
                     
@@ -246,7 +259,7 @@ async def async_setup_entry(
                     entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
                     entities.append(EltakoMeterSensor(dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
 
-            elif dev_eep in ["A5-12-03"]:
+            elif dev_eep in [A5_12_03]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WATER_METER
                     
@@ -311,7 +324,7 @@ class EltakoMeterSensor(EltakoSensor):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self.dev_eep,
+            model=self.dev_eep.eep_string,
         )
 
     def value_changed(self, msg):
@@ -319,13 +332,19 @@ class EltakoMeterSensor(EltakoSensor):
         For cumulative values, we alway respect the channel.
         For current values, we respect the channel just for gas and water.
         """
-        if msg.org != 0x07:
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
             return
         
-        tariff = msg.data[3] >> 4
-        cumulative = not (msg.data[3] & 0x04)
-        value = (msg.data[0] << 16) + (msg.data[1] << 8) + msg.data[2]
-        divisor = 10 ** (msg.data[3] & 0x03)
+        if decoded.learn_button != 1:
+            return
+        
+        tariff = decoded.measurement_channel
+        cumulative = not decoded.data_type
+        value = decoded.meter_reading
+        divisor = 10 ** decoded.divisor
         calculatedValue = value / divisor
         
         if cumulative and self._tariff == tariff and (
@@ -334,7 +353,7 @@ class EltakoMeterSensor(EltakoSensor):
             self.entity_description.key == SENSOR_TYPE_WATER_CUMULATIVE):
             self._attr_native_value = round(calculatedValue, 2)
             self.schedule_update_ha_state()
-        elif (not cumulative) and msg.data[3] != 0x8f and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT:
+        elif (not cumulative) and msg.data[3] != 0x8F and self.entity_description.key == SENSOR_TYPE_ELECTRICITY_CURRENT: # 0x8F means that, it's sending the serial number of the meter
             self._attr_native_value = round(calculatedValue, 2)
             self.schedule_update_ha_state()
         elif (not cumulative) and self._tariff == tariff and (
@@ -373,23 +392,30 @@ class EltakoWindowHandle(EltakoSensor):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self.dev_eep,
+            model=self.dev_eep.eep_string,
         )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
-        
-        if msg.org != 0x05:
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
             return
-
-        action = (msg.data[0] & 0x70) >> 4
-
+        
+        if decoded.learn_button != 1:
+            return
+        
+        action = (decoded.movement & 0x70) >> 4
+        
         if action == 0x07:
             self._attr_native_value = STATE_CLOSED
         elif action in (0x04, 0x06):
             self._attr_native_value = STATE_OPEN
         elif action == 0x05:
             self._attr_native_value = "tilt"
+        else:
+            return
 
         self.schedule_update_ha_state()
 
@@ -421,49 +447,57 @@ class EltakoWeatherStation(EltakoSensor):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self.dev_eep,
+            model=self.dev_eep.eep_string,
         )
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
+            return
         
-        if msg.org != 0x07 or msg.data == bytes((0, 0, 0xff, 0x1a)):
+        if decoded.learn_button != 1:
+            return
+        
+        if msg.data == bytes((0, 0, 0xFF, 0x1A)): # I don't really know why this is filtered out
             return
 
         if self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_DAWN:
-            if msg.data[3] >> 4 != 1:
+            if decoded.identifier != 0x01:
                 return
             
-            self._attr_native_value = round(999 * msg.data[0] / 255)
+            self._attr_native_value = decoded.dawn_sensor
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_TEMPERATURE:
-            if msg.data[3] >> 4 != 1:
+            if decoded.identifier != 0x01:
                 return
             
-            self._attr_native_value = round(-40 + 120 * msg.data[1] / 255, 2)
+            self._attr_native_value = decoded.temperature
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_WIND_SPEED:
-            if msg.data[3] >> 4 != 1:
+            if decoded.identifier != 0x01:
                 return
             
-            self._attr_native_value = round(70 * msg.data[2] / 255, 2)
+            self._attr_native_value = decoded.wind_speed
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_RAIN:
-            if msg.data[3] >> 4 != 1:
+            if decoded.identifier != 0x01:
                 return
             
-            self._attr_native_value = bool(msg.data[3] & 0x02)
+            self._attr_native_value = decoded.rain_indication
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST:
-            if msg.data[3] >> 4 != 2:
+            if decoded.identifier != 0x02:
                 return
             
-            self._attr_native_value = round(150000 * msg.data[0] / 255)
+            self._attr_native_value = decoded.sun_west
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL:
-            if msg.data[3] >> 4 != 2:
+            if decoded.identifier != 0x02:
                 return
             
-            self._attr_native_value = round(150000 * msg.data[1] / 255)
+            self._attr_native_value = decoded.sun_south
         elif self.entity_description.key == SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST:
-            if msg.data[3] >> 4 != 2:
+            if decoded.identifier != 0x02:
                 return
             
-            self._attr_native_value = round(150000 * msg.data[2] / 255)
+            self._attr_native_value = decoded.sun_east
 
         self.schedule_update_ha_state()

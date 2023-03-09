@@ -59,7 +59,7 @@ class EltakoGateway:
     def _send_message_callback(self, msg):
         """Send a request through the Eltako gateway."""
         if isinstance(msg, ESP2Message):
-            LOGGER.debug("Send message: %s", msg)
+            LOGGER.debug("Send message: %s - Serialized: %s", msg, msg.serialize().hex())
             self._bus.send(msg)
 
     async def _initialize_bus_task(self, run):
