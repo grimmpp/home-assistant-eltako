@@ -184,7 +184,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
             elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
                 time_in_seconds = decoded.time / 10.0
                 
-                if direction == 0x01: # up
+                if decoded.direction == 0x01: # up
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
                 else: # down
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
