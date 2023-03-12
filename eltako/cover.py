@@ -30,7 +30,7 @@ async def async_setup_entry(
     
     if Platform.COVER in config:
         for entity_config in config[Platform.COVER]:
-            dev_id = AddressExpression.parse(entity_entity_config.get(CONF_ID))
+            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
             sender_id = AddressExpression.parse(entity_config.get(CONF_SENDER_ID))
             device_class = entity_config.get(CONF_DEVICE_CLASS)
