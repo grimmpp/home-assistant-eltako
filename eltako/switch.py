@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
@@ -16,7 +15,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import DOMAIN, LOGGER
 from .device import EltakoEntity
 from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
 
@@ -44,7 +42,7 @@ async def async_setup_entry(
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoSwitch(dev_id, dev_name, dev_eep))
+                entities.append(EltakoSwitch(dev_id, dev_name, dev_eep, sender_id))
         
     async_add_entities(entities)
 
@@ -60,12 +58,17 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         self._on_state = False
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"switch.{self.unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, dev_id.plain_address().hex())},
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
-            name=dev_name,
-            model=dev_eep.eep_string,
-        )
+            model=self._dev_eep.eep_string,
 
     @property
     def is_on(self):

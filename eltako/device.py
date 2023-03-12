@@ -7,7 +7,6 @@ from eltakobus.message import RPSMessage
 from eltakobus.message import Regular4BSMessage
 from eltakobus.message import Regular1BSMessage
 from eltakobus.error import ParseError
-from eltakobus.util import combine_hex
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity

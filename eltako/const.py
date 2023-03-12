@@ -20,10 +20,13 @@ CONF_EEP = "eep"
 CONF_SENDER_ID = "sender_id"
 CONF_ID_REGEX = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})( (left|right))?$"
 CONF_METER_TARIFFS = "meter_tariffs"
+CONF_TIME_CLOSES = "time_closes"
+CONF_TIME_OPENS = "time_opens"
 
 PLATFORMS = [
     Platform.LIGHT,
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.COVER,
 ]

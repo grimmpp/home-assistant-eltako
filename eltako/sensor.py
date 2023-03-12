@@ -6,7 +6,6 @@ from enum import Enum
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 

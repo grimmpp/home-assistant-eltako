@@ -4,7 +4,6 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from eltakobus.util import combine_hex
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
