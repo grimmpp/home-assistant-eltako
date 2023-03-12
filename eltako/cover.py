@@ -7,7 +7,7 @@ from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
 from homeassistant import config_entries
-from homeassistant.components.cover import PLATFORM_SCHEMA, CoverEntity, CoverEntityFeature
+from homeassistant.components.cover import PLATFORM_SCHEMA, CoverEntity, CoverEntityFeature, ATTR_POSITION
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
