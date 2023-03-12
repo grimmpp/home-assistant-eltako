@@ -56,7 +56,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
         self._sender_id = sender_id
-        self._device_class = device_class
+        self._attr_device_class = device_class
         self._attr_is_opening = False
         self._attr_is_closing = False
         self._attr_is_closed = False
