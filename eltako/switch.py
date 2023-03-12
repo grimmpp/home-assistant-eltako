@@ -69,7 +69,8 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self._dev_eep.eep_string,
-
+        )
+        
     @property
     def is_on(self):
         """Return whether the switch is on or off."""
