@@ -30,6 +30,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
+    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
     
     entities: list[EltakoSensor] = []
     
@@ -46,7 +47,7 @@ async def async_setup_entry(
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoBinarySensor(dev_id, dev_name, dev_eep, device_class))
+                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class))
 
 
     async_add_entities(entities)
@@ -62,9 +63,9 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - D5-00-01
     """
 
-    def __init__(self, dev_id, dev_name, dev_eep, device_class):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, device_class):
         """Initialize the Eltako binary sensor."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
         self._device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
@@ -90,6 +91,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self._dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
         )
 
     def value_changed(self, msg):

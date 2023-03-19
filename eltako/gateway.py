@@ -37,7 +37,7 @@ class EltakoGateway:
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
-            identifiers={(DOMAIN, serial_path)},
+            identifiers={(DOMAIN, self.unique_id)},
             manufacturer=MANUFACTURER,
             name=DEFAULT_NAME,
         )
@@ -114,6 +114,11 @@ class EltakoGateway:
         if isinstance(message, ESP2Message):
             LOGGER.debug("Received message: %s", message)
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
+            
+    @property
+    def unique_id(self):
+        """Return the unique id of the gateway."""
+        return self.serial_path
 
 
 def detect():

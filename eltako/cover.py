@@ -25,7 +25,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako cover platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    
+    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+
     entities: list[EltakoSensor] = []
     
     if Platform.COVER in config:
@@ -48,16 +49,16 @@ async def async_setup_entry(
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoCover(dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
+                entities.append(EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
         
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens):
         """Initialize the Eltako cover device."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
         self._sender_id = sender_id
         self._sender_eep = sender_eep
@@ -86,6 +87,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self._dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
         )
         
     @property

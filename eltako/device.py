@@ -12,8 +12,9 @@ class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
 
-    def __init__(self, dev_id, dev_name="Device"):
+    def __init__(self, gateway, dev_id, dev_name="Device"):
         """Initialize the device."""
+        self.gateway = gateway
         self.dev_id = dev_id
         self.dev_name = dev_name
 

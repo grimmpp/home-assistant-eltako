@@ -31,7 +31,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako light platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    
+    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+
     entities: list[EltakoSensor] = []
     
     if Platform.LIGHT in config:
@@ -52,9 +53,9 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(EltakoDimmableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
                 elif dev_eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     async_add_entities(entities)
 
@@ -65,9 +66,9 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako light source."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
         self._on_state = False
         self._brightness = 50
@@ -91,6 +92,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self._dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
         )
 
     @property
@@ -171,9 +173,9 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako light source."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
         self._on_state = False
         self._sender_id = sender_id
@@ -196,6 +198,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self._dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
         )
 
     @property

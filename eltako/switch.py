@@ -26,7 +26,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako switch platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    
+    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+
     entities: list[EltakoSensor] = []
     
     if Platform.SWITCH in config:
@@ -46,7 +47,7 @@ async def async_setup_entry(
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoSwitch(dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                entities.append(EltakoSwitch(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     async_add_entities(entities)
 
@@ -54,9 +55,9 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako switch device."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
         self._sender_id = sender_id
         self._sender_eep = sender_eep
@@ -74,6 +75,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self._dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
         )
         
     @property
