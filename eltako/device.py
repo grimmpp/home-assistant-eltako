@@ -1,11 +1,5 @@
 """Representation of an Eltako device."""
-from eltakobus.message import ESP2Message
-from eltakobus.message import EltakoWrappedRPS
-from eltakobus.message import EltakoWrapped1BS
-from eltakobus.message import EltakoWrapped4BS
-from eltakobus.message import RPSMessage
-from eltakobus.message import Regular4BSMessage
-from eltakobus.message import Regular1BSMessage
+from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
 from eltakobus.error import ParseError
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
@@ -99,9 +93,3 @@ class EltakoEntity(Entity):
     
     def send_message(self, msg):
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
-        
-    def send_command(self, data, optional, packet_type):
-        """Send a command via the Eltako gateway."""
-# TODO: Replace packet with ESP2Message
-        #packet = Packet(packet_type, data=data, optional=optional)
-        #dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, packet)

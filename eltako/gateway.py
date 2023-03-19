@@ -116,14 +116,14 @@ class EltakoGateway:
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
 
 
+@classmethod
 def detect():
     """Return a list of candidate paths for USB Eltako gateways.
 
     This method is currently a bit simplistic, it may need to be
     improved to support more configurations and OS.
     """
-    # TODO: Find a better way
-    globs_to_test = ["/dev/tty*Eltako*", "/dev/serial/by-id/*Eltako*"]
+    globs_to_test = ["/dev/serial/by-id/*", "/dev/serial/by-path/*"]
     found_paths = []
     for current_glob in globs_to_test:
         found_paths.extend(glob.glob(current_glob))
@@ -131,13 +131,11 @@ def detect():
     return found_paths
 
 
+@classmethod
 def validate_path(path: str):
     """Return True if the provided path points to a valid serial port, False otherwise."""
     try:
-        # Creating the serial communicator will raise an exception
-        # if it cannot connect
-        # TODO: Implement check
-        #SerialCommunicator(port=path)
+        serial.Serial(path, 57600, timeout=0.1)
         return True
     except serial.SerialException as exception:
         LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
