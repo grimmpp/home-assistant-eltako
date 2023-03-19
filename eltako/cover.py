@@ -90,7 +90,10 @@ class EltakoCover(EltakoEntity, CoverEntity):
 
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        time = 255
+        if self._time_opens is not None:
+            time = self._time_opens + 1
+        else:
+            time = 255
         
         address, _ = self._sender_id
         
@@ -102,7 +105,10 @@ class EltakoCover(EltakoEntity, CoverEntity):
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
-        time = 255
+        if self._time_closes is not None:
+            time = self._time_closes + 1
+        else:
+            time = 255
         
         address, _ = self._sender_id
         
