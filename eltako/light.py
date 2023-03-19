@@ -21,7 +21,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER_ID, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
 
 
 async def async_setup_entry(
@@ -38,19 +38,23 @@ async def async_setup_entry(
         for entity_config in config[Platform.LIGHT]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
-            sender_id = AddressExpression.parse(entity_config.get(CONF_SENDER_ID))
             eep_string = entity_config.get(CONF_EEP)
+            
+            sender_config = entity_config.get(CONF_SENDER)
+            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+            sender_eep_string = sender_config.get(CONF_EEP)
 
             try:
                 dev_eep = EEP.find(eep_string)
+                sender_eep = EEP.find(sender_eep_string)
             except:
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
                 if dev_eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id))
+                    entities.append(EltakoDimmableLight(dev_id, dev_name, dev_eep, sender_id, sender_eep))
                 elif dev_eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id))
+                    entities.append(EltakoSwitchableLight(dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     async_add_entities(entities)
 
@@ -61,13 +65,14 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id):
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako light source."""
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
+        self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
 
@@ -108,9 +113,10 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(int(self.brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
-        msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == A5_38_08:
+            dimming = CentralCommandDimming(int(self.brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
+            msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
+            self.send_message(msg)
         
         self._on_state = True
 
@@ -118,10 +124,11 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         """Turn the light source off."""
         address, _ = self._sender_id
         
-        dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
-        msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
-        self.send_message(msg)
-        
+        if self._sender_eep == A5_38_08:
+            dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
+            msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
+            self.send_message(msg)
+            
         self._brightness = 0
         self._on_state = False
 
@@ -164,12 +171,13 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id):
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako light source."""
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
         self._on_state = False
         self._sender_id = sender_id
+        self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
 
@@ -199,9 +207,10 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         """Turn the light source on or sets a specific dimmer value."""
         address, _ = self._sender_id
         
-        switching = CentralCommandSwitching(0, 1, 0, 0, 1)
-        msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == A5_38_08:
+            switching = CentralCommandSwitching(0, 1, 0, 0, 1)
+            msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
+            self.send_message(msg)
 
         self._on_state = True
 
@@ -209,9 +218,10 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         """Turn the light source off."""
         address, _ = self._sender_id
         
-        switching = CentralCommandSwitching(0, 1, 0, 0, 0)
-        msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == A5_38_08:
+            switching = CentralCommandSwitching(0, 1, 0, 0, 0)
+            msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
+            self.send_message(msg)
         
         self._on_state = False
 

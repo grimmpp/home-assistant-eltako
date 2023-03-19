@@ -16,7 +16,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER_ID, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
 
 
 async def async_setup_entry(
@@ -33,16 +33,20 @@ async def async_setup_entry(
         for entity_config in config[Platform.SWITCH]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
-            sender_id = AddressExpression.parse(entity_config.get(CONF_SENDER_ID))
             eep_string = entity_config.get(CONF_EEP)
+            
+            sender_config = entity_config.get(CONF_SENDER)
+            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+            sender_eep_string = sender_config.get(CONF_EEP)
 
             try:
                 dev_eep = EEP.find(eep_string)
+                sender_eep = EEP.find(sender_eep_string)
             except:
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoSwitch(dev_id, dev_name, dev_eep, sender_id))
+                entities.append(EltakoSwitch(dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     async_add_entities(entities)
 
@@ -50,11 +54,12 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id):
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako switch device."""
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
         self._sender_id = sender_id
+        self._sender_eep = sender_eep
         self._on_state = False
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"switch.{self.unique_id}"
@@ -85,15 +90,16 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         """Turn on the switch."""
         address, discriminator = self._sender_id
         
-        if discriminator == "left":
-            action = 0
-        elif discriminator == "right":
-            action = 2
-        else:
-            action = 0
-            
-        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == F6_02_01:
+            if discriminator == "left":
+                action = 0
+            elif discriminator == "right":
+                action = 2
+            else:
+                action = 0
+                
+            msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(msg)
         
         self._on_state = True
 
@@ -101,15 +107,16 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         """Turn off the switch."""
         address, discriminator = self._sender_id
         
-        if discriminator == "left":
-            action = 1
-        elif discriminator == "right":
-            action = 3
-        else:
-            action = 1
-            
-        msg = F6_02_01(action, 1, 0, 0).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == F6_02_01:
+            if discriminator == "left":
+                action = 1
+            elif discriminator == "right":
+                action = 3
+            else:
+                action = 1
+                
+            msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(msg)
         
         self._on_state = False
 

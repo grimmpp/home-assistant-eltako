@@ -16,7 +16,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER_ID, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, LOGGER
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -32,30 +32,35 @@ async def async_setup_entry(
         for entity_config in config[Platform.COVER]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
-            sender_id = AddressExpression.parse(entity_config.get(CONF_SENDER_ID))
             device_class = entity_config.get(CONF_DEVICE_CLASS)
             time_closes = entity_config.get(CONF_TIME_CLOSES)
             time_opens = entity_config.get(CONF_TIME_OPENS)
             eep_string = entity_config.get(CONF_EEP)
 
+            sender_config = entity_config.get(CONF_SENDER)
+            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+            sender_eep_string = sender_config.get(CONF_EEP)
+
             try:
                 dev_eep = EEP.find(eep_string)
+                sender_eep = EEP.find(sender_eep_string)
             except:
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoCover(dev_id, dev_name, dev_eep, sender_id, device_class, time_closes, time_opens))
+                entities.append(EltakoCover(dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
         
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, dev_id, dev_name, dev_eep, sender_id, device_class, time_closes, time_opens):
+    def __init__(self, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens):
         """Initialize the Eltako cover device."""
         super().__init__(dev_id, dev_name)
         self._dev_eep = dev_eep
         self._sender_id = sender_id
+        self._sender_eep = sender_eep
         self._attr_device_class = device_class
         self._attr_is_opening = False
         self._attr_is_closing = False
@@ -97,8 +102,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         
         address, _ = self._sender_id
         
-        msg = H5_3F_7F(time, 0x01, 1).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == H5_3F_7F:
+            msg = H5_3F_7F(time, 0x01, 1).encode_message(address)
+            self.send_message(msg)
         
         self._attr_is_opening = True
         self._attr_is_closing = False
@@ -112,8 +118,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         
         address, _ = self._sender_id
         
-        msg = H5_3F_7F(time, 0x02, 1).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == H5_3F_7F:
+            msg = H5_3F_7F(time, 0x02, 1).encode_message(address)
+            self.send_message(msg)
         
         self._attr_is_closing = True
         self._attr_is_opening = False
@@ -123,32 +130,37 @@ class EltakoCover(EltakoEntity, CoverEntity):
         if self._time_closes is None or self._time_opens is None:
             return
         
+        address, _ = self._sender_id
         position = kwargs[ATTR_POSITION]
         
         if position == self._attr_current_cover_position:
             return
         elif position == 100:
-            command = 0x01
-            time = 255
+            direction = "up"
+            time = self._time_opens + 1
         elif position == 0:
-            command = 0x02
-            time = 255
+            direction = "down"
+            time = self._time_closes + 1
         elif position > self._attr_current_cover_position:
-            command = 0x01
+            direction = "up"
             time = min(int(((position - self._attr_current_cover_position) / 100.0) * self._time_opens), 255)
         elif position < self._attr_current_cover_position:
-            command = 0x02
+            direction = "down"
             time = min(int(((self._attr_current_cover_position - position) / 100.0) * self._time_closes), 255)
 
-        address, _ = self._sender_id
+        if self._sender_eep == H5_3F_7F:
+            if direction == "up":
+                command = 0x01
+            elif direction == "down":
+                command = 0x02
+            
+            msg = H5_3F_7F(time, command, 1).encode_message(address)
+            self.send_message(msg)
         
-        msg = H5_3F_7F(time, command, 1).encode_message(address)
-        self.send_message(msg)
-        
-        if command == 0x01:
+        if direction == "up":
             self._attr_is_opening = True
             self._attr_is_closing = False
-        elif command == 0x02:
+        elif direction == "down":
             self._attr_is_closing = True
             self._attr_is_opening = False
 
@@ -156,8 +168,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         """Stop the cover."""
         address, _ = self._sender_id
 
-        msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
-        self.send_message(msg)
+        if self._sender_eep == H5_3F_7F:
+            msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
+            self.send_message(msg)
         
         self._attr_is_closing = False
         self._attr_is_opening = False

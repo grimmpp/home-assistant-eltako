@@ -37,11 +37,10 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER_ID, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN
 
 class EltakoPlatformSchema(ABC):
     """Voluptuous schema for Eltako platform entity configuration."""
-
     PLATFORM: ClassVar[Platform | str]
     ENTITY_SCHEMA: ClassVar[vol.Schema]
 
@@ -56,7 +55,6 @@ class EltakoPlatformSchema(ABC):
 
 class BinarySensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako binary sensors."""
-
     PLATFORM = Platform.BINARY_SENSOR
 
     CONF_EEP = CONF_EEP
@@ -79,23 +77,26 @@ class BinarySensorSchema(EltakoPlatformSchema):
 
 class LightSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako lights."""
-
     PLATFORM = Platform.LIGHT
 
-    CONF_EEP = CONF_EEP
-    CONF_ID_REGEX = CONF_ID_REGEX
-    CONF_SENDER_ID = CONF_SENDER_ID
-
     CONF_EEP_SUPPORTED = [A5_38_08.eep_string, M5_38_08.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [A5_38_08.eep_string]
 
     DEFAULT_NAME = "Light"
+
+    SENDER_SCHEMA = vol.Schema(
+        {
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
+        }
+    )
 
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER_ID): cv.matches_regex(CONF_ID_REGEX),
+                vol.Required(CONF_SENDER): SENDER_SCHEMA,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
@@ -103,23 +104,26 @@ class LightSchema(EltakoPlatformSchema):
 
 class SwitchSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako switches."""
-
     PLATFORM = Platform.SWITCH
 
-    CONF_EEP = CONF_EEP
-    CONF_ID_REGEX = CONF_ID_REGEX
-    CONF_SENDER_ID = CONF_SENDER_ID
-
     CONF_EEP_SUPPORTED = [M5_38_08.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [F6_02_01.eep_string]
 
     DEFAULT_NAME = "Switch"
+
+    SENDER_SCHEMA = vol.Schema(
+        {
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
+        }
+    )
 
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER_ID): cv.matches_regex(CONF_ID_REGEX),
+                vol.Required(CONF_SENDER): SENDER_SCHEMA,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
@@ -127,13 +131,8 @@ class SwitchSchema(EltakoPlatformSchema):
 
 class SensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako sensors."""
-
     PLATFORM = Platform.SENSOR
 
-    CONF_EEP = CONF_EEP
-    CONF_ID_REGEX = CONF_ID_REGEX
-    CONF_METER_TARIFFS = CONF_METER_TARIFFS
-    
     CONF_EEP_SUPPORTED = [A5_13_01.eep_string, F6_10_00.eep_string, A5_12_01.eep_string, A5_12_02.eep_string, A5_12_03.eep_string]
 
     DEFAULT_NAME = ""
@@ -152,25 +151,26 @@ class SensorSchema(EltakoPlatformSchema):
 
 class CoverSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako covers."""
-
     PLATFORM = Platform.COVER
 
-    CONF_EEP = CONF_EEP
-    CONF_ID_REGEX = CONF_ID_REGEX
-    CONF_SENDER_ID = CONF_SENDER_ID
-    CONF_TIME_CLOSES = CONF_TIME_CLOSES
-    CONF_TIME_OPENS = CONF_TIME_OPENS
-
     CONF_EEP_SUPPORTED = [G5_3F_7F.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [H5_3F_7F.eep_string]
 
     DEFAULT_NAME = "Cover"
+
+    SENDER_SCHEMA = vol.Schema(
+        {
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
+        }
+    )
 
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER_ID): cv.matches_regex(CONF_ID_REGEX),
+                vol.Required(CONF_SENDER): SENDER_SCHEMA,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_DEVICE_CLASS): COVER_DEVICE_CLASSES_SCHEMA,
                 vol.Optional(CONF_TIME_CLOSES): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),

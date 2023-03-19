@@ -17,7 +17,7 @@ SIGNAL_SEND_MESSAGE = "eltako.send_message"
 LOGGER = logging.getLogger("eltako")
 
 CONF_EEP = "eep"
-CONF_SENDER_ID = "sender_id"
+CONF_SENDER = "sender"
 CONF_ID_REGEX = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})( (left|right))?$"
 CONF_METER_TARIFFS = "meter_tariffs"
 CONF_TIME_CLOSES = "time_closes"
