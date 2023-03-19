@@ -192,9 +192,15 @@ class EltakoCover(EltakoEntity, CoverEntity):
                 
                 if decoded.direction == 0x01: # up
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
+                    
+                    if self._attr_current_cover_position == 100:
+                        self._attr_is_closed = False
                 else: # down
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
                     
+                    if self._attr_current_cover_position == 0:
+                        self._attr_is_closed = True
+
                 self._attr_is_closing = False
                 self._attr_is_opening = False
             
