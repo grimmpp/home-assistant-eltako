@@ -301,9 +301,9 @@ class EltakoMeterSensor(EltakoSensor):
     - A5-12-02 (Automated Meter Reading, Gas)
     - A5-12-03 (Automated Meter Reading, Water)
     """
-    def __init__(self, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription, *, tariff) -> None:
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription, *, tariff) -> None:
         """Initialize the Eltako meter sensor device."""
-        super().__init__(dev_id, dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}_{tariff}"
         self.entity_id = f"sensor.{self.unique_id}"
         self._tariff = tariff
@@ -370,9 +370,9 @@ class EltakoWindowHandle(EltakoSensor):
     - F6-10-00 (Mechanical handle / Hoppe AG)
     """
 
-    def __init__(self, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako window handle sensor device."""
-        super().__init__(dev_id, dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
@@ -427,9 +427,9 @@ class EltakoWeatherStation(EltakoSensor):
     - A5-13-01 (Weather station)
     """
 
-    def __init__(self, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako weather station device."""
-        super().__init__(dev_id, dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
