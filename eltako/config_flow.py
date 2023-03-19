@@ -5,7 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 
-from . import gateway
+from .gateway import EltakoGateway
 from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
 
 
