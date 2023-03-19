@@ -98,8 +98,11 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             else:
                 action = 0
                 
-            msg = F6_02_01(action, 1, 0, 0).encode_message(address)
-            self.send_message(msg)
+            pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(pressed_msg)
+            
+            released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
+            self.send_message(released_msg)
         
         self._on_state = True
 
@@ -115,9 +118,12 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             else:
                 action = 1
                 
-            msg = F6_02_01(action, 1, 0, 0).encode_message(address)
-            self.send_message(msg)
-        
+            pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(pressed_msg)
+            
+            released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
+            self.send_message(released_msg)
+
         self._on_state = False
 
     def value_changed(self, msg):
