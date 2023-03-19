@@ -5,7 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 
-from .gateway import EltakoGateway
+from . import gateway
 from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
 
 
@@ -38,7 +38,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             
             errors = {CONF_DEVICE: ERROR_INVALID_GATEWAY_PATH}
 
-        serial_paths = await self.hass.async_add_executor_job(EltakoGateway.detect)
+        serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
         if len(serial_paths) == 0:
             return await self.async_step_manual(user_input)
@@ -75,7 +75,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Return True if the user_input contains a valid gateway path."""
         serial_path = user_input[CONF_DEVICE]
         path_is_valid = await self.hass.async_add_executor_job(
-            EltakoGateway.validate_path, serial_path
+            gateway.validate_path, serial_path
         )
         return path_is_valid
 

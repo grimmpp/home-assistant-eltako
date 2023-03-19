@@ -116,7 +116,6 @@ class EltakoGateway:
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
 
 
-@classmethod
 def detect():
     """Return a list of candidate paths for USB Eltako gateways.
 
@@ -131,7 +130,6 @@ def detect():
     return found_paths
 
 
-@classmethod
 def validate_path(path: str):
     """Return True if the provided path points to a valid serial port, False otherwise."""
     try:
