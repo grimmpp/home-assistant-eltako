@@ -67,12 +67,15 @@ Under this section you can define the supported platforms.
 A device inside a platform alway consists of
 * id - This is the address of the device on the bus
 * eep - The EEP of the device (have a look at "Supported EEPs and devices")
+
 You can optinally also define
 * name - The name, which is shown in Home Assistant
 * device_class - Please refer to the device_class documentation in Home Assistant (Binary sensor and Cover)
+
 For devices, which are controllable (like lights or covers), you have to define a sender consisting of
 * id - This is the address of the sender teached into the device
 * eep - The EEP of the sender (have a look at "Supported EEPs and devices")
+
 Covers have two special attributes
 * time_closes - The time it takes until the cover is completely closed (used for position calculation)
 * time_opens - The time it takes until the cover is completely opened (used for position calculation)
