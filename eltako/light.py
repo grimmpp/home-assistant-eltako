@@ -71,7 +71,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
         self._on_state = False
-        self._brightness = 50
+        self._attr_brightness = 50
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
@@ -96,22 +96,13 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         )
 
     @property
-    def brightness(self):
-        """Brightness of the light.
-
-        This method is optional. Removing it indicates to Home Assistant
-        that brightness is not supported for this light.
-        """
-        return self._brightness
-
-    @property
     def is_on(self):
         """If light is on."""
         return self._on_state
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
-        self._brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
+        self._attr_brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         
         address, _ = self._sender_id
         
@@ -131,7 +122,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
             
-        self._brightness = 0
+        self._attr_brightness = 0
         self._on_state = False
 
     def value_changed(self, msg):
@@ -157,9 +148,9 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                     return
                     
                 if decoded.dimming.dimming_range == 0:
-                    self._brightness = int((decoded.dimming.dimming_value / 100.0) * 255.0)
+                    self._attr_brightness = int((decoded.dimming.dimming_value / 100.0) * 255.0)
                 elif decoded.dimming.dimming_range == 1:
-                    self._brightness = decoded.dimming.dimming_value
+                    self._attr_brightness = decoded.dimming.dimming_value
 
                 self._on_state = decoded.dimming.switching_command
             else:

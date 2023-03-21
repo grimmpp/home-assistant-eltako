@@ -1,93 +1,117 @@
 Eltako bus support for home assistant
 =====================================
 
-(While this is not integrated into home assistant's repositories, this can be
-installed by copying over the eltako directory from this repository ino your
-home assistant's ``/config/custom_components`` directory.
+While this is not integrated into home assistant's repositories, this can be installed by copying over the eltako directory from this repository into your home assistant's ``/config/custom_components`` directory.
 
-When installed like this, an "Invalid config" error may show at the first start
-of home assistant with the module active; a restart fixes that, as by then all
-dependencies will be installed.)
+To enable this component, go to your integrations, press the "add" button and select "Eltako".
+In the presented sheet either select the detected USB gateway or enter the path manually.
 
-To enable this component, add lines like the following to your config.yaml:
-
-~~~~~~~~
-eltako:
-  device: /dev/ttyS0
-~~~~~~~~
-
-Devices on the bus will be integrated automatically.
-
-Devices that are not on the bus can be made to send teach-in telegrams. As soon
-as the teach-in telegrams are received, its sensor values are added to home
-assistant. As those additions are not permanent, a notice is shown on the home
-screen on how to make those devices available across reboots without sending
-teach-in messsages again.
-
-Various sensors can be persisted simply by adding their teach-in messages to
-the configuration in a "teach-in" section as shown in the notification. As
-switches without attached lights have no direct useful representation in home
-assistant, you might want to register them at supported devices (currently
-FUD14 and FSR14 series). For that purpose, write their lines into a
-"programming" section in in a subsection with the eltako-busaddress of the
-respective actuator. Again, the notification message will guide this. On the
-next home assistant reload, that configuration will be applied to the
-respective actuator if it is not already present.
-
-If you have switches in the network that are not to be programmed into any
-actuator (eg. because they are taught into an actuator not on the bus), they
-can be set to ignore by taking down their lines in the teach-in section.
+The devices themselves have to be added to your ``/config/configuration.yaml`` file.
 
 A full configuration can thus look like this:
 
 ~~~~~~~~
 eltako:
-  device: /dev/ttyUSB0
-  teach-in:
-    "05-11-fe-94": "a5-02-14"        # a temperature sensor
-    "05-11-fa-7b": "a5-02-14"        # another temperature sensor
-    "00-21-64-12 left": "f6-02-01"   # a pair of switch buttons we chose to ignore
-    "00-21-64-12 right": "f6-02-01"  #
-  programming:
-    5:
-      "00-21-63-44 left": "f6-02-01"  # A half switch that controls the FUD14 on bus address 5
-    7:
-      "00-21-63-44 right": "f6-02-01" # The other half of this switch controls an FSR14 on address 7
+  binary_sensor:
+    - id: "00-00-10-70"
+      eep: "D5-00-01"
+      device_class: window
+    - id: "00-00-10-77"
+      eep: "D5-00-01"
+      device_class: smoke
+    - id: "00-00-10-91"
+      eep: "A5-08-01"
+      device_class: motion
+    - id: "FE-EF-09-3B"
+      eep: "F6-10-00"
+      device_class: door
+  sensor:
+    - id: "00-00-18-00"
+      eep: "A5-13-01"
+    - id: "00-00-00-2A"
+      eep: "A5-12-01"
+    - id: "00-00-00-2D"
+      eep: "A5-12-02"
+    - id: "00-00-00-2E"
+      eep: "A5-12-03"
+  light:
+    - id: "00-00-00-02"
+      eep: "A5-38-08"
+      sender:
+          id: "00-00-00-03"
+          eep: "A5-38-08"
+    - id: "00-00-00-08"
+      eep: "M5-38-08"
+      sender:
+          id: "00-00-00-0F"
+          eep: "A5-38-08"
+  switch:
+    - id: "FE-FE-FE-71"
+      eep: "M5-38-08"
+      sender:
+          id: "00-00-01-71 left"
+          eep: "F6-02-01"
+  cover:
+    - id: "00-00-00-1B"
+      eep: "G5-3F-7F"
+      sender:
+          id: "00-00-00-45"
+          eep: "H5-3F-7F"
+      time_closes: 24
+      time_opens: 25
+      device_class: shutter
 ~~~~~~~~
 
-Features
+As you can see, there has to be a custom section for your Eltako devices.
+Under this section you can define the supported platforms.
+A device inside a platform alway consists of
+* id - This is the address of the device on the bus
+* eep - The EEP of the device (have a look at "Supported EEPs and devices")
+You can optinally also define
+* name - The name, which is shown in Home Assistant
+* device_class - Please refer to the device_class documentation in Home Assistant (Binary sensor and Cover)
+For devices, which are controllable (like lights or covers), you have to define a sender consisting of
+* id - This is the address of the sender teached into the device
+* eep - The EEP of the sender (have a look at "Supported EEPs and devices")
+Covers have two special attributes
+* time_closes - The time it takes until the cover is completely closed (used for position calculation)
+* time_opens - The time it takes until the cover is completely opened (used for position calculation)
+
+
+
+Supported EEPs and devices
 ========
 
-Recognized on the bus:
+EEPs and devices currently supported for the different platforms are:
+* Binary sensor
+  * F6-02-01 (Rocker switch, FTS14EM)
+  * F6-02-02 (Rocker switch)
+  * F6-10-00 (Window handle, FTS14EM)
+  * D5-00-01 (Contact sensor, FTS14EM)
+  * A5-08-01 (Occupancy sensor, FTS14EM)
+* Sensor
+  * A5-13-01 (Weather station, FWG14)
+  * F6-10-00 (Window handle, FTS14EM)
+  * A5-12-01 (Automated meter reading - electricity, FSDG14)
+  * A5-12-02 (Automated meter reading - gas, F3Z14D)
+  * A5-12-03 (Automated meter reading - water, F3Z14D)
+* Light
+  * A5-38-08 (Central command - gateway, FUD14)
+  * M5-38-08 (Eltako relay, FSR14)
+* Switch
+  * M5-38-08 (Eltako relay, FSR14)
+* Cover
+  * G5-3F-7F (Eltako cover, FSB14)
 
-* as dimmable lights:
-  * FUD14 (also the 800W version)
-  * FSG14 1-10V (as dimmable lights)
-  * FDG14
-* as switches:
-  * FSR14 with 1, 2, or 4 slots (as switches)
-  * FSR14-LED
-* as covers:
-  * FSB14 (due to the limited feedback the devices give, they are only shown as
-    full-up or full-down whenever end stops are reached, and as unknown while
-    being actuated from home assistant; no attempt is made to recover state
-    from timing.)
-* as meters:
-  * FWZ14-65A
+Sender EEPs currently supported for the different platforms are:
+* Light
+  * A5-38-08 (Central command - gateway, FUD14)
+* Switch
+  * F6-02-01 (Rocker switch)
+* Cover
+  * H5-3F-7F (Eltako cover, FSB14)
 
-Recognized over the air:
 
-* Various temperature sensors (A5-02-01 to A5-02-1B)
-* Various humidity sensors (A5-04-01 and A5-05-02)
-* Direcional buttons (RPS)
-
-  Those are not exposed as sensors as they are in practice taught into actuators, would only clutter the display, and just because home assistant received a telegram from them doesn't mean that any of its recipient devices actually got the message).
-
-  Note that devices like the FTS14EM appear just as such devices because they do not fully participate on the bus, and send regular radio telegrams from their own address space.
-
-* FGW14MS
-
-  Those devices participate on the bus, but report their status only using telegrams whose ID depends on the switch state which can be read from the bus. For the purpose of reading it, the FGW14MS on the bus is a no-op entity, and has to be taught in like any other radio object.
 
 Credits
 =======

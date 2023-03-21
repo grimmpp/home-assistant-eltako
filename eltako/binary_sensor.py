@@ -67,7 +67,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """Initialize the Eltako binary sensor."""
         super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
-        self._device_class = device_class
+        self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
 
@@ -75,11 +75,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     def name(self):
         """Return the default name for the binary sensor."""
         return None
-
-    @property
-    def device_class(self):
-        """Return the class of this sensor."""
-        return self._device_class
 
     @property
     def device_info(self) -> DeviceInfo:
