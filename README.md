@@ -68,7 +68,7 @@ A device inside a platform alway consists of
 * id - This is the address of the device on the bus
 * eep - The EEP of the device (have a look at "Supported EEPs and devices")
 
-You can optinally also define
+You can optionally also define
 * name - The name, which is shown in Home Assistant
 * device_class - Please refer to the device_class documentation in Home Assistant (Binary sensor and Cover)
 
