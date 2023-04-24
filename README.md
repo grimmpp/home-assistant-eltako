@@ -1,5 +1,7 @@
 # Eltako Bus Integration (rs485 - enocean) for Home Assistant
 
+This repo contains an Home Assistant Integration for Eltako Baureihe 14 home automation. 
+
 While this is not integrated into home assistant's repositories, this can be installed by copying over the eltako directory from this repository into your home assistant's ``/config/custom_components`` directory.
 
 To enable this component, go to your integrations, press the "add" button and select "Eltako".
@@ -113,19 +115,23 @@ Sender EEPs currently supported for the different platforms are:
   * H5-3F-7F (Eltako cover, FSB14)
 
 
-# Installation Example
-## Hardware
-In this setup I've used:
-* Eltako FSTN14-12V/12W (power supply)
-* Eltako FAM14 (BA=2, Auto=1)
-* Eltako FGW14-USB (BA=6, USB connected to PC)
-* Eltako FSR14-4x (Relay, output 1 connected to light bulb)
-* Eltako double rocker switch
-
-**to be continued**
 
 # Tutorials
+* [Simple Eltako Setup](./tutorials/simple_eltako_setup.md)
 * [How to detect Switch Signals and react on thoese in Home Assistant](./tutorials//rocker_switch.md)
+
+
+# Dependencies
+* [Home Assistant Community Store](https://hacs.xyz/)
+* [Eltako Baureihe 14 Python Library](https://github.com/michaelpiron/eltako14bus)
+
+
+# Usefull Home Assistant Addons
+* [File Editor](https://github.com/home-assistant/addons/tree/master/configurator)
+* [Log Viewer](https://github.com/hassio-addons/addon-log-viewer)
+* [Terminal & SSH](https://github.com/home-assistant/addons/tree/master/ssh)
+* [Studio Code Server](https://github.com/hassio-addons/addon-vscode)
+
 
 # Credits
 Credits for this code goes to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who made this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)).  This repository here on Github is meant to keep the Eltako integration alive, make it work again with the latest Home Asssistant Core and potentially add functionalities.
