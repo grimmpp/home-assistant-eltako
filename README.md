@@ -1,5 +1,4 @@
-Eltako bus support for home assistant
-=====================================
+# Eltako Bus Integration (rs485 - enocean) support for Home Assistant
 
 While this is not integrated into home assistant's repositories, this can be installed by copying over the eltako directory from this repository into your home assistant's ``/config/custom_components`` directory.
 
@@ -82,8 +81,7 @@ Covers have two special attributes
 
 
 
-Supported EEPs and devices
-========
+# Supported EEPs and devices
 
 EEPs and devices currently supported for the different platforms are:
 * Binary sensor
@@ -115,7 +113,19 @@ Sender EEPs currently supported for the different platforms are:
   * H5-3F-7F (Eltako cover, FSB14)
 
 
+# Installation Example
+## Hardware
+In this setup I've used:
+* Eltako FSTN14-12V/12W (power supply)
+* Eltako FAM14 (BA=2, Auto=1)
+* Eltako FGW14-USB (BA=6, USB connected to PC)
+* Eltako FSR14-4x (Relay, output 1 connected to light bulb)
+* Eltako double rocker switch
 
-Credits
-=======
-Credits for this code goes to chrysn (https://gitlab.com/chrysn) who made this code publicly available on his Gitlab repo, and shared it in the Home Assistant community. This repository here on Github is meant to keep the Eltako integration alive, make it work again with the latest Home Asssistant Core and potentially add functionalities.
+**to be continued**
+
+# Tutorials
+* [How to detect Switch Signals and react on thoese in Home Assistant](./tutorials//rocker_switch.md)
+
+# Credits
+Credits for this code goes to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who made this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)).  This repository here on Github is meant to keep the Eltako integration alive, make it work again with the latest Home Asssistant Core and potentially add functionalities.

@@ -19,8 +19,10 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .device import EltakoEntity
 from .const import CONF_ID_REGEX, CONF_EEP, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
+import json
+
 DEPENDENCIES = ["eltakobus"]
-EVENT_BUTTON_PRESSED = "button_pressed"
+EVENT_BUTTON_PRESSED = "eltako_button_pressed"
 
 
 async def async_setup_entry(
@@ -70,6 +72,9 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
+        self.dev_id = dev_id
+        self.dev_name = dev_name
+        self.gateway = gateway
 
     @property
     def name(self):
@@ -104,35 +109,59 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         
         try:
             decoded = self._dev_eep.decode_message(msg)
+            LOGGER.debug("msg : %s", json.dumps(decoded.__dict__))
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
-        
+
         if self._dev_eep in [F6_02_01, F6_02_02]:
-            if decoded.rocker_first_action == 0:
-                discriminator = "left"
-                action = 1
-            elif decoded.rocker_first_action == 1:
-                discriminator = "left"
-                action = 0
-            elif decoded.rocker_first_action == 2:
-                discriminator = "right"
-                action = 1
-            elif decoded.rocker_first_action == 3:
-                discriminator = "right"
-                action = 0
+            pressed_buttons = []
+            pressed = decoded.energy_bow == 1
+            two_buttons_pressed = decoded.second_action == 1
+            fa = decoded.rocker_first_action
+            sa = decoded.rocker_second_action
+
+            # Data is only available when button is pressed. 
+            # Button cannot be identified when releasing it.
+            # if at least one button is pressed
+            if pressed:
+                if fa == 0:
+                    pressed_buttons += ["LB"]
+                if fa == 1:
+                    pressed_buttons += ["LT"]
+                if fa == 2:
+                    pressed_buttons += ["RB"]
+                if fa == 3:
+                    pressed_buttons += ["RT"]
+            if two_buttons_pressed:
+                if sa == 0:
+                    pressed_buttons += ["LB"]
+                if sa == 1:
+                    pressed_buttons += ["LT"]
+                if sa == 2:
+                    pressed_buttons += ["RB"]
+                if sa == 3:
+                    pressed_buttons += ["RT"]
             else:
-                return
+                # button released but no detailed information available
+                pass
             
-            pressed = decoded.energy_bow
+            #TODO: export into helper function
+            id = str(self.dev_id.plain_address().hex()).upper()
+            id = f"{id[0:2]}-{id[2:4]}-{id[4:6]}-{id[6:8]}"
+
+            event_id = f"{EVENT_BUTTON_PRESSED}_{id}"
+            LOGGER.debug("Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             
             self.hass.bus.fire(
-                EVENT_BUTTON_PRESSED,
+                event_id,
                 {
-                    "id": self.dev_id.plain_address(),
-                    "discriminator": discriminator,
-                    "action": action,
+                    "id": id,
+                    "pressed_buttons": pressed_buttons,
                     "pressed": pressed,
+                    "two_buttons_pressed": two_buttons_pressed,
+                    "rocker_first_action": decoded.rocker_first_action,
+                    "rocker_second_action": decoded.rocker_second_action,
                 },
             )
         elif self._dev_eep in [F6_10_00]:
