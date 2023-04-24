@@ -2,6 +2,9 @@
 
 This example is about how to trigger complex automations defined in home assistant which can be triggered by wall-mounted switches.
 
+<img src="./switch_triggered_ha_automation.png" alt="Home Assistant Automation" height="200"/>
+<img src="./Eltako-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
+
 First of all you need to register your swicht into the home assistant configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
 
 <div style="border: 2px dotted darkgrey; padding: 12px; margin-top:20px; margin-bottom: 20px; ">
