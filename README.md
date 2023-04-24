@@ -1,4 +1,4 @@
-# Eltako Bus Integration (rs485 - enocean) support for Home Assistant
+# Eltako Bus Integration (rs485 - enocean) for Home Assistant
 
 While this is not integrated into home assistant's repositories, this can be installed by copying over the eltako directory from this repository into your home assistant's ``/config/custom_components`` directory.
 
