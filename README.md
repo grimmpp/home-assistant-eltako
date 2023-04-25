@@ -119,7 +119,7 @@ Sender EEPs currently supported for the different platforms are:
 # Tutorials
 * [Eltako Home Automation](https://github.com/cvanlabe/Eltako-home-automation) from [Cedric Van Labeke](https://github.com/cvanlabe)
 * [Simple Eltako Setup](./tutorials/simple_eltako_setup.md)
-* [How to detect Switch Signals and react on thoese in Home Assistant](./tutorials//rocker_switch.md)
+* [How to detect Switch Signals and react on thoese in Home Assistant](./tutorials/rocker_switch/readme.md)
 
 
 # Dependencies
