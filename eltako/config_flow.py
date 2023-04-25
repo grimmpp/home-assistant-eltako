@@ -1,4 +1,5 @@
 """Config flows for the Eltako integration."""
+# https://developers.home-assistant.io/docs/config_entries_config_flow_handler
 
 import voluptuous as vol
 

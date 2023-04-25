@@ -117,6 +117,7 @@ Sender EEPs currently supported for the different platforms are:
 
 
 # Tutorials
+* [Eltako Home Automation](https://github.com/cvanlabe/Eltako-home-automation) from [Cedric Van Labeke](https://github.com/cvanlabe)
 * [Simple Eltako Setup](./tutorials/simple_eltako_setup.md)
 * [How to detect Switch Signals and react on thoese in Home Assistant](./tutorials//rocker_switch.md)
 
@@ -133,6 +134,11 @@ Sender EEPs currently supported for the different platforms are:
 * [Terminal & SSH](https://github.com/home-assistant/addons/tree/master/ssh)
 * [Studio Code Server](https://github.com/hassio-addons/addon-vscode)
 
+
+# Documentation
+* [Home Assistant Developer Docs](https://developers.home-assistant.io/)
+* [EnOcean Equipment Profiles - EEP2.1](https://www.trio2sys.fr/images/media/EnOcean_Equipment_Profiles_EEP2.1.pdf)
+* [EnOcean Equipment Profiles - EEP v2.6.7](https://www.enocean-alliance.org/wp-content/uploads/2017/05/EnOcean_Equipment_Profiles_EEP_v2.6.7_public.pdf)
 
 # Credits
 Credits for this code goes to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who made this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)).  This repository here on Github is meant to keep the Eltako integration alive, make it work again with the latest Home Asssistant Core and potentially add functionalities.
