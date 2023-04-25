@@ -1,0 +1,1 @@
+``python3 ha_discovery.py /dev/ttyUSB1``
