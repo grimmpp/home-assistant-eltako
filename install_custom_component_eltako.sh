@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Install from outside. Copy file and run it in HA.
-# dont forget: 'chmod +x install_custom_component_eltako.sh'
 
 # Function to display commands
 exe() { echo "\$ ${@/eval/}" ; "$@" ; }
