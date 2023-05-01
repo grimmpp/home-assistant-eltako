@@ -108,6 +108,8 @@ class EltakoCover(EltakoEntity, CoverEntity):
             msg = H5_3F_7F(time, 0x01, 1).encode_message(address)
             self.send_message(msg)
         
+        #TODO: ... setting state should be comment out
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
         self._attr_is_opening = True
         self._attr_is_closing = False
 
@@ -124,6 +126,8 @@ class EltakoCover(EltakoEntity, CoverEntity):
             msg = H5_3F_7F(time, 0x02, 1).encode_message(address)
             self.send_message(msg)
         
+        #TODO: ... setting state should be comment out
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
         self._attr_is_closing = True
         self._attr_is_opening = False
 

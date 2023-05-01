@@ -106,7 +106,8 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
         
-        self._on_state = True
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
+        # self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
@@ -126,7 +127,8 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
 
-        self._on_state = False
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
+        # self._on_state = False
 
     def value_changed(self, msg):
         """Update the internal state of the switch."""

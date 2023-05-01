@@ -111,7 +111,8 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
         
-        self._on_state = True
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
+        # self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
@@ -122,8 +123,9 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
             
-        self._attr_brightness = 0
-        self._on_state = False
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
+        # self._attr_brightness = 0
+        # self._on_state = False
 
     def value_changed(self, msg):
         """Update the internal state of this device.
@@ -206,7 +208,8 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
-        self._on_state = True
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
+        # self._on_state = True
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
@@ -217,7 +220,8 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
         
-        self._on_state = False
+        # Don't set state instead wait for response from actor so that real state of light is displayed.
+        # self._on_state = False
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
