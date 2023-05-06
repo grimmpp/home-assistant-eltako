@@ -3,6 +3,8 @@ import asyncio
 import sys
 import functools
 
+from termcolor import colored
+
 from eltakobus import *
 from ymalRepresentation import HaConfig
 
@@ -52,19 +54,55 @@ async def unlock_bus(bus):
     print(await(locking.unlock_bus(bus)))
 
 @buslocked
-async def ha_config(bus, outfile):
-    config = HaConfig(DEFAULT_SENDER_ADDRESS, save_debug_log_config=True)
-
+async def ha_config(bus, config: HaConfig):
+    
+    print(colored("Start scanning for devices", 'red'))
     async for dev in enumerate_bus(bus):
         try:
-            await config.add(dev)
+            print(colored(f"Found device: {dev}",'grey'))
+            await config.add_device(dev)
         except TimeoutError:
             print("Read error, skipping: Device %s announces %d memory but produces timeouts at reading" % (dev, dev.discovery_response.memory_size))
+    print(colored("Device scan finished.", 'red'))
 
-    config.save_as_yaml_to_flie(outfile)
+
+async def listen(bus, config, ensure_unlocked):
+    print(colored(f"Listen for sensor events ...", 'red'))
+    if ensure_unlocked:
+        await lock_bus(bus)
+        await unlock_bus(bus)
+
+    seen_someone_polling = True
+    seen_someone_force_polling = True
+
+    while True:
+        msg = await bus.received.get()
+        msg = prettify(msg)
+
+        if isinstance(msg, EltakoPoll):
+            if not seen_someone_polling:
+                seen_someone_polling = True
+                print("There is a device on the bus that polls for messages.")
+            continue
+
+        if isinstance(msg, EltakoPollForced):
+            if not seen_someone_force_polling:
+                seen_someone_force_polling = True
+                print("There is a device on the bus that force-polls for messages.")
+            continue
+
+        await config.add_sensor(msg)
 
 def main():
-    eltakobus = sys.argv[1] # "/dev/ttyUSB1"
+    print(colored('Generate Home Assistent configuration.', 'red'))
+
+    eltakobus = "/dev/ttyUSB1"
+    if len(sys.argv) > 0:
+        eltakobus = sys.argv[1] 
+
+    filename = "ha.yaml"
+    if len(sys.argv) > 1:
+        filename = sys.argv[2]
 
     loop = asyncio.get_event_loop()
 
@@ -74,21 +112,23 @@ def main():
     loop.run_until_complete(bus_ready)
     cache_rawpart = eltakobus.replace('/', '-')
 
-    maintask = asyncio.Task( ha_config(bus, "ha.yaml") )
-
     try:
+        config = HaConfig(DEFAULT_SENDER_ADDRESS, save_debug_log_config=True)
+
+        maintask = asyncio.Task( ha_config(bus, config) )
         result = loop.run_until_complete(maintask)
+
+        maintask = asyncio.Task( listen(bus, config, True) )
+        result = loop.run_until_complete(maintask)
+
     except KeyboardInterrupt as e:
         print("Received keyboard interrupt, cancelling", file=sys.stderr)
         maintask.cancel()
-        try:
-            loop.run_until_complete(maintask)
-        except asyncio.CancelledError:
-            pass
-        sys.exit(1)
+    finally:
+        config.save_as_yaml_to_flie(filename)
 
-    if result is not None:
-        print(result)
+    # if result is not None:
+    #     print(result)
 
 if __name__ == "__main__":
     main()

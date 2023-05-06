@@ -1,4 +1,4 @@
-``python3 ha_discovery.py /dev/ttyUSB1``
+``python3 ha_discovery.py /dev/ttyUSB1 ha.yaml``
 
 The plan is to detect all actors on the bus and prepare the list of devices as good as posible.
 

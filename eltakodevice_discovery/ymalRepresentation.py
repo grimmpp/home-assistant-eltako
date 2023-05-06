@@ -1,5 +1,8 @@
 import ruamel.yaml
+import json
+from termcolor import colored
 from eltakobus.device import BusObject
+from eltakobus.message import *
 
 EEP_MAPPING = [
     {'hw-type': 'FTS14EM', 'eep': 'F6-02-01', 'type': 'binary_sensor', 'description': 'Rocker switch', 'address_count': 1},
@@ -26,12 +29,21 @@ EEP_MAPPING = [
     {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'type': 'cover', 'description': 'Eltako cover', 'address_count': 1},
 ]
 
+ORG_MAPPING = {
+    5: {'Telegram': 'RPS', 'RORG': 'F6', 'name': 'Switch', 'type': 'binary_sensor', 'eep': 'F6-02-01'},
+    6: {'Telegram': '1BS', 'RORG': 'D5', 'name': '1 Byte Communication', 'type': 'sensor', 'eep': 'D5-??-??'},
+    7: {'Telegram': '4BS', 'RORG': 'A5', 'name': '4 Byte Communication', 'type': 'sensor', 'eep': 'A5-??-??'},
+}
+
+SENSOR_MESSAGE_TYPES = [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, EltakoMessage]
+
 class HaConfig():
 
     def __init__(self, default_sender_address, save_debug_log_config:bool=False):
         super()
 
         self.eltako = {}
+        self.sener_id_list = []
         self.sender_address = default_sender_address
         self.export_logger = save_debug_log_config
 
@@ -46,7 +58,7 @@ class HaConfig():
         a = f"{address:08x}".upper()
         return f"{a[0:2]}-{a[2:4]}-{a[4:6]}-{a[6:8]}"
 
-    async def add(self, device: BusObject):
+    async def add_device(self, device: BusObject):
         device_name = type(device).__name__
         info = self.find_device_info(device_name)
 
@@ -68,9 +80,41 @@ class HaConfig():
                 if info['type'] not in self.eltako:
                     self.eltako[info['type']] = []    
                 self.eltako[info['type']].append(dev_obj)
+                # print
+                print(colored(f"Add device {info['type']}: id: {dev_obj['id']}, eep: {dev_obj['eep']}, name: {dev_obj['name']}",'yellow'))
+
+
+    async def add_sensor(self, msg: ESP2Message):
+        if type(msg) in SENSOR_MESSAGE_TYPES:
+            print(msg)
+            if hasattr(msg, 'outgoing'):
+                if msg.address not in self.sener_id_list:
+
+                    info = ORG_MAPPING[msg.org]
+                    address = b2a(msg.address).replace(' ','-').upper()
+
+                    sensor = {
+                        'id': address,
+                        'eep': info['eep'],
+                        'name': info['name']
+                    }
+
+                    if info['type'] not in self.eltako:
+                        self.eltako[info['type']] = []
+
+                    self.eltako[info['type']].append(sensor)
+                    self.sener_id_list.append(msg.address)
+                    
+                    print(colored(f"Add Sensor ({info['name']}): address: {address}", 'yellow'))
+        else:
+            if type(msg) == EltakoDiscoveryRequest and msg.address == 127:
+                print(colored('Wait for incoming sensor singals. After you have recorded all your sensor singals press Ctrl+c to exist and store the configuration file.', 'red', attrs=['bold']))
+            # print(f"not in {msg}")
 
 
     def save_as_yaml_to_flie(self, filename:str):
+        print(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
+
         data = {}
         data['eltako'] = self.eltako
         
