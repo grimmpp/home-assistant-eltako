@@ -1,6 +1,7 @@
 import ruamel.yaml
 import json
 from termcolor import colored
+import logging
 from eltakobus.device import BusObject
 from eltakobus.message import *
 
@@ -80,13 +81,13 @@ class HaConfig():
                 if info['type'] not in self.eltako:
                     self.eltako[info['type']] = []    
                 self.eltako[info['type']].append(dev_obj)
-                # print
-                print(colored(f"Add device {info['type']}: id: {dev_obj['id']}, eep: {dev_obj['eep']}, name: {dev_obj['name']}",'yellow'))
+                
+                logging.info(colored(f"Add device {info['type']}: id: {dev_obj['id']}, eep: {dev_obj['eep']}, name: {dev_obj['name']}",'yellow'))
 
 
     async def add_sensor(self, msg: ESP2Message):
         if type(msg) in SENSOR_MESSAGE_TYPES:
-            print(msg)
+            logging.debug(msg)
             if hasattr(msg, 'outgoing'):
                 if msg.address not in self.sener_id_list:
 
@@ -105,15 +106,16 @@ class HaConfig():
                     self.eltako[info['type']].append(sensor)
                     self.sener_id_list.append(msg.address)
                     
-                    print(colored(f"Add Sensor ({info['name']}): address: {address}", 'yellow'))
+                    logging.info(colored(f"Add Sensor ({info['name']}): address: {address}", 'yellow'))
         else:
             if type(msg) == EltakoDiscoveryRequest and msg.address == 127:
-                print(colored('Wait for incoming sensor singals. After you have recorded all your sensor singals press Ctrl+c to exist and store the configuration file.', 'red', attrs=['bold']))
-            # print(f"not in {msg}")
+                logging.info(colored('Wait for incoming sensor singals. After you have recorded all your sensor singals press Ctrl+c to exist and store the configuration file.', 'red', attrs=['bold']))
+            # to find message which are not displayed. Only for debugging because most of the messages are poll messages.
+            # logging.debug(msg)
 
 
     def save_as_yaml_to_flie(self, filename:str):
-        print(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
+        logging.info(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
 
         data = {}
         data['eltako'] = self.eltako

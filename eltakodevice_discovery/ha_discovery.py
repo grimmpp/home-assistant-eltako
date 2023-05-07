@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import argparse
+from argparse import RawTextHelpFormatter
 import asyncio
 import sys
 import functools
 
 from termcolor import colored
+import logging
 
 from eltakobus import *
 from ymalRepresentation import HaConfig
@@ -39,35 +42,35 @@ def buslocked(f):
     @functools.wraps(f)
     async def new_f(bus, *args, **kwargs):
         try:
-            print("Sending a lock command onto the bus; its reply should tell us whether there's a FAM in the game.")
+            logging.debug("Sending a lock command onto the bus; its reply should tell us whether there's a FAM in the game.")
             await lock_bus(bus)
             return await f(bus, *args, **kwargs)
         finally:
-            print("Unlocking the bus again")
+            logging.debug("Unlocking the bus again")
             await unlock_bus(bus)
     return new_f
 
 async def lock_bus(bus):
-    print(await(locking.lock_bus(bus)))
+    logging.debug(await(locking.lock_bus(bus)))
 
 async def unlock_bus(bus):
-    print(await(locking.unlock_bus(bus)))
+    logging.debug(await(locking.unlock_bus(bus)))
 
 @buslocked
 async def ha_config(bus, config: HaConfig):
     
-    print(colored("Start scanning for devices", 'red'))
+    logging.info(colored("Start scanning for devices", 'red'))
     async for dev in enumerate_bus(bus):
         try:
-            print(colored(f"Found device: {dev}",'grey'))
+            logging.info(colored(f"Found device: {dev}",'grey'))
             await config.add_device(dev)
         except TimeoutError:
-            print("Read error, skipping: Device %s announces %d memory but produces timeouts at reading" % (dev, dev.discovery_response.memory_size))
-    print(colored("Device scan finished.", 'red'))
+            logging.error("Read error, skipping: Device %s announces %d memory but produces timeouts at reading" % (dev, dev.discovery_response.memory_size))
+    logging.info(colored("Device scan finished.", 'red'))
 
 
-async def listen(bus, config, ensure_unlocked):
-    print(colored(f"Listen for sensor events ...", 'red'))
+async def listen(bus, config: HaConfig, ensure_unlocked):
+    logging.info(colored(f"Listen for sensor events ...", 'red'))
     if ensure_unlocked:
         await lock_bus(bus)
         await unlock_bus(bus)
@@ -79,56 +82,67 @@ async def listen(bus, config, ensure_unlocked):
         msg = await bus.received.get()
         msg = prettify(msg)
 
-        if isinstance(msg, EltakoPoll):
-            if not seen_someone_polling:
-                seen_someone_polling = True
-                print("There is a device on the bus that polls for messages.")
-            continue
-
-        if isinstance(msg, EltakoPollForced):
-            if not seen_someone_force_polling:
-                seen_someone_force_polling = True
-                print("There is a device on the bus that force-polls for messages.")
-            continue
-
         await config.add_sensor(msg)
 
 def main():
-    print(colored('Generate Home Assistent configuration.', 'red'))
 
-    eltakobus = "/dev/ttyUSB1"
-    if len(sys.argv) > 0:
-        eltakobus = sys.argv[1] 
+    p = argparse.ArgumentParser(
+        formatter_class=RawTextHelpFormatter,
+        description='''Eltako Decice and Sensor Discovery for Home Assistant Configuration: 
+Detection of EnOcean Sensors and Eltako Devices mounted on Baureihe 14. 
+Output format is compatible to Home Assistant configuration. 
+In the output file EEPs for sensors need to be manually extend before copying the yaml into Home Assistent.''')
 
-    filename = "ha.yaml"
-    if len(sys.argv) > 1:
-        filename = sys.argv[2]
+    
+    p.add_argument('-v', '--verbose', 
+                   action='count', 
+                   default=0, 
+                   help="enables debug logs")
+    p.add_argument('-eb', '--eltakobus', 
+                   required=True,
+                   help="file at which a RS485 Eltako bus can be opened")
+    p.add_argument('-osa', '--offset-sender-address', 
+                   default=DEFAULT_SENDER_ADDRESS, 
+                   help="offset address for unique sender address used to send messages to devices mounted on the bus")
+    p.add_argument('-o', '--output', 
+                   help="filename in which Home Assistant configuration will be stored", 
+                   default="ha_conf.yaml")
 
-    loop = asyncio.get_event_loop()
+    opts = p.parse_args()
 
-    bus_ready = asyncio.Future()
-    bus = RS485SerialInterface(eltakobus)
+    log_level = logging.INFO
+    if opts.verbose > 0:
+        log_level = logging.DEBUG
+    logging.basicConfig(format='%(message)s', level=log_level)
+
+    logging.info(colored('Generate Home Assistent configuration.', 'red'))
+
+    loop = asyncio.new_event_loop()    
+    asyncio.set_event_loop(loop)
+
+    bus_ready = asyncio.Future(loop=loop)
+    bus = RS485SerialInterface(opts.eltakobus)
     asyncio.ensure_future(bus.run(loop, conn_made=bus_ready), loop=loop)
     loop.run_until_complete(bus_ready)
-    cache_rawpart = eltakobus.replace('/', '-')
+    # cache_rawpart = opts.eltakobus.replace('/', '-')
 
     try:
-        config = HaConfig(DEFAULT_SENDER_ADDRESS, save_debug_log_config=True)
+        config = HaConfig(int(opts.offset_sender_address,16), save_debug_log_config=True)
 
-        maintask = asyncio.Task( ha_config(bus, config) )
+        maintask = asyncio.Task( ha_config(bus, config), loop=loop )
         result = loop.run_until_complete(maintask)
 
-        maintask = asyncio.Task( listen(bus, config, True) )
+        maintask = asyncio.Task( listen(bus, config, True), loop=loop )
         result = loop.run_until_complete(maintask)
 
     except KeyboardInterrupt as e:
-        print("Received keyboard interrupt, cancelling", file=sys.stderr)
+        logging.info("Received keyboard interrupt, cancelling")
         maintask.cancel()
     finally:
-        config.save_as_yaml_to_flie(filename)
+        config.save_as_yaml_to_flie(opts.output)
 
     # if result is not None:
-    #     print(result)
+    #     logging.info(result)
 
 if __name__ == "__main__":
     main()
