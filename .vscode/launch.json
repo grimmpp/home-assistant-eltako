@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/eltakodevice_discovery/ha_discovery.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["/dev/ttyUSB1", "ha.yaml"]
+            "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
         }
     ]
 }

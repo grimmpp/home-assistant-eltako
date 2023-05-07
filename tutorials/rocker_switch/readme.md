@@ -5,7 +5,7 @@ This example is about how to trigger complex automations defined in home assista
 <img src="./switch_triggered_ha_automation.png" alt="Home Assistant Automation" height="300"/>
 <img src="./Eltako-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
 
-First of all you need to register your swicht into the home assistant configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
+First of all you need to register your switch into the home assistant configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
 
 <div style="border: 2px dotted darkgrey; padding: 12px; margin-top:20px; margin-bottom: 20px; ">
 📝 <b>Note:</b> <br />
@@ -32,9 +32,9 @@ See example snipped to declare your switch:
 After you have registered the switch in Home Assistant configuration and after you have restarted Home Assistant you can see messages in the logger view.
 
 To create an automation go in Home Assistant to ``Settings > Automation & Scenes > Create Automation``.
-As trigger choose ``Event`` and enter ``eltako_button_pressed_`` followed by your switch id in one word without spaces. Now any button on your switch will be detected. You can filter for specific buttons or button combinations on your switch by using conditions. To do so you need a ``template condition`` which is unfortunatley not available in the webUI, therefore just switch to yaml mode. 
+As trigger choose ``Event`` and enter ``eltako_button_pressed_`` followed by your switch id in one word without spaces. Now any button on your switch will be detected. You can filter for specific buttons or button combinations on your switch by using conditions. To do so you need a ``template condition`` which is unfortunately not available in the webUI, therefore just switch to yaml mode. 
 
-In my example below the auotmation is listening on switch. There is one condition which filters out the upper left button. Only then the action is triggered. the action itself is a simple relai which is switched either on or off.:
+In my example below the automation is listening on switch. There is one condition which filters out the upper left button. Only then the action is triggered. the action itself is a simple relay which is switched either on or off.:
 ```
 alias: Eltako Taser Test
 description: ""
@@ -54,7 +54,7 @@ action:
     enabled: true
 mode: single
 ```
-After saving the automation and by pusshing the swich you can see a popup when the automation recognizes the event triggered by the switch.
+After saving the automation and by pushing the switch you can see a popup when the automation recognizes the event triggered by the switch.
 
 This action only works if you have previously registered the light/relay in the Home Assistant configuration. 
 Below you can find the whole configuration of Home Assistant for this example:
