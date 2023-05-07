@@ -27,4 +27,6 @@ USB cable needs to be plugged into FAM14. The find out the right serial port in 
 Execute:
 ``python3 ha_discovery.py --verbose --eltakobus /dev/ttyUSB0 --output ha.yaml --offset-sender-address 0x0000B000``
 
+At some point the tool will ask you to wait for sensor messages. Wait for all automatically triggered messages from e.g. weather stations and push all switches you want to register in Home Assistant. You can end the detection by simply pressing ``Ctrl+c``.
+
 It will list you all the detected devices and sensors. As result you will receive a yaml which you can copy past into Home Assistant. Ensure that you find and enter manually all the needed EEPs for the listed sensors.
