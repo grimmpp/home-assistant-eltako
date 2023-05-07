@@ -25,6 +25,6 @@ The tool will then write all collected data into a file which you then need to e
 USB cable needs to be plugged into FAM14. The find out the right serial port in this example ``/dev/ttyUSB0``. Define an output file and offset address for the senders.
 
 Execute:
-``ha_discovery.py --verbose --eltakobus /dev/ttyUSB0 --output ha.yaml --offset-sender-address 0x0000B000``
+``python3 ha_discovery.py --verbose --eltakobus /dev/ttyUSB0 --output ha.yaml --offset-sender-address 0x0000B000``
 
 It will list you all the detected devices and sensors. As result you will receive a yaml which you can copy past into Home Assistant. Ensure that you find and enter manually all the needed EEPs for the listed sensors.
