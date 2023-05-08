@@ -5,14 +5,13 @@ This integration allows you to get all information of the Eltako bus and it allo
 
 For more details check out the provided tutorials and links.
 
-# Installation
+# Installation and Configuration
 
-While this is not integrated into home assistant's repositories, this can be installed by copying over the eltako directory from this repository into your home assistant's ``/config/custom_components`` directory.
-
-To enable this component, go to your integrations, press the "add" button and select "Eltako".
-In the presented sheet either select the detected USB gateway or enter the path manually.
-
-The devices themselves have to be added to your ``/config/configuration.yaml`` file.
+While this is not integrated into home assistant's repositories. You need to install first [Home Assistant Commuinty Sore (HACS)](https://hacs.xyz/) in order to install custom components. After that you need to do the following steps:
+1. **Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
+   For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
+2. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
+3. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. There is a scipt which can detect devices and sensors and create a prepared configuration which you need to extend a bit. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](./eltakodevice_discovery/)
 
 A full configuration can thus look like this:
 
