@@ -1,6 +1,11 @@
 # Eltako Bus Integration (rs485 - enocean) for Home Assistant
 
-This repo contains an Home Assistant Integration for Eltako Baureihe 14 home automation. 
+This repo contains an Home Assistant Integration for Eltako Baureihe 14. 
+This integration allows you to get all information of the Eltako bus and it allows you ton control all the devices via Home Assistant. (See supported devices.) Reaction on sensor data like weather station, rocker switches, ... can be use in Home Assistant automations as well.
+
+For more details check out the provided tutorials and links.
+
+# Installation
 
 While this is not integrated into home assistant's repositories, this can be installed by copying over the eltako directory from this repository into your home assistant's ``/config/custom_components`` directory.
 
