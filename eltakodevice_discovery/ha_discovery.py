@@ -13,7 +13,7 @@ from ymalRepresentation import HaConfig
 
 DEFAULT_SENDER_ADDRESS = 0x0000B000
 
-async def create_busobject(bus, id):
+async def create_busobject(bus: RS485SerialInterface, id: int) -> BusObject:
     response = await bus.exchange(EltakoDiscoveryRequest(address=id), EltakoDiscoveryReply)
 
     assert id == response.reported_address, "Queried for ID %s, received %s" % (id, prettify(response))
@@ -24,13 +24,10 @@ async def create_busobject(bus, id):
     else:
         return BusObject(response, bus=bus)
 
-async def enumerate_bus(bus, *, limit_ids=None):
+async def enumerate_bus(bus: RS485SerialInterface) -> Iterator[BusObject]:
     """Search the bus for devices, yield bus objects for every match"""
 
-    if limit_ids is None:
-        limit_ids = range(1, 256)
-
-    for i in limit_ids:
+    for i in range(1, 256):
         try:
             yield await create_busobject(bus, i)
         except TimeoutError:
@@ -50,33 +47,44 @@ def buslocked(f):
             await unlock_bus(bus)
     return new_f
 
+
 async def lock_bus(bus):
     logging.debug(await(locking.lock_bus(bus)))
+
 
 async def unlock_bus(bus):
     logging.debug(await(locking.unlock_bus(bus)))
 
+
 @buslocked
-async def ha_config(bus, config: HaConfig):
+async def ha_config(bus: RS485SerialInterface, config: HaConfig, offset_address:bytes, write_sender_address_to_mem:bool) -> None:
     
     logging.info(colored("Start scanning for devices", 'red'))
     async for dev in enumerate_bus(bus):
         try:
             logging.info(colored(f"Found device: {dev}",'grey'))
             await config.add_device(dev)
+
+            if write_sender_address_to_mem:
+                if isinstance(dev, HasProgrammableRPS) or isinstance(dev, DimmerStyle):
+                    for i in range(0,dev.size):
+                        # remove 0x from offset string
+                        # sender_address = bytes.fromhex(offset_address[2:]) + dev.address
+                        # sender_address = (int(offset_address[2:], 16) + dev.address).to_bytes(4, 'big')
+                        sender_address = b'\x00\x00\xb1\x01'
+                        await dev.ensure_programmed(i, AddressExpression((sender_address, None)), A5_38_08)
+
         except TimeoutError:
             logging.error("Read error, skipping: Device %s announces %d memory but produces timeouts at reading" % (dev, dev.discovery_response.memory_size))
     logging.info(colored("Device scan finished.", 'red'))
 
 
-async def listen(bus, config: HaConfig, ensure_unlocked):
+async def listen(bus: RS485SerialInterface, config: HaConfig, ensure_unlocked) -> None:
     logging.info(colored(f"Listen for sensor events ...", 'red'))
+
     if ensure_unlocked:
         await lock_bus(bus)
         await unlock_bus(bus)
-
-    seen_someone_polling = True
-    seen_someone_force_polling = True
 
     while True:
         msg = await bus.received.get()
@@ -84,14 +92,14 @@ async def listen(bus, config: HaConfig, ensure_unlocked):
 
         await config.add_sensor(msg)
 
-def main():
 
+def main():
     p = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description='''Eltako Decice and Sensor Discovery for Home Assistant Configuration: 
 Detection of EnOcean Sensors and Eltako Devices mounted on Baureihe 14. 
 Output format is compatible to Home Assistant configuration. 
-In the output file EEPs for sensors need to be manually extend before copying the yaml into Home Assistent.''')
+In the output file EEPs for sensors need to be manually extend before copying the yaml into Home Assistant.''')
 
     
     p.add_argument('-v', '--verbose', 
@@ -107,6 +115,10 @@ In the output file EEPs for sensors need to be manually extend before copying th
     p.add_argument('-o', '--output', 
                    help="filename in which Home Assistant configuration will be stored", 
                    default="ha_conf.yaml")
+    p.add_argument('-wsa', '--write_sender_address_to_device', 
+                   action=argparse.BooleanOptionalAction,
+                   help="Writes the sender address for Home Assistant into memory of devices if not exists.", 
+                   default=False)
 
     opts = p.parse_args()
 
@@ -115,7 +127,7 @@ In the output file EEPs for sensors need to be manually extend before copying th
         log_level = logging.DEBUG
     logging.basicConfig(format='%(message)s', level=log_level)
 
-    logging.info(colored('Generate Home Assistent configuration.', 'red'))
+    logging.info(colored('Generate Home Assistant configuration.', 'red'))
 
     loop = asyncio.new_event_loop()    
     asyncio.set_event_loop(loop)
@@ -129,7 +141,7 @@ In the output file EEPs for sensors need to be manually extend before copying th
     try:
         config = HaConfig(int(opts.offset_sender_address,16), save_debug_log_config=True)
 
-        maintask = asyncio.Task( ha_config(bus, config), loop=loop )
+        maintask = asyncio.Task( ha_config(bus, config, opts.offset_sender_address, opts.write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
         maintask = asyncio.Task( listen(bus, config, True), loop=loop )
