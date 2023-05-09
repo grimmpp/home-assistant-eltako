@@ -68,10 +68,7 @@ async def ha_config(bus: RS485SerialInterface, config: HaConfig, offset_address:
             if write_sender_address_to_mem:
                 if isinstance(dev, HasProgrammableRPS) or isinstance(dev, DimmerStyle):
                     for i in range(0,dev.size):
-                        # remove 0x from offset string
-                        # sender_address = bytes.fromhex(offset_address[2:]) + dev.address
-                        # sender_address = (int(offset_address[2:], 16) + dev.address).to_bytes(4, 'big')
-                        sender_address = b'\x00\x00\xb1\x01'
+                        sender_address = (int(offset_address, 16) + dev.address).to_bytes(4, 'big')
                         await dev.ensure_programmed(i, AddressExpression((sender_address, None)), A5_38_08)
 
         except TimeoutError:
