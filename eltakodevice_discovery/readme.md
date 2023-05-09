@@ -22,11 +22,18 @@ After all devices detected the tool will scan for senders. You can push all the 
 The tool will then write all collected data into a file which you then need to extend manually. Most of the detected senders won't have a proper EEP. Therefore check out the [Enocean Standard](https://www.trio2sys.fr/images/media/EnOcean_Equipment_Profiles_EEP2.1.pdf) and what type of sensors (EEPs) send which messages. Important is to have the relation of EEP to the address which is included in the sensor message and which was detected by the tool and put into the output file.
 
 # Example Execution
+
+## Prerequisite
+Install eltako14bus library: ``pip install -e git+https://github.com/grimmpp/eltako14bus@master#egg=eltakobus``
+
 USB cable needs to be plugged into FAM14. The find out the right serial port in this example ``/dev/ttyUSB0``. Define an output file and offset address for the senders.
 
-Execute:
+## Execute
 ``python3 ha_discovery.py --verbose --eltakobus /dev/ttyUSB0 --output ha.yaml --offset-sender-address 0x0000B000``
+
+If you want to programmatically write the sender address for Home Assistant into the device memories then add the parameter ``-wsa``.
 
 At some point the tool will ask you to wait for sensor messages. Wait for all automatically triggered messages from e.g. weather stations and push all switches you want to register in Home Assistant. You can end the detection by simply pressing ``Ctrl+c``.
 
 It will list you all the detected devices and sensors. As result you will receive a yaml which you can copy past into Home Assistant. Ensure that you find and enter manually all the needed EEPs for the listed sensors.
+
