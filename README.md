@@ -57,7 +57,7 @@ Sender EEPs currently supported for the different platforms are:
 # Dependencies
 * [Eltako Software PCT14](https://www.eltako.com/en/software-pct14/) for programming and configuring Eltako Baureihe 14 devices natively.
 * [Home Assistant Community Store](https://hacs.xyz/) is needed to be able to install this repository. It allows you to install custom_components.
-* [Eltako Baureihe 14 Python Library](https://github.com/michaelpiron/eltako14bus) is used by this Home Assistant Integration.
+* [Eltako14Bus Python Library](https://github.com/grimmpp/eltako14bus) is used by this Home Assistant Integration.
 
 
 # Usefull Home Assistant Addons
