@@ -42,6 +42,7 @@ async def async_setup_entry(
             dev_name = entity_config.get(CONF_NAME)
             device_class = entity_config.get(CONF_DEVICE_CLASS)
             eep_string = entity_config.get(CONF_EEP)
+            invert_signal =  entity_config.get(CONF_INVERT_SIGNAL)
 
             try:
                 dev_eep = EEP.find(eep_string)
@@ -49,7 +50,7 @@ async def async_setup_entry(
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class))
+                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
 
     async_add_entities(entities)
@@ -65,7 +66,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - D5-00-01
     """
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, device_class):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, device_class, invert_signal):
         """Initialize the Eltako binary sensor."""
         super().__init__(gateway, dev_id, dev_name)
         self._dev_eep = dev_eep
@@ -75,6 +76,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self.dev_id = dev_id
         self.dev_name = dev_name
         self.gateway = gateway
+        self.invert_signal = invert_signal
 
     @property
     def name(self):
@@ -179,7 +181,10 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             if decoded.learn_button == 0:
                 return
             
-            self._attr_is_on = decoded.contact == 0
+            if self.invert_signal:
+                self._attr_is_on = decoded.contact == 1
+            else:
+                self._attr_is_on = decoded.contact == 0 
 
             self.schedule_update_ha_state()
         elif self._dev_eep in [A5_08_01]:

@@ -23,17 +23,7 @@ from homeassistant.components.switch import (
 from homeassistant.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.const import (
-    CONF_DEVICE_CLASS,
-    CONF_ENTITY_CATEGORY,
-    CONF_ENTITY_ID,
-    CONF_EVENT,
-    CONF_MODE,
-    CONF_ID,
-    CONF_NAME,
-    CONF_TYPE,
-    Platform,
-)
+from homeassistant.const import *
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
@@ -59,6 +49,7 @@ class BinarySensorSchema(EltakoPlatformSchema):
 
     CONF_EEP = CONF_EEP
     CONF_ID_REGEX = CONF_ID_REGEX
+    CONF_INVERT_SIGNAL = CONF_INVERT_SIGNAL
     
     CONF_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 
@@ -71,6 +62,7 @@ class BinarySensorSchema(EltakoPlatformSchema):
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
+                vol.Optional(CONF_INVERT_SIGNAL, default=False): cv.boolean,
             }
         ),
     )
