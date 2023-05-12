@@ -23,7 +23,18 @@ from homeassistant.components.switch import (
 from homeassistant.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.const import *
+from homeassistant.const import (
+    CONF_DEVICE_CLASS,
+    CONF_ENTITY_CATEGORY,
+    CONF_ENTITY_ID,
+    CONF_EVENT,
+    CONF_MODE,
+    CONF_ID,
+    CONF_NAME,
+    CONF_TYPE,
+    Platform,
+    CONF_INVERT_SIGNAL,
+)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
