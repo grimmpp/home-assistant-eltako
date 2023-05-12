@@ -33,12 +33,11 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_TYPE,
     Platform,
-    CONF_INVERT_SIGNAL,
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, CONF_INVERT_SIGNAL
 
 class EltakoPlatformSchema(ABC):
     """Voluptuous schema for Eltako platform entity configuration."""
