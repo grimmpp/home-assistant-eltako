@@ -178,8 +178,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
 
             self.schedule_update_ha_state()
         elif self._dev_eep in [D5_00_01]:
-            if decoded.learn_button == 1:
-                return
+            # if decoded.learn_button == 1:
+            #     return
             
             if self.invert_signal:
                 self._attr_is_on = decoded.contact == 0

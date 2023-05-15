@@ -30,5 +30,5 @@ eltako:
       eep: "D5-00-01"
       name: window
       device_class: window
-      invert-signal: True   # optional, default=False
+      invert-signal: False   # optional, default=False
 ```
