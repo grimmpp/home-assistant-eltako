@@ -183,7 +183,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
             
             # contact: 0=open, 1=closed
-            if self.invert_signal:
+            if not self.invert_signal:
                 self._attr_is_on = decoded.contact == 0
             else:
                 self._attr_is_on = decoded.contact == 1 
