@@ -37,7 +37,7 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, CONF_INVERT_SIGNAL
+from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN
 
 class EltakoPlatformSchema(ABC):
     """Voluptuous schema for Eltako platform entity configuration."""
@@ -59,7 +59,6 @@ class BinarySensorSchema(EltakoPlatformSchema):
 
     CONF_EEP = CONF_EEP
     CONF_ID_REGEX = CONF_ID_REGEX
-    CONF_INVERT_SIGNAL = CONF_INVERT_SIGNAL
     
     CONF_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 
@@ -72,7 +71,6 @@ class BinarySensorSchema(EltakoPlatformSchema):
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
-                vol.Optional(CONF_INVERT_SIGNAL, default=False): cv.boolean,
             }
         ),
     )
