@@ -9,5 +9,5 @@
   "iot_class": "local_push",
   "loggers": ["eltako"],
   "version": "0.0.2",
-  "requirements": ["git+https://github.com/grimmpp/eltako14bus.git@master#eltakobus==0.0.26"]
+  "requirements": ["git+https://github.com/grimmpp/eltako14bus.git@fgw14-communication#eltakobus==0.0.26"]
 }
