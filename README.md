@@ -5,15 +5,6 @@ This integration allows you to get all information of the Eltako bus and it allo
 
 For more details check out the provided tutorials and links.
 
-# Installation and Configuration
-
-While this is not integrated into home assistant's repositories. You need to install first [Home Assistant Commuinty Sore (HACS)](https://hacs.xyz/) in order to install custom components. After that you need to do the following steps:
-1. **Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
-   For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
-2. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
-3. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./tutorials/update_home_assistant_configuration.md) to see how the configuration should look like. 
-There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](./eltakodevice_discovery/)
-
 # Supported EEPs and devices
 
 EEPs and devices currently supported for the different platforms are:
@@ -21,7 +12,7 @@ EEPs and devices currently supported for the different platforms are:
   * F6-02-01 (Rocker switch, FTS14EM)
   * F6-02-02 (Rocker switch)
   * F6-10-00 (Window handle, FTS14EM)
-  * D5-00-01 (Contact sensor, FTS14EM)
+  * D5-00-01 (Contact sensor, FTS14EM) incl. signal inverter
   * A5-08-01 (Occupancy sensor, FTS14EM)
 * Sensor
   * A5-13-01 (Weather station, FWG14)
@@ -45,7 +36,22 @@ Sender EEPs currently supported for the different platforms are:
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
 
+# Installation and Configuration
 
+While this is not integrated into home assistant's repositories. You need to install first [Home Assistant Commuinty Sore (HACS)](https://hacs.xyz/) in order to install custom components. After that you need to do the following steps:
+1. **Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
+   For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
+2. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
+3. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./tutorials/update_home_assistant_configuration.md) to see how the configuration should look like. 
+There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](./eltakodevice_discovery/)
+
+# Testing
+
+Unit and component tests for this integration are located in the folder tests. There is already a vscode settings.json prepared to start them via vscode or you can just run the following command from the repo folder.
+
+```
+python -m unittest discover tests -v
+```
 
 # Tutorials
 * [Create Home Assistant Configuration File for Eltako Integration](./eltakodevice_discovery/)

@@ -1,7 +1,7 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import (
@@ -147,18 +147,17 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             else:
                 # button released but no detailed information available
                 pass
-            
-            #TODO: export into helper function
-            id = str(self.dev_id.plain_address().hex()).upper()
-            id = f"{id[0:2]}-{id[2:4]}-{id[4:6]}-{id[6:8]}"
 
-            event_id = f"{EVENT_BUTTON_PRESSED}_{id}"
+            switch_address = b2a(msg.address, '-').upper()
+
+            event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
             LOGGER.debug("Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             
             self.hass.bus.fire(
                 event_id,
                 {
-                    "id": id,
+                    "id": event_id,
+                    "switch_address": switch_address,
                     "pressed_buttons": pressed_buttons,
                     "pressed": pressed,
                     "two_buttons_pressed": two_buttons_pressed,
