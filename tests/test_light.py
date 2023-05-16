@@ -2,12 +2,17 @@ import unittest
 from unittest import mock
 from homeassistant.helpers.entity import Entity
 from custom_components.eltako.light import EltakoDimmableLight, EltakoSwitchableLight
+from custom_components.eltako.device import EltakoEntity
 from eltakobus import *
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
+# EltakoEntity.send_message = mock.Mock(return_value=None)
 
 class TestLight(unittest.TestCase):
+
+    def retrieve_commands(self, msg):
+        self.retrieved_command = msg
 
     def create_switchable_light(self) -> EltakoSwitchableLight:
         gateway = None
@@ -48,3 +53,26 @@ class TestLight(unittest.TestCase):
 
         light.value_changed(on_msg)
         self.assertEqual(light._on_state, True)
+
+
+    def test_switchable_light_trun_on(self):
+        light = self.create_switchable_light()
+        light.send_message = self.retrieve_commands
+        
+        # test if command is sent
+        light.turn_on()
+        self.assertEqual(
+            self.retrieved_command.body,
+            b'k\x07\x01\x00\x00\t\x00\x00\xb0\x01\x00')
+        
+    def test_switchable_light_trun_off(self):
+        light = self.create_switchable_light()
+        light.send_message = self.retrieve_commands
+
+        # test if command is sent
+        light.turn_off()
+        self.assertEqual(
+            self.retrieved_command.body,
+            b'k\x07\x01\x00\x00\x08\x00\x00\xb0\x01\x00')
+
+
