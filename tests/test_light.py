@@ -11,8 +11,8 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestLight(unittest.TestCase):
 
-    def retrieve_commands(self, msg):
-        self.retrieved_command = msg
+    def mock_send_message(self, msg):
+        self.last_sent_command = msg
 
     def create_switchable_light(self) -> EltakoSwitchableLight:
         gateway = None
@@ -57,22 +57,22 @@ class TestLight(unittest.TestCase):
 
     def test_switchable_light_trun_on(self):
         light = self.create_switchable_light()
-        light.send_message = self.retrieve_commands
+        light.send_message = self.mock_send_message
         
         # test if command is sent to eltako bus
         light.turn_on()
         self.assertEqual(
-            self.retrieved_command.body,
+            self.last_sent_command.body,
             b'k\x07\x01\x00\x00\t\x00\x00\xb0\x01\x00')
         
     def test_switchable_light_trun_off(self):
         light = self.create_switchable_light()
-        light.send_message = self.retrieve_commands
+        light.send_message = self.mock_send_message
 
         # test if command is sent to eltako bus
         light.turn_off()
         self.assertEqual(
-            self.retrieved_command.body,
+            self.last_sent_command.body,
             b'k\x07\x01\x00\x00\x08\x00\x00\xb0\x01\x00')
 
 
