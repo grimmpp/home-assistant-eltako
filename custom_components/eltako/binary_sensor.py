@@ -22,7 +22,6 @@ from .const import *
 import json
 
 DEPENDENCIES = ["eltakobus"]
-EVENT_BUTTON_PRESSED = "eltako_button_pressed"
 
 
 async def async_setup_entry(
