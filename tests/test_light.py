@@ -59,7 +59,7 @@ class TestLight(unittest.TestCase):
         light = self.create_switchable_light()
         light.send_message = self.retrieve_commands
         
-        # test if command is sent
+        # test if command is sent to eltako bus
         light.turn_on()
         self.assertEqual(
             self.retrieved_command.body,
@@ -69,7 +69,7 @@ class TestLight(unittest.TestCase):
         light = self.create_switchable_light()
         light.send_message = self.retrieve_commands
 
-        # test if command is sent
+        # test if command is sent to eltako bus
         light.turn_off()
         self.assertEqual(
             self.retrieved_command.body,
