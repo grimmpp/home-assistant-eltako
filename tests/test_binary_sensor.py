@@ -1,11 +1,12 @@
 import unittest
 from mocks import HassMock
 from unittest import mock
+from homeassistant.helpers.entity import Entity
 from custom_components.eltako.binary_sensor import EltakoBinarySensor
 from eltakobus import *
 
 # mock update of Home Assistant
-EltakoBinarySensor.schedule_update_ha_state = mock.Mock(return_value=None)
+Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 # EltakoBinarySensor.hass.bus.fire is mocked by class HassMock
 
 
