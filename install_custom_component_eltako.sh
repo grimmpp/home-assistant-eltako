@@ -30,7 +30,7 @@ fi
 
 echo -e "\nCopy new folder into $eltako_dir"
 exe mkdir -p $eltako_dir
-exe cp -r .$repo_dir/eltako $custom_components
+exe cp -r .$repo_dir/custom_components/eltako $custom_components
 
 #echo -e "\nRemove leftovers from repo home-assistant-eltko"
 #exe rm -r .$repo_dir

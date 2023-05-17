@@ -10,6 +10,7 @@ import logging
 
 from eltakobus import *
 from ymalRepresentation import HaConfig
+from eltakobus.locking import buslocked
 
 DEFAULT_SENDER_ADDRESS = 0x0000B000
 
@@ -32,21 +33,6 @@ async def enumerate_bus(bus: RS485SerialInterface) -> Iterator[BusObject]:
             yield await create_busobject(bus, i)
         except TimeoutError:
             continue
-
-def buslocked(f):
-    """Wraps a coroutine inside a bus locking and (finally) bus unlocking. The
-    coroutine must take a bus as its first argument."""
-    @functools.wraps(f)
-    async def new_f(bus, *args, **kwargs):
-        try:
-            logging.debug("Sending a lock command onto the bus; its reply should tell us whether there's a FAM in the game.")
-            await lock_bus(bus)
-            return await f(bus, *args, **kwargs)
-        finally:
-            logging.debug("Unlocking the bus again")
-            await unlock_bus(bus)
-    return new_f
-
 
 async def lock_bus(bus):
     logging.debug(await(locking.lock_bus(bus)))
@@ -79,9 +65,9 @@ async def ha_config(bus: RS485SerialInterface, config: HaConfig, offset_address:
 async def listen(bus: RS485SerialInterface, config: HaConfig, ensure_unlocked) -> None:
     logging.info(colored(f"Listen for sensor events ...", 'red'))
 
-    if ensure_unlocked:
-        await lock_bus(bus)
-        await unlock_bus(bus)
+    # if ensure_unlocked:
+    #     await lock_bus(bus)
+    #     await unlock_bus(bus)
 
     while True:
         msg = await bus.received.get()
@@ -126,7 +112,7 @@ In the output file EEPs for sensors need to be manually extend before copying th
 
     logging.info(colored('Generate Home Assistant configuration.', 'red'))
 
-    loop = asyncio.new_event_loop()    
+    loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     bus_ready = asyncio.Future(loop=loop)

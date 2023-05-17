@@ -47,6 +47,8 @@ There is also a scipt which can detect devices and sensors and creates a prepare
 
 # Testing
 
+Because you don't want to run all the time the Home Assistant development container and restart Home Assistant for testing. Here are some basic tests for ensuring a low level quality.
+
 Unit and component tests for this integration are located in the folder tests. There is already a vscode settings.json prepared to start them via vscode or you can just run the following command from the repo folder.
 
 ```
