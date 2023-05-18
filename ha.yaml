@@ -37,14 +37,19 @@ eltako:
     sender:
       id: 00-00-B0-06
       eep: H5-3F-7F
+    device_class: shutter
+    time_closes: 24
+    time_opens: 25
   binary_sensor:
   - id: FE-DB-B6-40
     eep: F6-02-01
     name: Switch FE-DB-B6-40
+    device_class: window / door / smoke / motion / ? # <= NEED TO BE COMPLETED!!!
     #Sensor Type: Wall Switch /Rocker Switch, Derived from Msg Type: RPSMessage
   - id: FE-DB-DA-04
     eep: F6-02-01
     name: Switch FE-DB-DA-04
+    device_class: window / door / smoke / motion / ? # <= NEED TO BE COMPLETED!!!
     #Sensor Type: Wall Switch /Rocker Switch, Derived from Msg Type: RPSMessage
   sensor:
   - id: 05-1E-83-15

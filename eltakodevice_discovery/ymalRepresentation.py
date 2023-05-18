@@ -79,6 +79,11 @@ class HaConfig():
                         'id': f"{self.get_formatted_address(self.sender_address+device.address+i)}",
                         'eep': f"{info['sender_eep']}",
                     }
+                
+                if info['type'] == 'cover':
+                    dev_obj['device_class'] = 'shutter'
+                    dev_obj['time_closes'] = 24
+                    dev_obj['time_opens'] = 25
 
                 if info['type'] not in self.eltako:
                     self.eltako[info['type']] = []    
@@ -128,6 +133,9 @@ class HaConfig():
                         'comment': comment
                     }
 
+                    if info['type'] == 'binary_sensor':
+                        sensor['device_class'] = 'window / door / smoke / motion / ?'
+
                     if info['type'] not in self.eltako:
                         self.eltako[info['type']] = []
 
@@ -158,7 +166,7 @@ class HaConfig():
                     for entry_key in item.keys():
                         if entry_key not in ['id', 'sender', 'comment']:
                             value = item[entry_key]
-                            if '?' in value:
+                            if type(value).__name__ == 'str' and '?' in value:
                                 value += " # <= NEED TO BE COMPLETED!!!"
                             print(f"    {entry_key}: {value}", file=f)
                         if entry_key == 'sender':
