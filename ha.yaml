@@ -36,24 +36,29 @@ eltako:
     name: FSB14 - 6
     sender:
       id: 00-00-B0-06
-      eep: ''
-  sensor:
-  - id: 05-1E-83-15
-    eep: A5-??-??
-    name: 4 Byte Communication
-  - id: 00-00-B1-05
-    eep: A5-??-??
-    name: 4 Byte Communication
-  - id: 00-00-B1-01
-    eep: A5-??-??
-    name: 4 Byte Communication
+      eep: H5-3F-7F
   binary_sensor:
   - id: FE-DB-B6-40
     eep: F6-02-01
-    name: Switch
+    name: Switch FE-DB-B6-40
+    #Sensor Type: Wall Switch /Rocker Switch, Derived from Msg Type: RPSMessage
   - id: FE-DB-DA-04
     eep: F6-02-01
-    name: Switch
+    name: Switch FE-DB-DA-04
+    #Sensor Type: Wall Switch /Rocker Switch, Derived from Msg Type: RPSMessage
+  sensor:
+  - id: 05-1E-83-15
+    eep: A5-??-?? # <= NEED TO BE COMPLETED!!!
+    name: 4 Byte Communication 05-1E-83-15
+    #Sensor Type: Multi-Sensor ? , Derived from Msg Type: Regular4BSMessage
+  - id: 00-00-10-08
+    eep: D5-??-?? # <= NEED TO BE COMPLETED!!!
+    name: 1 Byte Communication 00-00-10-08
+    #Sensor Type: FTS14EM switch, Derived from Msg Type: Regular1BSMessage
+  - id: 00-00-10-01
+    eep: D5-??-?? # <= NEED TO BE COMPLETED!!!
+    name: 1 Byte Communication 00-00-10-01
+    #Sensor Type: FTS14EM switch, Derived from Msg Type: Regular1BSMessage
 logger:
   default: info
   logs:

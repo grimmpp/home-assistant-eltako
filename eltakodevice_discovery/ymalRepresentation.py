@@ -27,7 +27,7 @@ EEP_MAPPING = [
     {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 2},
     {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 4},
 
-    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'sender_eep': '' ,'type': 'cover', 'description': 'Eltako cover', 'address_count': 1},
+    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'type': 'cover', 'description': 'Eltako cover', 'address_count': 1},
 ]
 
 ORG_MAPPING = {
@@ -36,7 +36,7 @@ ORG_MAPPING = {
     7: {'Telegram': '4BS', 'RORG': 'A5', 'name': '4 Byte Communication', 'type': 'sensor', 'eep': 'A5-??-??'},
 }
 
-SENSOR_MESSAGE_TYPES = [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, EltakoMessage]
+SENSOR_MESSAGE_TYPES = [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage, EltakoMessage]
 
 class HaConfig():
 
@@ -55,9 +55,11 @@ class HaConfig():
                 return i
         return None
     
+    
     def get_formatted_address(self, address):
         a = f"{address:08x}".upper()
         return f"{a[0:2]}-{a[2:4]}-{a[4:6]}-{a[6:8]}"
+
 
     async def add_device(self, device: BusObject):
         device_name = type(device).__name__
@@ -85,6 +87,28 @@ class HaConfig():
                 logging.info(colored(f"Add device {info['type']}: id: {dev_obj['id']}, eep: {dev_obj['eep']}, name: {dev_obj['name']}",'yellow'))
 
 
+    def guess_sensor_type_by_address(self, msg:ESP2Message)->str:
+        if type(msg) == Regular1BSMessage:
+            try:
+                data = b"\xa5\x5a" + msg.body[:-1]+ (sum(msg.body[:-1]) % 256).to_bytes(2, 'big')
+                _msg = Regular1BSMessage.parse(data)
+                min_address = b'\x00\x00\x10\x01'
+                max_address = b'\x00\x00\x14\x89'
+                if min_address <= _msg.address and _msg.address <= max_address:
+                    return "FTS14EM switch"
+            except:
+                pass
+        
+        if type(msg) == RPSMessage:
+            if b'\xFE\xDB\x00\x00' < msg.address:
+                return "Wall Switch /Rocker Switch"
+
+        if type(msg) == Regular4BSMessage:
+            return "Multi-Sensor ? "
+
+        return "???"
+    
+
     async def add_sensor(self, msg: ESP2Message):
         if type(msg) in SENSOR_MESSAGE_TYPES:
             logging.debug(msg)
@@ -93,11 +117,15 @@ class HaConfig():
 
                     info = ORG_MAPPING[msg.org]
                     address = b2a(msg.address).replace(' ','-').upper()
+                    sensor_type = self.guess_sensor_type_by_address(msg)
+                    msg_type = type(msg).__name__
+                    comment = f"Sensor Type: {sensor_type}, Derived from Msg Type: {msg_type}"
 
                     sensor = {
                         'id': address,
                         'eep': info['eep'],
-                        'name': info['name']
+                        'name': f"{info['name']} {address}",
+                        'comment': comment
                     }
 
                     if info['type'] not in self.eltako:
@@ -106,7 +134,7 @@ class HaConfig():
                     self.eltako[info['type']].append(sensor)
                     self.sener_id_list.append(msg.address)
                     
-                    logging.info(colored(f"Add Sensor ({info['name']}): address: {address}", 'yellow'))
+                    logging.info(colored(f"Add Sensor ({msg_type} - {info['name']}): address: {address}, Sensor Type: {sensor_type}", 'yellow'))
         else:
             if type(msg) == EltakoDiscoveryRequest and msg.address == 127:
                 logging.info(colored('Wait for incoming sensor singals. After you have recorded all your sensor singals press Ctrl+c to exist and store the configuration file.', 'red', attrs=['bold']))
@@ -116,20 +144,32 @@ class HaConfig():
 
     def save_as_yaml_to_flie(self, filename:str):
         logging.info(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
-
-        data = {}
-        data['eltako'] = self.eltako
         
-        if self.export_logger:
-            data['logger'] = {
-                'default': 'info',
-                'logs': {
-                    'eltako': 'debug'
-                }
-            }
-
+        # go through manually to be able to add comments
         yaml = ruamel.yaml.YAML()
-        yaml.preserve_quotes = True
-        # yaml.explicit_start = True
+        e = self.eltako
+
         with open(filename, 'w') as f:
-            data = yaml.dump(data, f)
+            print("eltako:", file=f)
+            for type_key in e.keys():
+                print(f"  {type_key}:", file=f)
+                for item in e[type_key]:
+                    print(f"  - id: {item['id']}", file=f)
+                    for entry_key in item.keys():
+                        if entry_key not in ['id', 'sender', 'comment']:
+                            value = item[entry_key]
+                            if '?' in value:
+                                value += " # <= NEED TO BE COMPLETED!!!"
+                            print(f"    {entry_key}: {value}", file=f)
+                        if entry_key == 'sender':
+                            print("    sender:", file=f)
+                            print(f"      id: {item[entry_key]['id']}", file=f)
+                            print(f"      eep: {item[entry_key]['eep']}", file=f)
+                    if 'comment' in item.keys():
+                        print(f"    #{item['comment']}", file=f)
+
+            # logs
+            print("logger:", file=f)
+            print("  default: info", file=f)
+            print("  logs:", file=f)
+            print("    eltako: debug", file=f)
