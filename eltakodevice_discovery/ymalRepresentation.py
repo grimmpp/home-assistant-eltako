@@ -18,16 +18,16 @@ EEP_MAPPING = [
     {'hw-type': 'F3Z14D', 'eep': 'A5-13-01', 'type': 'sensor', 'description': 'Automated meter reading - gas', 'address_count': 1},
     {'hw-type': 'F3Z14D', 'eep': 'A5-12-03', 'type': 'sensor', 'description': 'Automated meter reading - water', 'address_count': 1},
 
-    {'hw-type': 'FUD14', 'eep': 'A5-38-08', 'type': 'light', 'description': 'Central command - gateway', 'address_count': 1},
-    {'hw-type': 'FSR14_1x', 'eep': 'M5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 1},
-    {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 2},
-    {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 4},
+    {'hw-type': 'FUD14', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Central command - gateway', 'address_count': 1},
+    {'hw-type': 'FSR14_1x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 1},
+    {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 2},
+    {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 4},
 
-    {'hw-type': 'FSR14_1x', 'eep': 'M5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 1},
-    {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 2},
-    {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 4},
+    {'hw-type': 'FSR14_1x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 1},
+    {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 2},
+    {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 4},
 
-    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'type': 'cover', 'description': 'Eltako cover', 'address_count': 1},
+    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'sender_eep': '' ,'type': 'cover', 'description': 'Eltako cover', 'address_count': 1},
 ]
 
 ORG_MAPPING = {
@@ -75,7 +75,7 @@ class HaConfig():
                 if info['type'] in ['light', 'switch', 'cover']:
                     dev_obj['sender'] = {
                         'id': f"{self.get_formatted_address(self.sender_address+device.address+i)}",
-                        'eep': "A5-38-08",
+                        'eep': f"{info['sender_eep']}",
                     }
 
                 if info['type'] not in self.eltako:
