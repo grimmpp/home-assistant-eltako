@@ -12,17 +12,20 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestBinarySensor(unittest.TestCase):
 
-    def test_binary_sensor_rocker_switch(self):
+    def create_binary_sensor(self, eep_string:str="F6-02-01", device_class = "none", invert_signal:bool=False) -> EltakoBinarySensor:
         gateway = None
         dev_id = AddressExpression.parse("00-00-00-01")
         dev_name = "device name"
-        device_class = "none"
-        eep_string = "F6-02-01"
+        
         dev_eep = EEP.find(eep_string)
-        invert_signal =  False
 
         bs = EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal)
-        self.assertEqual(bs._attr_is_on, None)       
+        self.assertEqual(bs._attr_is_on, None)     
+
+        return bs
+
+    def test_binary_sensor_rocker_switch(self):
+        bs = self.create_binary_sensor()
 
         bs.hass = HassMock()
         
@@ -51,15 +54,8 @@ class TestBinarySensor(unittest.TestCase):
 
 
     def test_binary_sensor_window_contact_triggered_via_FTS14EM(self):
-        gateway = None
-        dev_id = AddressExpression.parse("00-00-00-01")
-        dev_name = "device name"
-        device_class = "window"
-        eep_string = "D5-00-01"
-        dev_eep = EEP.find(eep_string)
-        invert_signal =  True
+        bs = self.create_binary_sensor(eep_string="D5-00-01", device_class = "window", invert_signal =  True)
 
-        bs = EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal)
         # test if sensor object is newly created
         self.assertEqual(bs._attr_is_on, None)       
         
