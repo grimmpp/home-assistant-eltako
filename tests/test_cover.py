@@ -11,6 +11,9 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestCover(unittest.TestCase):
 
+    def mock_send_message(self, msg):
+        self.last_sent_command = msg
+
     def create_cover(self) -> EltakoCover:
         gateway = None
         dev_id = AddressExpression.parse('00-00-00-01')
@@ -27,11 +30,8 @@ class TestCover(unittest.TestCase):
         sender_eep = EEP.find(sender_eep_string)
 
         ec = EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens)
-        return ec
+        ec.send_message = self.mock_send_message
 
-
-    def test_cover_value_changed(self):
-        ec = self.create_cover()
         ec._attr_is_closing = False
         ec._attr_is_opening = False
         self._attr_is_closed = False
@@ -41,6 +41,12 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_opening, False)
         self.assertEqual(ec._attr_is_closed, False)
         self.assertEqual(ec._attr_current_cover_position, 100)
+
+        return ec
+
+
+    def test_cover_value_changed(self):
+        ec = self.create_cover()
 
         # status update message form device
         # device send acknowledgement for opening
@@ -70,3 +76,72 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_opening, False)
         self.assertEqual(ec._attr_is_closed, False)
         self.assertEqual(ec._attr_current_cover_position, 100)
+
+
+    def test_open_cover(self):
+        ec = self.create_cover()
+
+        ec.open_cover()
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x04\x01\x08\x00\x00\xb1\x06\x00')
+        
+    def test_close_cover(self):
+        ec = self.create_cover()
+
+        ec.close_cover()
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x04\x02\x08\x00\x00\xb1\x06\x00')
+        
+    def test_stop_cover(self):
+        ec = self.create_cover()
+
+        ec.stop_cover()
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x00\x00\x08\x00\x00\xb1\x06\x00')
+        
+    def test_set_cover_position(self):
+        ec = self.create_cover()
+
+        ec._attr_current_cover_position = 100
+        ec.set_cover_position(position=50)
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x01\x02\x08\x00\x00\xb1\x06\x00')
+        self.assertEqual(ec._attr_is_closing, True)
+        self.assertEqual(ec._attr_is_opening, False)
+        self.last_sent_command = None
+
+        ec._attr_current_cover_position = 0
+        ec.set_cover_position(position=50)
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x01\x01\x08\x00\x00\xb1\x06\x00')
+        self.assertEqual(ec._attr_is_closing, False)
+        self.assertEqual(ec._attr_is_opening, True)
+        self.last_sent_command = None
+        
+        ec._attr_current_cover_position = 100
+        ec.set_cover_position(position=0)
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x04\x02\x08\x00\x00\xb1\x06\x00')
+        self.assertEqual(ec._attr_is_closing, True)
+        self.assertEqual(ec._attr_is_opening, False)
+        self.last_sent_command = None
+
+        ec._attr_current_cover_position = 0
+        ec.set_cover_position(position=100)
+        self.assertEqual(
+            self.last_sent_command.body,
+            b'k\x07\x00\x04\x01\x08\x00\x00\xb1\x06\x00')
+        self.assertEqual(ec._attr_is_closing, False)
+        self.assertEqual(ec._attr_is_opening, True)
+        self.last_sent_command = None
+
+        ec._attr_current_cover_position = 100
+        ec.set_cover_position(position=100)
+        self.assertEqual(self.last_sent_command, None)
+        self.last_sent_command = None
