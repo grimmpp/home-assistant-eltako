@@ -28,29 +28,38 @@ class TestSensor(unittest.TestCase):
         msg = Regular4BSMessage(address=b'\x05\x1e\x83\x15', status=b'\x00', data=b'\x0f\x7d\x07\x1a', outgoing=False)
         
         ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN
+        ews._attr_native_value = -1
         ews.value_changed(msg)
         self.assertEqual(ews.native_value, 58.76470588235294)
 
         ews.entity_description = SENSOR_DESC_WEATHER_STATION_TEMPERATURE
+        ews._attr_native_value = -1
         ews.value_changed(msg)
         self.assertEqual(ews.native_value, 18.823529411764703)
 
         ews.entity_description = SENSOR_DESC_WEATHER_STATION_WIND_SPEED
-        ews.value_changed(msg)
-        self.assertEqual(ews.native_value, 1.9215686274509804)
-
-        ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST
-        ews.value_changed(msg)
-        self.assertEqual(ews.native_value, 1.9215686274509804)
-
-        ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL
-        ews.value_changed(msg)
-        self.assertEqual(ews.native_value, 1.9215686274509804)
-
-        ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST
+        ews._attr_native_value = -1
         ews.value_changed(msg)
         self.assertEqual(ews.native_value, 1.9215686274509804)
 
         ews.entity_description = SENSOR_DESC_WEATHER_STATION_RAIN
+        ews._attr_native_value = -1
         ews.value_changed(msg)
         self.assertEqual(ews.native_value, 1)
+
+        msg = Regular4BSMessage(address=b'\x05\x1e\x83\x15', status=b'\x00', data=b'\x01\x0a\x08\x28', outgoing=False)
+
+        ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST
+        ews._attr_native_value = -1
+        ews.value_changed(msg)
+        self.assertEqual(ews.native_value, 4705.882352941177)
+
+        ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL
+        ews._attr_native_value = -1
+        ews.value_changed(msg)
+        self.assertEqual(ews.native_value, 5882.35294117647)
+
+        ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST
+        ews._attr_native_value = -1
+        ews.value_changed(msg)
+        self.assertEqual(ews.native_value, 588.2352941176471)
