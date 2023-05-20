@@ -1,4 +1,6 @@
 # Eltako Bus Integration (rs485 - enocean) for Home Assistant
+<!-- [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration) -->
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
 This repo contains an Home Assistant Integration for Eltako Baureihe 14. 
 This integration allows you to get all information of the Eltako bus and it allows you ton control all the devices via Home Assistant. (See supported devices.) Reaction on sensor data like weather station, rocker switches, ... can be use in Home Assistant automations as well.
@@ -41,10 +43,10 @@ Sender EEPs currently supported for the different platforms are:
 While this is not integrated into home assistant's repositories. You need to install first [Home Assistant Commuinty Sore (HACS)](https://hacs.xyz/) in order to install custom components. After that you need to do the following steps:
 1. **Install repo via HACS**: Simply enter the URL of this repo. It will then be listed in HACS and also shows when new updates are available. [Add Custom Repo in HACS](https://hacs.xyz/docs/faq/custom_repositories/)
 
-   *Alternative: Copying directory* ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
+   *Alternative 2:* Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
    For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
-3. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
-4. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./tutorials/update_home_assistant_configuration.md) to see how the configuration should look like. 
+2. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
+3. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./tutorials/update_home_assistant_configuration.md) to see how the configuration should look like. 
 There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](./eltakodevice_discovery/)
 
 # Testing
