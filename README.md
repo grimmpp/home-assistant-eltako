@@ -1,6 +1,8 @@
 # Eltako Bus Integration (rs485 - enocean) for Home Assistant
-<!-- [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration) -->
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![Generic badge](https://img.shields.io/badge/HACS-Custom-3498db.svg)](https://github.com/hacs/integration)
+[![Generic badge](https://img.shields.io/github/commit-activity/y/grimmpp/home-assistant-eltako.svg?style=flat&color=3498db)](https://github.com/grimmpp/home-assistant-eltako/commits/main)
+[![Generic badge](https://img.shields.io/badge/Community-Forum-3498db.svg)](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)
+
 
 This repo contains an Home Assistant Integration for Eltako Baureihe 14. 
 This integration allows you to get all information of the Eltako bus and it allows you ton control all the devices via Home Assistant. (See supported devices.) Reaction on sensor data like weather station, rocker switches, ... can be use in Home Assistant automations as well.
