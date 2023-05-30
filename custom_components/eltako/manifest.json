@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/grimmpp/home-assistant-eltako/issues",
   "loggers": ["eltako"],
   "requirements": ["git+https://github.com/grimmpp/eltako14bus.git@master#eltakobus==0.0.28"],
-  "version": "0.0.2",
+  "version": "0.0.2"
 }
