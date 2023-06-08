@@ -3,6 +3,7 @@
 [![Generic badge](https://img.shields.io/badge/Community-Forum-3498db.svg)](https://community.home-assistant.io/)
 [![Generic badge](https://img.shields.io/badge/Community_Forum-Eltako_Integration_Debugging-3498db.svg)](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)
 [![Generic badge](https://img.shields.io/badge/License-MIT-3498db.svg)](/LICENSE)
+[![Generic badge](https://img.shields.io/badge/SUPPORT_THIS_PROJECT-Donate-27ae60.svg)](https://buymeacoffee.com/grimmpp)
 
 # Eltako Bus Integration (RS485 - EnOcean) for Home Assistant
 
