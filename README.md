@@ -27,6 +27,7 @@ EEPs and devices currently supported for the different platforms are:
   * A5-12-01 (Automated meter reading - electricity, FSDG14)
   * A5-12-02 (Automated meter reading - gas, F3Z14D)
   * A5-12-03 (Automated meter reading - water, F3Z14D)
+  * A5-04-02 (Temperature and Humidity Sensor, FLGTF, FLT58)
 * Light
   * A5-38-08 (Central command - gateway, FUD14)
   * M5-38-08 (Eltako relay, FSR14)
