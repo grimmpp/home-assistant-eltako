@@ -48,6 +48,8 @@ DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"
 DEFAULT_DEVICE_NAME_ELECTRICITY_METER = "Electricity meter"
 DEFAULT_DEVICE_NAME_GAS_METER = "Gas meter"
 DEFAULT_DEVICE_NAME_WATER_METER = "Water meter"
+DEFAULT_DEVICE_NAME_HYGROSTAT = "Hygrostat"
+DEFAULT_DEVICE_NAME_THERMOMETER = "Thermometer"
 
 SENSOR_TYPE_ELECTRICITY_CUMULATIVE = "electricity_cumulative"
 SENSOR_TYPE_ELECTRICITY_CURRENT = "electricity_current"
@@ -287,6 +289,7 @@ async def async_setup_entry(
                     entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
             elif dev_eep in [A5_04_02]:
+                
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
                 
@@ -304,6 +307,7 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
         self.entity_description = description
+        self._attr_native_value = None
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
@@ -539,7 +543,10 @@ class EltakoTemperatureSensor(EltakoSensor):
 
     def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
@@ -569,7 +576,7 @@ class EltakoTemperatureSensor(EltakoSensor):
             LOGGER.warning("Could not decode message: %s", str(e))
             return
         
-        self._attr_native_value = msg.temperature
+        self._attr_native_value = decoded.temperature
 
         self.schedule_update_ha_state()
 
@@ -583,7 +590,10 @@ class EltakoHumiditySensor(EltakoSensor):
 
     def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
         """Initialize the Eltako temperature sensor."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = DEFAULT_DEVICE_NAME_HYGROSTAT
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
@@ -613,6 +623,6 @@ class EltakoHumiditySensor(EltakoSensor):
             LOGGER.warning("Could not decode message: %s", str(e))
             return
         
-        self._attr_native_value = msg.humidity
+        self._attr_native_value = decoded.humidity
 
         self.schedule_update_ha_state()
