@@ -135,7 +135,7 @@ class SensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako sensors."""
     PLATFORM = Platform.SENSOR
 
-    CONF_EEP_SUPPORTED = [A5_13_01.eep_string, F6_10_00.eep_string, A5_12_01.eep_string, A5_12_02.eep_string, A5_12_03.eep_string]
+    CONF_EEP_SUPPORTED = [A5_13_01.eep_string, F6_10_00.eep_string, A5_12_01.eep_string, A5_12_02.eep_string, A5_12_03.eep_string, A5_04_02.eep_string]
 
     DEFAULT_NAME = ""
     DEFAULT_METER_TARIFFS = [1]
