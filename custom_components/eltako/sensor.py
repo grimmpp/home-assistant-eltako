@@ -31,6 +31,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
     Platform,
+    PERCENTAGE,
 )
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -198,6 +199,26 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
     suggested_display_precision=0,
 )
 
+SENSOR_DESC_TEMPERATURE = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_TEMPERATURE,
+    name="Temperature",
+    native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+    icon="mdi:thermometer",
+    device_class=SensorDeviceClass.TEMPERATURE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=1,
+)
+
+SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_HUMIDITY,
+    name="Humidity",
+    native_unit_of_measurement=PERCENTAGE,
+    icon="mdi:water-percent",
+    device_class=SensorDeviceClass.HUMIDITY,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=1,
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -264,6 +285,10 @@ async def async_setup_entry(
                 for tariff in meter_tariffs:
                     entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
                     entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+
+            elif dev_eep in [A5_04_02]:
+                entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
+                entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
 
     async_add_entities(entities)
 
@@ -500,5 +525,93 @@ class EltakoWeatherStation(EltakoSensor):
                 return
             
             self._attr_native_value = decoded.sun_east * 1000.0
+
+        self.schedule_update_ha_state()
+
+
+class EltakoTemperatureSensor(EltakoSensor):
+    """Representation of an Eltako temperature sensor.
+    
+    EEPs (EnOcean Equipment Profiles):
+    - A5-04-02 (Temperature and Humidity)
+    """
+
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
+        """Initialize the Eltako temperature sensor."""
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self.entity_id = f"sensor.{self.unique_id}"
+
+    @property
+    def name(self):
+        """Return the default name for the sensor."""
+        return self.entity_description.name
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
+        )
+    
+    def value_changed(self, msg):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = msg.temperature
+
+        self.schedule_update_ha_state()
+
+
+class EltakoHumiditySensor(EltakoSensor):
+    """Representation of an Eltako humidity sensor.
+    
+    EEPs (EnOcean Equipment Profiles):
+    - A5-04-02 (Temperature and Humidity)
+    """
+
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
+        """Initialize the Eltako temperature sensor."""
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self.entity_id = f"sensor.{self.unique_id}"
+
+    @property
+    def name(self):
+        """Return the default name for the sensor."""
+        return self.entity_description.name
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
+        )
+    
+    def value_changed(self, msg):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = msg.humidity
 
         self.schedule_update_ha_state()
