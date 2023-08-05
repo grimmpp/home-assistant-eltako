@@ -14,7 +14,9 @@ For more details check out the provided tutorials and links.
 
 # Supported EEPs and devices
 
-EEPs and devices currently supported for the different platforms are:
+The following EnOcean Equipment Profiles (EEPs) and devices are currently supported:
+Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) a nice overview about which EEPs are provided/required by which Eltako devices.
+
 * Binary sensor
   * F6-02-01 (Rocker switch, FTS14EM)
   * F6-02-02 (Rocker switch)
@@ -95,6 +97,7 @@ python -m unittest discover tests -v
 * [Home Assistant Developer Docs](https://developers.home-assistant.io/)
 * [EnOcean Equipment Profiles - EEP2.1](https://www.trio2sys.fr/images/media/EnOcean_Equipment_Profiles_EEP2.1.pdf)
 * [EnOcean Equipment Profiles - EEP v2.6.7](https://www.enocean-alliance.org/wp-content/uploads/2017/05/EnOcean_Equipment_Profiles_EEP_v2.6.7_public.pdf)
+* [Eltako Technical Specification of Devices](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) contains as well mapping of EEPs to devices
 
 
 # Credits

@@ -14,7 +14,9 @@ See more details on GitHub: [home-assistant-eltako](https://github.com/grimmpp/h
 
 # Supported EEPs and devices
 
-EEPs and devices currently supported for the different platforms are:
+The following EnOcean Equipment Profiles (EEPs) and devices are currently supported:
+Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) a nice overview about which EEPs are provided/required by which Eltako devices.
+
 * Binary sensor
   * F6-02-01 (Rocker switch, FTS14EM)
   * F6-02-02 (Rocker switch)
