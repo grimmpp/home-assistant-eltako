@@ -45,3 +45,5 @@ Sender EEPs currently supported for the different platforms are:
   * F6-02-01 (Rocker switch)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
+* Climate
+  * A5-10-06 (Eltako FAE14*, FHK14*)
