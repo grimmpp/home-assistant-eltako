@@ -33,7 +33,7 @@ async def async_setup_entry(
 
     entities: list[EltakoSensor] = []
     
-    if Platform.LIGHT in config:
+    if Platform.CLIMATE in config:
         for entity_config in config[Platform.LIGHT]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
