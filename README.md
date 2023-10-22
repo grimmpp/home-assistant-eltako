@@ -46,7 +46,7 @@ Sender EEPs currently supported for the different platforms are:
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
 * Climate
-  * A5-10-06 (Eltako FAE14*, FHK14*)
+  * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
 
 # Installation and Configuration
 

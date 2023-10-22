@@ -186,7 +186,7 @@ class ClimateSchema(EltakoPlatformSchema):
     PLATFORM = Platform.CLIMATE
 
     CONF_EEP_SUPPORTED = [A5_10_06.eep_string]
-    CONF_SENDER_EEP_SUPPORTED = []
+    CONF_SENDER_EEP_SUPPORTED = ["A5-10-12"]
 
     DEFAULT_NAME = "Climate"
 
@@ -202,7 +202,7 @@ class ClimateSchema(EltakoPlatformSchema):
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Optional(CONF_SENDER): SENDER_SCHEMA,
+                vol.Required(CONF_SENDER): SENDER_SCHEMA,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
