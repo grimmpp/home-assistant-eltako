@@ -70,17 +70,17 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"heating_and_cooling.{self.unique_id}"
         
-        self.hvac_action = HVACAction.HEATING
-        self.hvac_modes = [HVACAction.HEATING, HVACAction.COOLING]
-        self.fan_mode = None
-        self.fan_modes = None
-        self.is_aux_heat = None
-        self.preset_mode = None
-        self.preset_modes = None
-        self.swing_mode = None
-        self.swing_modes = None
-        self.target_temperature_high = 25
-        self.target_temperature_low = 8
+        self._attr_hvac_action = HVACAction.HEATING
+        self._attr_hvac_modes = [HVACAction.HEATING, HVACAction.COOLING]
+        self._attr_fan_mode = None
+        self._attr_fan_modes = None
+        self._attr_is_aux_heat = None
+        self._attr_preset_mode = None
+        self._attr_preset_modes = None
+        self._attr_swing_mode = None
+        self._attr_swing_modes = None
+        self._attr_target_temperature_high = 25
+        self._attr_target_temperature_low = 8
 
     @property
     def name(self):
@@ -113,12 +113,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
             return
 
         if self._dev_eep in [A5_10_06]:
-            self.current_temperature = decoded.temp
-            self.target_temperature = decoded.set_point_temp
+            self._attr_current_temperature = decoded.temp
+            self._attr_target_temperature = decoded.set_point_temp
             
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
-                self.hvac_action = HVACAction.OFF
+                self._attr_hvac_action = HVACAction.OFF
             elif decoded.mode == A5_10_06.Heater_Mode.NORMAL:
-                self.hvac_action = HVACAction.HEATING
+                self._attr_hvac_action = HVACAction.HEATING
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
-                self.hvac_action = HVACAction.IDLE
+                self._attr_hvac_action = HVACAction.IDLE
