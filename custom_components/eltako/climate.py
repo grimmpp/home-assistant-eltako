@@ -9,7 +9,8 @@ from eltakobus.eep import *
 
 from homeassistant.components.climate import (
     ClimateEntity,
-    HVACAction
+    HVACAction,
+    HVACMode
 )
 from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS
@@ -60,8 +61,9 @@ async def async_setup_entry(
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
-    _attr_hvac_action = HVACAction.HEATING
-    _attr_hvac_modes = [HVACAction.HEATING, HVACAction.COOLING]
+    _attr_hvac_action = HVACAction.OFF
+    _attr_hvac_mode = HVACMode.HEAT
+    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL]
     _attr_fan_mode = None
     _attr_fan_modes = None
     _attr_is_aux_heat = None
