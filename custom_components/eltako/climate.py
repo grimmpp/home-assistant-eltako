@@ -111,7 +111,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
-        pass
+
+        LOGGER.info(kwargs)
+
+    async def async_set_temperature(self, **kwargs):
+        """Set new target temperature."""
+        self.set_temperature(kwargs)
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
