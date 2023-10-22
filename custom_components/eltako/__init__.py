@@ -15,6 +15,7 @@ from .schema import (
     SwitchSchema,
     SensorSchema,
     CoverSchema,
+    HeatingAndCoolingSchema,
 )
 
 CONFIG_SCHEMA = vol.Schema(
@@ -28,6 +29,7 @@ CONFIG_SCHEMA = vol.Schema(
                     **SensorSchema.platform_node(),
                     **SensorSchema.platform_node(),
                     **CoverSchema.platform_node(),
+                    **HeatingAndCoolingSchema.platform_node(),
                 }
             ),
         )

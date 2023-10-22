@@ -180,3 +180,30 @@ class CoverSchema(EltakoPlatformSchema):
             }
         ),
     )
+
+class HeatingAndCoolingSchema(EltakoPlatformSchema):
+    """Schema for Eltako heating and cooling."""
+    PLATFORM = Platform.CLIMATE
+
+    CONF_EEP_SUPPORTED = [A5_10_06.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = []
+
+    DEFAULT_NAME = "Heating"
+
+    SENDER_SCHEMA = vol.Schema(
+        {
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
+        }
+    )
+
+    ENTITY_SCHEMA = vol.All(
+        vol.Schema(
+            {
+                vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
+                vol.Optional(CONF_SENDER): SENDER_SCHEMA,
+                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+            }
+        ),
+    )
