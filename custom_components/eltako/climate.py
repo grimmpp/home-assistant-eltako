@@ -140,3 +140,5 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 self._attr_hvac_action = HVACAction.HEATING
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
                 self._attr_hvac_action = HVACAction.IDLE
+
+        self.schedule_update_ha_state()
