@@ -181,14 +181,14 @@ class CoverSchema(EltakoPlatformSchema):
         ),
     )
 
-class HeatingAndCoolingSchema(EltakoPlatformSchema):
+class ClimateSchema(EltakoPlatformSchema):
     """Schema for Eltako heating and cooling."""
     PLATFORM = Platform.CLIMATE
 
     CONF_EEP_SUPPORTED = [A5_10_06.eep_string]
     CONF_SENDER_EEP_SUPPORTED = []
 
-    DEFAULT_NAME = "Heating"
+    DEFAULT_NAME = "Climate"
 
     SENDER_SCHEMA = vol.Schema(
         {

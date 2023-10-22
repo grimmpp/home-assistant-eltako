@@ -51,12 +51,12 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_10_06]:
-                    entities.append(HeatingAndCoolingActor(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     async_add_entities(entities)
 
 
-class HeatingAndCoolingActor(EltakoEntity, ClimateEntity):
+class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
