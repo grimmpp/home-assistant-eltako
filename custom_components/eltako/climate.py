@@ -1,4 +1,4 @@
-"""Support for Eltako light sources."""
+"""Support for Eltako Temperature Control sources."""
 from __future__ import annotations
 
 import math
@@ -27,7 +27,7 @@ async def async_setup_entry(
     config_entry: config_entries.ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Eltako light platform."""
+    """Set up the Eltako Temperature Control platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
