@@ -186,7 +186,7 @@ class ClimateSchema(EltakoPlatformSchema):
     PLATFORM = Platform.CLIMATE
 
     CONF_EEP_SUPPORTED = [A5_10_06.eep_string]
-    CONF_SENDER_EEP_SUPPORTED = [A5_10_12.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [A5_10_06.eep_string]
 
     DEFAULT_NAME = "Climate"
 
