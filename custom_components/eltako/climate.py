@@ -102,6 +102,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
             model=self._dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
+    
+    def set_hvac_mode(self, hvac_mode):
+        """Set new target hvac mode."""
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Set new target hvac mode."""
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
