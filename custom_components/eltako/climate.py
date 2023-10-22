@@ -111,12 +111,14 @@ class ClimateController(EltakoEntity, ClimateEntity):
         """Set new target hvac mode."""
         LOGGER.info(hvac_mode)
 
-    async def async_set_temperature(self, **kwargs):
+    async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        self.set_temperature(kwargs)
+        LOGGER.info("async func")
+        LOGGER.info(kwargs)
 
-    def set_temperature(self, **kwargs):
+    def set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
+        LOGGER.info("sync func")
         LOGGER.info(kwargs)
 
     def value_changed(self, msg):
