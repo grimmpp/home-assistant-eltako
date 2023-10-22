@@ -46,8 +46,9 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
-            except:
-                LOGGER.exception("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+            except Exception as e:
+                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.critical(e, exc_info=True)
                 continue
             else:
                 if dev_eep in [A5_10_06]:
