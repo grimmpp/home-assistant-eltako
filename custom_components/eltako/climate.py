@@ -60,6 +60,18 @@ async def async_setup_entry(
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
+    _attr_hvac_action = HVACAction.HEATING
+    _attr_hvac_modes = [HVACAction.HEATING, HVACAction.COOLING]
+    _attr_fan_mode = None
+    _attr_fan_modes = None
+    _attr_is_aux_heat = None
+    _attr_preset_mode = None
+    _attr_preset_modes = None
+    _attr_swing_mode = None
+    _attr_swing_modes = None
+    _attr_target_temperature_high = 25
+    _attr_target_temperature_low = 8
+
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name)
@@ -68,19 +80,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
-        self.entity_id = f"heating_and_cooling.{self.unique_id}"
-        
-        self._attr_hvac_action = HVACAction.HEATING
-        self._attr_hvac_modes = [HVACAction.HEATING, HVACAction.COOLING]
-        self._attr_fan_mode = None
-        self._attr_fan_modes = None
-        self._attr_is_aux_heat = None
-        self._attr_preset_mode = None
-        self._attr_preset_modes = None
-        self._attr_swing_mode = None
-        self._attr_swing_modes = None
-        self._attr_target_temperature_high = 25
-        self._attr_target_temperature_low = 8
+        self.entity_id = f"climate.{self.unique_id}"
 
     @property
     def name(self):
@@ -107,12 +107,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def value_changed(self, msg):
         """Update the internal state of this device."""
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            if msg.org == 0x07:
+                decoded = self._dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [A5_10_06]:
+        if  msg.org == 0x07 and self._dev_eep in [A5_10_06]:
             self._attr_current_temperature = decoded.temp
             self._attr_target_temperature = decoded.set_point_temp
             
