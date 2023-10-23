@@ -69,7 +69,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     def __init__(self, gateway, dev_id, dev_name, dev_eep, device_class, invert_signal):
         """Initialize the Eltako binary sensor."""
         super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        self.dev_eep = dev_eep
         self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
@@ -92,7 +92,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
 
@@ -110,13 +110,13 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """
         
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            decoded = self.dev_eep.decode_message(msg)
             LOGGER.debug("msg : %s", json.dumps(decoded.__dict__))
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [F6_02_01, F6_02_02]:
+        if self.dev_eep in [F6_02_01, F6_02_02]:
             pressed_buttons = []
             pressed = decoded.energy_bow == 1
             two_buttons_pressed = decoded.second_action == 1
@@ -165,7 +165,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     "rocker_second_action": decoded.rocker_second_action,
                 },
             )
-        elif self._dev_eep in [F6_10_00]:
+        elif self.dev_eep in [F6_10_00]:
             action = (decoded.movement & 0x70) >> 4
             
             if action == 0x07:
@@ -176,7 +176,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
 
             self.schedule_update_ha_state()
-        elif self._dev_eep in [D5_00_01]:
+        elif self.dev_eep in [D5_00_01]:
             # learn button: 0=pressed, 1=not pressed
             if decoded.learn_button == 0:
                 return
@@ -188,7 +188,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 self._attr_is_on = decoded.contact == 1 
 
             self.schedule_update_ha_state()
-        elif self._dev_eep in [A5_08_01]:
+        elif self.dev_eep in [A5_08_01]:
             if decoded.learn_button == 1:
                 return
                 

@@ -71,7 +71,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        self.dev_eep = dev_eep
         self._on_state = False
         self._attr_brightness = 50
         self._sender_id = sender_id
@@ -93,7 +93,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
 
@@ -136,12 +136,12 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         We only care about the 4BS (0xA5).
         """
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [A5_38_08]:
+        if self.dev_eep in [A5_38_08]:
             if decoded.command == 0x01:
                 if decoded.switching.learn_button != 1:
                     return

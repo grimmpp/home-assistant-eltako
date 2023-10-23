@@ -80,7 +80,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        self.dev_eep = dev_eep
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
@@ -101,7 +101,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
     
@@ -133,12 +133,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
         """Update the internal state of this device."""
         try:
             if msg.org == 0x07:
-                decoded = self._dev_eep.decode_message(msg)
+                decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
 
-        if  msg.org == 0x07 and self._dev_eep in [A5_10_06]:
+        if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
             self._attr_current_temperature = decoded.temp
             self._attr_target_temperature = decoded.set_point_temp
             

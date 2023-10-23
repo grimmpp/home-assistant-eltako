@@ -61,7 +61,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens):
         """Initialize the Eltako cover device."""
         super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        self.dev_eep = dev_eep
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         self._attr_device_class = device_class
@@ -88,7 +88,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
         
@@ -186,12 +186,12 @@ class EltakoCover(EltakoEntity, CoverEntity):
     def value_changed(self, msg):
         """Update the internal state of the cover."""
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [G5_3F_7F]:
+        if self.dev_eep in [G5_3F_7F]:
             if decoded.state == 0x02: # down
                 self._attr_is_closing = True
                 self._attr_is_opening = False
