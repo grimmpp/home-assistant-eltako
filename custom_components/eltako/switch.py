@@ -48,7 +48,9 @@ async def async_setup_entry(
                 continue
             else:
                 entities.append(EltakoSwitch(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
-        
+    
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.SWITCH} to Home Assistant.")
     async_add_entities(entities)
 
 

@@ -249,7 +249,7 @@ async def async_setup_entry(
             if dev_eep in [A5_13_01]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
-                    
+                
                 entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
                 entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
                 entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
@@ -294,6 +294,8 @@ async def async_setup_entry(
                 entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
                 
 
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.SENSOR} to Home Assistant.")
     async_add_entities(entities)
 
 

@@ -55,6 +55,8 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
     async_add_entities(entities)
 
 
@@ -105,11 +107,17 @@ class ClimateController(EltakoEntity, ClimateEntity):
     
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
-        self.set_hvac_mode(hvac_mode)
+        LOGGER.info("async func")
+        LOGGER.info(f"hvac_mode {hvac_mode}")
+        LOGGER.info(f"target temp {self.target_temperature}")
+        LOGGER.info(f"current temp {self.current_temperature}")
 
     def set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
-        LOGGER.info(hvac_mode)
+        LOGGER.info("sync func")
+        LOGGER.info(f"hvac_mode {hvac_mode}")
+        LOGGER.info(f"target temp {self.target_temperature}")
+        LOGGER.info(f"current temp {self.current_temperature}")
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""

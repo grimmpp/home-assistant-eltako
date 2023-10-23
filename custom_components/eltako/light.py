@@ -57,6 +57,8 @@ async def async_setup_entry(
                 elif dev_eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.LIGHT} to Home Assistant.")
     async_add_entities(entities)
 
 

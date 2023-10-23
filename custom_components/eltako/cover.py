@@ -51,6 +51,8 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
         
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.COVER} to Home Assistant.")
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity):

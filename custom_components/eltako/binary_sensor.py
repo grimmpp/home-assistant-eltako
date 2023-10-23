@@ -51,7 +51,8 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
-
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.BINARY_SENSOR} to Home Assistant.")
     async_add_entities(entities)
     
 
