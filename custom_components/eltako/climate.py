@@ -10,7 +10,8 @@ from eltakobus.eep import *
 from homeassistant.components.climate import (
     ClimateEntity,
     HVACAction,
-    HVACMode
+    HVACMode,
+    ClimateEntityFeature
 )
 from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS
@@ -68,7 +69,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL]
     _attr_fan_mode = None
     _attr_fan_modes = None
-    _attr_is_aux_heat = 1
+    _attr_is_aux_heat = None
     _attr_preset_mode = None
     _attr_preset_modes = None
     _attr_swing_mode = None
@@ -76,6 +77,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_target_temperature_high = 25
     _attr_target_temperature_low = 8
     _attr_temperature_unit = TEMP_CELSIUS
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
         """Initialize the Eltako heating and cooling source."""
