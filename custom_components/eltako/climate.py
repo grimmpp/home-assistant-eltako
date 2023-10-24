@@ -128,14 +128,18 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
         # LOGGER.info(kwargs)
+        if self._sender_eep == A5_10_06:
+            msg = A5_10_06(A5_10_06.Heater_Mode.NORMAL, self.target_temperature, self.current_temperature)
+            self.send_message(msg)
 
-    def set_temperature(self, **kwargs) -> None:
-        """Set new target temperature."""
-        LOGGER.info("sync func")
-        LOGGER.info(f"hvac_mode {self.hvac_mode}")
-        LOGGER.info(f"target temp {self.target_temperature}")
-        LOGGER.info(f"current temp {self.current_temperature}")
-        # LOGGER.info(kwargs)
+    # def set_temperature(self, **kwargs) -> None:
+    #     """Set new target temperature."""
+    #     LOGGER.info("sync func")
+    #     LOGGER.info(f"hvac_mode {self.hvac_mode}")
+    #     LOGGER.info(f"target temp {self.target_temperature}")
+    #     LOGGER.info(f"current temp {self.current_temperature}")
+    #     # LOGGER.info(kwargs)
+
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
