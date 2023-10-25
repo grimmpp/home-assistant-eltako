@@ -115,7 +115,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
 
-        if hvac_mode == HVACMode.OFF 
+        if hvac_mode == HVACMode.OFF:
             if self.hvac_mode != HVACMode.OFF:
                 self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
             elif self.hvac_mode == HVACMode.OFF:
