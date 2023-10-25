@@ -130,7 +130,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         # LOGGER.info(kwargs)
         address, _ = self._sender_id
         if self._sender_eep == A5_10_06:
-            msg = A5_10_06(A5_10_06.Heater_Mode.NORMAL, self.target_temperature, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+            msg = A5_10_06(A5_10_06.Heater_Mode.NORMAL, self.current_temperature, self.target_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
 
     # def set_temperature(self, **kwargs) -> None:
