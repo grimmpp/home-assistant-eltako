@@ -170,8 +170,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             return
 
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
-            self._attr_current_temperature = decoded.current_temp
-            self._attr_target_temperature = decoded.target_temp
+            
             
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
@@ -182,5 +181,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
                 self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_hvac_action = HVACAction.IDLE
+
+            if decoded.mode != A5_10_06.Heater_Mode.OFF:
+                self._attr_target_temperature = decoded.target_temp
+                
+            self._attr_current_temperature = decoded.current_temp
+
 
         self.schedule_update_ha_state()
