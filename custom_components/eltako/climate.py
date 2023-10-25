@@ -125,12 +125,19 @@ class ClimateController(EltakoEntity, ClimateEntity):
         """Set new target temperature."""
         LOGGER.info("async func")
         LOGGER.info(f"hvac_mode {self.hvac_mode}")
+        LOGGER.info(f"hvac_action {self.hvac_action}")
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
         LOGGER.info(f"kwargs {kwargs}")
         new_target_temp = kwargs['temperature']
         # LOGGER.info(kwargs)
         address, _ = self._sender_id
+        mode = A5_10_06.Heater_Mode.NORMAL
+        if self.hvac_action == HVACAction.OFF:
+            mode = A5_10_06.Heater_Mode.OFF
+        elif self.hvac_mode == HVACAction.IDLE:
+            mode = A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
+
         if self._sender_eep == A5_10_06:
             msg = A5_10_06(A5_10_06.Heater_Mode.OFF, new_target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
