@@ -131,16 +131,16 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"kwargs {kwargs}")
         new_target_temp = kwargs['temperature']
 
-        mode = self._get_mode_by_hvac_action(self, self.hvac_action, self.hvac_mode)
+        mode = self._get_mode_by_hvac(self, self.hvac_action, self.hvac_mode)
         self._send_command(mode, new_target_temp)
     
-    def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp):
+    def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
         if self._sender_eep == A5_10_06:
             msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
 
-    def _get_mode_by_hvac_action(self, hvac_action, hvac_mode):
+    def _get_mode_by_hvac(self, hvac_action: HVACAction, hvac_mode: HVACMode) -> A5_10_06.Heater_Mode:
         mode = A5_10_06.Heater_Mode.OFF
         if hvac_action == HVACAction.HEATING or hvac_action == HVACAction.COOLING:
             mode = A5_10_06.Heater_Mode.NORMAL
@@ -149,6 +149,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if hvac_mode == HVACMode.OFF:
             mode = A5_10_06.Heater_Mode.OFF
+
+        return mode
 
     # def set_temperature(self, **kwargs) -> None:
     #     """Set new target temperature."""
