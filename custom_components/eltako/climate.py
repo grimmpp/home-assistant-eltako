@@ -131,8 +131,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"kwargs {kwargs}")
         new_target_temp = kwargs['temperature']
 
-        mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-        self._send_command(mode, new_target_temp)
+        self._send_command(A5_10_06.Heater_Mode.NORMAL, new_target_temp)
     
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
