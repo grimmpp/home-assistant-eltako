@@ -76,6 +76,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_swing_modes = None
     _attr_target_temperature_high = 25
     _attr_target_temperature_low = 8
+    _attr_max_temp = 25
+    _attr_min_temp = 8
     _attr_temperature_unit = TEMP_CELSIUS
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
@@ -184,7 +186,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 self._attr_target_temperature = decoded.target_temp
-                
+
             self._attr_current_temperature = decoded.current_temp
 
 
