@@ -66,7 +66,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     _attr_hvac_action = HVACAction.OFF
     _attr_hvac_mode = HVACMode.HEAT
-    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL]
+    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF, HVACMode.HEAT_COOL]
     _attr_fan_mode = None
     _attr_fan_modes = None
     _attr_is_aux_heat = None
@@ -114,12 +114,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
 
-    def set_hvac_mode(self, hvac_mode):
-        """Set new target hvac mode."""
-        LOGGER.info("sync func")
-        LOGGER.info(f"hvac_mode {hvac_mode}")
-        LOGGER.info(f"target temp {self.target_temperature}")
-        LOGGER.info(f"current temp {self.current_temperature}")
+        mode = self._get_mode_by_hvac_action(self.hvac_action, hvac_mode)
+        target_temp = self.target_temperature
+
+        self._send_command(mode, target_temp)
+
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -130,17 +129,23 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"current temp {self.current_temperature}")
         LOGGER.info(f"kwargs {kwargs}")
         new_target_temp = kwargs['temperature']
-        # LOGGER.info(kwargs)
-        address, _ = self._sender_id
-        mode = A5_10_06.Heater_Mode.NORMAL
-        if self.hvac_action == HVACAction.OFF:
-            mode = A5_10_06.Heater_Mode.OFF
-        elif self.hvac_mode == HVACAction.IDLE:
-            mode = A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
+        mode = self._get_mode_by_hvac_action(self.hvac_action)
 
+        self._send_command(mode, new_target_temp)
+    
+    def _send_command(self, hvac_action, target_temp):
+        address, _ = self._sender_id
+        mode = self._get_mode_by_hvac_action(self, hvac_action)
         if self._sender_eep == A5_10_06:
-            msg = A5_10_06(A5_10_06.Heater_Mode.OFF, new_target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+            msg = A5_10_06(A5_10_06.Heater_Mode.OFF, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
+
+    def _get_mode_by_hvac_action(self, hvac_action):
+        mode = A5_10_06.Heater_Mode.NORMAL
+        if hvac_action == HVACAction.OFF:
+            mode = A5_10_06.Heater_Mode.OFF
+        elif hvac_action == HVACAction.IDLE:
+            mode = A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
 
     # def set_temperature(self, **kwargs) -> None:
     #     """Set new target temperature."""
