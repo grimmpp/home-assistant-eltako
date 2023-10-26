@@ -27,7 +27,9 @@ EEP_MAPPING = [
     {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 2},
     {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 4},
 
-    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'type': 'cover', 'description': 'Eltako cover', 'address_count': 1},
+    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'type': 'cover', 'description': 'Eltako cover', 'address_count': 2},
+
+    {'hw-type': 'FAE14SSR', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06', 'type': 'climate', 'description': 'Eltako heating/cooling', 'address_count': 2},
 ]
 
 ORG_MAPPING = {
@@ -74,7 +76,7 @@ class HaConfig():
                     'name': f"{device_name} - {device.address+i}",
                 }
 
-                if info['type'] in ['light', 'switch', 'cover']:
+                if 'sender_eep' in info: #info['type'] in ['light', 'switch', 'cover']:
                     dev_obj['sender'] = {
                         'id': f"{self.get_formatted_address(self.sender_address+device.address+i)}",
                         'eep': f"{info['sender_eep']}",
