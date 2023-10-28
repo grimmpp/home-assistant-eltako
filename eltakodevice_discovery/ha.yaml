@@ -40,28 +40,11 @@ eltako:
     device_class: shutter
     time_closes: 24
     time_opens: 25
-  - id: 00-00-00-07
-    eep: G5-3F-7F
-    name: FSB14 - 7
-    sender:
-      id: 00-00-B0-07
-      eep: H5-3F-7F
-    device_class: shutter
-    time_closes: 24
-    time_opens: 25
-  climate:
-  - id: 00-00-00-08
-    eep: A5-10-06
-    name: FAE14SSR - 8
-    sender:
-      id: 00-00-B0-08
-      eep: A5-10-06
-  - id: 00-00-00-09
-    eep: A5-10-06
-    name: FAE14SSR - 9
-    sender:
-      id: 00-00-B0-09
-      eep: A5-10-06
+  sensor:
+  - id: FF-A6-DF-80
+    eep: A5-??-?? # <= NEED TO BE COMPLETED!!!
+    name: 4 Byte Communication FF-A6-DF-80
+    #Sensor Type: Multi-Sensor ? , Derived from Msg Type: Regular4BSMessage
 logger:
   default: info
   logs:
