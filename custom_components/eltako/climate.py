@@ -76,6 +76,8 @@ async def _loop_send_command(cc: ClimateController):
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
+    _update_frequency = 10 # sec
+
     _attr_hvac_action = HVACAction.OFF
     _attr_hvac_mode = HVACMode.HEAT
     _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
@@ -109,17 +111,17 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
 
     async def _wrapped_update(self, *args):
-        # while True:
-        try:
-            LOGGER.debug("update loop")
-            await asyncio.sleep(50)
-            
-            LOGGER.debug("Send status every 50 sec.:")
-            mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-            await self._async_send_command(mode, self.target_temperature)
-        except Exception as e:
-            LOGGER.exception(e)
-            # FIXME should I just restart with back-off?
+        while True:
+            try:
+                LOGGER.debug(f"update loop wait {self._update_frequency} sec")
+                await asyncio.sleep(self._update_frequency)
+                
+                LOGGER.debug(f"Send status every {self._update_frequency} sec.:")
+                mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
+                await self._async_send_command(mode, self.target_temperature)
+            except Exception as e:
+                LOGGER.exception(e)
+                # FIXME should I just restart with back-off?
 
 
     @property
