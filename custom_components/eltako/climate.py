@@ -113,12 +113,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
     async def _wrapped_update(self, *args):
         while True:
             try:
-                LOGGER.debug(f"update loop wait {self._update_frequency} sec")
+                LOGGER.debug(f"Wait {self._update_frequency} sec for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
-                LOGGER.debug(f"Send status every {self._update_frequency} sec.:")
-                mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-                await self._async_send_command(mode, self.target_temperature)
+                LOGGER.debug(f"Send status update")
+                # mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
+                await self._async_send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
             except Exception as e:
                 LOGGER.exception(e)
                 # FIXME should I just restart with back-off?
@@ -157,7 +157,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 #self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
             else:
                 self._send_set_normal_mode()
-                self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
+                # self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
 
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -176,17 +176,31 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
         if self._sender_eep == A5_10_06:
-            msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
-            self.send_message(msg)
+            if self.current_temperature and self.target_temperature:
+                msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+                self.send_message(msg)
 
 
     def _send_set_normal_mode(self):
+        LOGGER.debug("Send signal to set mode: Normal")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x70', True))
 
     def _send_mode_off(self):
+        LOGGER.debug("Send signal to set mode: OFF")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x10', True))
+
+    def _send_mode_night(self):
+        LOGGER.debug("Send signal to set mode: Night")
+        address, _ = self._sender_id
+        self.send_message(RPSMessage(address, 0x30, b'\x50', True))
+
+    def _send_mode_setback(self):
+        LOGGER.debug("Send signal to set mode: Temperature Setback")
+        address, _ = self._sender_id
+        self.send_message(RPSMessage(address, 0x30, b'\x30', True))
+
 
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         self._send_command(mode, target_temp)
