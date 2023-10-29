@@ -89,6 +89,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_preset_modes = None
     _attr_swing_mode = None
     _attr_swing_modes = None
+    _attr_current_temperature = 0
     _attr_target_temperature = 0
     _attr_target_temperature_high = 25
     _attr_target_temperature_low = 8
@@ -179,7 +180,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"kwargs {kwargs}")
         LOGGER.info(f"actor_mode {self._actor_mode}")
 
-        if self._actor_mode and self.current_temperature:
+        if self._actor_mode != None and self.current_temperature > 0:
             new_target_temp = kwargs['temperature']
 
             if new_target_temp < self.current_temperature:
@@ -188,8 +189,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 await self.async_set_hvac_mode(HVACMode.HEAT)
 
             await asyncio.sleep(0.2)
+            
+            if self._actor_mode == A5_10_06.Heater_Mode.OFF:
+                self._actor_mode = A5_10_06.Heater_Mode.NORMAL
+
             self._send_command(self._actor_mode, new_target_temp)
-    
+        else:
+            LOGGER.debug("default state of actor was not yet transferred.")
 
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
@@ -247,6 +253,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
             
             self._actor_mode = decoded.mode
+            self._attr_current_temperature = decoded.current_temp
+
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
                 self._attr_hvac_action = HVACAction.OFF
@@ -255,7 +263,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
                 self._attr_hvac_action = HVACAction.IDLE
 
-            self._attr_current_temperature = decoded.current_temp
+            
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 self._attr_target_temperature = decoded.target_temp
