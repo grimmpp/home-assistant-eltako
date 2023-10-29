@@ -64,6 +64,15 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
+async def _loop_send_command(cc: ClimateController):
+    while(True):
+        time.sleep(50)  # wait 50 seconds
+
+        LOGGER.debug("Automatic status update:")
+        mode = cc._get_mode_by_hvac(cc.hvac_action, cc.hvac_mode)
+        temp = cc.target_temperature
+        cc._send_command(mode, temp)
+
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
@@ -147,15 +156,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self._sender_eep == A5_10_06:
             msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
-
-    async def _loop_send_command(self):
-        while(True):
-            time.sleep(50)  # wait 50 seconds
-
-            LOGGER.debug("Automatic status update:")
-            mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-            temp = self.target_temperature
-            self._send_command(mode, temp)
 
     def _get_mode_by_hvac(self, hvac_action: HVACAction, hvac_mode: HVACMode) -> A5_10_06.Heater_Mode:
         mode = A5_10_06.Heater_Mode.OFF
