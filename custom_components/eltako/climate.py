@@ -174,10 +174,15 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"current temp {self.current_temperature}")
         LOGGER.info(f"kwargs {kwargs}")
 
-        if self.hvac_mode != HVACMode.OFF:
+        if self._actor_mode and self.current_temperature:
             new_target_temp = kwargs['temperature']
-            mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-            self._send_command(mode, new_target_temp)
+
+            if new_target_temp < self.current_temperature:
+                await self.async_set_hvac_mode(HVACMode.COOL)
+            else:
+                await self.async_set_hvac_mode(HVACMode.HEAT)
+
+            self._send_command(self._actor_mode, new_target_temp)
     
 
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
