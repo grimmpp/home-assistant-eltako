@@ -86,6 +86,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_preset_modes = None
     _attr_swing_mode = None
     _attr_swing_modes = None
+    _attr_target_temperature = 0
     _attr_target_temperature_high = 25
     _attr_target_temperature_low = 8
     _attr_max_temp = 25
@@ -103,21 +104,22 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
-    #     self._loop = asyncio.get_event_loop()
-    #     self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
+        self._loop = asyncio.get_event_loop()
+        self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
 
 
-    # async def _wrapped_update(self, *args):
-    #     # while True:
-    #     try:
-    #         await asyncio.sleep(50)
+    async def _wrapped_update(self, *args):
+        # while True:
+        try:
+            LOGGER.debug("update loop")
+            await asyncio.sleep(50)
             
-    #         LOGGER.debug("Send status every 50 sec.:")
-    #         mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-    #         await self._async_send_command(mode, self.target_temperature)
-    #     except Exception as e:
-    #         LOGGER.exception(e)
-    #         # FIXME should I just restart with back-off?
+            LOGGER.debug("Send status every 50 sec.:")
+            mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
+            await self._async_send_command(mode, self.target_temperature)
+        except Exception as e:
+            LOGGER.exception(e)
+            # FIXME should I just restart with back-off?
 
 
     @property
