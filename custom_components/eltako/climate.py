@@ -103,8 +103,21 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
-        self.loop = asyncio.new_event_loop()
-        self.send_frequently = asyncio.Task(_loop_send_command, loop=self.loop)
+        self._loop = asyncio.get_event_loop()
+        self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
+
+
+    async def _wrapped_update(self, *args):
+        while True:
+            try:
+                LOGGER.debug("Send status every 50 sec.:")
+                mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
+                await self._async_send_command(mode, self.target_temperature)
+
+                time.sleep(50)
+            except Exception as e:
+                LOGGER.exception(e)
+                # FIXME should I just restart with back-off?
 
 
     @property
@@ -125,6 +138,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             via_device=(DOMAIN, self.gateway.unique_id),
         )
     
+
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         LOGGER.info("async func")
@@ -139,6 +153,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             else:
                 self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
 
+
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         LOGGER.info("async func")
@@ -151,11 +166,17 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         self._send_command(A5_10_06.Heater_Mode.NORMAL, new_target_temp)
     
+
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
         if self._sender_eep == A5_10_06:
             msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
+
+
+    async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
+        self._send_command(mode, target_temp)
+
 
     def _get_mode_by_hvac(self, hvac_action: HVACAction, hvac_mode: HVACMode) -> A5_10_06.Heater_Mode:
         mode = A5_10_06.Heater_Mode.OFF
@@ -168,15 +189,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             mode = A5_10_06.Heater_Mode.OFF
 
         return mode
-
-    # def set_temperature(self, **kwargs) -> None:
-    #     """Set new target temperature."""
-    #     LOGGER.info("sync func")
-    #     LOGGER.info(f"hvac_mode {self.hvac_mode}")
-    #     LOGGER.info(f"target temp {self.target_temperature}")
-    #     LOGGER.info(f"current temp {self.current_temperature}")
-    #     # LOGGER.info(kwargs)
-
+    
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
