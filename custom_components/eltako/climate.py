@@ -119,6 +119,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 
                 LOGGER.debug(f"Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
+                
+                LOGGER.debug(f"Send command for cooling")
+                if self.hvac_mode == HVACMode.COOL:
+                    await self._async_send_mode_cooling()
             except Exception as e:
                 LOGGER.exception(e)
                 # FIXME should I just restart with back-off?
@@ -155,8 +159,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
             if hvac_mode != self.hvac_mode:
                 self._send_mode_off()
                 #self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
-            else:
-                self._send_set_normal_mode()
+        elif hvac_mode in [HVACMode.COOL, HVACMode.HEAT]:
+            self.hvac_mode = hvac_mode
+            self._send_set_normal_mode()
                 # self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
 
 
@@ -210,6 +215,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self.send_message(RPSMessage(address, 0x30, b'\x30', True))
 
 
+    async def _async_send_mode_cooling(self):
+        LOGGER.debug("Send signal to set mode: Cooling")
+        address = b'\x00\x00\xC1\x09'
+        self.send_message(RPSMessage(address, 0x30, b'\x50', True))
+
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         self._send_command(mode, target_temp)
 
@@ -230,10 +240,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 self._attr_hvac_mode = HVACMode.OFF
                 self._attr_hvac_action = HVACAction.OFF
             elif decoded.mode == A5_10_06.Heater_Mode.NORMAL:
-                self._attr_hvac_mode = HVACMode.HEAT
+                # self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_hvac_action = HVACAction.HEATING
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
-                self._attr_hvac_mode = HVACMode.HEAT
+                # self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_hvac_action = HVACAction.IDLE
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
