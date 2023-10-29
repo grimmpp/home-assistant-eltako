@@ -4,6 +4,9 @@ from __future__ import annotations
 import math
 from typing import Any
 
+import asyncio
+import time
+
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
@@ -91,6 +94,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
+        self.loop = asyncio.new_event_loop()
+        self.send_frequently = asyncio.Task(self._loop_send_command, loop=self.loop)
+
+
     @property
     def name(self):
         """Return the name of the device if any."""
@@ -140,6 +147,15 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self._sender_eep == A5_10_06:
             msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
+
+    async def _loop_send_command(self):
+        while(True):
+            time.sleep(50)  # wait 50 seconds
+
+            LOGGER.debug("Automatic status update:")
+            mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
+            temp = self.target_temperature
+            self._send_command(mode, temp)
 
     def _get_mode_by_hvac(self, hvac_action: HVACAction, hvac_mode: HVACMode) -> A5_10_06.Heater_Mode:
         mode = A5_10_06.Heater_Mode.OFF
