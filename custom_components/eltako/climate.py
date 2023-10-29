@@ -104,7 +104,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self.entity_id = f"climate.{self.unique_id}"
 
         self.loop = asyncio.new_event_loop()
-        self.send_frequently = asyncio.Task(self._loop_send_command, loop=self.loop)
+        self.send_frequently = asyncio.Task(_loop_send_command, loop=self.loop)
 
 
     @property
