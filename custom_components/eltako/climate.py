@@ -77,6 +77,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     _update_frequency = 10 # sec
+    _actor_mode: A5_10_06.Heater_Mode = None
 
     _attr_hvac_action = HVACAction.OFF
     _attr_hvac_mode = HVACMode.HEAT
@@ -117,8 +118,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 await asyncio.sleep(self._update_frequency)
                 
                 LOGGER.debug(f"Send status update")
-                # mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-                await self._async_send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
+                await self._async_send_command(self._actor_mode, self.target_temperature)
             except Exception as e:
                 LOGGER.exception(e)
                 # FIXME should I just restart with back-off?
@@ -171,7 +171,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if self.hvac_mode != HVACMode.OFF:
             new_target_temp = kwargs['temperature']
-            self._send_command(A5_10_06.Heater_Mode.NORMAL, new_target_temp)
+            mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
+            self._send_command(mode, new_target_temp)
     
 
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
@@ -190,15 +191,18 @@ class ClimateController(EltakoEntity, ClimateEntity):
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x70', True))
 
+
     def _send_mode_off(self):
         LOGGER.debug("Send signal to set mode: OFF")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x10', True))
 
+
     def _send_mode_night(self):
         LOGGER.debug("Send signal to set mode: Night")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
+
 
     def _send_mode_setback(self):
         LOGGER.debug("Send signal to set mode: Temperature Setback")
@@ -209,19 +213,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         self._send_command(mode, target_temp)
 
-
-    def _get_mode_by_hvac(self, hvac_action: HVACAction, hvac_mode: HVACMode) -> A5_10_06.Heater_Mode:
-        mode = A5_10_06.Heater_Mode.OFF
-        if hvac_action == HVACAction.HEATING or hvac_action == HVACAction.COOLING:
-            mode = A5_10_06.Heater_Mode.NORMAL
-        elif hvac_action == HVACAction.IDLE:
-            mode = A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
-
-        if hvac_mode == HVACMode.OFF:
-            mode = A5_10_06.Heater_Mode.OFF
-
-        return mode
-    
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
@@ -234,7 +225,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
             
-            
+            self._actor_mode = decoded.mode
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
                 self._attr_hvac_action = HVACAction.OFF
