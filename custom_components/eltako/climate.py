@@ -159,6 +159,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
             if hvac_mode != self.hvac_mode:
                 self._send_mode_off()
                 #self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
+            elif self.target_temperature >= self.current_temperature:
+                await self.async_set_hvac_mode(HVACMode.HEAT)
+            else: 
+                await self.async_set_hvac_mode(HVACMode.COOL)
         elif hvac_mode in [HVACMode.COOL, HVACMode.HEAT]:
             self._attr_hvac_mode = hvac_mode
             self._send_set_normal_mode()
