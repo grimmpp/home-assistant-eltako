@@ -120,8 +120,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
-                LOGGER.debug(f"Send command for cooling")
                 if self._attr_hvac_mode == HVACMode.COOL:
+                    LOGGER.debug(f"Send command for cooling")
                     await self._async_send_mode_cooling()
             except Exception as e:
                 LOGGER.exception(e)
