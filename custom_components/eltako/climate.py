@@ -173,6 +173,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
         LOGGER.info(f"kwargs {kwargs}")
+        LOGGER.info(f"actor_mode {self._actor_mode}")
 
         if self._actor_mode and self.current_temperature:
             new_target_temp = kwargs['temperature']
