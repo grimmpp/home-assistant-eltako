@@ -182,6 +182,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             else:
                 await self.async_set_hvac_mode(HVACMode.HEAT)
 
+            await asyncio.sleep(0.2)
             self._send_command(self._actor_mode, new_target_temp)
     
 
