@@ -153,7 +153,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
-                self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
+                self._send_mode_off()
+                #self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
             else:
                 self._send_set_normal_mode()
                 self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
@@ -180,10 +181,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
 
     def _send_set_normal_mode(self):
-        address, _ = self._sender_id
-        #self.send_message(F6_02_01()
-        #self.send_message(RPSMessage(b'\xfe\xd9\x5a\x07', 0x30, b'\x70', True))
-        self.send_message(RPSMessage(address, 0x30, b'\x70', True))
+        self.send_message(RPSMessage(self._sender_id, 0x30, b'\x70', True))
+
+    def _send_mode_off(self):
+        self.send_message(RPSMessage(self._sender_id, 0x30, b'\x10', True))
 
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         self._send_command(mode, target_temp)
