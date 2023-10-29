@@ -168,9 +168,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
         LOGGER.info(f"kwargs {kwargs}")
-        new_target_temp = kwargs['temperature']
 
-        self._send_command(A5_10_06.Heater_Mode.NORMAL, new_target_temp)
+        if self.hvac_mode != HVACMode.OFF:
+            new_target_temp = kwargs['temperature']
+            self._send_command(A5_10_06.Heater_Mode.NORMAL, new_target_temp)
     
 
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
@@ -179,6 +180,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
             if self.current_temperature and self.target_temperature:
                 msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
                 self.send_message(msg)
+            else:
+                LOGGER.debug("Either no current or target temperature is set.")
+                #This is always the case when there was no sensor signal after HA started.
 
 
     def _send_set_normal_mode(self):
