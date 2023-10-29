@@ -120,7 +120,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
-                if self._attr_hvac_mode == HVACMode.COOL:
+                if self.hvac_mode == HVACMode.COOL:
                     LOGGER.debug(f"Send command for cooling")
                     await self._async_send_mode_cooling()
             except Exception as e:
@@ -160,7 +160,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 self._send_mode_off()
                 #self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
         elif hvac_mode in [HVACMode.COOL, HVACMode.HEAT]:
-            self.hvac_mode = hvac_mode
+            self._attr_hvac_mode = hvac_mode
             self._send_set_normal_mode()
                 # self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
 
