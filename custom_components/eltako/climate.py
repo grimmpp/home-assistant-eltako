@@ -77,6 +77,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     _update_frequency = 10 # sec
+    _last_temperature = 21.0
 
     _attr_hvac_action = HVACAction.OFF
     _attr_hvac_mode = HVACMode.HEAT
@@ -118,7 +119,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 
                 LOGGER.debug(f"Send status every {self._update_frequency} sec.:")
                 mode = self._get_mode_by_hvac(self.hvac_action, self.hvac_mode)
-                await self._async_send_command(mode, self.target_temperature)
+                await self._async_send_command(mode, self._last_temperature)
             except Exception as e:
                 LOGGER.exception(e)
                 # FIXME should I just restart with back-off?
@@ -153,9 +154,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
-                self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
+                self._send_command(A5_10_06.Heater_Mode.OFF, self._last_temperature)
             else:
-                self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
+                self._send_command(A5_10_06.Heater_Mode.NORMAL, self._last_temperature)
 
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -222,5 +223,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
             self._attr_current_temperature = decoded.current_temp
 
+            if self._attr_target_temperature > 0:
+                self._last_temperature = self._attr_target_temperature
 
         self.schedule_update_ha_state()
