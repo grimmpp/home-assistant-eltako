@@ -247,15 +247,19 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 self._attr_hvac_mode = HVACMode.OFF
                 self._attr_hvac_action = HVACAction.OFF
             elif decoded.mode == A5_10_06.Heater_Mode.NORMAL:
-                # self._attr_hvac_mode = HVACMode.HEAT
-                self._attr_hvac_action = HVACAction.HEATING
+                pass
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
-                # self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_hvac_action = HVACAction.IDLE
+
+            self._attr_current_temperature = decoded.current_temp
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 self._attr_target_temperature = decoded.target_temp
-
-            self._attr_current_temperature = decoded.current_temp
+                if self.target_temperature < self.current_temperature:
+                    self._attr_hvac_mode = HVACMode.COOL
+                    self._attr_hvac_action = HVACAction.COOLING
+                else:
+                    self._attr_hvac_mode = HVACMode.HEAT
+                    self._attr_hvac_action = HVACAction.HEATING
 
         self.schedule_update_ha_state()
