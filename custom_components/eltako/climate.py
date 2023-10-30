@@ -17,15 +17,14 @@ from homeassistant.components.climate import (
     ClimateEntityFeature
 )
 from homeassistant import config_entries
-from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS
+from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS, CONF_TEMPERATURE_UNIT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
-
+from .const import *
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -36,13 +35,14 @@ async def async_setup_entry(
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
-    entities: list[EltakoSensor] = []
+    entities: list[EltakoEntity] = []
     
     if Platform.CLIMATE in config:
         for entity_config in config[Platform.CLIMATE]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
             dev_name = entity_config.get(CONF_NAME)
             eep_string = entity_config.get(CONF_EEP)
+            temp_unit = entity_config.get(CONF_TEMPERATURE_UNIT)
             
             sender_config = entity_config.get(CONF_SENDER)
             sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
@@ -92,8 +92,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_current_temperature = 0
     _attr_target_temperature = 0
     _attr_target_temperature_high = 25
-    _attr_target_temperature_low = 8
-    _attr_max_temp = 25
+    _attr_target_temperature_low = 16
+    _attr_max_temp = 40
     _attr_min_temp = 8
     _attr_temperature_unit = TEMP_CELSIUS
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
@@ -236,6 +236,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.debug("Send signal to set mode: Cooling")
         address = b'\x00\x00\xC1\x09'
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
+        # Regular4BSMessage???
 
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         self._send_command(mode, target_temp)

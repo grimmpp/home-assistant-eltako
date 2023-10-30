@@ -33,7 +33,7 @@ async def async_setup_entry(
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
     
-    entities: list[EltakoSensor] = []
+    entities: list[EltakoEntity] = []
     
     if Platform.BINARY_SENSOR in config:
         for entity_config in config[Platform.BINARY_SENSOR]:

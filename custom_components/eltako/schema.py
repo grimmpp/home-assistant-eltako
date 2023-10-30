@@ -33,11 +33,24 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_TYPE,
     Platform,
+    CONF_TEMPERATURE_UNIT,
+    UnitOfTemperature,
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_METER_TARIFFS, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, CONF_INVERT_SIGNAL
+from .const import *
+
+CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
+CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
+
+def _get_sender_schema(supported_sender_eep):
+    return vol.Schema(
+        {
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Required(CONF_EEP): vol.In(supported_sender_eep),
+        }
+    )
 
 class EltakoPlatformSchema(ABC):
     """Voluptuous schema for Eltako platform entity configuration."""
@@ -60,8 +73,6 @@ class BinarySensorSchema(EltakoPlatformSchema):
     CONF_EEP = CONF_EEP
     CONF_ID_REGEX = CONF_ID_REGEX
     CONF_INVERT_SIGNAL = CONF_INVERT_SIGNAL
-    
-    CONF_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 
     DEFAULT_NAME = "Binary sensor"
 
@@ -69,7 +80,7 @@ class BinarySensorSchema(EltakoPlatformSchema):
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
+                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED_BINARY_SENSOR),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
                 vol.Optional(CONF_INVERT_SIGNAL, default=False): cv.boolean,
@@ -86,19 +97,12 @@ class LightSchema(EltakoPlatformSchema):
 
     DEFAULT_NAME = "Light"
 
-    SENDER_SCHEMA = vol.Schema(
-        {
-            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
-        }
-    )
-
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER): SENDER_SCHEMA,
+                vol.Required(CONF_SENDER): _get_sender_schema(CONF_SENDER_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
@@ -113,19 +117,12 @@ class SwitchSchema(EltakoPlatformSchema):
 
     DEFAULT_NAME = "Switch"
 
-    SENDER_SCHEMA = vol.Schema(
-        {
-            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
-        }
-    )
-
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER): SENDER_SCHEMA,
+                vol.Required(CONF_SENDER): _get_sender_schema(CONF_SENDER_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
@@ -160,19 +157,12 @@ class CoverSchema(EltakoPlatformSchema):
 
     DEFAULT_NAME = "Cover"
 
-    SENDER_SCHEMA = vol.Schema(
-        {
-            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
-        }
-    )
-
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER): SENDER_SCHEMA,
+                vol.Required(CONF_SENDER): _get_sender_schema(CONF_SENDER_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_DEVICE_CLASS): COVER_DEVICE_CLASSES_SCHEMA,
                 vol.Optional(CONF_TIME_CLOSES): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
@@ -185,25 +175,36 @@ class ClimateSchema(EltakoPlatformSchema):
     """Schema for Eltako heating and cooling."""
     PLATFORM = Platform.CLIMATE
 
-    CONF_EEP_SUPPORTED = [A5_10_06.eep_string]
-    CONF_SENDER_EEP_SUPPORTED = [A5_10_06.eep_string]
+    CONF_CLIMATE_EEP = [A5_10_06.eep_string]
+    CONF_CLIMATE_SENDER_EEP = [A5_10_06.eep_string]
 
     DEFAULT_NAME = "Climate"
 
-    SENDER_SCHEMA = vol.Schema(
+    CONF_COOLING_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_SENSOR): vol.Schema(  # detects if heater is switch globally into cooling mode
+        {
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),                         
+            vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED_BINARY_SENSOR),
+        }),
+        vol.Optional(CONF_SENDER): vol.Schema(  # sends frequently a signal to stay in cooling mode if detect by cooling-mode-sensor
         {
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-            vol.Required(CONF_EEP): vol.In(CONF_SENDER_EEP_SUPPORTED),
-        }
-    )
+            vol.Required(CONF_EEP): vol.In([F6_02_01.eep_string, F6_02_02.eep_string]),
+        }),
+    })
 
     ENTITY_SCHEMA = vol.All(
         vol.Schema(
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Required(CONF_SENDER): SENDER_SCHEMA,
-                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+                vol.Required(CONF_EEP): vol.In(CONF_CLIMATE_EEP),
+                vol.Required(CONF_SENDER): _get_sender_schema(CONF_CLIMATE_SENDER_EEP),     # temperature controller command
+                vol.Required(CONF_TEMPERATURE_UNIT): vol.In(UnitOfTemperature.__getitem__), # for display: "°C", "°F", "K"
+                vol.Optional(CONF_MIN_TARGET_TEMPERATURE, default=17): cv.Number,
+                vol.Optional(CONF_MAX_TARGET_TEMPERATURE, default=25): cv.Number,
+                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  
+                vol.Optional(CONF_COOLING_MODE): CONF_COOLING_MODE_SCHEMA                   # if not provided cooling is not supported
             }
         ),
     )
