@@ -199,12 +199,12 @@ class ClimateSchema(EltakoPlatformSchema):
             {
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_CLIMATE_EEP),
-                vol.Required(CONF_SENDER): _get_sender_schema(CONF_CLIMATE_SENDER_EEP),     # temperature controller command
-                vol.Required(CONF_TEMPERATURE_UNIT): cv.string, #vol.In(UnitOfTemperature.__getitem__), # for display: "°C", "°F", "K"
+                vol.Required(CONF_SENDER): _get_sender_schema(CONF_CLIMATE_SENDER_EEP),             # temperature controller command
+                vol.Required(CONF_TEMPERATURE_UNIT): vol.IN([u.value for u in UnitOfTemperature]),  # for display: "°C", "°F", "K"
                 vol.Optional(CONF_MIN_TARGET_TEMPERATURE, default=17): cv.Number,
                 vol.Optional(CONF_MAX_TARGET_TEMPERATURE, default=25): cv.Number,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  
-                vol.Optional(CONF_COOLING_MODE): CONF_COOLING_MODE_SCHEMA                   # if not provided cooling is not supported
+                vol.Optional(CONF_COOLING_MODE): CONF_COOLING_MODE_SCHEMA                           # if not provided cooling is not supported
             }
         ),
     )
