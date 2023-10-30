@@ -57,11 +57,11 @@ async def async_setup_entry(
             cooling_sender_eep_string = None
             cooling_sender_eep = None
             if CONF_COOLING_MODE in entity_config:
-                cooling_switch_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID)
+                cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE):
-                    cooling_sender_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_ID)
+                    cooling_sender_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_ID))
                     cooling_sender_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_EEP)
 
             try:
@@ -261,11 +261,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
 
     async def _async_send_mode_cooling(self):
-        LOGGER.debug("Send signal to set mode: Cooling")
-        # address = b'\x00\x00\xC1\x09'
-        address, _ = self._cooling_sender_id
-        self.send_message(RPSMessage(address, 0x30, b'\x50', True))
-        # Regular4BSMessage???
+        if self._cooling_sender_id:
+            LOGGER.debug("Send signal to set mode: Cooling")
+            # address = b'\x00\x00\xC1\x09'
+            address, _ = self._cooling_sender_id
+            self.send_message(RPSMessage(address, 0x30, b'\x50', True))
+            # Regular4BSMessage???
 
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         self._send_command(mode, target_temp)
