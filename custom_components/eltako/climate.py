@@ -54,7 +54,6 @@ async def async_setup_entry(
             cooling_switch_eep_string = None
             cooling_sender_id = None
             cooling_sender_eep_string = None
-            
             if CONF_COOLING_MODE in entity_config:
                 cooling_switch_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID)
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
