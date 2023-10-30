@@ -106,8 +106,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self.entity_id = f"climate.{self.unique_id}"
 
         self._attr_temperature_unit = temp_unit
-        self._attr_target_temperature_high = max_temp
-        self._attr_target_temperature_low = min_temp
+        # self._attr_target_temperature_high = max_temp
+        # self._attr_target_temperature_low = min_temp
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
 
