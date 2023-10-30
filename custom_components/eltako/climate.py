@@ -98,8 +98,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _actor_mode: A5_10_06.Heater_Mode = None
 
     _attr_hvac_action = HVACAction.OFF
-    _attr_hvac_mode = HVACMode.HEAT
-    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
+    _attr_hvac_mode = HVACMode.OFF
     _attr_fan_mode = None
     _attr_fan_modes = None
     _attr_is_aux_heat = None
@@ -125,6 +124,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._cooling_switch_eep = cooling_switch_eep
         self._cooling_sender_id = cooling_sender_id
         self._cooling_sender_eep = cooling_sender_eep
+
+        if self._cooling_switch_id:
+            self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
+        else:
+            self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
 
         self._attr_temperature_unit = temp_unit
         # self._attr_target_temperature_high = max_temp
@@ -258,7 +262,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def _async_send_mode_cooling(self):
         LOGGER.debug("Send signal to set mode: Cooling")
-        address = b'\x00\x00\xC1\x09'
+        # address = b'\x00\x00\xC1\x09'
+        address, _ = self._cooling_sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
         # Regular4BSMessage???
 
