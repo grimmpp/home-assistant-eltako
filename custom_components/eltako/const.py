@@ -20,8 +20,8 @@ LOGGER = logging.getLogger("eltako")
 CONF_EEP = "eep"
 CONF_SENDER = "sender"
 CONF_SENSOR = "sensor"
-CONF_MAX_TARGET_TEMPERATURE = "max-target-temperature"
-CONF_MIN_TARGET_TEMPERATURE = "max-target-temperature"
+CONF_MAX_TARGET_TEMPERATURE = "max_target_temperature"
+CONF_MIN_TARGET_TEMPERATURE = "min_target_temperature"
 CONF_COOLING_MODE = "cooling-mode"
 
 CONF_ID_REGEX = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})( (left|right))?$"
