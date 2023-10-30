@@ -43,6 +43,8 @@ async def async_setup_entry(
             dev_name = entity_config.get(CONF_NAME)
             eep_string = entity_config.get(CONF_EEP)
             temp_unit = entity_config.get(CONF_TEMPERATURE_UNIT)
+            max_temp = entity_config.get(CONF_MAX_TARGET_TEMPERATURE)
+            min_temp = entity_config.get(CONF_MIN_TARGET_TEMPERATURE)
             
             sender_config = entity_config.get(CONF_SENDER)
             sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
@@ -57,7 +59,7 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_10_06]:
-                    entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp))
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
@@ -91,14 +93,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_swing_modes = None
     _attr_current_temperature = 0
     _attr_target_temperature = 0
-    _attr_target_temperature_high = 25
-    _attr_target_temperature_low = 16
-    _attr_max_temp = 40
-    _attr_min_temp = 8
-    _attr_temperature_unit = TEMP_CELSIUS
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
@@ -107,6 +104,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
+
+        self._attr_temperature_unit = temp_unit
+        self._attr_target_temperature_high = max_temp
+        self._attr_target_temperature_low = min_temp
+        self._attr_max_temp = max_temp
+        self._attr_min_temp = min_temp
 
         self._loop = asyncio.get_event_loop()
         self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
