@@ -50,16 +50,26 @@ async def async_setup_entry(
             sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
             sender_eep_string = sender_config.get(CONF_EEP)
 
+            if CONF_COOLING_MODE in entity_config:
+                cooling_switch_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID)
+                cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
+
+                if CONF_SENDER in entity_config.get(CONF_COOLING_MODE):
+                    cooling_sender_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_ID)
+                    cooling_sender_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_EEP)
+
             try:
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
+                if cooling_switch_eep_string: cooling_switch_eep = EEP.find(cooling_switch_eep_string)
+                if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
             except Exception as e:
                 LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 LOGGER.critical(e, exc_info=True)
                 continue
             else:
                 if dev_eep in [A5_10_06]:
-                    entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp))
+                    entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep))
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
@@ -95,7 +105,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_target_temperature = 0
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id=None, cooling_switch_eep=None, cooling_sender_id=None, cooling_sender_eep=None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
@@ -104,6 +114,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
+
+        self._cooling_switch_id = cooling_switch_id
+        self._cooling_switch_eep = cooling_switch_eep
+        self._cooling_sender_id = cooling_sender_id
+        self._cooling_sender_eep = cooling_sender_eep
 
         self._attr_temperature_unit = temp_unit
         # self._attr_target_temperature_high = max_temp
