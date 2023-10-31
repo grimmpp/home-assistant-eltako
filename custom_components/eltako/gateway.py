@@ -74,13 +74,18 @@ class EltakoGateway:
         self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
         def bus_done(bus_future, _task=self._main_task):
             self._bus_task = None
-            try:
-                result = bus_future.result()
-            except Exception as e:
-                LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
-                LOGGER.exception(e)
-            else:
-                LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
+            while True:
+                try:
+                    LOGGER.info("Connect Eltako serial bus.")
+                    result = bus_future.result()
+                except Exception as e:
+                    LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
+                    LOGGER.exception(e)
+                else:
+                    LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
+                
+                LOGGER.info(f"Wait {self.RECONNECT_TIMEOUT} until reconnect ...")
+                asyncio.sleep(self.RECONNECT_TIMEOUT)
             # _task.cancel()
         self._bus_task.add_done_callback(bus_done)
         await conn_made
@@ -98,23 +103,21 @@ class EltakoGateway:
 
     async def _main(self):
         bus = self._bus
+        await self._initialize_bus_task(bus.run)
+        
         while True:
-            await self._initialize_bus_task(bus.run)
-            if self._bus_task.done():
-                LOGGER.info(f"Try to reconnect after {self.RECONNECT_TIMEOUT} seconds.")
-                await asyncio.sleep(self.RECONNECT_TIMEOUT)
-            else:
-                while True:
-                    await self._step(bus)
+            await self._step(bus)
                 
 
     async def _step(self, bus):
-        try:
-            message = await asyncio.wait_for(bus.received.get, self.RECONNECT_TIMEOUT) # 10 sec
-            self._callback(message)
-        except asyncio.TimeoutError:
-            LOGGER.info(f"Didn't receive a message since {self.RECONNECT_TIMEOUT} seconds. Try to reconnect.")
-            self._initialize_bus_task()
+        message = await bus.received.get
+        self._callback(message)
+        # try:
+            # message = await asyncio.wait_for(bus.received.get, self.RECONNECT_TIMEOUT) # 10 sec
+            # self._callback(message)
+        # except asyncio.TimeoutError:
+        #     LOGGER.info(f"Didn't receive a message since {self.RECONNECT_TIMEOUT} seconds. Try to reconnect.")
+        #     self._initialize_bus_task()
 
     def _callback(self, message):
         """Handle Eltako device's callback.
