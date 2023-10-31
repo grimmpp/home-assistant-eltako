@@ -86,10 +86,10 @@ class EltakoGateway:
         await conn_made
     
     async def _wrapped_main(self, *args):
-        try:
-            await self._main(*args)
-        except Exception as e:
-            LOGGER.exception(e)
+        # try:
+        await self._main(*args)
+        # except Exception as e:
+        #     LOGGER.exception(e)
             # FIXME should I just restart with back-off?
 
         if self._bus_task is not None:
@@ -97,10 +97,17 @@ class EltakoGateway:
 
     async def _main(self):
         bus = self._bus
-        await self._initialize_bus_task(bus.run)
-
         while True:
-            await self._step(bus)
+            try:
+                await self._initialize_bus_task(bus.run)
+            except Exception as e:
+                LOGGER.exception(e)
+                LOGGER.info(f"Try to reconnect after {self.RECONNECT_TIMEOUT} seconds.")
+                await asyncio.sleep(self.RECONNECT_TIMEOUT)
+            else:
+                while True:
+                    await self._step(bus)
+                
 
     async def _step(self, bus):
         try:
