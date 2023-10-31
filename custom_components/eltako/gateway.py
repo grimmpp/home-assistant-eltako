@@ -72,7 +72,8 @@ class EltakoGateway:
 
         conn_made = asyncio.Future()
         self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
-        def bus_done(bus_future, _task=self._main_task, serial_path=self.serial_path):
+        # def bus_done(bus_future, _task=self._main_task, serial_path=self.serial_path):
+        def bus_done(bus_future, _task=self._bus_task, serial_path=self.serial_path):
             self._bus_task = None
             try:
                 LOGGER.info(f"Connect Eltako serial bus to {serial_path}")
@@ -85,9 +86,7 @@ class EltakoGateway:
             
             # LOGGER.info(f"Wait {self.RECONNECT_TIMEOUT} until reconnect ...")
             # await asyncio.sleep(self.RECONNECT_TIMEOUT)
-            # _task.cancel()
-            if self._bus_task is not None:
-                self._bus_task.cancel()
+            _task.cancel()
 
         self._bus_task.add_done_callback(bus_done)
         await conn_made
@@ -110,6 +109,7 @@ class EltakoGateway:
                 if self._bus_task is None:
                     await self._initialize_bus_task(bus.run)
             
+                LOGGER.debug("Start work with serial interface")
                 while True:
                     await self._step(bus)
 
@@ -123,6 +123,7 @@ class EltakoGateway:
 
     async def _step(self, bus):
         # message = await bus.received.get()
+        LOGGER.debug("wait for message")
         message = await asyncio.wait_for(bus.received.get, self.RECONNECT_TIMEOUT) # 10 sec
         self._callback(message)
         # try:
