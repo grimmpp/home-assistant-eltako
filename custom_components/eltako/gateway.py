@@ -86,10 +86,11 @@ class EltakoGateway:
         await conn_made
     
     async def _wrapped_main(self, *args):
-        # try:
-        await self._main(*args)
-        # except Exception as e:
-        #     LOGGER.exception(e)
+        try:
+            await self._main(*args)
+        except Exception as e:
+            LOGGER.Info("Test 123 ###########################################")
+            LOGGER.exception(e)
             # FIXME should I just restart with back-off?
 
         if self._bus_task is not None:
