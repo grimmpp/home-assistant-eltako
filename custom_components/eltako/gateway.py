@@ -81,7 +81,7 @@ class EltakoGateway:
                 LOGGER.exception(e)
             else:
                 LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
-            _task.cancel()
+            # _task.cancel()
         self._bus_task.add_done_callback(bus_done)
         await conn_made
     
