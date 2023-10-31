@@ -277,7 +277,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self._cooling_sender_id:
             return HVACMode.COOL
         
-        elif self._cooling_switch_id & self._last_cooling_signal:
+        elif self._cooling_switch_id and self._last_cooling_signal:
             if (time.time() - self._last_cooling_signal).total_seconds() / 60.0 < 16:   # time difference of last signal less than 16min
                 return HVACMode.COOL
 
