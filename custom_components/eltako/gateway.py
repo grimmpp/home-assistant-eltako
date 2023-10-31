@@ -23,6 +23,8 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
+    RECONNECT_TIMEOUT = 10 # sec
+
     def __init__(self, hass, serial_path, config_entry):
         """Initialize the Eltako gateway."""
 
@@ -101,8 +103,12 @@ class EltakoGateway:
             await self._step(bus)
 
     async def _step(self, bus):
-        message = await bus.received.get()
-        self._callback(message)
+        try:
+            message = await asyncio.wait_for(bus.received.get, self.RECONNECT_TIMEOUT) # 10 sec
+            self._callback(message)
+        except asyncio.TimeoutError:
+            LOGGER.info(f"Didn't receive a message since {self.RECONNECT_TIMEOUT} seconds. Try to reconnect.")
+            self._initialize_bus_task()
 
     def _callback(self, message):
         """Handle Eltako device's callback.

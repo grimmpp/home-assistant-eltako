@@ -150,7 +150,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
                 if self.hvac_mode == HVACMode.COOL:
-                    LOGGER.debug(f"Send command for cooling")
                     await self._async_send_mode_cooling()
             except Exception as e:
                 LOGGER.exception(e)
@@ -262,8 +261,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def _async_send_mode_cooling(self):
         if self._cooling_sender_id:
-            LOGGER.debug("Send signal to set mode: Cooling")
-            # address = b'\x00\x00\xC1\x09'
+            LOGGER.debug(f"Send command for cooling:")
             address, _ = self._cooling_sender_id
             self.send_message(RPSMessage(address, 0x30, b'\x50', True))
             # Regular4BSMessage???
