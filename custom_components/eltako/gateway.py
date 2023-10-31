@@ -72,7 +72,7 @@ class EltakoGateway:
 
         conn_made = asyncio.Future()
         self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
-        async def bus_done(bus_future, _task=self._main_task):
+        def bus_done(bus_future, _task=self._main_task):
             self._bus_task = None
             try:
                 LOGGER.info("Connect Eltako serial bus.")
