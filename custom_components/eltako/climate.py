@@ -96,8 +96,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     _update_frequency = 10 # sec
     _actor_mode: A5_10_06.Heater_Mode = None
+    _hvac_mode_from_heating = HVACMode.HEAT
 
-    _attr_hvac_action = HVACAction.OFF
+    _attr_hvac_action = None
     _attr_hvac_mode = HVACMode.OFF
     _attr_fan_mode = None
     _attr_fan_modes = None
@@ -109,6 +110,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_current_temperature = 0
     _attr_target_temperature = 0
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+
 
     def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id=None, cooling_switch_eep=None, cooling_sender_id=None, cooling_sender_eep=None):
         """Initialize the Eltako heating and cooling source."""
@@ -143,13 +145,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
     async def _wrapped_update(self, *args):
         while True:
             try:
-                LOGGER.debug(f"Wait {self._update_frequency} sec for next status update.")
+                LOGGER.debug(f"[climate {self._sender_id}] Wait {self._update_frequency} sec for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
-                LOGGER.debug(f"Send status update")
+                LOGGER.debug(f"[climate {self._sender_id}] Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
-                if self.hvac_mode == HVACMode.COOL:
+                if self._hvac_mode_from_heating == HVACMode.COOL:
                     await self._async_send_mode_cooling()
             except Exception as e:
                 LOGGER.exception(e)
@@ -176,7 +178,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     
 
     async def async_set_hvac_mode(self, hvac_mode):
-        """Set new target hvac mode."""
+        """Set new target hvac mode on the panel."""
         LOGGER.info("async func")
         LOGGER.info(f"hvac_mode {hvac_mode}")
         LOGGER.info(f"self.hvac_mode {self.hvac_mode}")
@@ -186,15 +188,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
                 self._send_mode_off()
-                #self._send_command(A5_10_06.Heater_Mode.OFF, self.target_temperature)
-            elif self.target_temperature >= self.current_temperature:
-                await self.async_set_hvac_mode(HVACMode.HEAT)
-            else: 
-                await self.async_set_hvac_mode(HVACMode.COOL)
-        elif hvac_mode in [HVACMode.COOL, HVACMode.HEAT]:
+            else:
+                await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+            
+        elif hvac_mode == self._hvac_mode_from_heating:
             self._attr_hvac_mode = hvac_mode
             self._send_set_normal_mode()
-                # self._send_command(A5_10_06.Heater_Mode.NORMAL, self.target_temperature)
 
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -231,37 +230,37 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
                 self.send_message(msg)
             else:
-                LOGGER.debug("Either no current or target temperature is set.")
+                LOGGER.debug(f"[climate {self._sender_id}] Either no current or target temperature is set.")
                 #This is always the case when there was no sensor signal after HA started.
 
 
     def _send_set_normal_mode(self):
-        LOGGER.debug("Send signal to set mode: Normal")
+        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: Normal")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x70', True))
 
 
     def _send_mode_off(self):
-        LOGGER.debug("Send signal to set mode: OFF")
+        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: OFF")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x10', True))
 
 
     def _send_mode_night(self):
-        LOGGER.debug("Send signal to set mode: Night")
+        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: Night")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
 
 
     def _send_mode_setback(self):
-        LOGGER.debug("Send signal to set mode: Temperature Setback")
+        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: Temperature Setback")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x30', True))
 
 
     async def _async_send_mode_cooling(self):
         if self._cooling_sender_id:
-            LOGGER.debug(f"Send command for cooling:")
+            LOGGER.debug(f"[climate {self._sender_id}] Send command for cooling:")
             address, _ = self._cooling_sender_id
             self.send_message(RPSMessage(address, 0x30, b'\x50', True))
             # Regular4BSMessage???
@@ -276,7 +275,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             if msg.org == 0x07:
                 decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning(f"[climate {self._sender_id}] Could not decode message: %s", str(e))
             return
 
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
@@ -286,21 +285,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
-                self._attr_hvac_action = HVACAction.OFF
             elif decoded.mode == A5_10_06.Heater_Mode.NORMAL:
-                pass
+                self._attr_hvac_mode = self._hvac_mode_from_heating
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
-                self._attr_hvac_action = HVACAction.IDLE
-
-            
+                self._attr_hvac_mode = self._hvac_mode_from_heating
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 self._attr_target_temperature = decoded.target_temp
-                if self.target_temperature < self.current_temperature:
-                    self._attr_hvac_mode = HVACMode.COOL
-                    self._attr_hvac_action = HVACAction.COOLING
-                else:
-                    self._attr_hvac_mode = HVACMode.HEAT
-                    self._attr_hvac_action = HVACAction.HEATING
 
         self.schedule_update_ha_state()
