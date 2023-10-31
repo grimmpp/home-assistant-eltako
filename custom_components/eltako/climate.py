@@ -75,7 +75,12 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_10_06]:
-                    entities.append(ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep))
+                    climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep)
+                    cooling_switch_entity = EltakoEntity(gateway, cooling_switch_id, 'cooling switch')
+                    cooling_switch_entity.value_changed = climate_entity.value_changed
+                    
+                    entities.append(climate_entity)
+                    entities.append(cooling_switch_entity)
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
@@ -97,6 +102,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _update_frequency = 10 # sec
     _actor_mode: A5_10_06.Heater_Mode = None
     _hvac_mode_from_heating = HVACMode.HEAT
+    _last_cooling_signal = None
 
     _attr_hvac_action = None
     _attr_hvac_mode = HVACMode.OFF
@@ -151,7 +157,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self._sender_id}] Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
-                if self._hvac_mode_from_heating == HVACMode.COOL:
+                if self._get_mode() == HVACMode.COOL:
                     await self._async_send_mode_cooling()
             except Exception as e:
                 LOGGER.exception(e)
@@ -188,8 +194,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
                 self._send_mode_off()
+
+            elif self._get_mode() == HVACMode.COOL:
+                await self.async_set_hvac_mode(HVACMode.COOL)
+
             else:
-                await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+                await self.async_set_hvac_mode(HVACMode.HEAT)
             
         elif hvac_mode == self._hvac_mode_from_heating:
             self._attr_hvac_mode = hvac_mode
@@ -209,19 +219,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self._actor_mode != None and self.current_temperature > 0:
             new_target_temp = kwargs['temperature']
 
-            if new_target_temp < self.current_temperature:
-                await self.async_set_hvac_mode(HVACMode.COOL)
-            else:
-                await self.async_set_hvac_mode(HVACMode.HEAT)
-
-            await asyncio.sleep(0.2)
-            
             if self._actor_mode == A5_10_06.Heater_Mode.OFF:
                 self._actor_mode = A5_10_06.Heater_Mode.NORMAL
 
             self._send_command(self._actor_mode, new_target_temp)
         else:
-            LOGGER.debug("default state of actor was not yet transferred.")
+            LOGGER.debug(f"[climate {self._sender_id}] default state of actor was not yet transferred.")
 
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
@@ -269,6 +272,18 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._send_command(mode, target_temp)
 
 
+    def _get_mode(self) -> HVACMode:
+
+        if self._cooling_sender_id:
+            return HVACMode.COOL
+        
+        elif self._cooling_switch_id & self._last_cooling_signal:
+            if (time.time() - self._last_cooling_signal).total_seconds() / 60.0 < 16:   # time difference of last signal less than 16min
+                return HVACMode.COOL
+
+        return HVACMode.HEAT
+
+
     def value_changed(self, msg):
         """Update the internal state of this device."""
         try:
@@ -292,5 +307,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 self._attr_target_temperature = decoded.target_temp
+
+        elif self._cooling_switch_eep in [M5_38_08]:
+            
+            self._last_cooling_signal = time.time()
 
         self.schedule_update_ha_state()
