@@ -98,10 +98,8 @@ class EltakoGateway:
     async def _main(self):
         bus = self._bus
         while True:
-            try:
-                await self._initialize_bus_task(bus.run)
-            except Exception as e:
-                LOGGER.exception(e)
+            await self._initialize_bus_task(bus.run)
+            if self._bus_task.done():
                 LOGGER.info(f"Try to reconnect after {self.RECONNECT_TIMEOUT} seconds.")
                 await asyncio.sleep(self.RECONNECT_TIMEOUT)
             else:
