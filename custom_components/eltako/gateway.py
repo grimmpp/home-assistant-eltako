@@ -86,7 +86,7 @@ class EltakoGateway:
             
             # LOGGER.info(f"Wait {self.RECONNECT_TIMEOUT} until reconnect ...")
             # await asyncio.sleep(self.RECONNECT_TIMEOUT)
-            _task.cancel()
+            # _task.cancel()
 
         self._bus_task.add_done_callback(bus_done)
         await conn_made
