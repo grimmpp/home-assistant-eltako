@@ -76,7 +76,7 @@ async def async_setup_entry(
             else:
                 if dev_eep in [A5_10_06]:
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep)
-                    cooling_switch_entity = EltakoEntity(gateway, cooling_switch_id, 'cooling switch')
+                    cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch')
                     cooling_switch_entity.value_changed = climate_entity.value_changed
                     
                     entities.append(climate_entity)
@@ -86,15 +86,11 @@ async def async_setup_entry(
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
     async_add_entities(entities)
 
+class CoolingSwitch(EltakoEntity):
 
-async def _loop_send_command(cc: ClimateController):
-    while(True):
-        time.sleep(50)  # wait 50 seconds
-
-        LOGGER.debug("Automatic status update:")
-        mode = cc._get_mode_by_hvac(cc.hvac_action, cc.hvac_mode)
-        temp = cc.target_temperature
-        cc._send_command(mode, temp)
+    def __init__(self, gateway, dev_id, dev_name, dev_eep):
+        super().__init__(gateway, dev_id, dev_name)
+        self.dev_eep = dev_eep
 
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
