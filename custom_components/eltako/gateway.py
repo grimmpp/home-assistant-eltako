@@ -109,7 +109,7 @@ class EltakoGateway:
                 
 
     async def _step(self, bus):
-        message = await bus.received.get
+        message = await bus.received.get()
         self._callback(message)
         # try:
             # message = await asyncio.wait_for(bus.received.get, self.RECONNECT_TIMEOUT) # 10 sec
