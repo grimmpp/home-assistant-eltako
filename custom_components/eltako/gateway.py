@@ -72,21 +72,20 @@ class EltakoGateway:
 
         conn_made = asyncio.Future()
         self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
-        def bus_done(bus_future, _task=self._main_task):
+        async def bus_done(bus_future, _task=self._main_task):
             self._bus_task = None
-            while True:
-                try:
-                    LOGGER.info("Connect Eltako serial bus.")
-                    result = bus_future.result()
-                except Exception as e:
-                    LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
-                    LOGGER.exception(e)
-                else:
-                    LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
-                
-                LOGGER.info(f"Wait {self.RECONNECT_TIMEOUT} until reconnect ...")
-                asyncio.sleep(self.RECONNECT_TIMEOUT)
-            # _task.cancel()
+            try:
+                LOGGER.info("Connect Eltako serial bus.")
+                result = bus_future.result()
+            except Exception as e:
+                LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
+                LOGGER.exception(e)
+            else:
+                LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
+            
+            # LOGGER.info(f"Wait {self.RECONNECT_TIMEOUT} until reconnect ...")
+            # await asyncio.sleep(self.RECONNECT_TIMEOUT)
+            _task.cancel()
         self._bus_task.add_done_callback(bus_done)
         await conn_made
     
