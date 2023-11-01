@@ -23,6 +23,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
+from .gateway import EltakoGateway
 from .device import EltakoEntity
 from .const import *
 
@@ -33,7 +34,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako Temperature Control platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
     entities: list[EltakoEntity] = []
     
@@ -77,10 +78,10 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep)
                     cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_sender_eep)
-                    cooling_switch_entity.value_changed = climate_entity.value_changed
+                    # cooling_switch_entity.value_changed = climate_entity.value_changed
                     
                     entities.append(climate_entity)
-                    entities.append(cooling_switch_entity)
+                    # entities.append(cooling_switch_entity)
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
