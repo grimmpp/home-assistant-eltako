@@ -112,7 +112,7 @@ class CoolingSwitch(EltakoEntity):
         if self.dev_eep in [M5_38_08]:
             
             self.last_cooling_signal = time.time()
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state}")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} of {type(decoded).__name__}")
 
     def is_cooling_mode_active(self):
         return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY_IN_MIN   # time difference of last signal less than 16min
