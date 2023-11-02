@@ -94,9 +94,9 @@ async def async_setup_entry(
 
 class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
-    SENDER_FREQUENCY: int = 15
+    SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep: EEP):
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
 
@@ -115,7 +115,7 @@ class CoolingSwitch(EltakoEntity):
             LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state}")
 
     def is_cooling_mode_active(self):
-        return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY   # time difference of last signal less than 16min
+        return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY_IN_MIN   # time difference of last signal less than 16min
 
 
 class ClimateController(EltakoEntity, ClimateEntity):
@@ -139,7 +139,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch: CoolingSwitch=None, cooling_sender_id=None, cooling_sender_eep=None):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, temp_unit, min_temp: int, max_temp: int, cooling_switch: CoolingSwitch=None, cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep

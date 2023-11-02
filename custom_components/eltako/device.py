@@ -1,18 +1,20 @@
 """Representation of an Eltako device."""
 from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
 from eltakobus.error import ParseError
+from eltakobus.util import AddressExpression
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
 
 from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER
+from .gateway import EltakoGateway
 
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
 
-    def __init__(self, gateway, dev_id, dev_name="Device"):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="Device"):
         """Initialize the device."""
         self.gateway = gateway
         self.dev_id = dev_id
