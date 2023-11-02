@@ -77,11 +77,12 @@ async def async_setup_entry(
             else:
                 if dev_eep in [A5_10_06]:
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep)
-                    cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_sender_eep)
-                    # cooling_switch_entity.value_changed = climate_entity.value_changed
-                    
                     entities.append(climate_entity)
-                    entities.append(cooling_switch_entity)
+
+                    if cooling_switch_id:
+                        cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_sender_eep)
+                        cooling_switch_entity.value_changed = climate_entity.value_changed
+                        entities.append(cooling_switch_entity)
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
