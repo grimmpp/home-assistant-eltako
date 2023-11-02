@@ -303,7 +303,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def value_changed(self, msg):
         """Update the internal state of this device."""
         try:
-            decoded = self.dev_eep.decode_message(msg)
+            if  msg.org == 0x07:
+                decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: %s", str(e))
             return
