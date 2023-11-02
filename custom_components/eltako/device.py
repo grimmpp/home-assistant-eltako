@@ -28,7 +28,7 @@ class EltakoEntity(Entity):
             )
         )
 
-    def _message_received_callback(self, msg):
+    def _message_received_callback(self, msg: ESP2Message):
         """Handle incoming messages."""
         
         # Eltako wrapped RPS
@@ -91,8 +91,8 @@ class EltakoEntity(Entity):
                 self.value_changed(msg)
             return
 
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the device when a message arrives."""
     
-    def send_message(self, msg):
+    def send_message(self, msg: ESP2Message):
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)

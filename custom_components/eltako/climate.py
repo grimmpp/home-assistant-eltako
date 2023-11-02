@@ -9,6 +9,7 @@ import time
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
+from eltakobus.message import ESP2Message
 
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -96,11 +97,11 @@ class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep: EEP):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP):
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
 
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of this device."""
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -169,7 +170,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
 
 
-    async def _wrapped_update(self, *args):
+    async def _wrapped_update(self, *args) -> None:
         while True:
             try:
                 LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency} sec for next status update.")
@@ -258,31 +259,31 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 #This is always the case when there was no sensor signal after HA started.
 
 
-    def _send_set_normal_mode(self):
+    def _send_set_normal_mode(self) -> None:
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Normal")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x70', True))
 
 
-    def _send_mode_off(self):
+    def _send_mode_off(self) -> None:
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: OFF")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x10', True))
 
 
-    def _send_mode_night(self):
+    def _send_mode_night(self) -> None:
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Night")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
 
 
-    def _send_mode_setback(self):
+    def _send_mode_setback(self) -> None:
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Temperature Setback")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x30', True))
 
 
-    async def _async_send_mode_cooling(self):
+    async def _async_send_mode_cooling(self) -> None:
         if self._cooling_sender_id:
             LOGGER.debug(f"[climate {self.dev_id}] Send command for cooling:")
             address, _ = self._cooling_sender_id
@@ -301,7 +302,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         return HVACMode.HEAT
 
 
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message) -> None:
         """Update the internal state of this device."""
         try:
             if  msg.org == 0x07:
