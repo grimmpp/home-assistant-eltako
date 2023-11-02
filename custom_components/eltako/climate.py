@@ -81,7 +81,7 @@ async def async_setup_entry(
                     # cooling_switch_entity.value_changed = climate_entity.value_changed
                     
                     entities.append(climate_entity)
-                    # entities.append(cooling_switch_entity)
+                    entities.append(cooling_switch_entity)
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
