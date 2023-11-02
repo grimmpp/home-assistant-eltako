@@ -57,11 +57,13 @@ async def async_setup_entry(
             cooling_sender_id = None
             cooling_sender_eep_string = None
             cooling_sender_eep = None
-            if CONF_COOLING_MODE in entity_config:
+            if CONF_COOLING_MODE in entity_config.keys():
+                LOGGER.debug("Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
 
-                if CONF_SENDER in entity_config.get(CONF_COOLING_MODE):
+                if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
+                    LOGGER.debug("Read cooling sender config")
                     cooling_sender_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_ID))
                     cooling_sender_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_EEP)
 
