@@ -170,10 +170,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
     async def _wrapped_update(self, *args):
         while True:
             try:
-                LOGGER.debug(f"[climate {self._sender_id}] Wait {self._update_frequency} sec for next status update.")
+                LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency} sec for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
-                LOGGER.debug(f"[climate {self._sender_id}] Send status update")
+                LOGGER.debug(f"[climate {self.dev_id}] Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
                 if self._get_mode() == HVACMode.COOL:
@@ -243,7 +243,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
             self._send_command(self._actor_mode, new_target_temp)
         else:
-            LOGGER.debug(f"[climate {self._sender_id}] default state of actor was not yet transferred.")
+            LOGGER.debug(f"[climate {self.dev_id}] default state of actor was not yet transferred.")
 
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         address, _ = self._sender_id
@@ -252,37 +252,37 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
                 self.send_message(msg)
             else:
-                LOGGER.debug(f"[climate {self._sender_id}] Either no current or target temperature is set.")
+                LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set.")
                 #This is always the case when there was no sensor signal after HA started.
 
 
     def _send_set_normal_mode(self):
-        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: Normal")
+        LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Normal")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x70', True))
 
 
     def _send_mode_off(self):
-        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: OFF")
+        LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: OFF")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x10', True))
 
 
     def _send_mode_night(self):
-        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: Night")
+        LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Night")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
 
 
     def _send_mode_setback(self):
-        LOGGER.debug(f"[climate {self._sender_id}] Send signal to set mode: Temperature Setback")
+        LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Temperature Setback")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x30', True))
 
 
     async def _async_send_mode_cooling(self):
         if self._cooling_sender_id:
-            LOGGER.debug(f"[climate {self._sender_id}] Send command for cooling:")
+            LOGGER.debug(f"[climate {self.dev_id}] Send command for cooling:")
             address, _ = self._cooling_sender_id
             self.send_message(RPSMessage(address, 0x30, b'\x50', True))
             # Regular4BSMessage???
@@ -304,7 +304,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning(f"[climate {self._sender_id}] Could not decode message: %s", str(e))
+            LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: %s", str(e))
             return
 
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
