@@ -105,7 +105,8 @@ class CoolingSwitch(EltakoEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: %s", str(e))
+            LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: {str(e)}")
+            LOGGER.debug(f"[climate {self.dev_id}] Message: {msg}")
             return
 
         if self.dev_eep in [M5_38_08]:
