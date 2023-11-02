@@ -78,23 +78,44 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_10_06]:
-                    climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id, cooling_switch_eep, cooling_sender_id, cooling_sender_eep)
-                    entities.append(climate_entity)
-
+                    cooling_switch_entity = None
                     if cooling_switch_id:
                         cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_sender_eep)
-                        cooling_switch_entity.value_changed = climate_entity.value_changed
                         entities.append(cooling_switch_entity)
+
+                    climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_entity, cooling_sender_id, cooling_sender_eep)
+                    entities.append(climate_entity)
+
+                    
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
     async_add_entities(entities)
 
 class CoolingSwitch(EltakoEntity):
+    last_cooling_signal: float = 0
+    SENDER_FREQUENCY: int = 15
 
     def __init__(self, gateway, dev_id, dev_name, dev_eep):
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
+
+    def value_changed(self, msg):
+        """Update the internal state of this device."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning(f"[climate {self._sender_id}] Could not decode message: %s", str(e))
+            return
+
+        if self.dev_eep in [M5_38_08]:
+            
+            self.last_cooling_signal = time.time()
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state}")
+
+    def is_cooling_mode_active(self):
+        return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY   # time difference of last signal less than 16min
+
 
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
@@ -102,7 +123,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _update_frequency = 10 # sec
     _actor_mode: A5_10_06.Heater_Mode = None
     _hvac_mode_from_heating = HVACMode.HEAT
-    _last_cooling_signal = None
 
     _attr_hvac_action = None
     _attr_hvac_mode = HVACMode.OFF
@@ -118,7 +138,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_id=None, cooling_switch_eep=None, cooling_sender_id=None, cooling_sender_eep=None):
+    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch: CoolingSwitch=None, cooling_sender_id=None, cooling_sender_eep=None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name)
         self.dev_eep = dev_eep
@@ -128,12 +148,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
-        self._cooling_switch_id = cooling_switch_id
-        self._cooling_switch_eep = cooling_switch_eep
+        self.cooling_switch = cooling_switch
         self._cooling_sender_id = cooling_sender_id
         self._cooling_sender_eep = cooling_sender_eep
 
-        if self._cooling_switch_id:
+        if self.cooling_switch:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
@@ -274,12 +293,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def _get_mode(self) -> HVACMode:
 
-        if self._cooling_sender_id:
+        if self.cooling_switch and self.cooling_switch.is_cooling_mode_active():
             return HVACMode.COOL
-        
-        elif self._cooling_switch_id and self._last_cooling_signal:
-            if (time.time() - self._last_cooling_signal) / 60.0 < 16:   # time difference of last signal less than 16min
-                return HVACMode.COOL
 
         return HVACMode.HEAT
 
@@ -287,8 +302,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def value_changed(self, msg):
         """Update the internal state of this device."""
         try:
-            if msg.org == 0x07:
-                decoded = self.dev_eep.decode_message(msg)
+            decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning(f"[climate {self._sender_id}] Could not decode message: %s", str(e))
             return
@@ -307,10 +321,5 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 self._attr_target_temperature = decoded.target_temp
-
-        elif self._cooling_switch_eep in [M5_38_08]:
-            
-            self._last_cooling_signal = time.time()
-            LOGGER.debug(f"[climate {self._sender_id} - Cooling Switch received status] {decoded.state}")
 
         self.schedule_update_ha_state()
