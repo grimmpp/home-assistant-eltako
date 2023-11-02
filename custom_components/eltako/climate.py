@@ -80,17 +80,17 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     cooling_switch_entity = None
                     if cooling_switch_id:
-                        cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_sender_eep)
+                        cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep)
                         entities.append(cooling_switch_entity)
 
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_entity, cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
 
-                    
         
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
     async_add_entities(entities)
+
 
 class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
