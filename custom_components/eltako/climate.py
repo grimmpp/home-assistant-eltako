@@ -311,5 +311,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
         elif self._cooling_switch_eep in [M5_38_08]:
             
             self._last_cooling_signal = time.time()
+            LOGGER.debug(f"[climate {self._sender_id} - Cooling Switch received status] {decoded.state}")
 
         self.schedule_update_ha_state()
