@@ -61,8 +61,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data[ELTAKO_CONFIG] = config
     LOGGER.debug(f"config {config}")
     # Initialise the gateway
-    if CONF_GATEWAY in config and CONF_DEVICE in config[CONF_GATEWAY]:
-        gateway_device = config[CONF_GATEWAY][CONF_DEVICE]
+    if CONF_GATEWAY in config and len(config[CONF_GATEWAY]) == 1 and CONF_DEVICE in config[CONF_GATEWAY][0]:
+        gateway_device = config[CONF_GATEWAY][CONF_DEVICE][0]
     else:
         gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
         LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
