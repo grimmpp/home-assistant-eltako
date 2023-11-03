@@ -18,7 +18,7 @@ DEFAULT_NAME = "Eltako gateway"
 
 class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
-    GatewayEltakoFGWUSB14 = 'fgw-usb14'
+    GatewayEltakoFGW14USB = 'fgw14usb'
     EnOceanUSB300 = 'enocean-usb300' # not yet supported
 
 class EltakoGateway:

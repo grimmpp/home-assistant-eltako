@@ -64,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_device = config_entry.data[CONF_GATEWAY][CONF_DEVICE]
     serial_path = config_entry.data[CONF_GATEWAY][CONF_SERIAL_PATH]
     match gateway_device:
-        case GatewayDeviceTypes.GatewayEltakoFAM14 | GatewayDeviceTypes.GatewayEltakoFGWUSB14:
+        case GatewayDeviceTypes.GatewayEltakoFAM14 | GatewayDeviceTypes.GatewayEltakoFGW14USB:
             usb_gateway = EltakoGateway(hass, serial_path, config_entry)
         case GatewayDeviceTypes.EnOceanUSB300:
             usb_gateway = None
