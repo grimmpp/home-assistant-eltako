@@ -59,7 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         config = _conf[DOMAIN]
 
     eltako_data[ELTAKO_CONFIG] = config
-    
+    LOGGER.debug(f"config {config}")
     # Initialise the gateway
     if CONF_GATEWAY in config and CONF_DEVICE in config[CONF_GATEWAY]:
         gateway_device = config[CONF_GATEWAY][CONF_DEVICE]
