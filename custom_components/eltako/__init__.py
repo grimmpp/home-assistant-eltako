@@ -71,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     match gateway_device:
         case GatewayDeviceTypes.GatewayEltakoFAM14 | GatewayDeviceTypes.GatewayEltakoFGW14USB:
+            LOGGER.debug(f"[Eltako Setup] Initializes USB device {gateway_device}")
             usb_gateway = EltakoGateway(hass, serial_path, config_entry)
         case GatewayDeviceTypes.EnOceanUSB300:
             usb_gateway = None
