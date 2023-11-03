@@ -61,18 +61,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data[ELTAKO_CONFIG] = config
     
     # Initialise the gateway
-    if CONF_GATEWAY in config_entry.data.keys():
-        if CONF_DEVICE in config_entry[CONF_GATEWAY].keys():
-            gateway_device = config_entry.data[CONF_GATEWAY][CONF_DEVICE]
-        else:
-            gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
-            LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
-
-        if CONF_SERIAL_PATH in config_entry[CONF_GATEWAY].keys():
-            serial_path = config_entry.data[CONF_GATEWAY][CONF_SERIAL_PATH]
+    if CONF_GATEWAY in config and CONF_DEVICE in config[CONF_GATEWAY].keys():
+        gateway_device = config[CONF_GATEWAY][CONF_DEVICE]
     else:
         gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
         LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
+
+    serial_path = config_entry.data[CONF_DEVICE]
 
     match gateway_device:
         case GatewayDeviceTypes.GatewayEltakoFAM14 | GatewayDeviceTypes.GatewayEltakoFGW14USB:
