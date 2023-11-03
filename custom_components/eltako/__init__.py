@@ -61,8 +61,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data[ELTAKO_CONFIG] = config
     
     # Initialise the gateway
-    gateway_device = config_entry.data[CONF_GATEWAY][CONF_DEVICE]
-    serial_path = config_entry.data[CONF_GATEWAY][CONF_SERIAL_PATH]
+    if CONF_GATEWAY in config_entry.data.keys():
+        if CONF_DEVICE in config_entry[CONF_GATEWAY].keys():
+            gateway_device = config_entry.data[CONF_GATEWAY][CONF_DEVICE]
+        else:
+            gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
+            LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
+
+        if CONF_SERIAL_PATH in config_entry[CONF_GATEWAY].keys():
+            serial_path = config_entry.data[CONF_GATEWAY][CONF_SERIAL_PATH]
+    else:
+        gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
+        LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
+
     match gateway_device:
         case GatewayDeviceTypes.GatewayEltakoFAM14 | GatewayDeviceTypes.GatewayEltakoFGW14USB:
             usb_gateway = EltakoGateway(hass, serial_path, config_entry)
@@ -70,7 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             usb_gateway = None
     
     if usb_gateway is None:
-        LOGGER.error(f"USB device {gateway_device} is not supported.")
+        LOGGER.error(f"[Eltako Setup] USB device {gateway_device} is not supported.")
         return False
 
     await usb_gateway.async_setup()
