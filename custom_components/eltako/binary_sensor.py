@@ -18,6 +18,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
 from .const import *
+from .gateway import EltakoGateway
 
 import json
 
@@ -66,10 +67,9 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - D5-00-01
     """
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, device_class, invert_signal):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
         """Initialize the Eltako binary sensor."""
-        super().__init__(gateway, dev_id, dev_name)
-        self.dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"

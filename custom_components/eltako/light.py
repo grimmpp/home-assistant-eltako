@@ -21,6 +21,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import EltakoEntity
+from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
 
@@ -68,9 +69,9 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
-        super().__init__(gateway, dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self._on_state = False
         self._attr_brightness = 50
@@ -168,9 +169,9 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
-        super().__init__(gateway, dev_id, dev_name)
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self._on_state = False
         self._sender_id = sender_id

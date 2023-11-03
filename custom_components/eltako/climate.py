@@ -98,8 +98,7 @@ class CoolingSwitch(EltakoEntity):
     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP):
-        super().__init__(gateway, dev_id, dev_name)
-        self.dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of this device."""
@@ -143,8 +142,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, temp_unit, min_temp: int, max_temp: int, cooling_switch: CoolingSwitch=None, cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
-        super().__init__(gateway, dev_id, dev_name)
-        self.dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
