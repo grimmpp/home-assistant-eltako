@@ -8,6 +8,7 @@ from homeassistant.const import CONF_DEVICE
 
 from . import gateway
 from .const import CONF_GATEWAY, CONF_SERIAL_PATH, DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
+from .gateway import GatewayDeviceTypes
 
 
 class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -21,6 +22,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
+        LOGGER.debug(f"[Eltako FlowHandler] user_input {user_input}")
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
@@ -64,6 +66,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             
             if CONF_GATEWAY not in user_input.keys():
                 user_input[CONF_GATEWAY] = {}
+                user_input[CONF_GATEWAY][CONF_DEVICE] = GatewayDeviceTypes.GatewayEltakoFGW14USB # set default device
             
             default_value = user_input[CONF_GATEWAY][CONF_SERIAL_PATH]
             errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
@@ -78,7 +81,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def validate_eltako_conf(self, user_input) -> bool:
         """Return True if the user_input contains a valid gateway path."""
-        serial_path = user_input[CONF_GATEWAY][CONF_SERIAL_PATH]
+        if CONF_GATEWAY not in user_input.keys():
+            serial_path = user_input[CONF_GATEWAY][CONF_SERIAL_PATH]
+        else:
+            serial_path = None
+
         path_is_valid = await self.hass.async_add_executor_job(
             gateway.validate_path, serial_path
         )
