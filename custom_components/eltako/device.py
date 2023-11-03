@@ -97,4 +97,5 @@ class EltakoEntity(Entity):
         """Update the internal state of the device when a message arrives."""
     
     def send_message(self, msg: ESP2Message):
+        # TODO: check if gateway is available
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)

@@ -7,8 +7,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_integration_yaml_config
 
-from .const import DATA_ELTAKO, DOMAIN, ELTAKO_GATEWAY, ELTAKO_CONFIG, LOGGER, PLATFORMS
-from .gateway import EltakoGateway
+from .const import *
+from .gateway import EltakoGateway, GatewayDeviceTypes
 from .schema import (
     BinarySensorSchema,
     LightSchema,
@@ -16,6 +16,7 @@ from .schema import (
     SensorSchema,
     CoverSchema,
     ClimateSchema,
+    GatewaySchema,
 )
 
 CONFIG_SCHEMA = vol.Schema(
@@ -23,6 +24,7 @@ CONFIG_SCHEMA = vol.Schema(
         DOMAIN: vol.All(
             vol.Schema(
                 {
+                    **GatewaySchema.platform_node()
                     **BinarySensorSchema.platform_node(),
                     **LightSchema.platform_node(),
                     **SwitchSchema.platform_node(),
@@ -59,8 +61,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data[ELTAKO_CONFIG] = config
     
     # Initialise the gateway
-    serial_path = config_entry.data[CONF_DEVICE]
-    usb_gateway = EltakoGateway(hass, serial_path, config_entry)
+    gateway_device = config_entry.data[CONF_GATEWAY][CONF_DEVICE]
+    serial_path = config_entry.data[CONF_GATEWAY][CONF_SERIAL_PATH]
+    match gateway_device:
+        case GatewayDeviceTypes.GatewayEltakoFAM14 | GatewayDeviceTypes.GatewayEltakoFGWUSB14:
+            usb_gateway = EltakoGateway(hass, serial_path, config_entry)
+        case GatewayDeviceTypes.EnOceanUSB300:
+            usb_gateway = None
+    
+    if usb_gateway is None:
+        LOGGER.error(f"USB device {gateway_device} is not supported.")
+        return False
+
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = usb_gateway
     

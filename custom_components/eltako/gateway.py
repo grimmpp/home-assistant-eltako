@@ -1,4 +1,5 @@
 """Representation of an Eltako gateway."""
+from enum import Enum
 import glob
 import asyncio
 import logging
@@ -15,6 +16,10 @@ from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER, MANUFACT
 
 DEFAULT_NAME = "Eltako gateway"
 
+class GatewayDeviceTypes(str, Enum):
+    GatewayEltakoFAM14 = 'fam14'
+    GatewayEltakoFGWUSB14 = 'fgw-usb14'
+    EnOceanUSB300 = 'enocean-usb300' # not yet supported
 
 class EltakoGateway:
     """Representation of an Eltako gateway.

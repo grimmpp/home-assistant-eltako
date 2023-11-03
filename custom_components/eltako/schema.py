@@ -32,6 +32,7 @@ from homeassistant.const import (
     CONF_ID,
     CONF_NAME,
     CONF_TYPE,
+    CONF_DEVICE,
     Platform,
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
@@ -40,6 +41,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
 from .const import *
+from .gateway import GatewayDeviceTypes
 
 CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
@@ -65,6 +67,19 @@ class EltakoPlatformSchema(ABC):
                 cv.ensure_list, [cls.ENTITY_SCHEMA]
             )
         }
+    
+class GatewaySchema(EltakoPlatformSchema):
+    """Voluptuous schema for bus gateway"""
+    PLATFORM = CONF_GATEWAY
+
+    ENTITY_SCHEMA = vol.All(
+        vol.Schema(
+            {
+                vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14): vol.In(GatewayDeviceTypes),
+                vol.Optional(CONF_SERIAL_PATH): cv.string,
+            }
+        ),
+    )
 
 class BinarySensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako binary sensors."""
