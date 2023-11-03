@@ -31,11 +31,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         
         if user_input is not None:
-            if CONF_GATEWAY not in user_input.keys():
-                user_input[CONF_GATEWAY] = {}
-
-            if user_input[CONF_GATEWAY][CONF_SERIAL_PATH] == self.MANUAL_PATH_VALUE:
-                return await self.async_step_manual(None)
+            if CONF_GATEWAY in user_input.keys() and CONF_SERIAL_PATH in user_input[CONF_GATEWAY]:
+                if user_input[CONF_GATEWAY][CONF_SERIAL_PATH] == self.MANUAL_PATH_VALUE:
+                    return await self.async_step_manual(None)
                 
             if await self.validate_eltako_conf(user_input):
                 return self.create_eltako_entry(user_input)
