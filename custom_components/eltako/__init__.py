@@ -61,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data[ELTAKO_CONFIG] = config
     
     # Initialise the gateway
-    if CONF_GATEWAY in config and CONF_DEVICE in config[CONF_GATEWAY].keys():
+    if CONF_GATEWAY in config and CONF_DEVICE in config[CONF_GATEWAY]:
         gateway_device = config[CONF_GATEWAY][CONF_DEVICE]
     else:
         gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
