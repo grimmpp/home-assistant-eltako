@@ -24,7 +24,7 @@ CONFIG_SCHEMA = vol.Schema(
         DOMAIN: vol.All(
             vol.Schema(
                 {
-                    **GatewaySchema.platform_node()
+                    **GatewaySchema.platform_node(),
                     **BinarySensorSchema.platform_node(),
                     **LightSchema.platform_node(),
                     **SwitchSchema.platform_node(),
