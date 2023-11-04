@@ -82,6 +82,7 @@ python -m unittest discover tests -v
 * [Eltako Home Automation](https://github.com/cvanlabe/Eltako-home-automation) from [Cedric Van Labeke](https://github.com/cvanlabe)
 * [Simple Eltako Setup](./docs/simple_eltako_setup.md)
 * [How to detect Switch Signals and react on thoese in Home Assistant](./docs/rocker_switch/readme.md)
+* [How to configure heating and cooling](./docs/heating-and-cooling/readme.md)
 
 
 # Dependencies
@@ -97,7 +98,7 @@ python -m unittest discover tests -v
 * [Studio Code Server](https://github.com/hassio-addons/addon-vscode)
 
 
-# Documentation
+# External Documentation
 * [Home Assistant Developer Docs](https://developers.home-assistant.io/)
 * [EnOcean Equipment Profiles - EEP2.1](https://www.trio2sys.fr/images/media/EnOcean_Equipment_Profiles_EEP2.1.pdf)
 * [EnOcean Equipment Profiles - EEP v2.6.7](https://www.enocean-alliance.org/wp-content/uploads/2017/05/EnOcean_Equipment_Profiles_EEP_v2.6.7_public.pdf)
