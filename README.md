@@ -10,11 +10,11 @@
 This repo contains an Home Assistant Integration for Eltako Baureihe 14. 
 This integration allows you to get all information of the Eltako 14 Bus and it allows you to control all the devices via Home Assistant. (See supported devices.) You can also react on sensors like weather station, rocker switches, window contacts ... with automations in Home Assistant.
 
-For more details check out the provided tutorials and links.
+For more details check out the provided [docs](./docs) and links listed at the end.
 
 # Supported EEPs and devices
 
-The following EnOcean Equipment Profiles (EEPs) and devices are currently supported:
+The following EnOcean Equipment Profiles (EEPs) and devices are currently supported. In general, this is not limited to Eltako devices, mainly to the EnOcean standard. 
 Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) a nice overview about which EEPs are provided/required by which Eltako devices.
 
 * Binary sensor
@@ -38,7 +38,9 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * Cover
   * G5-3F-7F (Eltako cover, FSB14)
 
-Sender EEPs currently supported for the different platforms are:
+Supported sender EEPs:
+* Gateway
+  * Eltako FAM14 and Eltako FGW14-USB (based on rs485 bus and baud rate 57600) / not yet supported EnOcean USB300
 * Light
   * A5-38-08 (Central command - gateway, FUD14)
 * Switch
@@ -62,7 +64,7 @@ While this is not integrated into home assistant's repositories. You need to ins
    *Alternative 2:* Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
    For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
 4. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
-5. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./tutorials/update_home_assistant_configuration.md) to see how the configuration should look like. 
+5. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
 There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](./eltakodevice_discovery/)
 
 # Testing
@@ -75,11 +77,11 @@ Unit and component tests for this integration are located in the folder tests. T
 python -m unittest discover tests -v
 ```
 
-# Tutorials
+# Documentation
 * [Create Home Assistant Configuration File for Eltako Integration](./eltakodevice_discovery/)
 * [Eltako Home Automation](https://github.com/cvanlabe/Eltako-home-automation) from [Cedric Van Labeke](https://github.com/cvanlabe)
-* [Simple Eltako Setup](./tutorials/simple_eltako_setup.md)
-* [How to detect Switch Signals and react on thoese in Home Assistant](./tutorials/rocker_switch/readme.md)
+* [Simple Eltako Setup](./docs/simple_eltako_setup.md)
+* [How to detect Switch Signals and react on thoese in Home Assistant](./docs/rocker_switch/readme.md)
 
 
 # Dependencies
