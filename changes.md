@@ -1,6 +1,8 @@
+# Changes and Feature List
 
+## version   
 * Change file introduced
-* Climate Panel introduced
+* **Climate Panel introduced** incl. support for actors like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14 and EEP A5-10-06 as well as control panels like FTAF55ED.
 * Refactoring
   * Introduced many explicit types.
   * Logging improved
@@ -13,3 +15,4 @@ Backlog:
 * Support of different gateways e.g. enOcean USB300
 * Docs for Configuration Schema
 * Docs for Climate Panel/Heating and Cooling
+* Extend device discovery for heating and cooling actors
