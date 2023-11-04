@@ -16,3 +16,4 @@ Backlog:
 * Docs for Configuration Schema
 * Docs for Climate Panel/Heating and Cooling
 * Extend device discovery for heating and cooling actors
+* Integrate Eltako FMZ14 ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))

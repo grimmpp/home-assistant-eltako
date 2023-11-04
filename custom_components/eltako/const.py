@@ -18,6 +18,7 @@ EVENT_BUTTON_PRESSED = "eltako_button_pressed"
 LOGGER = logging.getLogger("eltako")
 
 CONF_EEP = "eep"
+CONF_DATA = "data"
 CONF_SENDER = "sender"
 CONF_SENSOR = "sensor"
 CONF_GATEWAY = "gateway"

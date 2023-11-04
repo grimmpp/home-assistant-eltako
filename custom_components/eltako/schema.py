@@ -194,6 +194,8 @@ class ClimateSchema(EltakoPlatformSchema):
     CONF_CLIMATE_SENDER_EEP = [A5_10_06.eep_string]
 
     DEFAULT_NAME = "Climate"
+    DEFAULT_COOLING_SWITCH_NAME = "cooling mode switch"
+    DEFAULT_COOLING_SENDER_NAME = "cooling mode sender"
 
     CONF_COOLING_MODE_SCHEMA = vol.Schema(
     {
@@ -201,11 +203,14 @@ class ClimateSchema(EltakoPlatformSchema):
         {
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),                         
             vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED_BINARY_SENSOR + [M5_38_08.eep_string]),
+            vol.Optional(CONF_DATA, default=80): cv.Number,
+            vol.Optional(CONF_NAME, default=DEFAULT_COOLING_SWITCH_NAME): cv.string,
         }),
         vol.Optional(CONF_SENDER): vol.Schema(  # sends frequently a signal to stay in cooling mode if detect by cooling-mode-sensor
         {
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Required(CONF_EEP): vol.In([F6_02_01.eep_string, F6_02_02.eep_string]),
+            vol.Optional(CONF_NAME, default=DEFAULT_COOLING_SENDER_NAME): cv.string,
         }),
     })
 
