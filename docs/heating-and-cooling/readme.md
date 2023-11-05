@@ -1,6 +1,8 @@
 # Heating and Cooling
 
-This documentation is about how to control e.g. a heat pump which is able to heat up in winter and to cool down in summer.
+This documentation is about how to control a heating like a heat pump which is able to heat up in winter and to cool down in summer.
+
+<img src="./HAClimatePanel.png" alt="Home Assistant Climate Panel" height="250"/>
 
 In the following scenario we have an actor (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room temperature sensor and the target temperature can be set via control panel (e.g. Eltako FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
 
