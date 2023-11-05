@@ -10,7 +10,7 @@ Both control panels are updated via a frequently sent telegram from the actor ba
 
 Heating and cooling is supported, however it cannot be change via Climate Panel. It will be set via central rocker switch which defines the state for the whole heating. All actors need to react on it.
 
-=> Drawing of the setup
+<img src="./heating-and-cooling-setup.png" alt="Heating and cooling setup" />
 
 ## Actor Configuration in Device 
 
