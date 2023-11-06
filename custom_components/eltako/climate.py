@@ -98,7 +98,7 @@ class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:bytes):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:int):
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.button = button
 
@@ -116,9 +116,9 @@ class CoolingSwitch(EltakoEntity):
 # 0x50 = bottom right
 # 0x30 = top left
 # 0x10 = bottom left            
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from button type {self.dev_eep.eep_string} type {type(msg.data)}")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {int.from_bytes(msg.data)} from button type {self.dev_eep.eep_string} type {type(msg.data)}")
             LOGGER.debug(f"[Cooling Switch {self.dev_id}] Button {hex(self.button)} defined for cooling mode. type {type(self.button)}")
-            if msg.data == self.button:
+            if self.button == int.from_bytes(msg.data):
                 self.last_cooling_signal = time.time()
                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Cooling mode signal received.")
 
