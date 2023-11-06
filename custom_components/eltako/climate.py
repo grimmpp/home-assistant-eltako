@@ -62,6 +62,7 @@ async def async_setup_entry(
                 LOGGER.debug("Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
+                switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
                     LOGGER.debug("Read cooling sender config")
@@ -81,7 +82,7 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     cooling_switch_entity = None
                     if cooling_switch_id:
-                        cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep)
+                        cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep, switch_button)
                         entities.append(cooling_switch_entity)
 
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_entity, cooling_sender_id, cooling_sender_eep)
@@ -97,7 +98,7 @@ class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:int=None):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:int=0):
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.button = button
 
