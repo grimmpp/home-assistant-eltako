@@ -116,14 +116,14 @@ class CoolingSwitch(EltakoEntity):
 # 0x50 = bottom right
 # 0x30 = top left
 # 0x10 = bottom left            
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {b2a(msg.data)} from button type {self.dev_eep.eep_string}")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from button type {self.dev_eep.eep_string}")
             LOGGER.debug(f"[Cooling Switch {self.dev_id}] Button {hex(self.button)} defined for cooling mode.")
             if msg.data == self.button:
                 self.last_cooling_signal = time.time()
                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Cooling mode signal received.")
 
         else:
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {b2a(msg.data)} from contact type {self.dev_eep.eep_string}")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from contact type {self.dev_eep.eep_string}")
 
             
 
