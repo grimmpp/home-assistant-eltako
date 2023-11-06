@@ -7,7 +7,7 @@ from typing import Any
 import asyncio
 import time
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message
 
@@ -115,14 +115,14 @@ class CoolingSwitch(EltakoEntity):
 # 0x50 = bottom right
 # 0x30 = top left
 # 0x10 = bottom left            
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from button type {self.dev_eep}")
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Button {msg.data} defined for cooling mode.")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {b2a(msg.data)} from button type {self.dev_eep.eep_string}")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Button {b2a(self.button)} defined for cooling mode.")
             if msg.data == self.button:
                 self.last_cooling_signal = time.time()
                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Cooling mode signal received.")
 
         else:
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from contact type {self.dev_eep}")
+            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {b2a(msg.data)} from contact type {self.dev_eep.eep_string}")
 
             
 
@@ -134,7 +134,7 @@ class CoolingSwitch(EltakoEntity):
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
-    _update_frequency = 10 # sec
+    _update_frequency = 50 # sec
     _actor_mode: A5_10_06.Heater_Mode = None
     _hvac_mode_from_heating = HVACMode.HEAT
 
