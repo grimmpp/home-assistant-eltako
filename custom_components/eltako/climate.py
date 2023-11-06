@@ -98,7 +98,7 @@ class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:bytes=b'\x0'):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:bytes):
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.button = button
 
