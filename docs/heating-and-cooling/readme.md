@@ -16,7 +16,7 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 | :---        | :---        | :---        |
 | 1           | Heating and Cooling Actor | e.g. Eltako FHK14, FAE14SSR ... . This actor is controlling the actuator (number 6)|
 | 2           | Climate Panel | Virtual temperature controller in Home Assistant. <br/>It requires an own address which needs to be entered in the function group 3 of the actor e.g. via PCT14 programming software. <br/>It's EEP is "A5-10-06". |
-| 3           | Cooling Mode | Physical switch which is connected to FTS14EM and sends frequently (15min) a signal to stay in cooling mode or is off for heating. <br/>Supported EEPs: F6-02-01, F6-02-02, F6-10-00, D5-00-01, A5-08-01, M5-38-08 (FTS14EM contact signals and rocker switches are supported) |
+| 3           | Cooling Mode | Physical switch which is connected to FTS14EM and sends frequently (15min) a signal to stay in cooling mode or is off for heating. <br/>Supported EEPs: F6-02-01, F6-02-02, F6-10-00, D5-00-01, A5-08-01, M5-38-08 (FTS14EM contact signals and rocker switches are supported) <br/>In case of a rocker switch the button needs to be defined. 0x70 = top right, x50 = bottom right, 0x30 = top left, 0x10 = bottom left |
 | 4           | Room Temperature Sensor | Sensor sending periodically (every 50 seconds) the current temperature of the room. |
 | 5           | Temperature Controller | Physical wall-mounted temperature sensor and controller in one box. |
 | 6           | Actuator | Bringing the valve into the right position. |
@@ -50,6 +50,6 @@ eltako:
         sensor:                   # Rocker switch (3)
           id: "FE-DB-0A-1B"       # Address of switch (3) 
           eep: "M5-38-08"         # EEP of switch (3).
-          data: 0x50              # In case of switch button needs to be specified.
+          switch-button: 0x50            # In case of switch button needs to be specified. E.g.
 ```
 
