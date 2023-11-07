@@ -50,6 +50,6 @@ eltako:
         sensor:                   # Rocker switch (3)
           id: "FE-DB-0A-1B"       # Address of switch (3) 
           eep: "M5-38-08"         # EEP of switch (3).
-          switch-button: 0x50            # In case of switch button needs to be specified. E.g.
+          switch-button: 0x50     # In case of switch button needs to be specified. E.g.
 ```
 
