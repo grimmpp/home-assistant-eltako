@@ -77,6 +77,7 @@ class GatewaySchema(EltakoPlatformSchema):
             {
                 vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
                 vol.Optional(CONF_SERIAL_PATH): cv.string,
+                
             }
         ),
     )

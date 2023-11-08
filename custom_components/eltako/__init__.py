@@ -61,8 +61,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data[ELTAKO_CONFIG] = config
     LOGGER.debug(f"config {config}")
     # Initialise the gateway
-    if CONF_GATEWAY in config and len(config[CONF_GATEWAY]) == 1 and CONF_DEVICE in config[CONF_GATEWAY][0]:
-        gateway_device = config[CONF_GATEWAY][0][CONF_DEVICE]
+    if CONF_GATEWAY in config:
+        if len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
+            gateway_device = config[CONF_GATEWAY][0][CONF_DEVICE]
+
+        if len(config[CONF_GATEWAY]) > 1:
+            LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
     else:
         gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
         LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
