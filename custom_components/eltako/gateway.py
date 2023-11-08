@@ -5,9 +5,13 @@ import asyncio
 import logging
 from os.path import basename, normpath
 
+import serial
+
 from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
-import serial
+
+from enocean.communicators import SerialCommunicator
+from enocean.protocol.packet import RadioPacket
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
@@ -119,6 +123,66 @@ class EltakoGateway:
         if isinstance(message, ESP2Message):
             LOGGER.debug("Received message: %s", message)
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
+            
+    @property
+    def unique_id(self):
+        """Return the unique id of the gateway."""
+        return self.serial_path
+    
+
+class EnoceanUSB300Gateway:
+    """Representation of Enocean USB300 transmitter.
+
+    The dongle is responsible for receiving the ENOcean frames,
+    creating devices if needed, and dispatching messages to platforms.
+    """
+
+    def __init__(self, hass, serial_path, config_entry):
+        """Initialize the EnOcean dongle."""
+
+        self._communicator = SerialCommunicator(
+            port=serial_path, callback=self.callback
+        )
+        self.serial_path = serial_path
+        self.identifier = basename(normpath(serial_path))
+        self.hass = hass
+        self.dispatcher_disconnect_handle = None
+        
+        device_registry = dr.async_get(hass)
+        device_registry.async_get_or_create(
+            config_entry_id=config_entry.entry_id,
+            identifiers={(DOMAIN, self.unique_id)},
+            manufacturer=MANUFACTURER,
+            name=DEFAULT_NAME,
+        )
+
+    async def async_setup(self):
+        """Finish the setup of the bridge and supported platforms."""
+        self._communicator.start()
+        self.dispatcher_disconnect_handle = async_dispatcher_connect(
+            self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
+        )
+
+    def unload(self):
+        """Disconnect callbacks established at init time."""
+        if self.dispatcher_disconnect_handle:
+            self.dispatcher_disconnect_handle()
+            self.dispatcher_disconnect_handle = None
+
+    def _send_message_callback(self, command):
+        """Send a command through the EnOcean dongle."""
+        self._communicator.send(command)
+
+    def callback(self, packet):
+        """Handle EnOcean device's callback.
+
+        This is the callback function called by python-enocan whenever there
+        is an incoming packet.
+        """
+
+        if isinstance(packet, RadioPacket):
+            LOGGER.debug("Received radio packet: %s", packet)
+            dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, packet)
             
     @property
     def unique_id(self):

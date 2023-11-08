@@ -8,7 +8,7 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_integration_yaml_config
 
 from .const import *
-from .gateway import EltakoGateway, GatewayDeviceTypes
+from .gateway import EltakoGateway, GatewayDeviceTypes, EnoceanUSB300Gateway
 from .schema import (
     BinarySensorSchema,
     LightSchema,
@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             LOGGER.debug(f"[Eltako Setup] Initializes USB device {gateway_device}")
             usb_gateway = EltakoGateway(hass, serial_path, config_entry)
         case GatewayDeviceTypes.EnOceanUSB300:
-            usb_gateway = None
+            usb_gateway = EnoceanUSB300Gateway(hass, serial_path, config_entry)
     
     if usb_gateway is None:
         LOGGER.error(f"[Eltako Setup] USB device {gateway_device} is not supported.")
