@@ -8,13 +8,13 @@
 # Eltako Bus Integration (RS485 - EnOcean) for Home Assistant
 
 This repo contains an Home Assistant Integration for Eltako Baureihe 14. 
-This integration allows you to get all information of the Eltako 14 Bus and it allows you to control all the devices via Home Assistant. You can also react on sensors like weather station, rocker switches, window contacts ... with automations in Home Assistant.
+This integration allows you to get all information of the Eltako 14 Bus and it allows you to control all the devices via Home Assistant. (See supported devices.) You can also react on sensors like weather station, rocker switches, window contacts ... with automations in Home Assistant.
 
-See more details on GitHub: [home-assistant-eltako](https://github.com/grimmpp/home-assistant-eltako)
+For more details check out the provided [docs](./docs) and links listed at the end.
 
 # Supported EEPs and devices
 
-The following EnOcean Equipment Profiles (EEPs) and devices are currently supported:
+The following EnOcean Equipment Profiles (EEPs) and devices are currently supported. In general, this is not limited to Eltako devices, mainly to the EnOcean standard. 
 Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) a nice overview about which EEPs are provided/required by which Eltako devices.
 
 * Binary sensor
@@ -38,7 +38,10 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * Cover
   * G5-3F-7F (Eltako cover, FSB14)
 
-Sender EEPs currently supported for the different platforms are:
+Supported sender EEPs:
+* Gateway
+  * Eltako FAM14 and Eltako FGW14-USB (based on rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
+  * EnOcean USB300 (based on UART and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
 * Light
   * A5-38-08 (Central command - gateway, FUD14)
 * Switch

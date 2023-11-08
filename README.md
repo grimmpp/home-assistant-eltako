@@ -40,7 +40,8 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 
 Supported sender EEPs:
 * Gateway
-  * Eltako FAM14 and Eltako FGW14-USB (based on rs485 bus and baud rate 57600) / not yet supported EnOcean USB300
+  * Eltako FAM14 and Eltako FGW14-USB (based on rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
+  * EnOcean USB300 (based on UART and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
 * Light
   * A5-38-08 (Central command - gateway, FUD14)
 * Switch
@@ -88,7 +89,8 @@ python -m unittest discover tests -v
 # Dependencies
 * [Eltako Software PCT14](https://www.eltako.com/en/software-pct14/) for programming and configuring Eltako Baureihe 14 devices natively.
 * [Home Assistant Community Store](https://hacs.xyz/) is needed to be able to install this repository. It allows you to install custom_components.
-* [Eltako14Bus Python Library](https://github.com/grimmpp/eltako14bus) is used by this Home Assistant Integration.
+* [Eltako14Bus Python Library](https://github.com/grimmpp/eltako14bus) is used by Home Assistant Eltako Integration for serial communication for device Eltako FAM14 and FGW14-USB.
+* [Python EnOcean](https://github.com/kipe/enocean) is used by Home Assistant Eltako Integration for serial communication for device USB300.
 
 
 # Usefull Home Assistant Addons
