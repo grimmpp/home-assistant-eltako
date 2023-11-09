@@ -94,7 +94,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
     LOGGER.debug(f"config_entry: {config_entry}")
-    LOGGER.debug(f"hass.data: {hass.data}")
+    LOGGER.debug(f"hass: {hass}")
 
 
 class CoolingSwitch(EltakoEntity):
