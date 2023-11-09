@@ -93,9 +93,6 @@ async def async_setup_entry(
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
     async_add_entities(entities)
 
-    LOGGER.debug(f"config_entry: {config_entry}")
-    LOGGER.debug(f"hass: {hass}")
-
 
 class CoolingSwitch(EltakoEntity):
     last_cooling_signal: float = 0
