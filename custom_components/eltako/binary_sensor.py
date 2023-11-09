@@ -118,7 +118,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             ['0xf6', '0x10', '0x00', '0x2d', '0xcf', '0x45', '0x30']
         - button released
             ['0xf6', '0x00', '0x00', '0x2d', '0xcf', '0x45', '0x20']
-        """ 
+        """
         
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -160,8 +160,11 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 # button released but no detailed information available
                 pass
 
-            self._attr_last_received_signal = time.time()
-            self._attr_data = msg.data
+            # only for signal
+            if pressed or two_buttons_pressed:
+                self._attr_last_received_signal = time.time()
+                self._attr_data = msg.data
+
             switch_address = b2a(msg.address, '-').upper()
 
             event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
