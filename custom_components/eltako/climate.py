@@ -100,9 +100,11 @@ async def async_setup_entry(
 
                     if cooling_switch_id is not None:
                         event_id = f"{EVENT_BUTTON_PRESSED}_{cooling_switch_id}"
+                        LOGGER.debug(f"[Climate] event_id {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.handle_event)
 
                         event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id}"
+                        LOGGER.debug(f"[Climate] event_id {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.handle_event)
 
         
@@ -248,6 +250,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         )
     
     def handle_event(self, call):
+        LOGGER.info(f"[climate {self.dev_id}] Event received")
         LOGGER.info("Event received: %s", call.data)
 
     async def async_set_hvac_mode(self, hvac_mode):
