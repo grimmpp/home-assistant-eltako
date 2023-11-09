@@ -99,12 +99,13 @@ async def async_setup_entry(
                     entities.append(climate_entity)
 
                     if cooling_switch_id is not None:
-                        LOGGER.debug(f"cooling_switch_id: {cooling_switch_id.plain_address()}")
-                        event_id = f"{EVENT_BUTTON_PRESSED}_{cooling_switch_id.plain_address()}"
+                        cs_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID).upper()
+                        LOGGER.debug(f"cooling_switch_id: {cs_id}")
+                        event_id = f"{EVENT_BUTTON_PRESSED}_{cs_id}"
                         LOGGER.debug(f"[Climate] event_id {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.handle_event)
 
-                        event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id.plain_address()}"
+                        event_id = f"{EVENT_CONTACT_CLOSED}_{cs_id}"
                         LOGGER.debug(f"[Climate] event_id {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.handle_event)
 
