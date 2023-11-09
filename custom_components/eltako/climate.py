@@ -18,7 +18,7 @@ from homeassistant.components.climate import (
     ClimateEntityFeature
 )
 from homeassistant import config_entries
-from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS, CONF_TEMPERATURE_UNIT
+from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS, CONF_TEMPERATURE_UNIT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
@@ -84,7 +84,8 @@ async def async_setup_entry(
                     if cooling_switch_id:
                         # cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep, switch_button)
                         # entities.append(cooling_switch_entity)
-                        cooling_switch_entity = get_entity_from_hass(hass, cooling_switch_id)
+                        LOGGER.debug(f"[Climate] find switch ")
+                        cooling_switch_entity = get_entity_from_hass(hass, Platform.BINARY_SENSOR, cooling_switch_id)
                         e = cooling_switch_entity
                         LOGGER.debug(f"[Climate] sender entity: {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep}")
 

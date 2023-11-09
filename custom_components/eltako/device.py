@@ -6,6 +6,7 @@ from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
+from homeassistant.const import Platform
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
@@ -13,12 +14,14 @@ from homeassistant.helpers.entity import Entity
 from .const import *
 from .gateway import EltakoGateway
 
-def get_entity_from_hass(hass: HomeAssistant, dev_id: AddressExpression) -> bool:
+def get_entity_from_hass(hass: HomeAssistant, domain:Platform, dev_id: AddressExpression) -> bool:
     entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
     for platform in entity_platforms:
-        for entity in platform.entities.values():
-            if entity.dev_id == dev_id:
-                return entity
+        if platform.domain == domain:
+            for entity in platform.entities.values():
+                LOGGER.debug(f"checking entity type: {type(entity)}, dev_eep: {entity.dev_eep.eep_string}, dev_id: {entity.dev_id}")
+                if entity.dev_id == dev_id:
+                    return entity
     return None
 
 class EltakoEntity(Entity):
