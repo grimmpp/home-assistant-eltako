@@ -93,8 +93,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
-
-    _platform = await async_get_platform_without_config_entry(hass, DOMAIN, DOMAIN)
     
     LOGGER.debug(f"eltako entities: {hass.data[DATA_ELTAKO][DATA_ENTITIES]}")
     LOGGER.debug(f"hass.data[DATA_ENTITY_PLATFORM]: {hass.data[DATA_ENTITY_PLATFORM]}")
