@@ -61,8 +61,8 @@ async def async_setup_entry(
             if CONF_COOLING_MODE in entity_config.keys():
                 LOGGER.debug("[Climate] Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
-                sender_entity = get_entity_from_hass(hass, cooling_sender_id)
-                LOGGER.debug(f"[Climate] sender entity: {sender_entity}")
+                switch_entity = get_entity_from_hass(hass, cooling_switch_id)
+                LOGGER.debug(f"[Climate] sender entity: {switch_entity}")
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
                 switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
