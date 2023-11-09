@@ -103,11 +103,11 @@ async def async_setup_entry(
                         LOGGER.debug(f"cooling_switch_id: {cs_id}")
                         event_id = f"{EVENT_BUTTON_PRESSED}_{cs_id}"
                         LOGGER.debug(f"[Climate] event_id {event_id}")
-                        hass.bus.async_listen(event_id, climate_entity.handle_event)
+                        hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
                         event_id = f"{EVENT_CONTACT_CLOSED}_{cs_id}"
                         LOGGER.debug(f"[Climate] event_id {event_id}")
-                        hass.bus.async_listen(event_id, climate_entity.handle_event)
+                        hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
         
     log_entities_to_be_added(entities, Platform.CLIMATE)
@@ -245,17 +245,18 @@ class ClimateController(EltakoEntity, ClimateEntity):
             via_device=(DOMAIN, self.gateway.unique_id),
         )
     
-    def handle_event(self, call):
-        LOGGER.info(f"[climate {self.dev_id}] Event received")
-        LOGGER.info("Event received: %s", call.data)
+    async def async_handle_event(self, call):
+        LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
         if call.data['id'].startswith(EVENT_BUTTON_PRESSED):
             if (call.data['pressed'] or call.data['two_buttons_pressed']) and call.data['data'] == self.cooling_switch_button:
+                LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} for button {call.data['data'].hex()} timestamp set.")
                 self.cooling_switch_last_signal_timestamp = time.time()
         elif call.data['id'].startswith(EVENT_CONTACT_CLOSED):
+            LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} timestamp set.")
             self.cooling_switch_last_signal_timestamp = time.time()
 
-        self._async_check_if_cooling_is_activated()
+        await self._async_check_if_cooling_is_activated()
 
 
     async def async_set_hvac_mode(self, hvac_mode):
