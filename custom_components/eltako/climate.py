@@ -250,7 +250,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if call.data['id'].startswith(EVENT_BUTTON_PRESSED):
             if (call.data['pressed'] or call.data['two_buttons_pressed']) and call.data['data'] == self.cooling_switch_button:
-                LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} for button {call.data['data'].hex()} timestamp set.")
+                LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} for button {hex(call.data['data'])} timestamp set.")
                 self.cooling_switch_last_signal_timestamp = time.time()
         elif call.data['id'].startswith(EVENT_CONTACT_CLOSED):
             LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} timestamp set.")
