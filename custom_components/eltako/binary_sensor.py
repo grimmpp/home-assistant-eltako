@@ -21,6 +21,7 @@ from .const import *
 from .gateway import EltakoGateway
 
 import json
+import time
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -73,11 +74,22 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self.dev_name = dev_name
         self.gateway = gateway
         self.invert_signal = invert_signal
+        self._attr_last_received_signal = 0
 
     @property
     def name(self):
         """Return the default name for the binary sensor."""
         return None
+    
+    @property
+    def last_received_signal(self):
+        """Return timestamp of last received signal."""
+        return self._attr_last_received_signal
+    
+    @property
+    def data(self):
+        """Return telegram data for rocker switch."""
+        return self._attr_data
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -144,6 +156,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 # button released but no detailed information available
                 pass
 
+            self._attr_last_received_signal = time.time()
+            self._attr_data = msg.data
             switch_address = b2a(msg.address, '-').upper()
 
             event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
@@ -161,6 +175,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     "rocker_second_action": decoded.rocker_second_action,
                 },
             )
+            return
         elif self.dev_eep in [F6_10_00]:
             action = (decoded.movement & 0x70) >> 4
             
@@ -171,7 +186,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             else:
                 return
 
-            self.schedule_update_ha_state()
         elif self.dev_eep in [D5_00_01]:
             # learn button: 0=pressed, 1=not pressed
             if decoded.learn_button == 0:
@@ -181,14 +195,19 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             if not self.invert_signal:
                 self._attr_is_on = decoded.contact == 0
             else:
-                self._attr_is_on = decoded.contact == 1 
+                self._attr_is_on = decoded.contact == 1
 
-            self.schedule_update_ha_state()
         elif self.dev_eep in [A5_08_01]:
             if decoded.learn_button == 1:
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
-            
-            self.schedule_update_ha_state()
+
+        else:
+            return
+        
+        if self.is_on:
+            self._attr_last_received_signal = time.time()
+
+        self.schedule_update_ha_state()
 

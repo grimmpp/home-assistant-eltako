@@ -27,6 +27,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .gateway import EltakoGateway
 from .device import *
 from .const import *
+from .binary_sensor import EltakoBinarySensor
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -53,15 +54,15 @@ async def async_setup_entry(
             sender_eep_string = sender_config.get(CONF_EEP)
 
             cooling_switch_id = None
-            cooling_switch_eep_string = None
-            cooling_switch_eep = None
+            # cooling_switch_eep_string = None
+            # cooling_switch_eep = None
             cooling_sender_id = None
             cooling_sender_eep_string = None
             cooling_sender_eep = None
             if CONF_COOLING_MODE in entity_config.keys():
                 LOGGER.debug("[Climate] Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
-                cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
+                # cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
                 switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
@@ -72,7 +73,7 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
-                if cooling_switch_eep_string: cooling_switch_eep = EEP.find(cooling_switch_eep_string)
+                # if cooling_switch_eep_string: cooling_switch_eep = EEP.find(cooling_switch_eep_string)
                 if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
             except Exception as e:
                 LOGGER.warning("[Climate] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
@@ -84,12 +85,17 @@ async def async_setup_entry(
                     if cooling_switch_id:
                         # cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep, switch_button)
                         # entities.append(cooling_switch_entity)
-                        LOGGER.debug(f"[Climate] find switch ")
                         cooling_switch_entity = get_entity_from_hass(hass, Platform.BINARY_SENSOR, cooling_switch_id)
+                        if cooling_switch_entity is None:
+                            raise Exception(f"Specified cooling switch id: {cooling_switch_id} not found for climate device id: {dev_id}, name: {dev_name}")
                         e = cooling_switch_entity
-                        LOGGER.debug(f"[Climate] sender entity: {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep}")
+                        LOGGER.debug(f"[Climate] Found cooling switch {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep} for climate dev_id: {dev_id} name: {dev_name}")
 
-                    climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_entity, cooling_sender_id, cooling_sender_eep)
+                    climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, 
+                                                       sender_id, sender_eep, 
+                                                       temp_unit, min_temp, max_temp, 
+                                                       cooling_switch_entity, switch_button, 
+                                                       cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
 
         
@@ -97,41 +103,41 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class CoolingSwitch(EltakoEntity):
-    last_cooling_signal: float = 0
-    SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
+# class CoolingSwitch(EltakoEntity):
+#     last_cooling_signal: float = 0
+#     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:int):
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
-        self.button = button
+#     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:int):
+#         super().__init__(gateway, dev_id, dev_name, dev_eep)
+#         self.button = button
 
-    def value_changed(self, msg: ESP2Message):
-        """Update the internal state of this device."""
-        try:
-            decoded = self.dev_eep.decode_message(msg)
-        except Exception as e:
-            LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: {str(e)}")
-            LOGGER.debug(f"[climate {self.dev_id}] Message: {msg}")
-            return
+#     def value_changed(self, msg: ESP2Message):
+#         """Update the internal state of this device."""
+#         try:
+#             decoded = self.dev_eep.decode_message(msg)
+#         except Exception as e:
+#             LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: {str(e)}")
+#             LOGGER.debug(f"[climate {self.dev_id}] Message: {msg}")
+#             return
 
-        if self.dev_eep in [M5_38_08]:
-# 0x70 = top right
-# 0x50 = bottom right
-# 0x30 = top left
-# 0x10 = bottom left
-            if self.button == int.from_bytes(msg.data):
-                LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data 0x{msg.data.hex()} from button type {self.dev_eep.eep_string}")
-                LOGGER.debug(f"[Cooling Switch {self.dev_id}] Cooling mode signal received.")
-                self.last_cooling_signal = time.time()
+#         if self.dev_eep in [M5_38_08]:
+# # 0x70 = top right
+# # 0x50 = bottom right
+# # 0x30 = top left
+# # 0x10 = bottom left
+#             if self.button == int.from_bytes(msg.data):
+#                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data 0x{msg.data.hex()} from button type {self.dev_eep.eep_string}")
+#                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Cooling mode signal received.")
+#                 self.last_cooling_signal = time.time()
 
-        else:
-            LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from contact type {self.dev_eep.eep_string}")
+#         else:
+#             LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from contact type {self.dev_eep.eep_string}")
 
             
 
 
-    def is_cooling_mode_active(self):
-        return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY_IN_MIN   # time difference of last signal less than 16min
+#     def is_cooling_mode_active(self):
+#         return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY_IN_MIN   # time difference of last signal less than 16min
 
 
 class ClimateController(EltakoEntity, ClimateEntity):
@@ -140,6 +146,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _update_frequency = 50 # sec
     _actor_mode: A5_10_06.Heater_Mode = None
     _hvac_mode_from_heating = HVACMode.HEAT
+
+    COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
 
     _attr_hvac_action = None
     _attr_hvac_mode = HVACMode.OFF
@@ -155,7 +163,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, temp_unit, min_temp: int, max_temp: int, cooling_switch: CoolingSwitch=None, cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
+                 sender_id: AddressExpression, sender_eep: EEP, 
+                 temp_unit, min_temp: int, max_temp: int, 
+                 cooling_switch: EltakoBinarySensor=None, cooling_switch_button:int=0,
+                 cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._on_state = False
@@ -165,6 +177,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self.entity_id = f"climate.{self.unique_id}"
 
         self.cooling_switch = cooling_switch
+        self.cooling_switch_button = cooling_switch_button
+
         self._cooling_sender_id = cooling_sender_id
         self._cooling_sender_eep = cooling_sender_eep
 
@@ -309,8 +323,20 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def _get_mode(self) -> HVACMode:
 
-        # if self.cooling_switch and self.cooling_switch.is_cooling_mode_active():
-        #     return HVACMode.COOL
+        # is cooling signal timed out?
+        if self.cooling_switch is not None:
+            if (time.time() - self.cooling_switch.last_received_signal) / 60.0 <= self.COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN:
+                LOGGER.debug(f"[climate {self.dev_id}] cooling still active.")
+                # in case of rocker switch check button
+                if self.cooling_switch.dev_eep in [F6_02_01, F6_02_02]:
+                    if int.from_bytes(self.cooling_switch.data) == self.cooling_switch_button: 
+                        LOGGER.debug(f"[climate {self.dev_id}] right button was pressed for cooling")
+                        return HVACMode.COOL
+                    else:
+                        #wrong/other button of rocker switch pressed
+                        pass
+                else:
+                    return HVACMode.COOL
 
         return HVACMode.HEAT
 
