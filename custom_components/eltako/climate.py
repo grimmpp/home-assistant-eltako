@@ -61,8 +61,6 @@ async def async_setup_entry(
             if CONF_COOLING_MODE in entity_config.keys():
                 LOGGER.debug("[Climate] Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
-                switch_entity = get_entity_from_hass(hass, cooling_switch_id)
-                LOGGER.debug(f"[Climate] sender entity: {switch_entity}")
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
                 switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
@@ -84,8 +82,11 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     cooling_switch_entity = None
                     if cooling_switch_id:
-                        cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep, switch_button)
-                        entities.append(cooling_switch_entity)
+                        # cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep, switch_button)
+                        # entities.append(cooling_switch_entity)
+                        cooling_switch_entity = get_entity_from_hass(hass, cooling_switch_id)
+                        e = cooling_switch_entity
+                        LOGGER.debug(f"[Climate] sender entity: {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep}")
 
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, cooling_switch_entity, cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
@@ -308,8 +309,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def _get_mode(self) -> HVACMode:
 
-        if self.cooling_switch and self.cooling_switch.is_cooling_mode_active():
-            return HVACMode.COOL
+        # if self.cooling_switch and self.cooling_switch.is_cooling_mode_active():
+        #     return HVACMode.COOL
 
         return HVACMode.HEAT
 
