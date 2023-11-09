@@ -34,22 +34,64 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 ## Home Assistant Configuration
 
 You can find the meaning of the numbers in the table above.
+
+### Example with physical switch connected via FTS14EM (RECOMMENDED)
 ```
 eltako:
   
+  ...
+  binary_sensor:
+  - id: "00-00-10-08"
+    eep: "D5-00-01"
+    name: "cooling switch"
   ...
 
   climate:
     - id: "00-00-00-09"           # Address of actor (1)
       eep: "A5-10-06"             # Telegram type of the actor (1)
+
       temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
+      min_target_temperature: 17  # Optional field, default value 17 (2)
+      max_target_temperature: 25  # Optional field, default value 25 (2)
+
       sender:                     # Virtual temperature controller (2)
         id: "00-00-B0-09"         # Sender address (2) needs to be entered .
         eep: "A5-10-06"           # 2: Sender EEP
+
       cooling_mode:               # Optional part - cooling mode
-        sensor:                   # Rocker switch (3)
-          id: "FE-DB-0A-1B"       # Address of switch (3) 
-          eep: "M5-38-08"         # EEP of switch (3).
-          switch-button: 0x50     # In case of switch button needs to be specified. E.g.
+        sensor:                   # Rocker switch (3) must be specified in binary_sensor
+          id: "00-00-10-08"       # Address of switch (3)
+```
+
+
+
+### Example with rocker switch as cooling switch which must be triggered frequently (each 15min)
+```
+eltako:
+  
+  ...
+  binary_sensor:
+  - id: "FF-DD-0A-1B"
+    eep: "F6-02-01"
+
+  ...
+
+  climate:
+    - id: "00-00-00-09"           # Address of actor (1)
+      eep: "A5-10-06"             # Telegram type of the actor (1)
+
+      temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
+      min_target_temperature: 17  # Optional field, default value 17 (2)
+      max_target_temperature: 25  # Optional field, default value 25 (2)
+
+      sender:                     # Virtual temperature controller (2)
+        id: "00-00-B0-09"         # Sender address (2) needs to be entered .
+        eep: "A5-10-06"           # 2: Sender EEP
+        
+      cooling_mode:               # Optional part - cooling mode
+        sensor:                   # Rocker switch (3) must be specified in binary_sensor
+          id: "FF-DD-0A-1B"       # Address of switch (3)
+          switch-button: 0x50     # In case of switch button needs to be specified.
+                                  # for rocker switches only
 ```
 
