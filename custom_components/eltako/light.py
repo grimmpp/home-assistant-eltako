@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from .device import *
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
@@ -50,7 +50,7 @@ async def async_setup_entry(
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
             except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Light] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
                 if dev_eep in [A5_38_08]:
@@ -58,8 +58,7 @@ async def async_setup_entry(
                 elif dev_eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
-    for e in entities:
-        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.LIGHT} to Home Assistant.")
+    log_entities_to_be_added(entities, Platform.LIGHT)
     async_add_entities(entities)
 
 
@@ -139,7 +138,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Light] Could not decode message: %s", str(e))
             return
 
         if self.dev_eep in [A5_38_08]:
@@ -231,7 +230,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Light] Could not decode message: %s", str(e))
             return
 
         if self.dev_eep in [M5_38_08]:

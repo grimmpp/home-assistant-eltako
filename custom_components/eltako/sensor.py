@@ -40,7 +40,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from .device import *
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
@@ -244,7 +244,7 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
             except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
 
             if dev_eep in [A5_13_01]:
@@ -295,8 +295,7 @@ async def async_setup_entry(
                 entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
                 
 
-    for e in entities:
-        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.SENSOR} to Home Assistant.")
+    log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
 
 
@@ -367,7 +366,7 @@ class EltakoMeterSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
         if decoded.learn_button != 1:
@@ -433,7 +432,7 @@ class EltakoWindowHandle(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
         if decoded.learn_button != 1:
@@ -489,7 +488,7 @@ class EltakoWeatherStation(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
         if decoded.learn_button != 1:
@@ -576,7 +575,7 @@ class EltakoTemperatureSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
         self._attr_native_value = decoded.temperature
@@ -623,7 +622,7 @@ class EltakoHumiditySensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
         self._attr_native_value = decoded.humidity

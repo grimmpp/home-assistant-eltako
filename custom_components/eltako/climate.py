@@ -25,7 +25,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .gateway import EltakoGateway
-from .device import EltakoEntity, get_entity_from_hass
+from .device import *
 from .const import *
 
 async def async_setup_entry(
@@ -93,8 +93,7 @@ async def async_setup_entry(
                     entities.append(climate_entity)
 
         
-    for e in entities:
-        LOGGER.debug(f"[Climate] Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
+    log_entities_to_be_added(entities, Platform.CLIMATE)
     async_add_entities(entities)
 
 

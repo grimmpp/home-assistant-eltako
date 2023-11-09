@@ -14,15 +14,6 @@ from homeassistant.helpers.entity import Entity
 from .const import *
 from .gateway import EltakoGateway
 
-def get_entity_from_hass(hass: HomeAssistant, domain:Platform, dev_id: AddressExpression) -> bool:
-    entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
-    for platform in entity_platforms:
-        if platform.domain == domain:
-            for entity in platform.entities.values():
-                LOGGER.debug(f"checking entity type: {type(entity)}, dev_eep: {entity.dev_eep.eep_string}, dev_id: {entity.dev_id}")
-                if entity.dev_id == dev_id:
-                    return entity
-    return None
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
@@ -112,3 +103,18 @@ class EltakoEntity(Entity):
     def send_message(self, msg: ESP2Message):
         # TODO: check if gateway is available
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+
+
+def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep.eep_string}) of platform type {platform} to Home Assistant.")
+
+def get_entity_from_hass(hass: HomeAssistant, domain:Platform, dev_id: AddressExpression) -> bool:
+    entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
+    for platform in entity_platforms:
+        if platform.domain == domain:
+            for entity in platform.entities.values():
+                LOGGER.debug(f"checking entity type: {type(entity)}, dev_eep: {entity.dev_eep.eep_string}, dev_id: {entity.dev_id}")
+                if entity.dev_id == dev_id:
+                    return entity
+    return None

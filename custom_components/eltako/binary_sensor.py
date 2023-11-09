@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from .device import *
 from .const import *
 from .gateway import EltakoGateway
 
@@ -49,8 +49,7 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
-    for e in entities:
-        LOGGER.debug(f"[Binary Sensor] Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.BINARY_SENSOR} to Home Assistant.")
+    log_entities_to_be_added(entities, Platform.BINARY_SENSOR)
     async_add_entities(entities)
     
 
