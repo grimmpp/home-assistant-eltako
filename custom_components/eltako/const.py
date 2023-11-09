@@ -5,6 +5,7 @@ from homeassistant.const import Platform
 
 DOMAIN = "eltako"
 DATA_ELTAKO = "eltako"
+DATA_ENTITIES = "entities"
 ELTAKO_GATEWAY = "gateway"
 ELTAKO_CONFIG = "config"
 MANUFACTURER = "Eltako"

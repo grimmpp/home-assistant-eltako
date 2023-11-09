@@ -48,7 +48,7 @@ Supported sender EEPs:
   * F6-02-01 (Rocker switch)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
-* Climate
+* Climate (**Experimental**)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
 
 # Installation and Configuration

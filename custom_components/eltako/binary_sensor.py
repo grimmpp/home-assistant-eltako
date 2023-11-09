@@ -54,6 +54,7 @@ async def async_setup_entry(
 
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.BINARY_SENSOR} to Home Assistant.")
+        hass.data[DATA_ELTAKO][DATA_ENTITIES][e.entity_id] = e
     async_add_entities(entities)
     
 
