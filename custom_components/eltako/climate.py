@@ -203,11 +203,17 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency} sec for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
+                if self.cooling_switch:
+                    LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
+                    self._hvac_mode_from_heating = self._get_mode()
+                    LOGGER.debug(f"[climate {self.dev_id} Set mode {self._hvac_mode_from_heating}] ")
+                    await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+                    
+                    await self._async_send_mode_cooling()
+
                 LOGGER.debug(f"[climate {self.dev_id}] Send status update")
                 await self._async_send_command(self._actor_mode, self.target_temperature)
                 
-                if self._get_mode() == HVACMode.COOL:
-                    await self._async_send_mode_cooling()
             except Exception as e:
                 LOGGER.exception(e)
                 # FIXME should I just restart with back-off?
@@ -323,8 +329,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def _get_mode(self) -> HVACMode:
 
-        # is cooling signal timed out?
-        if self.cooling_switch is not None:
+        # if no cooling switch is define return mode from config
+        if self.cooling_switch is None:
+            return self._hvac_mode_from_heating 
+
+        # does cooling signal stays within the time range?
+        else:
             if (time.time() - self.cooling_switch.last_received_signal) / 60.0 <= self.COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN:
                 LOGGER.debug(f"[climate {self.dev_id}] cooling still active.")
                 # in case of rocker switch check button
@@ -337,7 +347,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
                         pass
                 else:
                     return HVACMode.COOL
-
+        
+        # is cooling signal timed out?
         return HVACMode.HEAT
 
 
