@@ -197,10 +197,8 @@ class ClimateSchema(EltakoPlatformSchema):
     {
         vol.Required(CONF_SENSOR): vol.Schema(  # detects if heater is switch globally into cooling mode
         {
-            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),                         
-            vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED_BINARY_SENSOR + [M5_38_08.eep_string]),
+            vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_SWITCH_BUTTON, default=0): cv.byte,
-            vol.Optional(CONF_NAME, default=DEFAULT_COOLING_SWITCH_NAME): cv.string,
         }),
         vol.Optional(CONF_SENDER): vol.Schema(  # sends frequently a signal to stay in cooling mode if detect by cooling-mode-sensor
         {

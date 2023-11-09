@@ -54,15 +54,12 @@ async def async_setup_entry(
             sender_eep_string = sender_config.get(CONF_EEP)
 
             cooling_switch_id = None
-            # cooling_switch_eep_string = None
-            # cooling_switch_eep = None
             cooling_sender_id = None
             cooling_sender_eep_string = None
             cooling_sender_eep = None
             if CONF_COOLING_MODE in entity_config.keys():
                 LOGGER.debug("[Climate] Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
-                # cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
                 switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
@@ -73,7 +70,6 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
-                # if cooling_switch_eep_string: cooling_switch_eep = EEP.find(cooling_switch_eep_string)
                 if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
             except Exception as e:
                 LOGGER.warning("[Climate] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
@@ -83,8 +79,6 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     cooling_switch_entity = None
                     if cooling_switch_id:
-                        # cooling_switch_entity = CoolingSwitch(gateway, cooling_switch_id, 'cooling switch', cooling_switch_eep, switch_button)
-                        # entities.append(cooling_switch_entity)
                         cooling_switch_entity = get_entity_from_hass(hass, Platform.BINARY_SENSOR, cooling_switch_id)
                         if cooling_switch_entity is None:
                             raise Exception(f"Specified cooling switch id: {cooling_switch_id} not found for climate device id: {dev_id}, name: {dev_name}")
@@ -98,57 +92,18 @@ async def async_setup_entry(
                                                        cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
 
+                    # subscribe for cooling switch events
                     if cooling_switch_id is not None:
                         cs_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID).upper()
-                        LOGGER.debug(f"cooling_switch_id: {cs_id}")
                         event_id = f"{EVENT_BUTTON_PRESSED}_{cs_id}"
-                        LOGGER.debug(f"[Climate] event_id {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
                         event_id = f"{EVENT_CONTACT_CLOSED}_{cs_id}"
-                        LOGGER.debug(f"[Climate] event_id {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
         
     log_entities_to_be_added(entities, Platform.CLIMATE)
     async_add_entities(entities)
-
-
-# class CoolingSwitch(EltakoEntity):
-#     last_cooling_signal: float = 0
-#     SENDER_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
-
-#     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, button:int):
-#         super().__init__(gateway, dev_id, dev_name, dev_eep)
-#         self.button = button
-
-#     def value_changed(self, msg: ESP2Message):
-#         """Update the internal state of this device."""
-#         try:
-#             decoded = self.dev_eep.decode_message(msg)
-#         except Exception as e:
-#             LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: {str(e)}")
-#             LOGGER.debug(f"[climate {self.dev_id}] Message: {msg}")
-#             return
-
-#         if self.dev_eep in [M5_38_08]:
-# # 0x70 = top right
-# # 0x50 = bottom right
-# # 0x30 = top left
-# # 0x10 = bottom left
-#             if self.button == int.from_bytes(msg.data):
-#                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data 0x{msg.data.hex()} from button type {self.dev_eep.eep_string}")
-#                 LOGGER.debug(f"[Cooling Switch {self.dev_id}] Cooling mode signal received.")
-#                 self.last_cooling_signal = time.time()
-
-#         else:
-#             LOGGER.debug(f"[Cooling Switch {self.dev_id}] Received status: {decoded.state} and data {msg.data} from contact type {self.dev_eep.eep_string}")
-
-            
-
-
-#     def is_cooling_mode_active(self):
-#         return (time.time() - self.last_cooling_signal) / 60.0 <= self.SENDER_FREQUENCY_IN_MIN   # time difference of last signal less than 16min
 
 
 class ClimateController(EltakoEntity, ClimateEntity):
@@ -211,7 +166,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     async def _wrapped_update(self, *args) -> None:
         while True:
             try:
-                LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency} sec for next status update.")
+                LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency}s for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
                 if self.cooling_switch:
@@ -246,7 +201,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
         )
     
     async def async_handle_event(self, call):
-        LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
+        """Receives signal from cooling switches if defined in configuration."""
+        # LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
         if call.data['id'].startswith(EVENT_BUTTON_PRESSED):
             if (call.data['pressed'] or call.data['two_buttons_pressed']) and call.data['data'] == self.cooling_switch_button:
@@ -356,9 +312,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         # does cooling signal stays within the time range?
         else:
-            LOGGER.debug(f"[climate {self.dev_id}] Cooling mode switch last_received_signal:{self.cooling_switch_last_signal_timestamp}")
+            # LOGGER.debug(f"[climate {self.dev_id}] Cooling mode switch last_received_signal:{self.cooling_switch_last_signal_timestamp}")
             if (time.time() - self.cooling_switch_last_signal_timestamp) / 60.0 <= self.COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN:
-                LOGGER.debug(f"[climate {self.dev_id}] cooling still active.")
+                LOGGER.debug(f"[climate {self.dev_id}] Cooling mode is active.")
                 return HVACMode.COOL
         
         # is cooling signal timed out?
@@ -366,7 +322,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     
 
     async def _async_check_if_cooling_is_activated(self) -> None:
-        LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
+        # LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
         new_mode = self._get_mode()
         if new_mode != self._hvac_mode_from_heating:
             LOGGER.debug(f"[climate {self.dev_id}] Set mode {self._hvac_mode_from_heating}")
