@@ -74,7 +74,10 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self.dev_name = dev_name
         self.gateway = gateway
         self.invert_signal = invert_signal
+        # timestamp of last received signal
         self._attr_last_received_signal = 0
+        # telegram data of rocker switch
+        self._attr_data = 0
 
     @property
     def name(self):
