@@ -4,12 +4,22 @@ from eltakobus.error import ParseError
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
 
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
+
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
 
-from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER
+from .const import *
 from .gateway import EltakoGateway
 
+def check_if_entity_exists(hass: HomeAssistant, device_id:str) -> bool:
+    device_domains = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
+    for dd in device_domains:
+        for e in dd.entities:
+            if e.entity_id == device_id:
+                return True
+    return False
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""

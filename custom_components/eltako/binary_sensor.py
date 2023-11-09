@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from .device import EltakoEntity, check_if_entity_exists
 from .const import *
 from .gateway import EltakoGateway
 
@@ -47,14 +47,17 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
             except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Binary Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
+                entity = EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal)
+                if check_if_entity_exists(hass, entity.entity_id):
+                    entities.append(entity)
+                else:
+                    LOGGER.debug(f"[Binary Sensor] {type(entity)}: {entity.entity_id} already exists.")
 
     for e in entities:
-        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.BINARY_SENSOR} to Home Assistant.")
-        hass.data[DATA_ELTAKO][DATA_ENTITIES][e.entity_id] = e
+        LOGGER.debug(f"[Binary Sensor] Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.BINARY_SENSOR} to Home Assistant.")
     async_add_entities(entities)
     
 
@@ -114,7 +117,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             decoded = self.dev_eep.decode_message(msg)
             LOGGER.debug("msg : %s", json.dumps(decoded.__dict__))
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Binary Sensor] Could not decode message: %s", str(e))
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
@@ -152,7 +155,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             switch_address = b2a(msg.address, '-').upper()
 
             event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
-            LOGGER.debug("Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             
             self.hass.bus.fire(
                 event_id,
