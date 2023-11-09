@@ -325,9 +325,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
         # LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
         new_mode = self._get_mode()
         if new_mode != self._hvac_mode_from_heating:
-            LOGGER.debug(f"[climate {self.dev_id}] Set mode {self._hvac_mode_from_heating}")
             self._hvac_mode_from_heating = new_mode
             await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+
+        LOGGER.debug(f"[climate {self.dev_id}] {new_mode} mode is activated.")
 
 
     def value_changed(self, msg: ESP2Message) -> None:
