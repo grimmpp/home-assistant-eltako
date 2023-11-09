@@ -164,7 +164,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 event_id,
                 {
                     "id": event_id,
-                    "data": msg.data,
+                    # "data": msg.data,
                     "switch_address": switch_address,
                     "pressed_buttons": pressed_buttons,
                     "pressed": pressed,
