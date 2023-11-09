@@ -118,7 +118,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             ['0xf6', '0x10', '0x00', '0x2d', '0xcf', '0x45', '0x30']
         - button released
             ['0xf6', '0x00', '0x00', '0x2d', '0xcf', '0x45', '0x20']
-        """
+        """ 
         
         try:
             decoded = self.dev_eep.decode_message(msg)
