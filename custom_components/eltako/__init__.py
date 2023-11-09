@@ -95,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
     
     LOGGER.debug(f"eltako entities: {hass.data[DATA_ELTAKO][DATA_ENTITIES]}")
-    LOGGER.debug(f"hass.data[DATA_ENTITY_PLATFORM]: {hass.data[DATA_ENTITY_PLATFORM]}")
+    LOGGER.debug(f"hass.data[DATA_ENTITY_PLATFORM][DOMAIN]: {hass.data[DATA_ENTITY_PLATFORM][DOMAIN]}")
 
     return True
 
