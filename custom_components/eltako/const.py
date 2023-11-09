@@ -15,6 +15,7 @@ ERROR_INVALID_GATEWAY_PATH = "invalid_gateway_path"
 SIGNAL_RECEIVE_MESSAGE = "eltako.receive_message"
 SIGNAL_SEND_MESSAGE = "eltako.send_message"
 EVENT_BUTTON_PRESSED = "eltako_button_pressed"
+EVENT_CONTACT_CLOSED = "eltako_contact_closed"
 
 LOGGER = logging.getLogger("eltako")
 

@@ -74,10 +74,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self.dev_name = dev_name
         self.gateway = gateway
         self.invert_signal = invert_signal
-        # timestamp of last received signal
-        self._attr_last_received_signal = 0
-        # telegram data of rocker switch
-        self._attr_data = 0
 
     @property
     def name(self):
@@ -160,13 +156,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 # button released but no detailed information available
                 pass
 
-            # only for signal
-            if pressed or two_buttons_pressed:
-                self._attr_last_received_signal = time.time()
-                self._attr_data = msg.data
-
             switch_address = b2a(msg.address, '-').upper()
-
             event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             
@@ -174,6 +164,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 event_id,
                 {
                     "id": event_id,
+                    "data": msg.data,
                     "switch_address": switch_address,
                     "pressed_buttons": pressed_buttons,
                     "pressed": pressed,
@@ -214,7 +205,15 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             return
         
         if self.is_on:
-            self._attr_last_received_signal = time.time()
+            switch_address = b2a(msg.address, '-').upper()
+            event_id = f"{EVENT_CONTACT_CLOSED}_{switch_address}"
+            self.hass.bus.fire(
+                event_id,
+                {
+                    "id": event_id,
+                    "contact_address": switch_address,
+                },
+            )
 
         self.schedule_update_ha_state()
 

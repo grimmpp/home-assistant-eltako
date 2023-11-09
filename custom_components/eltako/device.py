@@ -25,6 +25,8 @@ class EltakoEntity(Entity):
         self.dev_id = dev_id
         self.dev_name = dev_name
         self.dev_eep = dev_eep
+        self.listen_to_addresses = []
+        self.listen_to_addresses.append(self.dev_id.plain_address())
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -43,7 +45,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
         
@@ -53,7 +55,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
@@ -63,7 +65,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
     
@@ -73,7 +75,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
@@ -83,7 +85,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
@@ -93,7 +95,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
