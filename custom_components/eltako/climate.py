@@ -249,7 +249,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"[climate {self.dev_id}] Event received")
         LOGGER.info("Event received: %s", call.data)
 
-        if 'id' in call.data:
+        if 'id' in call.data.keys():
             if call.data.id.startsWith(EVENT_BUTTON_PRESSED):
                 if 'data' in call.data and call.data.data == self.cooling_switch_button:
                     self.cooling_switch_last_signal_timestamp = time.time()
