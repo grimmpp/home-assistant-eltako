@@ -25,7 +25,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .gateway import EltakoGateway
-from .device import EltakoEntity
+from .device import EltakoEntity, get_entity_from_hass
 from .const import *
 
 async def async_setup_entry(
@@ -59,13 +59,15 @@ async def async_setup_entry(
             cooling_sender_eep_string = None
             cooling_sender_eep = None
             if CONF_COOLING_MODE in entity_config.keys():
-                LOGGER.debug("Read cooling switch config")
+                LOGGER.debug("[Climate] Read cooling switch config")
                 cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
+                sender_entity = get_entity_from_hass(hass, cooling_sender_id)
+                LOGGER.debug(f"[Climate] sender entity: {sender_entity}")
                 cooling_switch_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_EEP)
                 switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
-                    LOGGER.debug("Read cooling sender config")
+                    LOGGER.debug("[Climate] Read cooling sender config")
                     cooling_sender_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_ID))
                     cooling_sender_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_EEP)
 
@@ -75,7 +77,7 @@ async def async_setup_entry(
                 if cooling_switch_eep_string: cooling_switch_eep = EEP.find(cooling_switch_eep_string)
                 if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
             except Exception as e:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Climate] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 LOGGER.critical(e, exc_info=True)
                 continue
             else:
@@ -90,7 +92,7 @@ async def async_setup_entry(
 
         
     for e in entities:
-        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
+        LOGGER.debug(f"[Climate] Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.CLIMATE} to Home Assistant.")
     async_add_entities(entities)
 
 

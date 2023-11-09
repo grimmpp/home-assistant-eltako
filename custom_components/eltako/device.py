@@ -13,13 +13,13 @@ from homeassistant.helpers.entity import Entity
 from .const import *
 from .gateway import EltakoGateway
 
-def check_if_entity_exists(hass: HomeAssistant, device_id:str) -> bool:
-    device_domains = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
-    for dd in device_domains:
-        for e in dd.entities:
-            if e.entity_id == device_id:
-                return True
-    return False
+def get_entity_from_hass(hass: HomeAssistant, dev_id: AddressExpression) -> bool:
+    entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
+    for platform in entity_platforms:
+        for entity in platform.entities:
+            if entity.dev_id == dev_id:
+                return entity
+    return None
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""

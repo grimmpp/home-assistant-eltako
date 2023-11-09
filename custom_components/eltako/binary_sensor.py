@@ -22,9 +22,6 @@ from .gateway import EltakoGateway
 
 import json
 
-DEPENDENCIES = ["eltakobus"]
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
@@ -50,11 +47,7 @@ async def async_setup_entry(
                 LOGGER.warning("[Binary Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
-                entity = EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal)
-                if check_if_entity_exists(hass, entity.entity_id):
-                    entities.append(entity)
-                else:
-                    LOGGER.debug(f"[Binary Sensor] {type(entity)}: {entity.entity_id} already exists.")
+                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
     for e in entities:
         LOGGER.debug(f"[Binary Sensor] Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep}) of platform type {Platform.BINARY_SENSOR} to Home Assistant.")
