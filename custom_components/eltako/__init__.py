@@ -98,6 +98,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"hass.data['{DATA_ENTITY_PLATFORM}']['{DOMAIN}']: {hass.data[DATA_ENTITY_PLATFORM][DOMAIN]}")
     for e in hass.data[DATA_ENTITY_PLATFORM][DOMAIN]:
         LOGGER.debug(f"  {e}")
+        LOGGER.debug(f"  entities: {e.entities}")
 
     return True
 
