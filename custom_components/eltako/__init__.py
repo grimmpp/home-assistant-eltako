@@ -6,6 +6,7 @@ from homeassistant.const import CONF_DEVICE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_integration_yaml_config, async_get_platform_without_config_entry
+from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .gateway import EltakoGateway, GatewayDeviceTypes, EnoceanUSB300Gateway
@@ -96,7 +97,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     _platform = await async_get_platform_without_config_entry(hass, DOMAIN, DOMAIN)
     
     LOGGER.debug(f"eltako entities: {hass.data[DATA_ELTAKO][DATA_ENTITIES]}")
-    LOGGER.debug(f"_platform.entities: {_platform.entities}")
+    LOGGER.debug(f"hass.data[DATA_ENTITY_PLATFORM]: {hass.data[DATA_ENTITY_PLATFORM]}")
 
     return True
 
