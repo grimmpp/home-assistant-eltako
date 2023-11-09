@@ -16,7 +16,7 @@ from .gateway import EltakoGateway
 def get_entity_from_hass(hass: HomeAssistant, dev_id: AddressExpression) -> bool:
     entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
     for platform in entity_platforms:
-        for entity in platform.entities:
+        for entity in platform.entities.values():
             if entity.dev_id == dev_id:
                 return entity
     return None
