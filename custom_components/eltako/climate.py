@@ -205,9 +205,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 
                 if self.cooling_switch:
                     LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
-                    self._hvac_mode_from_heating = self._get_mode()
-                    LOGGER.debug(f"[climate {self.dev_id} Set mode {self._hvac_mode_from_heating}] ")
-                    await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+                    new_mode = self._get_mode()
+                    if new_mode != self._hvac_mode_from_heating:
+                        LOGGER.debug(f"[climate {self.dev_id}] Set mode {self._hvac_mode_from_heating}")
+                        self._hvac_mode_from_heating = new_mode
+                        await self.async_set_hvac_mode(self._hvac_mode_from_heating)
                     
                     await self._async_send_mode_cooling()
 
@@ -335,6 +337,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         # does cooling signal stays within the time range?
         else:
+            LOGGER.debug(f"[climate {self.dev_id}] Cooling mode switch last_received_signal:{self.cooling_switch.last_received_signal}, data: {self.cooling_switch.data}")
             if (time.time() - self.cooling_switch.last_received_signal) / 60.0 <= self.COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN:
                 LOGGER.debug(f"[climate {self.dev_id}] cooling still active.")
                 # in case of rocker switch check button
