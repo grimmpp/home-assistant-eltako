@@ -72,15 +72,10 @@ class GatewaySchema(EltakoPlatformSchema):
     """Voluptuous schema for bus gateway"""
     PLATFORM = CONF_GATEWAY
 
-    ENTITY_SCHEMA = vol.All(
-        vol.Schema(
-            {
-                vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
-                vol.Optional(CONF_SERIAL_PATH): cv.string,
-                
-            }
-        ),
-    )
+    ENTITY_SCHEMA = vol.Schema({
+            vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
+            vol.Optional(CONF_SERIAL_PATH): cv.string,
+        })
 
 class BinarySensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako binary sensors."""
