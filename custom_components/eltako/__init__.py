@@ -95,6 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.async_create_task(
         LOGGER.debug(f"eltako entities: {hass.data[DATA_ELTAKO][DATA_ENTITIES]}")
     )
+    LOGGER.debug(f"hass.components: {hass.components}")
 
     return True
 
