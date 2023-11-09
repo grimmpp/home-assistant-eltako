@@ -60,7 +60,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         config = _conf[DOMAIN]
 
     eltako_data[ELTAKO_CONFIG] = config
-    LOGGER.debug(f"config {config}")
+    # print whole eltako configuration
+    LOGGER.debug(f"config: {config}\n")
+
     # Initialise the gateway
     if CONF_GATEWAY in config:
         if len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
@@ -94,12 +96,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
     
-    LOGGER.debug(f"eltako entities: {hass.data[DATA_ELTAKO][DATA_ENTITIES]}")
-    LOGGER.debug(f"hass.data['{DATA_ENTITY_PLATFORM}']['{DOMAIN}']: {hass.data[DATA_ENTITY_PLATFORM][DOMAIN]}")
-    for e in hass.data[DATA_ENTITY_PLATFORM][DOMAIN]:
-        LOGGER.debug(f"  {e}")
-        LOGGER.debug(f"  entities: {e.entities}")
-
     return True
 
 
