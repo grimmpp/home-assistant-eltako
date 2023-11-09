@@ -189,11 +189,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         self.cooling_switch = cooling_switch
         self.cooling_switch_button = cooling_switch_button
-        self.listen_to_addresses.append(self.cooling_switch.dev_id.plain_address())
+        self.cooling_switch_last_signal_timestamp = 0
 
         self._cooling_sender_id = cooling_sender_id
-        self._cooling_sender_eep = cooling_sender_eep
-
+        
         if self.cooling_switch:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
@@ -216,12 +215,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 await asyncio.sleep(self._update_frequency)
                 
                 if self.cooling_switch:
-                    LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
-                    new_mode = self._get_mode()
-                    if new_mode != self._hvac_mode_from_heating:
-                        LOGGER.debug(f"[climate {self.dev_id}] Set mode {self._hvac_mode_from_heating}")
-                        self._hvac_mode_from_heating = new_mode
-                        await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+                    await self._async_check_if_cooling_is_activated()
                     
                     await self._async_send_mode_cooling()
 
@@ -254,6 +248,16 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def handle_event(self, call):
         LOGGER.info(f"[climate {self.dev_id}] Event received")
         LOGGER.info("Event received: %s", call.data)
+
+        if 'id' in call.data:
+            if call.data.id.startsWith(EVENT_BUTTON_PRESSED):
+                if 'data' in call.data and call.data.data == self.cooling_switch_button:
+                    self.cooling_switch_last_signal_timestamp = time.time()
+            elif call.data.id.startsWith(EVENT_CONTACT_CLOSED):
+                self.cooling_switch_last_signal_timestamp = time.time()
+
+        self._async_check_if_cooling_is_activated()
+
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""
@@ -351,23 +355,23 @@ class ClimateController(EltakoEntity, ClimateEntity):
             return self._hvac_mode_from_heating 
 
         # does cooling signal stays within the time range?
-        # else:
-        #     LOGGER.debug(f"[climate {self.dev_id}] Cooling mode switch last_received_signal:{self.cooling_switch.last_received_signal}, data: {self.cooling_switch.data}")
-        #     if (time.time() - self.cooling_switch.last_received_signal) / 60.0 <= self.COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN:
-        #         LOGGER.debug(f"[climate {self.dev_id}] cooling still active.")
-        #         # in case of rocker switch check button
-        #         if self.cooling_switch.dev_eep in [F6_02_01, F6_02_02]:
-        #             if int.from_bytes(self.cooling_switch.data) == self.cooling_switch_button: 
-        #                 LOGGER.debug(f"[climate {self.dev_id}] right button was pressed for cooling")
-        #                 return HVACMode.COOL
-        #             else:
-        #                 #wrong/other button of rocker switch pressed
-        #                 pass
-        #         else:
-        #             return HVACMode.COOL
+        else:
+            LOGGER.debug(f"[climate {self.dev_id}] Cooling mode switch last_received_signal:{self.cooling_switch_last_signal_timestamp}")
+            if (time.time() - self.cooling_switch_last_signal_timestamp) / 60.0 <= self.COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN:
+                LOGGER.debug(f"[climate {self.dev_id}] cooling still active.")
+                return HVACMode.COOL
         
         # is cooling signal timed out?
         return HVACMode.HEAT
+    
+
+    async def _async_check_if_cooling_is_activated(self) -> None:
+        LOGGER.debug(f"[climate {self.dev_id}] Check if cooling switch is activated.")
+        new_mode = self._get_mode()
+        if new_mode != self._hvac_mode_from_heating:
+            LOGGER.debug(f"[climate {self.dev_id}] Set mode {self._hvac_mode_from_heating}")
+            self._hvac_mode_from_heating = new_mode
+            await self.async_set_hvac_mode(self._hvac_mode_from_heating)
 
 
     def value_changed(self, msg: ESP2Message) -> None:
