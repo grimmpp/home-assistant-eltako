@@ -289,10 +289,13 @@ async def async_setup_entry(
                     entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
                     entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
-            elif dev_eep in [A5_04_02]:
+            elif dev_eep in [A5_04_02]:   #TODO: add A5_10_12 as well
                 
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
+
+            elif dev_eep in [A5_10_06]:
+                entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 
 
     log_entities_to_be_added(entities, Platform.SENSOR)
@@ -578,7 +581,11 @@ class EltakoTemperatureSensor(EltakoSensor):
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
-        self._attr_native_value = decoded.temperature
+        if self.dev_eep in [A5_04_02]:
+            self._attr_native_value = decoded.temperature
+
+        elif self.dev_eep in [A5_10_06]:
+            self._attr_native_value = decoded.current_temp
 
         self.schedule_update_ha_state()
 
