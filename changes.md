@@ -11,9 +11,10 @@
 * Support of different gateways e.g. enOcean USB300
 
 
-Backlog:
+**Backlog**
 * Gateway availability checks for send commands.
 * Reconnect for serial interface
 * Docs for Configuration Schema
 * Extend device discovery for heating and cooling actors
+* Integrate Eltako FUTH65D ([Wireless thermo clock/hygrostat](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FUTH65D_12-24VUC_30065741-1_gb.pdf))
 * Integrate Eltako FMZ14 ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))
