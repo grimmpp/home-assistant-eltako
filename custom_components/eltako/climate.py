@@ -353,6 +353,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 self._attr_hvac_mode = self._hvac_mode_from_heating
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
-                self._attr_target_temperature = decoded.target_temp
+                self._attr_target_temperature = decoded.target_temperature
 
         self.schedule_update_ha_state()
