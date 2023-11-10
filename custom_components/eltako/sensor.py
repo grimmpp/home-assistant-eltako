@@ -581,14 +581,7 @@ class EltakoTemperatureSensor(EltakoSensor):
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
-        if self.dev_eep in [A5_04_02]:
-            self._attr_native_value = decoded.temperature
-
-        elif self.dev_eep in [A5_10_06]:
-            self._attr_native_value = decoded.current_temp
-
-        elif self.dev_eep in [A5_10_12]:
-            self._attr_native_value = decoded.current_temperature
+        self._attr_native_value = decoded.current_temperature
 
         self.schedule_update_ha_state()
 
