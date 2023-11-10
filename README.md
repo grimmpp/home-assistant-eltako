@@ -17,6 +17,7 @@ For more details check out the provided [docs](./docs) and links listed at the e
 The following EnOcean Equipment Profiles (EEPs) and devices are currently supported. In general, this is not limited to Eltako devices, mainly to the EnOcean standard. 
 Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) a nice overview about which EEPs are provided/required by which Eltako devices.
 
+**Supported sensor EEPs**
 * Binary sensor
   * F6-02-01 (Rocker switch, FTS14EM)
   * F6-02-02 (Rocker switch)
@@ -38,10 +39,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * Cover
   * G5-3F-7F (Eltako cover, FSB14)
 
-Supported sender EEPs:
-* Gateway
-  * Eltako FAM14 and Eltako FGW14-USB (based on rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
-  * EnOcean USB300 (based on UART and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
+**Supported sender EEPs**
 * Light
   * A5-38-08 (Central command - gateway, FUD14)
 * Switch
@@ -50,6 +48,10 @@ Supported sender EEPs:
   * H5-3F-7F (Eltako cover, FSB14)
 * Climate (**Experimental**)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
+ 
+**Gateway**
+  * Eltako FAM14 and Eltako FGW14-USB (based on rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
+  * EnOcean USB300 (**Experimental**) (based on UART and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
 
 # Installation and Configuration
 
