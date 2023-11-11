@@ -54,6 +54,7 @@ async def async_setup_entry(
             sender_eep_string = sender_config.get(CONF_EEP)
 
             cooling_switch_id = None
+            switch_button = None
             cooling_sender_id = None
             cooling_sender_eep_string = None
             cooling_sender_eep = None
