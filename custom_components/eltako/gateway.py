@@ -9,9 +9,10 @@ import serial
 
 from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
+from eltakobus.error import ParseError
 
 from enocean.communicators import SerialCommunicator
-from enocean.protocol.packet import RadioPacket
+from enocean.protocol.packet import RadioPacket, PARSE_RESULT
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
@@ -24,6 +25,26 @@ class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
     GatewayEltakoFGW14USB = 'fgw14usb'
     EnOceanUSB300 = 'enocean-usb300' # not yet supported
+
+
+def convert_EltakoMessage_to_EnOceanPacket(message: ESP2Message) -> RadioPacket:
+    result, buf, packet = RadioPacket.parse_msg(message.body)
+    if PARSE_RESULT.OK == result:
+        return packet
+    else:
+        LOGGER.error(f"Cannot convert eltako message {message} into EnOcean message: PARSE_RESULT = '{result}'")
+        return None
+
+def convert_EnOceanPacket_to_EltakoMessage(packet: RadioPacket) -> ESP2Message:
+    data = b''
+    eltako_data = b"\xa5\x5a" + data + bytes([sum(data) % 256])
+    try:
+        return ESP2Message.parse(eltako_data)
+    except ParseError as e:
+        LOGGER.exception(f"Cannot convert EnOcean package to Eltako message!")
+    return None
+
+    
 
 class EltakoGateway:
     """Representation of an Eltako gateway.
@@ -169,9 +190,11 @@ class EnoceanUSB300Gateway:
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
-    def _send_message_callback(self, command):
+    def _send_message_callback(self, eltako_command):
         """Send a command through the EnOcean dongle."""
-        self._communicator.send(command)
+        enocean_command = convert_EltakoMessage_to_EnOceanPacket(eltako_command)
+        if enocean_command is not None:
+            self._communicator.send(enocean_command)
 
     def callback(self, packet):
         """Handle EnOcean device's callback.
@@ -182,7 +205,9 @@ class EnoceanUSB300Gateway:
 
         if isinstance(packet, RadioPacket):
             LOGGER.debug("Received radio packet: %s", packet)
-            dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, packet)
+            eltako_message = convert_EnOceanPacket_to_EltakoMessage(packet)
+            if eltako_message is not None:
+                dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, eltako_message)
             
     @property
     def unique_id(self):
