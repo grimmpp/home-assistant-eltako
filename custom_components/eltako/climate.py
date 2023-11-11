@@ -60,7 +60,8 @@ async def async_setup_entry(
             cooling_sender_eep = None
             if CONF_COOLING_MODE in entity_config.keys():
                 LOGGER.debug("[Climate] Read cooling switch config")
-                cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
+                # cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
+                cooling_switch_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID)
                 switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
@@ -78,28 +79,29 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_10_06]:
-                    cooling_switch_entity = None
-                    if cooling_switch_id:
-                        cooling_switch_entity = get_entity_from_hass(hass, Platform.BINARY_SENSOR, cooling_switch_id)
-                        if cooling_switch_entity is None:
-                            raise Exception(f"Specified cooling switch id: {cooling_switch_id} not found for climate device id: {dev_id}, name: {dev_name}")
-                        e = cooling_switch_entity
-                        LOGGER.debug(f"[Climate] Found cooling switch {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep} for climate dev_id: {dev_id} name: {dev_name}")
+                    ###### This way it is decouple from the order how devices will be loaded.
+                    # cooling_switch_entity = None
+                    # if cooling_switch_id:
+                    #     cooling_switch_entity = get_entity_from_hass(hass, Platform.BINARY_SENSOR, cooling_switch_id)
+                    #     if cooling_switch_entity is None:
+                    #         raise Exception(f"Specified cooling switch id: {cooling_switch_id} not found for climate device id: {dev_id}, name: {dev_name}")
+                    #     e = cooling_switch_entity
+                    #     LOGGER.debug(f"[Climate] Found cooling switch {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep} for climate dev_id: {dev_id} name: {dev_name}")
 
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, 
                                                        sender_id, sender_eep, 
                                                        temp_unit, min_temp, max_temp, 
-                                                       cooling_switch_entity, switch_button, 
+                                                       cooling_switch_id, switch_button,
+                                                       # cooling_switch_entity, switch_button, 
                                                        cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
 
                     # subscribe for cooling switch events
                     if cooling_switch_id is not None:
-                        cs_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID).upper()
-                        event_id = f"{EVENT_BUTTON_PRESSED}_{cs_id}"
+                        event_id = f"{EVENT_BUTTON_PRESSED}_{cooling_switch_id.upper()}"
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
-                        event_id = f"{EVENT_CONTACT_CLOSED}_{cs_id}"
+                        event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id.upper()}"
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
         
@@ -133,7 +135,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
-                 cooling_switch: EltakoBinarySensor=None, cooling_switch_button:int=0,
+                 # cooling_switch: EltakoBinarySensor=None, cooling_switch_button:int=0,
+                 cooling_switch_id:str=None, cooling_switch_button:int=0,
                  cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
@@ -143,13 +146,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
-        self.cooling_switch = cooling_switch
+        self.cooling_switch_id = cooling_switch_id
         self.cooling_switch_button = cooling_switch_button
         self.cooling_switch_last_signal_timestamp = 0
 
         self._cooling_sender_id = cooling_sender_id
         
-        if self.cooling_switch:
+        if self.cooling_switch_id:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
@@ -170,7 +173,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency}s for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
-                if self.cooling_switch:
+                if self.cooling_switch_id:
                     await self._async_check_if_cooling_is_activated()
                     
                     await self._async_send_mode_cooling()
@@ -308,7 +311,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def _get_mode(self) -> HVACMode:
 
         # if no cooling switch is define return mode from config
-        if self.cooling_switch is None:
+        if self.cooling_switch_id is None:
             return self._hvac_mode_from_heating 
 
         # does cooling signal stays within the time range?
