@@ -1,4 +1,4 @@
-# Heating and Cooling
+# Heating and Cooling -  Setup and Configuration
 
 This documentation is about how to control a heating like a heat pump which is able to heat up in winter and to cool down in summer.
 
@@ -95,3 +95,37 @@ eltako:
                                   # for rocker switches only
 ```
 
+## Information about FUTH (Temperature Controller)
+
+<img src="./FUTH55ED.jpg" height="150">
+
+### Recommendations
+Purchase the 12-24UC version instead of 230V version because FUTH55ED/230V is squeaking.
+
+### Links
+* [FUTH55ED Manual](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FUTH55ED_230V_30055805-3_gb.pdf)
+* [FHEM Forum: Controlling FUTH65D + Address ranges of FUTH****](https://forum.fhem.de/index.php?topic=82303.0)
+
+| Signal type |	Telegram Org | Address/ID-Offset | EEP |
+| ---- | --- | ---- | ---- |
+| Room 1 / FKS | (ORG=0x7) |	0x00 | A5-10-06 |
+| Room 1 / FHK | (ORG=0x7)	| 0x01 | A5-10-06 |
+| Room 2 / FKS | (ORG=0x7)	| 0x02 | A5-10-06 |
+| Room 2 / FHK | (ORG=0x7)	| 0x03 | A5-10-06 |
+| Room 3 / FKS | (ORG=0x7)	| 0x04 | A5-10-06 |
+| Room 3 / FHK | (ORG=0x7)	| 0x05 | A5-10-06 |
+| Room 4 / FKS | (ORG=0x7)	| 0x06 | A5-10-06 |
+| Room 4 / FHK | (ORG=0x7)	| 0x07 | A5-10-06 |
+| Room 5 / FKS | (ORG=0x7)	| 0x08 | A5-10-06 |
+| Room 5 / FHK | (ORG=0x7)	| 0x09 | A5-10-06 |
+| Room 6 / FKS | (ORG=0x7)	| 0x0A | A5-10-06 |
+| Room 6 / FHK | (ORG=0x7)	| 0x0B | A5-10-06 |
+| Room 7 / FKS | (ORG=0x7)	| 0x0C | A5-10-06 |
+| Room 7 / FHK | (ORG=0x7)	| 0x0D | A5-10-06 |
+| Room 8 / FKS | (ORG=0x7)	| 0x0E | A5-10-06 |
+| Room 8 / FHK | (ORG=0x7)	| 0x0F | A5-10-06 |
+| Pump | (ORG=0x5/0x7)	| 0x10 | F6-02-01 (0x70 = on, 0x50 = off) + A5-38-08 |
+| Hygrostat/ Sensor |  (ORG=0x5/0x7)| 0x11 | ? |
+| Hygrostat/ Sensor | (ORG=0x7)	| 0x12 | EP A5-10-12 |
+| FKS-MD10 | (ORG7)	| 0x13 | ? |
+| Two point controller FUTH Room1 | (ORG5/7)	| 0x14 | ? |
