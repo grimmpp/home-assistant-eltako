@@ -102,9 +102,13 @@ eltako:
 ### Recommendations
 * Purchase the 12-24UC version instead of 230V version because FUTH55ED/230V is squeaking.
 
-### Confuiguration
+### Confuiguration of FHK/FAE via PCT14
 
-* FUTH is teached-in in FHK/FAE via PCT14 in function group 1 with function 64 (Temp controller A5-10-06).
+| Function Group |  Function | Description |
+| ---: | ---: | --- |
+| 1 | 64 | Target Temperature (Temp controller EEP **A5-10-06**) |
+| 2 | 149 | Current Temperature (Hygrostat/ Sensor EEP **A5-10-12**) |
+| 3 | 65 | Home Automation SW (Temp Controller SW EEP **A5-10-06**)
 
 ### Telegrams
 
