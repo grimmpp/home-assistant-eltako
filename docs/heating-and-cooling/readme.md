@@ -41,7 +41,7 @@ eltako:
   
   ...
   binary_sensor:
-  - id: "00-00-10-08"
+  - id: "00-00-10-08"             # Wired via FTS14EM
     eep: "D5-00-01"
     name: "cooling switch"
   ...
@@ -95,20 +95,65 @@ eltako:
                                   # for rocker switches only
 ```
 
-## Information about FUTH (Temperature Controller)
+## Information about Eltako FLGTF
+
+<img src="./FLGTF55-wg.jpg" height="150">
+
+* EEP A5-04-02 for temperature and humidity.
+* EEP A5-09-05 for air quality. (Not yet supported)
+* EEP A5-09-0C for air quality. (Not yet supported)
+
+### Configuration in Home Assistant
+
+```
+eltako:
+  gateway:
+    device: fgw14usb
+  sensor:
+  - id: ff-ee-dd-81
+    eep: A5-04-02
+    name: "Temp. and Humidity Sensor - FLGTF"
+ ...
+```
+
+<img src="./Temp. Sensor - FLGTF.png" height="135">
+
+## Information about Eltako FUTH (Temperature Controller)
 
 <img src="./FUTH55ED.jpg" height="150">
 
 ### Recommendations
 * Purchase the 12-24UC version instead of 230V version because FUTH55ED/230V is squeaking.
 
-### Confuiguration of FHK/FAE via PCT14
+### Configuration of FHK/FAE via PCT14
 
 | Function Group |  Function | Description |
 | ---: | ---: | --- |
 | 1 | 64 | Target Temperature (Temp controller EEP **A5-10-06**) |
 | 2 | 149 | Current Temperature (Hygrostat/ Sensor EEP **A5-10-12**) |
-| 3 | 65 | Home Automation SW (Temp Controller SW EEP **A5-10-06**)
+| 3 | 65 | Home Automation SW (Temp Controller SW EEP **A5-10-06**) |
+
+### Configuration in Home Assistant
+
+Actually the temperature controller (Climate Entity) in Home Assistant gets its messages from FHK/FAE/... actuator instead of the controller itself. However you can reuse the built-in hygrostat sensor (temp. + humidity with EEP A5-10-12) and the temperature controller with current temperature (EEP A5-04-02) as separate sensor.
+
+Example Hygrostat Sensor and single Temperature Sensor:
+```
+eltako:
+  gateway:
+    device: fgw14usb
+  sensor:
+  - id: FF-EE-55-92
+    eep: A5-10-12
+    name: "Temp. and Humidity Sensor - FUTH"
+  - id: FF-EE-55-81
+    eep: A5-04-02
+    name: "Temp. Sensor - Room 1 FUTH"
+ ...
+```
+
+<img src="./Temp. and Humidity Sensor - FUTH.png" height="135">
+<img src="./Temp. Sensor - Room 1 FUTH.png" height="100">
 
 ### Telegrams
 
@@ -131,7 +176,7 @@ eltako:
 | Room 8 / FKS | (ORG=0x7)	| 0x0E | A5-20-01, A5-20-04 |
 | Room 8 / FHK | (ORG=0x7)	| 0x0F | A5-10-06 |
 | Pump | (ORG=0x5/0x7)	| 0x10 | F6-02-01 (0x70 = on, 0x50 = off) + A5-38-08 |
-| Hygrostat/ Sensor |  (ORG=0x5/0x7)| 0x11 | EP A5-10-12 |
+| Hygrostat/ temp + humidity sensor |  (ORG=0x5/0x7)| 0x11 | EP A5-10-12 |
 | Hygrostat/ Sensor | (ORG=0x7)	| 0x12 | ? |
 | FKS-MD10 | (ORG7)	| 0x13 | ? |
 | Two point controller FUTH Room1 | (ORG5/7)	| 0x14 | ? |
