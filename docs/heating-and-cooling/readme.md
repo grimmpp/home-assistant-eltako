@@ -4,24 +4,24 @@ This documentation is about how to control a heating like a heat pump which is a
 
 <img src="./HAClimatePanel.png" alt="Home Assistant Climate Panel" height="250"/>
 
-In the following scenario we have an actor (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room temperature sensor and the target temperature can be set via control panel (e.g. Eltako FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
+In the following scenario we have an actuator (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room temperature sensor and the target temperature can be set via control panel (e.g. Eltako FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
 
-Both control panels are updated via a frequently sent telegram from the actor based on EEP A5-10-06. For setting the target temperature the same EEP A5-10-06 is used.
+Both control panels are updated via a frequently sent telegram from the actuator based on EEP A5-10-06. For setting the target temperature the same EEP A5-10-06 is used.
 
-Heating and cooling is supported, however it cannot be change via Climate Panel. It will be set via central rocker switch which defines the state for the whole heating. All actors need to react on it.
+Heating and cooling is supported, however it cannot be change via Climate Panel. It will be set via central rocker switch which defines the state for the whole heating. All actuators need to react on it.
 
 <img src="./heating-and-cooling-setup2.png" alt="Heating and cooling setup" height=600 />
 
 | Number      | Component   | Description |
 | :---        | :---        | :---        |
-| 1           | Heating and Cooling Actor | e.g. Eltako FHK14, FAE14SSR ... . This actor is controlling the actuator (number 6)|
-| 2           | Climate Panel | Virtual temperature controller in Home Assistant. <br/>It requires an own address which needs to be entered in the function group 3 of the actor e.g. via PCT14 programming software. <br/>It's EEP is "A5-10-06". |
+| 1           | Heating and Cooling Actuator | e.g. Eltako FHK14, FAE14SSR ... . This actuator is controlling the actuator (number 6)|
+| 2           | Climate Panel | Virtual temperature controller in Home Assistant. <br/>It requires an own address which needs to be entered in the function group 3 of the actuator e.g. via PCT14 programming software. <br/>It's EEP is "A5-10-06". |
 | 3           | Cooling Mode | Physical switch which is connected to FTS14EM and sends frequently (15min) a signal to stay in cooling mode or is off for heating. <br/>Supported EEPs: F6-02-01, F6-02-02, F6-10-00, D5-00-01, A5-08-01, M5-38-08 (FTS14EM contact signals and rocker switches are supported) <br/>In case of a rocker switch the button needs to be defined. 0x70 = top right, x50 = bottom right, 0x30 = top left, 0x10 = bottom left |
 | 4           | Room Temperature Sensor | Sensor sending periodically (every 50 seconds) the current temperature of the room. |
 | 5           | Temperature Controller | Physical wall-mounted temperature sensor and controller in one box. |
 | 6           | Actuator | Bringing the valve into the right position. |
 
-## Actor Configuration in Device 
+## Actuator Configuration in Device 
 
 * **Heating is enabled** as default.
 * **Operating state** instead of switching state is enabled.
@@ -47,8 +47,8 @@ eltako:
   ...
 
   climate:
-    - id: "00-00-00-09"           # Address of actor (1)
-      eep: "A5-10-06"             # Telegram type of the actor (1)
+    - id: "00-00-00-09"           # Address of actuator (1)
+      eep: "A5-10-06"             # Telegram type of the actuator (1)
 
       temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
       min_target_temperature: 17  # Optional field, default value 17 (2)
@@ -77,8 +77,8 @@ eltako:
   ...
 
   climate:
-    - id: "00-00-00-09"           # Address of actor (1)
-      eep: "A5-10-06"             # Telegram type of the actor (1)
+    - id: "00-00-00-09"           # Address of actuator (1)
+      eep: "A5-10-06"             # Telegram type of the actuator (1)
 
       temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
       min_target_temperature: 17  # Optional field, default value 17 (2)
