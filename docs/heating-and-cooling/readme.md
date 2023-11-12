@@ -25,11 +25,11 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 
 * **Heating is enabled** as default.
 * **Operating state** instead of switching state is enabled.
-* In **function group 1 a temperature sensor** is entered which sends frequently the current room temperature.
-* **Optionally**: In **function group 2** a physical room **temperature controller** is entered. (e.g. Eltako FTAF55ED)
+* In **function group 1 a temperature sensor and controller** is entered which sends frequently the current room temperature.
+<!--Not really sure what FG 2 is!* **Optionally**: In **function group 2** a hygrostat **temperature sensor and controller** is entered. -->
 * In **function group 3** address for **Home Assistant Climate Panel** is entered.
-* **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night (4°), Setback (2°) - Predefined by Eltako)
-* **Optionally**: In **function group 4** a rocker switch is entered for changing from heating into **cooling mode**. Preferred solution is to use a physical with connected to FTS14EM. 
+* **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night reduction (-4°K), reduction (-2°K) - Predefined by Eltako). Not optional for FUTH. (See below)
+* **Optionally**: In **function group 4** a rocker switch is entered for changing from heating into **cooling mode**. Preferred solution is to use a physical switch connected to FTS14EM. 
 
 ## Home Assistant Configuration
 
@@ -127,11 +127,11 @@ eltako:
 
 ### Configuration of FHK/FAE via PCT14
 
-| Function Group |  Function | Description |
+| Function Group |  Function | Description | 
 | ---: | ---: | --- |
-| 1 | 64 | Target Temperature (Temp controller EEP **A5-10-06**) |
-| 2 | 149 | Current Temperature (Hygrostat/ Sensor EEP **A5-10-12**) |
+| 1 | 64 | Target and Current Temperature (EEP **A5-10-06**) <br/>Room address must be selected. (See below, default = 0x01 offset) | 
 | 3 | 65 | Home Automation SW (Temp Controller SW EEP **A5-10-06**) |
+| 4 | 30 | 4x push button <br/>Mandatory value. Offset 0x11 |
 
 ### Configuration in Home Assistant
 
@@ -157,29 +157,29 @@ eltako:
 
 ### Telegrams
 
-| Signal type |	Telegram Org | Address/ID-Offset | EEP |
-| ---- | --- | ---- | ---- |
-| Room 1 / FKS | (ORG=0x7) |	0x00 | A5-20-01, A5-20-04 |
-| Room 1 / FHK | (ORG=0x7)	| 0x01 | A5-10-06 |
-| Room 2 / FKS | (ORG=0x7)	| 0x02 | A5-20-01, A5-20-04 |
-| Room 2 / FHK | (ORG=0x7)	| 0x03 | A5-10-06 |
-| Room 3 / FKS | (ORG=0x7)	| 0x04 | A5-20-01, A5-20-04 |
-| Room 3 / FHK | (ORG=0x7)	| 0x05 | A5-10-06 |
-| Room 4 / FKS | (ORG=0x7)	| 0x06 | A5-20-01, A5-20-04 |
-| Room 4 / FHK | (ORG=0x7)	| 0x07 | A5-10-06 |
-| Room 5 / FKS | (ORG=0x7)	| 0x08 | A5-20-01, A5-20-04 |
-| Room 5 / FHK | (ORG=0x7)	| 0x09 | A5-10-06 |
-| Room 6 / FKS | (ORG=0x7)	| 0x0A | A5-20-01, A5-20-04 |
-| Room 6 / FHK | (ORG=0x7)	| 0x0B | A5-10-06 |
-| Room 7 / FKS | (ORG=0x7)	| 0x0C | A5-20-01, A5-20-04 |
-| Room 7 / FHK | (ORG=0x7)	| 0x0D | A5-10-06 |
-| Room 8 / FKS | (ORG=0x7)	| 0x0E | A5-20-01, A5-20-04 |
-| Room 8 / FHK | (ORG=0x7)	| 0x0F | A5-10-06 |
-| Pump | (ORG=0x5/0x7)	| 0x10 | F6-02-01 (0x70 = on, 0x50 = off) + A5-38-08 |
-| Hygrostat/ temp + humidity sensor |  (ORG=0x5/0x7)| 0x11 | EP A5-10-12 |
-| Hygrostat/ Sensor | (ORG=0x7)	| 0x12 | ? |
-| FKS-MD10 | (ORG7)	| 0x13 | ? |
-| Two point controller FUTH Room1 | (ORG5/7)	| 0x14 | ? |
+| Signal type |	Telegram Org | Address/ID-Offset | EEP | Function in PCT14 |
+| ---- | --- | ---- | ---- | ---- |
+| Room 1 / FKS | (ORG=0x7) |	0x00 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 1 / FHK | (ORG=0x7)	| 0x01 | A5-10-06 | |
+| Room 2 / FKS | (ORG=0x7)	| 0x02 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 2 / FHK | (ORG=0x7)	| 0x03 | A5-10-06 | |
+| Room 3 / FKS | (ORG=0x7)	| 0x04 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 3 / FHK | (ORG=0x7)	| 0x05 | A5-10-06 | |
+| Room 4 / FKS | (ORG=0x7)	| 0x06 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 4 / FHK | (ORG=0x7)	| 0x07 | A5-10-06 | |
+| Room 5 / FKS | (ORG=0x7)	| 0x08 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 5 / FHK | (ORG=0x7)	| 0x09 | A5-10-06 | |
+| Room 6 / FKS | (ORG=0x7)	| 0x0A | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 6 / FHK | (ORG=0x7)	| 0x0B | A5-10-06 | |
+| Room 7 / FKS | (ORG=0x7)	| 0x0C | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 7 / FHK | (ORG=0x7)	| 0x0D | A5-10-06 | |
+| Room 8 / FKS | (ORG=0x7)	| 0x0E | A5-20-01, A5-20-04 | function group: 1, function: 64 |
+| Room 8 / FHK | (ORG=0x7)	| 0x0F | A5-10-06 | |
+| Pump | (ORG=0x5/0x7)	| 0x10 | F6-02-01 (0x70 = on, 0x50 = off) <br/>A5-38-08 | ? |
+| 4x Push Button |  (ORG=0x5/0x7)| 0x11 | F6-02-01 (0x70 = normal, 0x50 = night reduction (-4°K), 0x30 = reduction (-2°K), 0x10 = off) | function group: 4: function: 30 |
+| Hygrostat/ Sensor | (ORG=0x7)	| 0x12 | EP A5-10-12 | function group: 2: function: 149 |
+| FKS-MD10 | (ORG7)	| 0x13 | A5-20-01/A5-20-04 ? | - |
+| Two point controller FUTH Room1 | (ORG5/7)	| 0x14 | ? | ? |
 
 ### Links
 * [FUTH55ED Manual](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FUTH55ED_230V_30055805-3_gb.pdf)
