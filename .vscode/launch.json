@@ -12,6 +12,16 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
-        }
+        },
+        {
+            "name": "Python: Debug Tests",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "purpose": ["debug-test"],
+            "console": "integratedTerminal",
+            "env": {"PYTHONPATH": "${workspaceRoot}"},
+            "justMyCode": false
+          }
     ]
 }

@@ -27,22 +27,13 @@ class GatewayDeviceTypes(str, Enum):
     EnOceanUSB300 = 'enocean-usb300' # not yet supported
 
 
-def convert_EltakoMessage_to_EnOceanPacket(message: ESP2Message) -> RadioPacket:
-    result, buf, packet = RadioPacket.parse_msg(message.body)
-    if PARSE_RESULT.OK == result:
-        return packet
-    else:
-        LOGGER.error(f"Cannot convert eltako message {message} into EnOcean message: PARSE_RESULT = '{result}'")
-        return None
+def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
+    #TODO: implement converter
+    raise Exception("Message conversion from ESP2 to ESP3 NOT YET IMPLEMENTED.")
 
-def convert_EnOceanPacket_to_EltakoMessage(packet: RadioPacket) -> ESP2Message:
-    data = b''
-    eltako_data = b"\xa5\x5a" + data + bytes([sum(data) % 256])
-    try:
-        return ESP2Message.parse(eltako_data)
-    except ParseError as e:
-        LOGGER.exception(f"Cannot convert EnOcean package to Eltako message!")
-    return None
+def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
+    #TODO: implement converter
+    raise Exception("Message conversion from ESP3 to ESP2 NOT YET IMPLEMENTED.")
 
     
 
@@ -192,7 +183,7 @@ class EnoceanUSB300Gateway:
 
     def _send_message_callback(self, eltako_command):
         """Send a command through the EnOcean dongle."""
-        enocean_command = convert_EltakoMessage_to_EnOceanPacket(eltako_command)
+        enocean_command = convert_esp2_to_esp3_message(eltako_command)
         if enocean_command is not None:
             self._communicator.send(enocean_command)
 
@@ -205,7 +196,7 @@ class EnoceanUSB300Gateway:
 
         if isinstance(packet, RadioPacket):
             LOGGER.debug("Received radio packet: %s", packet)
-            eltako_message = convert_EnOceanPacket_to_EltakoMessage(packet)
+            eltako_message = convert_esp3_to_esp2_message(packet)
             if eltako_message is not None:
                 dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, eltako_message)
             
