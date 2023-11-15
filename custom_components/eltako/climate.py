@@ -13,7 +13,8 @@ from eltakobus.message import ESP2Message, Regular4BSMessage
 
 from homeassistant.components.button import (
     ButtonEntity,
-    ButtonDeviceClass
+    ButtonDeviceClass,
+    ButtonEntityDescription
 )
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -25,7 +26,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME, Platform, TEMP_CELSIUS, CONF_TEMPERATURE_UNIT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .gateway import EltakoGateway
@@ -114,16 +115,23 @@ async def async_setup_entry(
     log_entities_to_be_added(entities, Platform.CLIMATE)
     async_add_entities(entities)
 
+TEACH_IN_BUTTON_DESCRIPTION = ButtonEntityDescription(
+    key="teach_in_button",
+    name="Teach-in Button",
+    icon="mdi:button-cursor",
+    device_class=ButtonDeviceClass.UPDATE,
+    has_entity_name= True,
+)
 
 class ClimateTeachInButton(EltakoEntity, ButtonEntity):
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, description:EntityDescription=TEACH_IN_BUTTON_DESCRIPTION):
         super().__init__(gateway, dev_id, dev_name+"_climate-controller-teach-in-button", dev_eep)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"climate.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
         self._attr_name = self.dev_name
-        self._attr_icon = "mdi:button-cursor"
+        self.entity_description = description
 
     async def async_press(self) -> None:
         """Handle the button press."""
