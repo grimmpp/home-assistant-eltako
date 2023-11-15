@@ -103,7 +103,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         super().__init__(gateway, dev_id, _dev_name, dev_eep)
         self.entity_description = ButtonEntityDescription(
             key="teach_in_button",
-            name="Send teach-in telegram to "+dev_id.plain_address().hex(),
+            name="Send teach-in telegram to "+sender_id.plain_address().hex(),
             icon="mdi:button-cursor",
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
