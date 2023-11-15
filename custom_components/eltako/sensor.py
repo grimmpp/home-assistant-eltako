@@ -302,7 +302,6 @@ async def async_setup_entry(
 
             elif dev_eep in [A5_10_06]:
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
-                entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep))
                 
 
     log_entities_to_be_added(entities, Platform.SENSOR)
@@ -639,33 +638,3 @@ class EltakoHumiditySensor(EltakoSensor):
 
         self.schedule_update_ha_state()
 
-
-TEACH_IN_BUTTON_DESCRIPTION = ButtonEntityDescription(
-    key="teach_in_button",
-    name="Teach-in Button",
-    icon="mdi:button-cursor",
-    device_class=ButtonDeviceClass.UPDATE,
-    has_entity_name= True,
-)
-
-class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
-
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, description:ButtonEntityDescription=TEACH_IN_BUTTON_DESCRIPTION):
-        if not dev_name:
-            dev_name = ""
-        dev_name = dev_name+"temperature-controller-teach-in-button "+dev_id.plain_address().hex()
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
-        self.entity_id = f"button.{self.unique_id}"
-        self._attr_device_class = ButtonDeviceClass.UPDATE
-        self._attr_name = dev_name
-        self.entity_description = description
-
-    def press(self) -> None:
-        """Handle the button press."""
-
-    async def async_press(self) -> None:
-        """Handle the button press."""
-        controller_address, _ = self.dev_id
-        msg:Regular4BSMessage = Regular4BSMessage(address=controller_address, status=0, data=b'\x40\x30\x0D\x87', outgoing=True)
-        self.send_message(msg)

@@ -42,4 +42,5 @@ PLATFORMS = [
     Platform.SWITCH,
     Platform.COVER,
     Platform.CLIMATE,
+    Platform.BUTTON,
 ]
