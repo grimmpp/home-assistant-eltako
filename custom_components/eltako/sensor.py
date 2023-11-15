@@ -662,6 +662,9 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         self.entity_description = description
         self.name = dev_name
 
+    def press(self) -> None:
+        """Handle the button press."""
+
     async def async_press(self) -> None:
         """Handle the button press."""
         controller_address, _ = self.dev_id
