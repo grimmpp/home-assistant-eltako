@@ -78,7 +78,7 @@ async def async_setup_entry(
             else:
 
                 if dev_eep in [A5_10_06]:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name="temperature-controller-teach-in-button", dev_eep=dev_eep))
+                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, dev_id))
                 
     # check for climate controller
     platform_id = Platform.SENSOR
@@ -100,8 +100,8 @@ async def async_setup_entry(
                 continue
             else:
 
-                if dev_eep in [A5_10_06]:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name="climate-controller-teach-in-button", dev_eep=dev_eep))
+                if dev_eep in [A5_10_06] and sender_eep in [A5_10_06]:
+                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     log_entities_to_be_added(entities, Platform.BUTTON)
     async_add_entities(entities)
@@ -112,24 +112,25 @@ async def async_setup_entry(
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
     """Button which sends teach-in telegram for temperature controller."""
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, sender_id: AddressExpression=None):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = "temperature-controller-teach-in-button"
         super().__init__(gateway, dev_id, _dev_name, dev_eep)
         self.entity_description = ButtonEntityDescription(
-            key=_dev_name,
+            key="teach_in_button",
             name="Send teach-in telegram to "+dev_id.plain_address().hex(),
             icon="mdi:button-cursor",
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
         )
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{_dev_name}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
         self.entity_id = f"button.{self.unique_id}"
+        self.sender_id = sender_id
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        controller_address, _ = self.dev_id
+        controller_address, _ = self.sender_id
         msg:Regular4BSMessage = Regular4BSMessage(address=controller_address, status=0, data=b'\x40\x30\x0D\x87', outgoing=True)
         self.send_message(msg)
 
