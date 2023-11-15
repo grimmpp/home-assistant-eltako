@@ -651,12 +651,16 @@ TEACH_IN_BUTTON_DESCRIPTION = ButtonEntityDescription(
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
 
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, description:ButtonEntityDescription=TEACH_IN_BUTTON_DESCRIPTION):
-        super().__init__(gateway, dev_id, dev_name+"_climate-controller-teach-in-button", dev_eep)
+        if not dev_name:
+            dev_name = ""
+        dev_name = dev_name+"temperature-controller-teach-in-button "+dev_id.plain_address().hex()
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"climate.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
         self._attr_name = self.dev_name
         self.entity_description = description
+        self.name = dev_name
 
     async def async_press(self) -> None:
         """Handle the button press."""
