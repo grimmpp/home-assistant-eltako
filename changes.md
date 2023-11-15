@@ -8,7 +8,8 @@
   * Introduced many explicit types.
   * Logging improved
 * Prepared config for other gateway types. (Currently supported Eltako fam14 and fgw14-usb)
-* Support of different gateways e.g. enOcean USB300
+* Support of different gateways e.g. enOcean USB300 with different protocol version (ESP3)
+* Added teach-in buttons for climate and temperature controller
 
 ## Version 1.0.0 Baseline
 
