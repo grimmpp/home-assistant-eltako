@@ -120,7 +120,7 @@ class ClimateTeachInButton(EltakoEntity, ButtonEntity):
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None):
         super().__init__(gateway, dev_id, dev_name+"_climate-controller-teach-in-button", dev_eep)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
-        self.entity_id = f"climate.{self.unique_id}.teach-in-button"
+        self.entity_id = f"climate.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
 
     async def async_press(self) -> None:
