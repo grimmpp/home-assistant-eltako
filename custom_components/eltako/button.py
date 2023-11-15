@@ -81,7 +81,7 @@ async def async_setup_entry(
                     entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, dev_id))
                 
     # check for climate controller
-    platform_id = Platform.SENSOR
+    platform_id = Platform.CLIMATE
     if platform_id in config:
         for entity_config in config[platform_id]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
