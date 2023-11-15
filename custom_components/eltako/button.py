@@ -62,6 +62,7 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
+    # check for temperature controller defined in config as temperature sensor
     platform_id = Platform.SENSOR
     if platform_id in config:
         for entity_config in config[platform_id]:
@@ -77,8 +78,30 @@ async def async_setup_entry(
             else:
 
                 if dev_eep in [A5_10_06]:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep))
+                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name="temperature-controller-teach-in-button", dev_eep=dev_eep))
                 
+    # check for climate controller
+    platform_id = Platform.SENSOR
+    if platform_id in config:
+        for entity_config in config[platform_id]:
+            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+            dev_name = entity_config[CONF_NAME]
+            eep_string = entity_config.get(CONF_EEP)
+
+            sender_config = entity_config.get(CONF_SENDER)
+            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+            sender_eep_string = sender_config.get(CONF_EEP)
+
+            try:
+                dev_eep = EEP.find(eep_string)
+                sender_eep = EEP.find(sender_eep_string)
+            except:
+                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                continue
+            else:
+
+                if dev_eep in [A5_10_06]:
+                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name="climate-controller-teach-in-button", dev_eep=dev_eep))
 
     log_entities_to_be_added(entities, Platform.BUTTON)
     async_add_entities(entities)
@@ -95,13 +118,13 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
             _dev_name = "temperature-controller-teach-in-button"
         super().__init__(gateway, dev_id, _dev_name, dev_eep)
         self.entity_description = ButtonEntityDescription(
-            key="teach_in_button",
+            key=_dev_name,
             name="Send teach-in telegram to "+dev_id.plain_address().hex(),
             icon="mdi:button-cursor",
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
         )
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{_dev_name}"
         self.entity_id = f"button.{self.unique_id}"
 
     async def async_press(self) -> None:
