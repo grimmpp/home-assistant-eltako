@@ -9,13 +9,8 @@ import time
 
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
-from eltakobus.message import ESP2Message, Regular4BSMessage
+from eltakobus.message import ESP2Message
 
-from homeassistant.components.button import (
-    ButtonEntity,
-    ButtonDeviceClass,
-    ButtonEntityDescription
-)
 from homeassistant.components.climate import (
     ClimateEntity,
     HVACAction,
@@ -114,30 +109,6 @@ async def async_setup_entry(
         
     log_entities_to_be_added(entities, Platform.CLIMATE)
     async_add_entities(entities)
-
-TEACH_IN_BUTTON_DESCRIPTION = ButtonEntityDescription(
-    key="teach_in_button",
-    name="Teach-in Button",
-    icon="mdi:button-cursor",
-    device_class=ButtonDeviceClass.UPDATE,
-    has_entity_name= True,
-)
-
-class ClimateTeachInButton(EltakoEntity, ButtonEntity):
-
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, description:EntityDescription=TEACH_IN_BUTTON_DESCRIPTION):
-        super().__init__(gateway, dev_id, dev_name+"_climate-controller-teach-in-button", dev_eep)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
-        self.entity_id = f"climate.{self.unique_id}"
-        self._attr_device_class = ButtonDeviceClass.UPDATE
-        self._attr_name = self.dev_name
-        self.entity_description = description
-
-    async def async_press(self) -> None:
-        """Handle the button press."""
-        controller_address, _ = self.dev_id
-        msg:Regular4BSMessage = Regular4BSMessage(address=controller_address, status=0, data=b'\x40\x30\x0D\x87', outgoing=True)
-        self.send_message(msg)
 
 
 class ClimateController(EltakoEntity, ClimateEntity):
