@@ -97,14 +97,12 @@ TEACH_IN_BUTTON_DESCRIPTION = ButtonEntityDescription(
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
 
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, description:ButtonEntityDescription=TEACH_IN_BUTTON_DESCRIPTION):
-        if not dev_name:
-            dev_name = ""
-        dev_name = dev_name+"temperature-controller-teach-in-button "+dev_id.plain_address().hex()
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = "temperature-controller-teach-in-button "+dev_id.plain_address().hex()
+        super().__init__(gateway, dev_id, _dev_name, dev_eep)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"button.{self.unique_id}"
-        self._attr_device_class = ButtonDeviceClass.UPDATE
-        self._attr_name = dev_name
         self.entity_description = description
 
     def press(self) -> None:
@@ -115,3 +113,16 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         controller_address, _ = self.dev_id
         msg:Regular4BSMessage = Regular4BSMessage(address=controller_address, status=0, data=b'\x40\x30\x0D\x87', outgoing=True)
         self.send_message(msg)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
+        )
