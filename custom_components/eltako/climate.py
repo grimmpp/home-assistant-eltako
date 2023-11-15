@@ -122,6 +122,8 @@ class ClimateTeachInButton(EltakoEntity, ButtonEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
+        self._attr_name = self.dev_name
+        self._attr_icon = "mdi:button-cursor"
 
     async def async_press(self) -> None:
         """Handle the button press."""
