@@ -86,27 +86,23 @@ async def async_setup_entry(
 
 
 
-TEACH_IN_BUTTON_DESCRIPTION = ButtonEntityDescription(
-    key="teach_in_button",
-    name="Teach-in Button",
-    icon="mdi:button-cursor",
-    device_class=ButtonDeviceClass.UPDATE,
-    has_entity_name= True,
-)
-
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
+    """Button which sends teach-in telegram for temperature controller."""
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, description:ButtonEntityDescription=TEACH_IN_BUTTON_DESCRIPTION):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None):
         _dev_name = dev_name
         if _dev_name == "":
-            _dev_name = "temperature-controller-teach-in-button "+dev_id.plain_address().hex()
+            _dev_name = "temperature-controller-teach-in-button"
         super().__init__(gateway, dev_id, _dev_name, dev_eep)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self.entity_description = ButtonEntityDescription(
+            key="teach_in_button",
+            name="Send teach-in telegram to "+dev_id.plain_address().hex(),
+            icon="mdi:button-cursor",
+            device_class=ButtonDeviceClass.UPDATE,
+            has_entity_name= True,
+        )
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
         self.entity_id = f"button.{self.unique_id}"
-        self.entity_description = description
-
-    def press(self) -> None:
-        """Handle the button press."""
 
     async def async_press(self) -> None:
         """Handle the button press."""
