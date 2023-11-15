@@ -21,7 +21,7 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 | 5           | Temperature Controller | Physical wall-mounted temperature sensor and controller in one box. |
 | 6           | Actuator | Bringing the valve into the right position. |
 
-## Actuator Configuration in Device 
+## Actuator Configuration in Device via PCT14
 
 * **Heating is enabled** as default.
 * **Operating state** instead of switching state is enabled.
@@ -30,6 +30,11 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 * In **function group 3** address for **Home Assistant Climate Panel** is entered.
 * **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night reduction (-4°K), reduction (-2°K) - Predefined by Eltako). Not optional for FUTH. (See below)
 * **Optionally**: In **function group 4** a rocker switch is entered for changing from heating into **cooling mode**. Preferred solution is to use a physical switch connected to FTS14EM. 
+
+## Configuration of temperature controller e.g. FUTH
+You can configure target temperature for rooms in the physical control panel e.g. FUTH.
+
+**IMPORTANT**: You need to send a teach-in telegram to the physical control panel so that it won't override the settings from climate controller in Home Assistant. (See description below in section for FUTH)
 
 ## Home Assistant Configuration
 
@@ -154,6 +159,12 @@ eltako:
 
 <img src="./Temp. and Humidity Sensor - FUTH.png" height="135">
 <img src="./Temp. Sensor - Room 1 FUTH.png" height="100">
+
+## Teach-in FUTH
+In Home Assistant you will find either in the climate controller or temperature sensor for EEP A5-10-06 a button to send teach-in telegram to the physical temperature controller.
+
+<img src="./climate-tech-in-button2.png" height="350">
+<img src="./futh-tech-in-button2.png" height="410">
 
 ### Telegrams
 
