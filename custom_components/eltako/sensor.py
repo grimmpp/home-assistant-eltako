@@ -238,7 +238,7 @@ async def async_setup_entry(
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
-    entities: list[EltakoSensor] = []
+    entities: list[EltakoEntity] = []
     
     if Platform.SENSOR in config:
         for entity_config in config[Platform.SENSOR]:
@@ -656,7 +656,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         dev_name = dev_name+"temperature-controller-teach-in-button "+dev_id.plain_address().hex()
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
-        self.entity_id = f"climate.{self.unique_id}"
+        self.entity_id = f"button.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
         self._attr_name = dev_name
         self.entity_description = description
