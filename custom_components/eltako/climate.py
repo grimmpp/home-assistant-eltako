@@ -27,7 +27,6 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .gateway import EltakoGateway
 from .device import *
 from .const import *
-from .binary_sensor import EltakoBinarySensor
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -95,8 +94,6 @@ async def async_setup_entry(
                                                        # cooling_switch_entity, switch_button, 
                                                        cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
-                    teach_in_button = ClimateTeachInButton(gateway, dev_id, dev_name, dev_eep)
-                    entities.append(teach_in_button)
 
                     # subscribe for cooling switch events
                     if cooling_switch_id is not None:
