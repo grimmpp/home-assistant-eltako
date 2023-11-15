@@ -99,7 +99,7 @@ async def async_setup_entry(
                                                        # cooling_switch_entity, switch_button, 
                                                        cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
-                    teach_in_button = ClimateTeachInButton(gateway, dev_id)
+                    teach_in_button = ClimateTeachInButton(gateway, dev_id, dev_name, dev_eep)
                     entities.append(teach_in_button)
 
                     # subscribe for cooling switch events
@@ -117,8 +117,8 @@ async def async_setup_entry(
 
 class ClimateTeachInButton(EltakoEntity, ButtonEntity):
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="teach-in-button", dev_eep: EEP=None):
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None):
+        super().__init__(gateway, dev_id, dev_name+"_climate-controller-teach-in-button", dev_eep)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
