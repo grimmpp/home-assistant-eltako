@@ -658,9 +658,8 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"climate.{self.unique_id}"
         self._attr_device_class = ButtonDeviceClass.UPDATE
-        self._attr_name = self.dev_name
+        self._attr_name = dev_name
         self.entity_description = description
-        self.name = dev_name
 
     def press(self) -> None:
         """Handle the button press."""
