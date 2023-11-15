@@ -85,7 +85,7 @@ async def async_setup_entry(
                     if dev_eep in [A5_10_06]:
                         if sender_id == None:
                             sender_id = dev_id
-                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, dev_id))
+                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     log_entities_to_be_added(entities, Platform.BUTTON)
     async_add_entities(entities)
@@ -96,7 +96,7 @@ async def async_setup_entry(
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
     """Button which sends teach-in telegram for temperature controller."""
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="", dev_eep: EEP=None, sender_id: AddressExpression=None):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = "temperature-controller-teach-in-button"
