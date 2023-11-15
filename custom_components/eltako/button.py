@@ -62,46 +62,30 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
-    # check for temperature controller defined in config as temperature sensor
-    platform_id = Platform.SENSOR
-    if platform_id in config:
-        for entity_config in config[platform_id]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config[CONF_NAME]
-            eep_string = entity_config.get(CONF_EEP)
+    # check for temperature controller defined in config as temperature sensor or climate controller
+    platform_ids = [Platform.SENSOR, Platform.CLIMATE]
+    for platform_id in platform_ids:
+        if platform_id in config:
+            for entity_config in config[platform_id]:
+                dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+                dev_name = entity_config[CONF_NAME]
+                eep_string = entity_config.get(CONF_EEP)
 
-            try:
-                dev_eep = EEP.find(eep_string)
-            except:
-                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
+                sender_id = None
+                if platform_id == Platform.CLIMATE:
+                    sender_config = entity_config.get(CONF_SENDER)
+                    sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
 
-                if dev_eep in [A5_10_06]:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, dev_id))
-                
-    # check for climate controller
-    platform_id = Platform.CLIMATE
-    if platform_id in config:
-        for entity_config in config[platform_id]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config[CONF_NAME]
-            eep_string = entity_config.get(CONF_EEP)
-
-            sender_config = entity_config.get(CONF_SENDER)
-            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-            sender_eep_string = sender_config.get(CONF_EEP)
-
-            try:
-                dev_eep = EEP.find(eep_string)
-                sender_eep = EEP.find(sender_eep_string)
-            except:
-                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-
-                if dev_eep in [A5_10_06] and sender_eep in [A5_10_06]:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+                try:
+                    dev_eep = EEP.find(eep_string)
+                except:
+                    LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                    continue
+                else:
+                    if dev_eep in [A5_10_06]:
+                        if sender_id == None:
+                            sender_id = dev_id
+                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, dev_id))
 
     log_entities_to_be_added(entities, Platform.BUTTON)
     async_add_entities(entities)
