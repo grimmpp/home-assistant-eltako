@@ -63,29 +63,24 @@ async def async_setup_entry(
     entities: list[EltakoEntity] = []
     
     # check for temperature controller defined in config as temperature sensor or climate controller
-    platform_ids = [Platform.SENSOR, Platform.CLIMATE]
-    for platform_id in platform_ids:
-        if platform_id in config:
-            for entity_config in config[platform_id]:
-                dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-                dev_name = entity_config[CONF_NAME]
-                eep_string = entity_config.get(CONF_EEP)
+    platform_id = [Platform.CLIMATE]
+    if platform_id in config:
+        for entity_config in config[platform_id]:
+            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+            dev_name = entity_config[CONF_NAME]
+            eep_string = entity_config.get(CONF_EEP)
 
-                sender_id = None
-                if platform_id == Platform.CLIMATE:
-                    sender_config = entity_config.get(CONF_SENDER)
-                    sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+            sender_config = entity_config.get(CONF_SENDER)
+            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
 
-                try:
-                    dev_eep = EEP.find(eep_string)
-                except:
-                    LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                    continue
-                else:
-                    if dev_eep in [A5_10_06]:
-                        if sender_id == None:
-                            sender_id = dev_id
-                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+            try:
+                dev_eep = EEP.find(eep_string)
+            except:
+                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                continue
+            else:
+                if dev_eep in [A5_10_06]:
+                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     log_entities_to_be_added(entities, Platform.BUTTON)
     async_add_entities(entities)
@@ -103,7 +98,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         super().__init__(gateway, dev_id, _dev_name, dev_eep)
         self.entity_description = ButtonEntityDescription(
             key="teach_in_button",
-            name="Send teach-in telegram to "+sender_id.plain_address().hex(),
+            name="Send teach-in telegram from "+sender_id.plain_address().hex(),
             icon="mdi:button-cursor",
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
@@ -121,11 +116,11 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         msg:Regular4BSMessage = Regular4BSMessage(controller_address, status, data, True)
         self.send_message(msg)
 
-        addresses = [controller_address, b'\xff\xe2\35\x80', b'\xff\xe2\35\x81', b'\xff\xe2\35\x82', b'\xff\xe2\35\x83', b'\xff\xe2\35\x84', b'\xff\xe2\35\x90', b'\xff\xe2\35\x91', b'\xff\xe2\35\x92']
+        # addresses = [controller_address, b'\xff\xe2\35\x80', b'\xff\xe2\35\x81', b'\xff\xe2\35\x82', b'\xff\xe2\35\x83', b'\xff\xe2\35\x84', b'\xff\xe2\35\x90', b'\xff\xe2\35\x91', b'\xff\xe2\35\x92']
         data_array = [b'\x40\x30\x0D\x87', b'\x40\x30\x0D\x81', b'\x40\x90\x0D\x80', b'\x87\x0D\x30\x40', b'\x80\x0D\x90\x40', b'\x81\x0D\x90\x40']
-        for a in addresses:
-            for d in data_array:
-                self.send_message(Regular4BSMessage(a, status, d, True))
+        # for a in addresses:
+        for d in data_array:
+            self.send_message(Regular4BSMessage(controller_address, status, d, True))
 
     @property
     def device_info(self) -> DeviceInfo:
