@@ -230,3 +230,21 @@ class ClimateSchema(EltakoPlatformSchema):
             }
         ),
     )
+
+class AirQualitySchema(EltakoPlatformSchema):
+    """Voluptuous schema for Eltako covers."""
+    PLATFORM = Platform.AIR_QUALITY
+
+    CONF_EEP_SUPPORTED = [A5_09_0C.eep_string]
+
+    DEFAULT_NAME = "VOC"
+
+    ENTITY_SCHEMA = vol.All(
+        vol.Schema(
+            {
+                vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
+                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+            }
+        ),
+    )

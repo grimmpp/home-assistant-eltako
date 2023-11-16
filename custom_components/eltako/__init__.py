@@ -10,15 +10,7 @@ from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .gateway import EltakoGateway, GatewayDeviceTypes, EnoceanUSB300Gateway
-from .schema import (
-    BinarySensorSchema,
-    LightSchema,
-    SwitchSchema,
-    SensorSchema,
-    CoverSchema,
-    ClimateSchema,
-    GatewaySchema,
-)
+from .schema import *
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -27,6 +19,7 @@ CONFIG_SCHEMA = vol.Schema(
                 {
                     **GatewaySchema.platform_node(),
                     **BinarySensorSchema.platform_node(),
+                    **AirQualitySchema.platform_node(),
                     **LightSchema.platform_node(),
                     **SwitchSchema.platform_node(),
                     **SensorSchema.platform_node(),

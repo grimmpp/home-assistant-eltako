@@ -39,6 +39,7 @@ PLATFORMS = [
     Platform.LIGHT,
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
+    Platform.AIR_QUALITY,
     Platform.SWITCH,
     Platform.COVER,
     Platform.CLIMATE,
