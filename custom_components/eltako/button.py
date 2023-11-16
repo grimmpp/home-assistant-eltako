@@ -122,7 +122,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         self.send_message(msg)
 
         addresses = [controller_address, b'\xff\xe2\35\x80', b'\xff\xe2\35\x81', b'\xff\xe2\35\x82', b'\xff\xe2\35\x83', b'\xff\xe2\35\x84', b'\xff\xe2\35\x90', b'\xff\xe2\35\x91', b'\xff\xe2\35\x92']
-        data_array = [b'\x40\x30\x0D\x87', b'\x40\x90\x0D\x80', b'\x87\x0D\x30\x40', b'\x80\x0D\x90\x40']
+        data_array = [b'\x40\x30\x0D\x87', b'\x40\x30\x0D\x81', b'\x40\x90\x0D\x80', b'\x87\x0D\x30\x40', b'\x80\x0D\x90\x40', b'\x81\x0D\x90\x40']
         for a in addresses:
             for d in data_array:
                 self.send_message(Regular4BSMessage(a, status, d, True))
