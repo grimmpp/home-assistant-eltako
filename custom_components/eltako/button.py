@@ -121,6 +121,14 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         msg:Regular4BSMessage = Regular4BSMessage(controller_address, status, data, True)
         self.send_message(msg)
 
+        addresses = [controller_address, b'\xff\xe2\35\x80', b'\xff\xe2\35\x81', b'\xff\xe2\35\x82', b'\xff\xe2\35\x83', b'\xff\xe2\35\x84', b'\xff\xe2\35\x90', b'\xff\xe2\35\x91', b'\xff\xe2\35\x92']
+        data_array = [b'\x40\x30\x0D\x87', b'\x40\x90\x0D\x80']
+        for a in addresses:
+            for d in data_array:
+                msg.address = a
+                msg.data = d
+                self.send_message(msg)
+
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
