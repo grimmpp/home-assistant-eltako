@@ -759,6 +759,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
+        LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
         self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
