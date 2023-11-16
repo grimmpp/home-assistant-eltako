@@ -144,6 +144,7 @@ class SensorSchema(EltakoPlatformSchema):
     PLATFORM = Platform.SENSOR
 
     CONF_EEP_SUPPORTED = [A5_04_02.eep_string,
+                          A5_09_0C.eep_string,
                           A5_10_06.eep_string,
                           A5_10_12.eep_string,
                           A5_12_01.eep_string, 
@@ -227,24 +228,6 @@ class ClimateSchema(EltakoPlatformSchema):
                 vol.Optional(CONF_MAX_TARGET_TEMPERATURE, default=25): cv.Number,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  
                 vol.Optional(CONF_COOLING_MODE): CONF_COOLING_MODE_SCHEMA                           # if not provided cooling is not supported
-            }
-        ),
-    )
-
-class AirQualitySchema(EltakoPlatformSchema):
-    """Voluptuous schema for Eltako covers."""
-    PLATFORM = Platform.AIR_QUALITY
-
-    CONF_EEP_SUPPORTED = [A5_09_0C.eep_string]
-
-    DEFAULT_NAME = "VOC"
-
-    ENTITY_SCHEMA = vol.All(
-        vol.Schema(
-            {
-                vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
-                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
-                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
             }
         ),
     )

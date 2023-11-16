@@ -19,7 +19,6 @@ CONFIG_SCHEMA = vol.Schema(
                 {
                     **GatewaySchema.platform_node(),
                     **BinarySensorSchema.platform_node(),
-                    # **AirQualitySchema.platform_node(),
                     **LightSchema.platform_node(),
                     **SwitchSchema.platform_node(),
                     **SensorSchema.platform_node(),
