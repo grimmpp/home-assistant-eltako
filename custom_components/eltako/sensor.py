@@ -218,6 +218,16 @@ SENSOR_DESC_TEMPERATURE = EltakoSensorEntityDescription(
     suggested_display_precision=1,
 )
 
+SENSOR_DESC_TARGET_TEMPERATURE = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_TEMPERATURE,
+    name="Target Temperature",
+    native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+    icon="mdi:thermometer",
+    device_class=SensorDeviceClass.TEMPERATURE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=1,
+)
+
 SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_HUMIDITY,
     name="Humidity",
@@ -299,10 +309,13 @@ async def async_setup_entry(
                 
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
+                if dev_eep in [A5_10_12]:
+                    entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
 
             elif dev_eep in [A5_10_06]:
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
-                
+                entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
+
 
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
@@ -588,6 +601,53 @@ class EltakoTemperatureSensor(EltakoSensor):
             return
         
         self._attr_native_value = decoded.current_temperature
+
+        self.schedule_update_ha_state()
+
+
+class EltakoTargetTemperatureSensor(EltakoSensor):
+    """Representation of an Eltako target temperature sensor.
+    
+    EEPs (EnOcean Equipment Profiles):
+    - A5-10-06, A5-10-12
+    """
+
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
+        """Initialize the Eltako temperature sensor."""
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self.entity_id = f"sensor.{self.unique_id}"
+
+    @property
+    def name(self):
+        """Return the default name for the sensor."""
+        return self.entity_description.name
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
+        )
+    
+    def value_changed(self, msg):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.target_temperature
 
         self.schedule_update_ha_state()
 
