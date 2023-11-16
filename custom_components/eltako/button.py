@@ -115,7 +115,9 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Handle the button press."""
         controller_address, _ = self.sender_id
-        msg:Regular4BSMessage = Regular4BSMessage(address=controller_address, status=0, data=b'\x40\x30\x0D\x87', outgoing=True)
+        # _data=b'\x40\x30\x0D\x87'
+        _data = b'\x40\x90\x0D\x80'
+        msg:Regular4BSMessage = Regular4BSMessage(address=controller_address, status=0, _data, outgoing=True)
         self.send_message(msg)
 
     @property
