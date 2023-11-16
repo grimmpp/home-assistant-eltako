@@ -63,7 +63,7 @@ async def async_setup_entry(
     entities: list[EltakoEntity] = []
     
     # check for temperature controller defined in config as temperature sensor or climate controller
-    platform_id = [Platform.CLIMATE]
+    platform_id = Platform.CLIMATE
     if platform_id in config:
         for entity_config in config[platform_id]:
             dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
