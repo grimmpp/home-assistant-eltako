@@ -161,7 +161,9 @@ eltako:
 <img src="./Temp. Sensor - Room 1 FUTH.png" height="100">
 
 ## Teach-in FUTH
-In Home Assistant you will find either in the climate controller or temperature sensor for EEP A5-10-06 a button to send teach-in telegram to the physical temperature controller.
+You need to teach-in telegram to FUTH so that it takes over the target temperature set in Home Assistant, otherwise FUTH will overwrite its current temperature every 50 seconds. If you have successfully teached-in FUTH, it will receive the target temperature from Home Assistant and apply it.
+
+In Home Assistant you will find either in the climate controller or temperature sensor for EEP A5-10-06 a button to send teach-in telegram to FUTH. Before doing it go into the menu of FUTH `learn -> heating -> controller -> wait for telegram` so it is waiting for the teach-in telegram and then send it.
 
 <img src="./climate-tech-in-button2.png" height="350">
 <img src="./futh-tech-in-button2.png" height="410">
