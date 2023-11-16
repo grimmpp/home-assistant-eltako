@@ -722,10 +722,10 @@ class EltakoAirQualitySensor(EltakoSensor):
         description = EltakoSensorEntityDescription(
             key = "air_quality_sensor_"+voc_type.name,
             device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+            # device_class=SensorDeviceClass.AQI,
             name = voc_type.name,
             native_unit_of_measurement = voc_type.unit,
             icon="mdi:lightning-bolt",
-            device_class=SensorDeviceClass.AQI,
             state_class=SensorStateClass.MEASUREMENT,
         )
 
