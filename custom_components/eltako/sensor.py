@@ -59,6 +59,7 @@ DEFAULT_DEVICE_NAME_GAS_METER = "Gas meter"
 DEFAULT_DEVICE_NAME_WATER_METER = "Water meter"
 DEFAULT_DEVICE_NAME_HYGROSTAT = "Hygrostat"
 DEFAULT_DEVICE_NAME_THERMOMETER = "Thermometer"
+DEFAULT_DEVICE_NAME_AIR_QUAILTY_SENSOR = "Air Quality Sensor"
 
 SENSOR_TYPE_ELECTRICITY_CUMULATIVE = "electricity_cumulative"
 SENSOR_TYPE_ELECTRICITY_CURRENT = "electricity_current"
@@ -318,6 +319,10 @@ async def async_setup_entry(
             elif dev_eep in [A5_10_06]:
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
+
+            elif dev_eep in [A5_09_0C]:
+                for t in VOC_SubstancesType:
+                    entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t))
 
 
     log_entities_to_be_added(entities, Platform.SENSOR)
@@ -698,5 +703,63 @@ class EltakoHumiditySensor(EltakoSensor):
             return
         
         self._attr_native_value = decoded.humidity
+
+        self.schedule_update_ha_state()
+
+class EltakoAirQualitySensor(EltakoSensor):
+    """Representation of an Eltako air quality sensor.
+    
+    EEPs (EnOcean Equipment Profiles):
+    - A5-09-0C
+    """
+
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType) -> None:
+        """Initialize the Eltako air quality sensor."""
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
+
+        description = EltakoSensorEntityDescription(
+            key = "air_quality_sensor_"+voc_type.name,
+            device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+            # device_class=SensorDeviceClass.AQI,
+            name = voc_type.name,
+            native_unit_of_measurement = voc_type.unit,
+            icon="mdi:lightning-bolt",
+            state_class=SensorStateClass.MEASUREMENT,
+        )
+
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self.entity_id = f"sensor.{self.unique_id}"
+
+    @property
+    def name(self):
+        """Return the default name for the sensor."""
+        return self.entity_description.name
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
+        )
+    
+    def value_changed(self, msg):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            return
+        
+        LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
+        self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
