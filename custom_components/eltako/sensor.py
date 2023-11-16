@@ -65,6 +65,7 @@ SENSOR_TYPE_GAS_CURRENT = "gas_current"
 SENSOR_TYPE_WATER_CUMULATIVE = "water_cumulative"
 SENSOR_TYPE_WATER_CURRENT = "water_current"
 SENSOR_TYPE_TEMPERATURE = "temperature"
+SENSOR_TYPE_TARGET_TEMPERATURE = "target_temperature"
 SENSOR_TYPE_HUMIDITY = "humidity"
 SENSOR_TYPE_WINDOWHANDLE = "windowhandle"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_DAWN = "weather_station_illuminance_dawn"
@@ -219,7 +220,7 @@ SENSOR_DESC_TEMPERATURE = EltakoSensorEntityDescription(
 )
 
 SENSOR_DESC_TARGET_TEMPERATURE = EltakoSensorEntityDescription(
-    key=SENSOR_TYPE_TEMPERATURE,
+    key=SENSOR_TYPE_TARGET_TEMPERATURE,
     name="Target Temperature",
     native_unit_of_measurement=UnitOfTemperature.CELSIUS,
     icon="mdi:thermometer",
