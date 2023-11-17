@@ -742,6 +742,8 @@ class EltakoAirQualitySensor(EltakoSensor):
         self.entity_id = f"sensor.{self.unique_id}"
         self.voc_type = voc_type
 
+        LOGGER.debug(f"entity_description: {self.entity_description}")
+
     @property
     def name(self):
         """Return the default name for the sensor."""
