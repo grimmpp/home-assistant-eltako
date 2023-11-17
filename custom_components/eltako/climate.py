@@ -112,7 +112,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     _update_frequency = 50 # sec
-    _actor_mode: A5_10_06.Heater_Mode = None
+    _actuator_mode: A5_10_06.Heater_Mode = None
     _hvac_mode_from_heating = HVACMode.HEAT
 
     COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
@@ -178,7 +178,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                     await self._async_send_mode_cooling()
 
                 LOGGER.debug(f"[climate {self.dev_id}] Send status update")
-                await self._async_send_command(self._actor_mode, self.target_temperature)
+                await self._async_send_command(self._actuator_mode, self.target_temperature)
                 
             except Exception as e:
                 LOGGER.exception(e)
@@ -249,15 +249,15 @@ class ClimateController(EltakoEntity, ClimateEntity):
         LOGGER.info(f"target temp {self.target_temperature}")
         LOGGER.info(f"current temp {self.current_temperature}")
         LOGGER.info(f"kwargs {kwargs}")
-        LOGGER.info(f"actor_mode {self._actor_mode}")
+        LOGGER.info(f"actor_mode {self._actuator_mode}")
 
-        if self._actor_mode != None and self.current_temperature > 0:
+        if self._actuator_mode != None and self.current_temperature > 0:
             new_target_temp = kwargs['temperature']
 
-            if self._actor_mode == A5_10_06.Heater_Mode.OFF:
-                self._actor_mode = A5_10_06.Heater_Mode.NORMAL
+            if self._actuator_mode == A5_10_06.Heater_Mode.OFF:
+                self._actuator_mode = A5_10_06.Heater_Mode.NORMAL
 
-            self._send_command(self._actor_mode, new_target_temp)
+            self._send_command(self._actuator_mode, new_target_temp)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] default state of actor was not yet transferred.")
 
@@ -343,11 +343,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
             LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: %s", str(e))
             return
 
-        LOGGER.debug(f"[Climate {self.dev_id.plain_address().hex()}] Received Message: {decoded}")
-
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
+
+            LOGGER.debug(f"[Climate {self.dev_id.plain_address().hex()}] Received Message: ct: {decoded.current_temperature}, tt: {decoded.target_temperature}")
             
-            self._actor_mode = decoded.mode
+            self._actuator_mode = decoded.mode
             self._attr_current_temperature = decoded.current_temperature
 
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
