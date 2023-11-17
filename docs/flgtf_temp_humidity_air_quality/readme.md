@@ -1,6 +1,7 @@
 # How to configure Eltako FLGTF
 
 <img src="./FLGTF55-wg.jpg" height="150">
+<img src="./FLGTF-HA-View.png" height="150">
 
 [Instructions and datasheet](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FLGTF55_30055520-2_gb.pdf)
 

@@ -26,7 +26,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-08-01 (Occupancy sensor, FTS14EM)
 * Sensor
   * A5-04-02 (Temperature and Humidity Sensor, FLGTF, FLT58)
-  * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. FLGTF)
+  * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](./docs/flgtf_temp_humidity_air_quality/readme.md))
   * A5-10-06 (Temperature Sensor and Controller e.g. FUTH)
   * A5-10-12 (Temperature Sensor and Controller and Humidity Sensor e.g. FUTH)
   * A5-12-01 (Automated meter reading - electricity, FSDG14)
