@@ -733,7 +733,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             # device_class=SensorDeviceClass.AQI,
             name = self.voc_type_name,
             native_unit_of_measurement = voc_type.unit,
-            icon="mdi:lightning-bolt",
+            icon="mdi:air-filter",
             state_class=SensorStateClass.MEASUREMENT,
         )
 
