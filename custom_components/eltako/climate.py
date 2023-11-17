@@ -267,9 +267,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
             if self.current_temperature and self.target_temperature:
                 msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
                 self.send_message(msg)
-
-                msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(b'\xFF\xE2x35\x81')
-                self.send_message(msg)
             else:
                 LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set.")
                 #This is always the case when there was no sensor signal after HA started.
