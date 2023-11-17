@@ -26,7 +26,7 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 * **Heating is enabled** as default.
 * **Operating state** instead of switching state is enabled.
 * In **function group 1 a temperature sensor and controller** is entered which sends frequently the current room temperature.
-<!--Not really sure what FG 2 is!* **Optionally**: In **function group 2** a hygrostat **temperature sensor and controller** is entered. -->
+* **Optionally**: In **function group 2** a hygrostat/humidity sensor is entered.
 * In **function group 3** address for **Home Assistant Climate Panel** is entered.
 * **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night reduction (-4°K), reduction (-2°K) - Predefined by Eltako). Not optional for FUTH. (See below)
 * **Optionally**: In **function group 4** a rocker switch is entered for changing from heating into **cooling mode**. Preferred solution is to use a physical switch connected to FTS14EM. 

@@ -343,6 +343,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
             LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: %s", str(e))
             return
 
+        LOGGER.debug(f"[Climate {self.dev_id.plain_address().hex()}] Received Message: {decoded}")
+
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
             
             self._actor_mode = decoded.mode
