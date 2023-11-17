@@ -741,7 +741,6 @@ class EltakoAirQualitySensor(EltakoSensor):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self.voc_type = voc_type
-        self._attr_icon = description.icon
 
     @property
     def name(self):
