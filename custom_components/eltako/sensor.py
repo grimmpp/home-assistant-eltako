@@ -743,7 +743,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         self.voc_type = voc_type
         # self._attr_suggested_unit_of_measurement = voc_type.unit
 
-        LOGGER.debug(f"entity_description: {self.entity_description}")
+        LOGGER.debug(f"entity_description: {self.entity_description}, voc_type: {voc_type}")
 
     @property
     def name(self):
