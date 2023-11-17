@@ -220,11 +220,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""
-        LOGGER.info("async func")
-        LOGGER.info(f"hvac_mode {hvac_mode}")
-        LOGGER.info(f"self.hvac_mode {self.hvac_mode}")
-        LOGGER.info(f"target temp {self.target_temperature}")
-        LOGGER.info(f"current temp {self.current_temperature}")
+        LOGGER.debug("async func")
+        LOGGER.debug(f"hvac_mode {hvac_mode}")
+        LOGGER.debug(f"self.hvac_mode {self.hvac_mode}")
+        LOGGER.debug(f"target temp {self.target_temperature}")
+        LOGGER.debug(f"current temp {self.current_temperature}")
 
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
@@ -243,13 +243,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        LOGGER.info("async func")
-        LOGGER.info(f"hvac_mode {self.hvac_mode}")
-        LOGGER.info(f"hvac_action {self.hvac_action}")
-        LOGGER.info(f"target temp {self.target_temperature}")
-        LOGGER.info(f"current temp {self.current_temperature}")
-        LOGGER.info(f"kwargs {kwargs}")
-        LOGGER.info(f"actor_mode {self._actuator_mode}")
+        LOGGER.debug("async func")
+        LOGGER.debug(f"hvac_mode {self.hvac_mode}")
+        LOGGER.debug(f"hvac_action {self.hvac_action}")
+        LOGGER.debug(f"target temp {self.target_temperature}")
+        LOGGER.debug(f"current temp {self.current_temperature}")
+        LOGGER.debug(f"kwargs {kwargs}")
+        LOGGER.debug(f"actor_mode {self._actuator_mode}")
 
         if self._actuator_mode != None and self.current_temperature > 0:
             new_target_temp = kwargs['temperature']
@@ -266,6 +266,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self._sender_eep == A5_10_06:
             if self.current_temperature and self.target_temperature:
                 msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+                self.send_message(msg)
+
+                msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(b'\xFF\xE2x35\x81')
                 self.send_message(msg)
             else:
                 LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set.")
@@ -345,8 +348,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
 
-            LOGGER.debug(f"[Climate {self.dev_id.plain_address().hex()}] Received Message: ct: {decoded.current_temperature}, tt: {decoded.target_temperature}")
-            
             self._actuator_mode = decoded.mode
             self._attr_current_temperature = decoded.current_temperature
 
