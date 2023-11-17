@@ -732,7 +732,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
             # device_class=SensorDeviceClass.AQI,
             name = self.voc_type_name,
-            native_unit_of_measurement = "ppb" # voc_type.unit,
+            native_unit_of_measurement = "ppb", # voc_type.unit,
             icon="mdi:air-filter",
             state_class=SensorStateClass.MEASUREMENT,
         )
