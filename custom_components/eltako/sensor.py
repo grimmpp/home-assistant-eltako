@@ -39,7 +39,8 @@ from homeassistant.const import (
     Platform,
     PERCENTAGE,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    CONCENTRATION_PARTS_PER_BILLION
+    CONCENTRATION_PARTS_PER_BILLION,
+    CONF_LANGUAGE,
 )
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -320,9 +321,12 @@ async def async_setup_entry(
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
 
+            
             elif dev_eep in [A5_09_0C]:
+            ### Eltako FLGTF only supports VOCT Total
                 for t in VOC_SubstancesType:
-                    entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t))
+                    if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
+                        entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t, entity_config[CONF_LANGUAGE]))
 
 
     log_entities_to_be_added(entities, Platform.SENSOR)
@@ -713,17 +717,21 @@ class EltakoAirQualitySensor(EltakoSensor):
     - A5-09-0C
     """
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATIONS) -> None:
         """Initialize the Eltako air quality sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
 
+        self.voc_type_name = voc_type.name_en
+        if language == LANGUAGE_ABBREVIATIONS.LANG_GERMAN:
+            self.voc_type_name = voc_type.name_de
+
         description = EltakoSensorEntityDescription(
-            key = "air_quality_sensor_"+voc_type.name,
+            key = "air_quality_sensor_"+self.voc_type_name,
             device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
             # device_class=SensorDeviceClass.AQI,
-            name = voc_type.name,
+            name = self.voc_type_name,
             native_unit_of_measurement = voc_type.unit,
             icon="mdi:lightning-bolt",
             state_class=SensorStateClass.MEASUREMENT,
@@ -760,7 +768,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
-        if decoded.voc_type == self.voc_type:
+        if decoded.voc_type.index == self.voc_type.index:
             LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
             self._attr_native_value = decoded.concentration
 
