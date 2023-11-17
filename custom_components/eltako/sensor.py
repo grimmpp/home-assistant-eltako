@@ -732,7 +732,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
             # device_class=SensorDeviceClass.AQI,
             name = self.voc_type_name,
-            native_unit_of_measurement = voc_type.unit,
+            native_unit_of_measurement = "ppb" # voc_type.unit,
             icon="mdi:air-filter",
             state_class=SensorStateClass.MEASUREMENT,
         )
@@ -741,7 +741,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self.voc_type = voc_type
-        self._attr_suggested_unit_of_measurement = voc_type.unit
+        # self._attr_suggested_unit_of_measurement = voc_type.unit
 
         LOGGER.debug(f"entity_description: {self.entity_description}")
 
