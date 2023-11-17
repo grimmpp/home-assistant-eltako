@@ -732,6 +732,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self.voc_type = voc_type
 
     @property
     def name(self):
@@ -759,7 +760,8 @@ class EltakoAirQualitySensor(EltakoSensor):
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
-        LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
-        self._attr_native_value = decoded.concentration
+        if decoded.voc_type == self.voc_type:
+            LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
+            self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
