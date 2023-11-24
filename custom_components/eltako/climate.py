@@ -167,7 +167,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
 
     async def _wrapped_update(self, *args) -> None:
-        while False:
+        while False:    #TODO: ...
             try:
                 LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency}s for next status update.")
                 await asyncio.sleep(self._update_frequency)

@@ -116,6 +116,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         status = 0x80
         msg:Regular4BSMessage = Regular4BSMessage(controller_address, status, data, True)
         self.send_message(msg)
+        self.send_message(msg)
 
     @property
     def device_info(self) -> DeviceInfo:
