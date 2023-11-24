@@ -112,6 +112,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         controller_address, _ = self.sender_id
         data=b'\x40\x30\x0D\x87'        # A5-10-06
         # data = b'\x40\x90\x0D\x80'    # A5-10-12
+        data=b'\x00\x89\x8a\x0f'        # A5-10-06
         status = 0
         msg:Regular4BSMessage = Regular4BSMessage(controller_address, status, data, True)
         self.send_message(msg)
