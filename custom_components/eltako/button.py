@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
-from eltakobus.message import ESP2Message, Regular4BSMessage
+from eltakobus.message import ESP2Message, Regular4BSMessage, TeachIn4BSMessage2
 
 from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
@@ -113,8 +113,9 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         data=b'\x40\x30\x0D\x87'        # A5-10-06
         # data = b'\x40\x90\x0D\x80'    # A5-10-12
         data=b'\x40\x30\x0d\x85'
+        controller_address=b'\xff\xf4\xc2\x98'
         status = 0x80
-        msg:Regular4BSMessage = Regular4BSMessage(controller_address, status, data, True)
+        msg = TeachIn4BSMessage2(controller_address, status, data, False)
         self.send_message(msg)
         self.send_message(msg)
 
