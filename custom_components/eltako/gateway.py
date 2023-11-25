@@ -132,8 +132,8 @@ class EltakoGateway:
         is an incoming message.
         """
 
+        LOGGER.debug("Received message: %s", message)
         if isinstance(message, ESP2Message):
-            LOGGER.debug("Received message: %s", message)
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
             
     @property
