@@ -17,6 +17,7 @@ CONFIG_SCHEMA = vol.Schema(
         DOMAIN: vol.All(
             vol.Schema(
                 {
+                    **GeneralSettings.platform_node(),
                     **GatewaySchema.platform_node(),
                     **BinarySensorSchema.platform_node(),
                     **LightSchema.platform_node(),
@@ -32,6 +33,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+GENERAL_SETTINGS = {}
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
@@ -81,6 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = usb_gateway
+    GENERAL_SETTINGS = config_entry.data[CONF_GERNERAL_SETTINGS]
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:

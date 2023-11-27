@@ -15,6 +15,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
+from . import GENERAL_SETTINGS
+
 from .device import *
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
@@ -115,6 +117,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         self._attr_is_opening = True
         self._attr_is_closing = False
 
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
+
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
         if self._time_closes is not None:
@@ -132,6 +137,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         # Don't set state instead wait for response from actor so that real state of light is displayed.
         self._attr_is_closing = True
         self._attr_is_opening = False
+
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
 
     def set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
@@ -172,6 +180,10 @@ class EltakoCover(EltakoEntity, CoverEntity):
             self._attr_is_closing = True
             self._attr_is_opening = False
 
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
+
+
     def stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
         address, _ = self._sender_id
@@ -182,6 +194,10 @@ class EltakoCover(EltakoEntity, CoverEntity):
         
         self._attr_is_closing = False
         self._attr_is_opening = False
+
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
+
 
     def value_changed(self, msg):
         """Update the internal state of the cover."""

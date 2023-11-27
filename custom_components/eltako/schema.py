@@ -71,6 +71,15 @@ class EltakoPlatformSchema(ABC):
             )
         }
     
+
+class GeneralSettings(EltakoPlatformSchema):
+    """Voluptuous schema for general settings of this integration"""
+    PLATFORM = CONF_GERNERAL_SETTINGS
+
+    ENTITY_SCHEMA = vol.Schema({
+            vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
+        })
+    
 class GatewaySchema(EltakoPlatformSchema):
     """Voluptuous schema for bus gateway"""
     PLATFORM = CONF_GATEWAY

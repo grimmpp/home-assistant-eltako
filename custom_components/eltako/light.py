@@ -20,6 +20,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
+from . import GENERAL_SETTINGS
+
 from .device import *
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
@@ -101,6 +103,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     def is_on(self):
         """If light is on."""
         return self._on_state
+    
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
@@ -113,8 +116,10 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
         
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._on_state = True
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._on_state = True
+            self.schedule_update_ha_state()
+
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
@@ -125,9 +130,11 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
             
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._attr_brightness = 0
-        # self._on_state = False
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._attr_brightness = 0
+            self._on_state = False
+            self.schedule_update_ha_state()
+
 
     def value_changed(self, msg):
         """Update the internal state of this device.
@@ -161,6 +168,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                 return
 
             self.schedule_update_ha_state()
+
 
 class EltakoSwitchableLight(EltakoEntity, LightEntity):
     """Representation of an Eltako light source."""
@@ -200,6 +208,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     def is_on(self):
         """If light is on."""
         return self._on_state
+    
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
@@ -210,8 +219,10 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._on_state = True
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._on_state = True
+            self.schedule_update_ha_state()
+        
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
@@ -222,8 +233,10 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
         
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._on_state = False
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._on_state = False
+            self.schedule_update_ha_state()
+
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
