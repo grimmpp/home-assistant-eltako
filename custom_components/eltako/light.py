@@ -145,7 +145,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Light] Could not decode message: %s", str(e))
+            LOGGER.warning("[Dimmable Light] Could not decode message: %s %s", type(e), str(e))
             return
 
         if self.dev_eep in [A5_38_08]:
