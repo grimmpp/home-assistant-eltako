@@ -145,13 +145,14 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         try:
             if msg.org == 0x07:
                 decoded = self.dev_eep.decode_message(msg)
+            elif msg.org == 0x05:
+                LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
 
         except Exception as e:
             LOGGER.warning("[Dimmable Light] Could not decode message: %s %s", type(e), str(e))
             return
 
         if self.dev_eep in [A5_38_08]:
-            # if msg.org == 0x07:
             if decoded.command == 0x01:
                 if decoded.switching.learn_button != 1:
                     return
@@ -167,11 +168,6 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                     self._attr_brightness = decoded.dimming.dimming_value
 
                 self._on_state = decoded.dimming.switching_command
-            # elif msg.org == 0x05:
-            #     if msg.body == 0x70:
-            #         self._on_state = True
-            #     else:
-            #         self._on_state = False
             else:
                 return
 
