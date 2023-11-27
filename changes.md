@@ -11,6 +11,7 @@
 * Support of different gateways e.g. enOcean USB300 with different protocol version (ESP3)
 * Added teach-in buttons for climate and temperature controller
 * Added Air Quality Sensor with EEP A5-09-0C for e.g. FLGTF
+* Fast status change added. You can set per configuration is you want to wait for actuator response or if you directly want to see the status change in HA.
 
 ## Version 1.0.0 Baseline
 
