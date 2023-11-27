@@ -147,6 +147,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                 decoded = self.dev_eep.decode_message(msg)
             elif msg.org == 0x05:
                 LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
+                return
 
         except Exception as e:
             LOGGER.warning("[Dimmable Light] Could not decode message: %s %s", type(e), str(e))
