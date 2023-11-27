@@ -16,8 +16,6 @@
 ## Version 1.0.0 Baseline
 
 ## Backlog
-* Possibility to show stauts changes of acutuators directly. Some actuators like FUD take some time until status message arrives in HA. Behavior shall be possible to be configured centrally in eltako-config.
-* Docs for how to test specific version or branch of this integration.
 * Config generation shall be come more easy.
 * Docs for Configuration Schema
 * Extend device discovery for heating and cooling actors
