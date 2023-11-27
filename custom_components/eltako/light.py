@@ -143,27 +143,35 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         We only care about the 4BS (0xA5).
         """
         try:
-            decoded = self.dev_eep.decode_message(msg)
+            if msg.org == 0x07:
+                decoded = self.dev_eep.decode_message(msg)
+
         except Exception as e:
             LOGGER.warning("[Dimmable Light] Could not decode message: %s %s", type(e), str(e))
             return
 
         if self.dev_eep in [A5_38_08]:
-            if decoded.command == 0x01:
-                if decoded.switching.learn_button != 1:
-                    return
-                    
-                self._on_state = decoded.switching.switching_command
-            elif decoded.command == 0x02:
-                if decoded.dimming.learn_button != 1:
-                    return
-                    
-                if decoded.dimming.dimming_range == 0:
-                    self._attr_brightness = int((decoded.dimming.dimming_value / 100.0) * 255.0)
-                elif decoded.dimming.dimming_range == 1:
-                    self._attr_brightness = decoded.dimming.dimming_value
+            if msg.org == 0x07:
+                if decoded.command == 0x01:
+                    if decoded.switching.learn_button != 1:
+                        return
+                        
+                    self._on_state = decoded.switching.switching_command
+                elif decoded.command == 0x02:
+                    if decoded.dimming.learn_button != 1:
+                        return
+                        
+                    if decoded.dimming.dimming_range == 0:
+                        self._attr_brightness = int((decoded.dimming.dimming_value / 100.0) * 255.0)
+                    elif decoded.dimming.dimming_range == 1:
+                        self._attr_brightness = decoded.dimming.dimming_value
 
-                self._on_state = decoded.dimming.switching_command
+                    self._on_state = decoded.dimming.switching_command
+            elif msg.org == 0x05:
+                if msg.body == 0x70:
+                    self._on_state = True
+                else:
+                    self._on_state =False
             else:
                 return
 
