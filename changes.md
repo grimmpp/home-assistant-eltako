@@ -15,6 +15,9 @@
 ## Version 1.0.0 Baseline
 
 ## Backlog
+* Possibility to show stauts changes of acutuators directly. Some actuators like FUD take some time until status message arrives in HA. Behavior shall be possible to be configured centrally in eltako-config.
+* Docs for how to test specific version or branch of this integration.
+* Config generation shall be come more easy.
 * Docs for Configuration Schema
 * Extend device discovery for heating and cooling actors
 * Integrate Eltako FUTH65D ([Wireless thermo clock/hygrostat](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FUTH65D_12-24VUC_30065741-1_gb.pdf))
