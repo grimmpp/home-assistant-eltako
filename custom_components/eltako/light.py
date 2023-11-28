@@ -20,7 +20,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from . import GENERAL_SETTINGS
+
+from .device import *
+from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
 
@@ -33,7 +36,7 @@ async def async_setup_entry(
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
-    entities: list[EltakoSensor] = []
+    entities: list[EltakoEntity] = []
     
     if Platform.LIGHT in config:
         for entity_config in config[Platform.LIGHT]:
@@ -49,7 +52,7 @@ async def async_setup_entry(
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
             except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Light] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
                 if dev_eep in [A5_38_08]:
@@ -57,6 +60,7 @@ async def async_setup_entry(
                 elif dev_eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
+    log_entities_to_be_added(entities, Platform.LIGHT)
     async_add_entities(entities)
 
 
@@ -66,10 +70,10 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
-        super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        self.dev_eep = dev_eep
         self._on_state = False
         self._attr_brightness = 50
         self._sender_id = sender_id
@@ -91,7 +95,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
 
@@ -99,6 +103,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     def is_on(self):
         """If light is on."""
         return self._on_state
+    
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
@@ -111,8 +116,10 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
         
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._on_state = True
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._on_state = True
+            self.schedule_update_ha_state()
+
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
@@ -123,9 +130,11 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
             
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._attr_brightness = 0
-        # self._on_state = False
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._attr_brightness = 0
+            self._on_state = False
+            self.schedule_update_ha_state()
+
 
     def value_changed(self, msg):
         """Update the internal state of this device.
@@ -134,12 +143,17 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         We only care about the 4BS (0xA5).
         """
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            if msg.org == 0x07:
+                decoded = self.dev_eep.decode_message(msg)
+            elif msg.org == 0x05:
+                LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
+                return
+
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Dimmable Light] Could not decode message: %s %s", type(e), str(e))
             return
 
-        if self._dev_eep in [A5_38_08]:
+        if self.dev_eep in [A5_38_08]:
             if decoded.command == 0x01:
                 if decoded.switching.learn_button != 1:
                     return
@@ -160,16 +174,17 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
 
             self.schedule_update_ha_state()
 
+
 class EltakoSwitchableLight(EltakoEntity, LightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
-        super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        self.dev_eep = dev_eep
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
@@ -190,7 +205,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
 
@@ -198,6 +213,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     def is_on(self):
         """If light is on."""
         return self._on_state
+    
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
@@ -208,8 +224,10 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._on_state = True
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._on_state = True
+            self.schedule_update_ha_state()
+        
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
@@ -220,17 +238,19 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
         
-        # Don't set state instead wait for response from actor so that real state of light is displayed.
-        # self._on_state = False
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self._on_state = False
+            self.schedule_update_ha_state()
+
 
     def value_changed(self, msg):
         """Update the internal state of this device."""
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Light] Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [M5_38_08]:
+        if self.dev_eep in [M5_38_08]:
             self._on_state = decoded.state
             self.schedule_update_ha_state()

@@ -15,7 +15,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from . import GENERAL_SETTINGS
+
+from .device import *
+from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
 async def async_setup_entry(
@@ -27,7 +30,7 @@ async def async_setup_entry(
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
-    entities: list[EltakoSensor] = []
+    entities: list[EltakoEntity] = []
     
     if Platform.COVER in config:
         for entity_config in config[Platform.COVER]:
@@ -51,15 +54,16 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
         
+    log_entities_to_be_added(entities, Platform.COVER)
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
         """Initialize the Eltako cover device."""
-        super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        self.dev_eep = dev_eep
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         self._attr_device_class = device_class
@@ -86,7 +90,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
         
@@ -113,6 +117,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         self._attr_is_opening = True
         self._attr_is_closing = False
 
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
+
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
         if self._time_closes is not None:
@@ -130,6 +137,9 @@ class EltakoCover(EltakoEntity, CoverEntity):
         # Don't set state instead wait for response from actor so that real state of light is displayed.
         self._attr_is_closing = True
         self._attr_is_opening = False
+
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
 
     def set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
@@ -170,6 +180,10 @@ class EltakoCover(EltakoEntity, CoverEntity):
             self._attr_is_closing = True
             self._attr_is_opening = False
 
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
+
+
     def stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
         address, _ = self._sender_id
@@ -181,15 +195,19 @@ class EltakoCover(EltakoEntity, CoverEntity):
         self._attr_is_closing = False
         self._attr_is_opening = False
 
+        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+            self.schedule_update_ha_state()
+
+
     def value_changed(self, msg):
         """Update the internal state of the cover."""
         try:
-            decoded = self._dev_eep.decode_message(msg)
+            decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning("Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [G5_3F_7F]:
+        if self.dev_eep in [G5_3F_7F]:
             if decoded.state == 0x02: # down
                 self._attr_is_closing = True
                 self._attr_is_opening = False

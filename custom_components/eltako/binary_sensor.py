@@ -16,13 +16,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .device import EltakoEntity
+from .device import *
 from .const import *
+from .gateway import EltakoGateway
 
 import json
-
-DEPENDENCIES = ["eltakobus"]
-
+import time
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -33,7 +32,7 @@ async def async_setup_entry(
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
     
-    entities: list[EltakoSensor] = []
+    entities: list[EltakoEntity] = []
     
     if Platform.BINARY_SENSOR in config:
         for entity_config in config[Platform.BINARY_SENSOR]:
@@ -46,12 +45,12 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
             except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Binary Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                 continue
             else:
                 entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
-
+    log_entities_to_be_added(entities, Platform.BINARY_SENSOR)
     async_add_entities(entities)
     
 
@@ -65,10 +64,9 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - D5-00-01
     """
 
-    def __init__(self, gateway, dev_id, dev_name, dev_eep, device_class, invert_signal):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
         """Initialize the Eltako binary sensor."""
-        super().__init__(gateway, dev_id, dev_name)
-        self._dev_eep = dev_eep
+        super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
@@ -81,6 +79,16 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     def name(self):
         """Return the default name for the binary sensor."""
         return None
+    
+    @property
+    def last_received_signal(self):
+        """Return timestamp of last received signal."""
+        return self._attr_last_received_signal
+    
+    @property
+    def data(self):
+        """Return telegram data for rocker switch."""
+        return self._attr_data
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -91,7 +99,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
-            model=self._dev_eep.eep_string,
+            model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
         )
 
@@ -109,13 +117,14 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """
         
         try:
-            decoded = self._dev_eep.decode_message(msg)
-            LOGGER.debug("msg : %s", json.dumps(decoded.__dict__))
+            decoded = self.dev_eep.decode_message(msg)
+            # LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
+            # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
-            LOGGER.warning("Could not decode message: %s", str(e))
+            LOGGER.warning("[Binary Sensor] Could not decode message: %s", str(e))
             return
 
-        if self._dev_eep in [F6_02_01, F6_02_02]:
+        if self.dev_eep in [F6_02_01, F6_02_02]:
             pressed_buttons = []
             pressed = decoded.energy_bow == 1
             two_buttons_pressed = decoded.second_action == 1
@@ -148,14 +157,14 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 pass
 
             switch_address = b2a(msg.address, '-').upper()
-
             event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
-            LOGGER.debug("Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             
             self.hass.bus.fire(
                 event_id,
                 {
                     "id": event_id,
+                    "data": int.from_bytes(msg.data, "big"),
                     "switch_address": switch_address,
                     "pressed_buttons": pressed_buttons,
                     "pressed": pressed,
@@ -164,7 +173,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     "rocker_second_action": decoded.rocker_second_action,
                 },
             )
-        elif self._dev_eep in [F6_10_00]:
+            return
+        elif self.dev_eep in [F6_10_00]:
             action = (decoded.movement & 0x70) >> 4
             
             if action == 0x07:
@@ -174,8 +184,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             else:
                 return
 
-            self.schedule_update_ha_state()
-        elif self._dev_eep in [D5_00_01]:
+        elif self.dev_eep in [D5_00_01]:
             # learn button: 0=pressed, 1=not pressed
             if decoded.learn_button == 0:
                 return
@@ -184,14 +193,27 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             if not self.invert_signal:
                 self._attr_is_on = decoded.contact == 0
             else:
-                self._attr_is_on = decoded.contact == 1 
+                self._attr_is_on = decoded.contact == 1
 
-            self.schedule_update_ha_state()
-        elif self._dev_eep in [A5_08_01]:
+        elif self.dev_eep in [A5_08_01]:
             if decoded.learn_button == 1:
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
-            
-            self.schedule_update_ha_state()
+
+        else:
+            return
+        
+        if self.is_on:
+            switch_address = b2a(msg.address, '-').upper()
+            event_id = f"{EVENT_CONTACT_CLOSED}_{switch_address}"
+            self.hass.bus.fire(
+                event_id,
+                {
+                    "id": event_id,
+                    "contact_address": switch_address,
+                },
+            )
+
+        self.schedule_update_ha_state()
 

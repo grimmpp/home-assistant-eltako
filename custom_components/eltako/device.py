@@ -1,22 +1,32 @@
 """Representation of an Eltako device."""
 from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
 from eltakobus.error import ParseError
+from eltakobus.util import AddressExpression
+from eltakobus.eep import EEP
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
+from homeassistant.const import Platform
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
 
-from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER
+from .const import *
+from .gateway import EltakoGateway
 
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
 
-    def __init__(self, gateway, dev_id, dev_name="Device"):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
         self.gateway = gateway
         self.dev_id = dev_id
         self.dev_name = dev_name
+        self.dev_eep = dev_eep
+        self.listen_to_addresses = []
+        self.listen_to_addresses.append(self.dev_id.plain_address())
 
     async def async_added_to_hass(self):
         """Register callbacks."""
@@ -26,7 +36,7 @@ class EltakoEntity(Entity):
             )
         )
 
-    def _message_received_callback(self, msg):
+    def _message_received_callback(self, msg: ESP2Message):
         """Handle incoming messages."""
         
         # Eltako wrapped RPS
@@ -35,7 +45,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
         
@@ -45,7 +55,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
@@ -55,7 +65,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
     
@@ -65,7 +75,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
@@ -75,7 +85,7 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
@@ -85,12 +95,28 @@ class EltakoEntity(Entity):
         except ParseError:
             pass
         else:
-            if msg.address == self.dev_id.plain_address():
+            if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
             return
 
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the device when a message arrives."""
     
-    def send_message(self, msg):
+    def send_message(self, msg: ESP2Message):
+        # TODO: check if gateway is available
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+
+
+def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
+    for e in entities:
+        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep.eep_string}) of platform type {platform} to Home Assistant.")
+
+def get_entity_from_hass(hass: HomeAssistant, domain:Platform, dev_id: AddressExpression) -> bool:
+    entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
+    for platform in entity_platforms:
+        if platform.domain == domain:
+            for entity in platform.entities.values():
+                LOGGER.debug(f"checking entity type: {type(entity)}, dev_eep: {entity.dev_eep.eep_string}, dev_id: {entity.dev_id}")
+                if entity.dev_id == dev_id:
+                    return entity
+    return None

@@ -20,19 +20,19 @@ class TestBinarySensor(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
 
         bs = EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal)
+        bs.hass = HassMock()
         self.assertEqual(bs._attr_is_on, None)     
 
         return bs
 
     def test_binary_sensor_rocker_switch(self):
         bs = self.create_binary_sensor()
-
-        bs.hass = HassMock()
         
         switch_address = b'\xfe\xdb\xb6\x40'
-        msg = RPSMessage(switch_address, data=b'\x70', status=b'\x30')
+        msg = RPSMessage(switch_address, status=b'\x30', data=b'\x70')
+                
         bs.value_changed(msg)
-
+        
         # test if processing was finished and event arrived on bus
         self.assertEqual(len(bs.hass.bus.fired_events), 1)
 
@@ -43,6 +43,7 @@ class TestBinarySensor(unittest.TestCase):
         # check event data
         exprected_data = {
             'id': 'eltako_button_pressed_FE-DB-B6-40', 
+            "data": 112,
             'switch_address': 'FE-DB-B6-40', 
             'pressed_buttons': ['RT'], 
             'pressed': True, 

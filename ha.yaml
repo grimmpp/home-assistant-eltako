@@ -1,4 +1,27 @@
 eltako:
+  general-settings:
+    fast-status-change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
+  gateway:
+    device: fgw14usb            # Supported gateways: gam14, fgw14usb
+  sensor:
+  - id: 05-EE-88-15
+    eep: A5-13-01
+    name: "Weather Station"
+  - id: ff-aa-dd-81
+    eep: A5-04-02
+    name: "Temperature and Humidity Sensor - FLGTF55"
+  - id: ff-66-dd-81
+    eep: A5-04-02
+    name: "Temp. Sensor 2 - FLGTF55"
+  - id: ff-ee-55-81
+    eep: A5-10-06
+    name: "Temp. Sensor and Controller - FUTH A5-10-06"
+  - id: ff-ee-55-92
+    eep: A5-10-12
+    name: "Hygrostat - FUTH"
+  - id: ff-66-dd-80
+    eep: A5-09-0C
+    name: "Air Quality Sensor - FLGTF55"
   light:
   - id: 00-00-00-01
     eep: M5-38-08
@@ -30,6 +53,18 @@ eltako:
     sender:
       id: 00-00-B0-05
       eep: A5-38-08
+  binary_sensor:
+    - id: ff-bb-0a-1b
+      eep: F6-02-01
+    - id: ff-bb-da-04
+      eep: F6-02-01     # rocker switch 1
+    - id: ff-dd-b6-40
+      eep: F6-02-01     # rocker switch 2
+    - id: 00-00-10-08   # address from FTS14EM (wired switch)
+      eep: D5-00-01
+      name: window 8
+      device_class: window  # is displayed as window contact
+      invert-signal: True   # value is inverted and shows closed contact as open.
   cover:
   - id: 00-00-00-06
     eep: G5-3F-7F
@@ -40,30 +75,29 @@ eltako:
     device_class: shutter
     time_closes: 24
     time_opens: 25
-  binary_sensor:
-  - id: FE-DB-B6-40
-    eep: F6-02-01
-    name: Switch FE-DB-B6-40
-    device_class: window / door / smoke / motion / ? # <= NEED TO BE COMPLETED!!!
-    #Sensor Type: Wall Switch /Rocker Switch, Derived from Msg Type: RPSMessage
-  - id: FE-DB-DA-04
-    eep: F6-02-01
-    name: Switch FE-DB-DA-04
-    device_class: window / door / smoke / motion / ? # <= NEED TO BE COMPLETED!!!
-    #Sensor Type: Wall Switch /Rocker Switch, Derived from Msg Type: RPSMessage
-  sensor:
-  - id: 05-1E-83-15
-    eep: A5-??-?? # <= NEED TO BE COMPLETED!!!
-    name: 4 Byte Communication 05-1E-83-15
-    #Sensor Type: Multi-Sensor ? , Derived from Msg Type: Regular4BSMessage
-  - id: 00-00-10-08
-    eep: D5-??-?? # <= NEED TO BE COMPLETED!!!
-    name: 1 Byte Communication 00-00-10-08
-    #Sensor Type: FTS14EM switch, Derived from Msg Type: Regular1BSMessage
-  - id: 00-00-10-01
-    eep: D5-??-?? # <= NEED TO BE COMPLETED!!!
-    name: 1 Byte Communication 00-00-10-01
-    #Sensor Type: FTS14EM switch, Derived from Msg Type: Regular1BSMessage
+  - id: 00-00-00-07
+    eep: G5-3F-7F
+    name: FSB14 - 7
+    sender:
+      id: 00-00-B0-07
+      eep: H5-3F-7F
+    device_class: shutter
+    time_closes: 24
+    time_opens: 25
+  climate:
+  - id: 00-00-00-08
+    eep: A5-10-06
+    name: FAE14SSR - 8
+    sender:
+      id: 00-00-B0-08
+      eep: A5-10-06
+  - id: 00-00-00-09
+    eep: A5-10-06
+    name: FAE14SSR - 9
+    sender:
+      id: 00-00-B0-09
+      eep: A5-10-06
+
 logger:
   default: info
   logs:

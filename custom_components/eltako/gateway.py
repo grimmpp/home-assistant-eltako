@@ -1,12 +1,18 @@
 """Representation of an Eltako gateway."""
+from enum import Enum
 import glob
 import asyncio
 import logging
 from os.path import basename, normpath
 
+import serial
+
 from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
-import serial
+from eltakobus.error import ParseError
+
+from enocean.communicators import SerialCommunicator
+from enocean.protocol.packet import RadioPacket, PARSE_RESULT
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
@@ -15,6 +21,21 @@ from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER, MANUFACT
 
 DEFAULT_NAME = "Eltako gateway"
 
+class GatewayDeviceTypes(str, Enum):
+    GatewayEltakoFAM14 = 'fam14'
+    GatewayEltakoFGW14USB = 'fgw14usb'
+    EnOceanUSB300 = 'enocean-usb300' # not yet supported
+
+
+def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
+    #TODO: implement converter
+    raise Exception("Message conversion from ESP2 to ESP3 NOT YET IMPLEMENTED.")
+
+def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
+    #TODO: implement converter
+    raise Exception("Message conversion from ESP3 to ESP2 NOT YET IMPLEMENTED.")
+
+    
 
 class EltakoGateway:
     """Representation of an Eltako gateway.
@@ -111,9 +132,73 @@ class EltakoGateway:
         is an incoming message.
         """
 
+        LOGGER.debug("Received message: %s", message)
         if isinstance(message, ESP2Message):
-            LOGGER.debug("Received message: %s", message)
             dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
+            
+    @property
+    def unique_id(self):
+        """Return the unique id of the gateway."""
+        return self.serial_path
+    
+
+class EnoceanUSB300Gateway:
+    """Representation of Enocean USB300 transmitter.
+
+    The dongle is responsible for receiving the ENOcean frames,
+    creating devices if needed, and dispatching messages to platforms.
+    """
+
+    def __init__(self, hass, serial_path, config_entry):
+        """Initialize the EnOcean dongle."""
+
+        self._communicator = SerialCommunicator(
+            port=serial_path, callback=self.callback
+        )
+        self.serial_path = serial_path
+        self.identifier = basename(normpath(serial_path))
+        self.hass = hass
+        self.dispatcher_disconnect_handle = None
+        
+        device_registry = dr.async_get(hass)
+        device_registry.async_get_or_create(
+            config_entry_id=config_entry.entry_id,
+            identifiers={(DOMAIN, self.unique_id)},
+            manufacturer=MANUFACTURER,
+            name=DEFAULT_NAME,
+        )
+
+    async def async_setup(self):
+        """Finish the setup of the bridge and supported platforms."""
+        self._communicator.start()
+        self.dispatcher_disconnect_handle = async_dispatcher_connect(
+            self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
+        )
+
+    def unload(self):
+        """Disconnect callbacks established at init time."""
+        if self.dispatcher_disconnect_handle:
+            self.dispatcher_disconnect_handle()
+            self.dispatcher_disconnect_handle = None
+
+    def _send_message_callback(self, eltako_command):
+        """Send a command through the EnOcean dongle."""
+        enocean_command = convert_esp2_to_esp3_message(eltako_command)
+        if enocean_command is not None:
+            self._communicator.send(enocean_command)
+
+    def callback(self, packet):
+        """Handle EnOcean device's callback.
+
+        This is the callback function called by python-enocan whenever there
+        is an incoming packet.
+        """
+
+        if isinstance(packet, RadioPacket):
+            LOGGER.debug("Received radio packet: %s", packet)
+            eltako_message = convert_esp3_to_esp2_message(packet)
+            if eltako_message is not None:
+                dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, eltako_message)
             
     @property
     def unique_id(self):
