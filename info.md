@@ -49,7 +49,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * F6-02-01 (Rocker switch)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
-* [Climate](./docs/heating-and-cooling/readme.md) (**Experimental** - telegram of teach-in button seems to be wrong!)
+* [Climate](./docs/heating-and-cooling/readme.md) (**Experimental** - Not properly test. Interaction and synchronization of temperature controllers may change.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
  
 **Gateway**
