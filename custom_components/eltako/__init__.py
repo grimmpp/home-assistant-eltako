@@ -38,7 +38,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def get_home_assistant_config(hass: HomeAssistant) -> dict:
+async def async_get_home_assistant_config(hass: HomeAssistant) -> dict:
     _conf = await async_integration_yaml_config(hass, DOMAIN)
     if not _conf or DOMAIN not in _conf:
         LOGGER.warning("No `eltako:` key found in configuration.yaml.")
@@ -52,7 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     
     # Read the config
-    config = get_home_assistant_config(hass)
+    config = await async_get_home_assistant_config(hass)
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")
