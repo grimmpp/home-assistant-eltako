@@ -53,7 +53,7 @@ async def async_get_gateway_config(hass: HomeAssistant) -> dict:
 
 async def async_get_gateway_config_serial_port(hass: HomeAssistant) -> dict:
     gateway_config = await async_get_gateway_config(hass)
-    if gateway_config is not None:
+    if gateway_config is not None and CONF_SERIAL_PATH in gateway_config:
         return gateway_config[CONF_SERIAL_PATH]
     return None
 
