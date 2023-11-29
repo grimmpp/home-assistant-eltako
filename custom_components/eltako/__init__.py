@@ -9,7 +9,7 @@ from homeassistant.helpers.reload import async_integration_yaml_config, async_ge
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
-from .configuration_helpers import async_get_home_assistant_config
+from .configuration_helpers import *
 from .gateway import EltakoGateway, GatewayDeviceTypes, EnoceanUSB300Gateway
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -28,12 +28,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"config: {config}\n")
 
     # Initialise the gateway
-    if CONF_GATEWAY in config:
-        if len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
-            gateway_device = config[CONF_GATEWAY][0][CONF_DEVICE]
-
-        if len(config[CONF_GATEWAY]) > 1:
-            LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
+    gateway_config = await async_get_gateway_config(hass)
+    if gateway_config:
+        gateway_device = gateway_config[CONF_DEVICE]
+        # if len(config[CONF_GATEWAY]) > 1:
+        #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
     else:
         gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
         LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
