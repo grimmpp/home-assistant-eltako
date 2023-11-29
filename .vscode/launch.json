@@ -21,6 +21,7 @@
             "purpose": ["debug-test"],
             "console": "integratedTerminal",
             "env": {"PYTHONPATH": "${workspaceRoot}"},
+            // "cwd": "${workspaceRoot}/custom_component/eltako",
             "justMyCode": false
           }
     ]

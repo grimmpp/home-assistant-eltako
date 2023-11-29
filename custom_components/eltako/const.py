@@ -1,5 +1,5 @@
 """Constants for the Eltako integration."""
-from enum import StrEnum
+from strenum import StrEnum
 import logging
 
 from typing import Final
