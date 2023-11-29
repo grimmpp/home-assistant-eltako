@@ -43,9 +43,11 @@ def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
 
 async def async_get_gateway_config(hass: HomeAssistant) -> dict:
     config = await async_get_home_assistant_config(hass)
-    LOGGER.debug(f"config: {config}")
+    LOGGER.debug(f"config: {config} \n\n {type(config[CONF_GATEWAY])}")
     if CONF_GATEWAY in config:
-        if len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
+        if type(config[CONF_GATEWAY]) == dict and CONF_DEVICE in config[CONF_GATEWAY]:
+            return config[CONF_GATEWAY]
+        elif len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
             return config[CONF_GATEWAY][0]
     return None
 
