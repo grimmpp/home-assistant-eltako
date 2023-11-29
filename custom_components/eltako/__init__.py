@@ -38,19 +38,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+async def get_home_assistant_config(hass: HomeAssistant) -> dict:
+    _conf = await async_integration_yaml_config(hass, DOMAIN)
+    if not _conf or DOMAIN not in _conf:
+        LOGGER.warning("No `eltako:` key found in configuration.yaml.")
+        # generate defaults
+        return CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
+    else:
+        return _conf[DOMAIN]
+
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     
     # Read the config
-    _conf = await async_integration_yaml_config(hass, DOMAIN)
-    if not _conf or DOMAIN not in _conf:
-        LOGGER.warning("No `eltako:` key found in configuration.yaml.")
-        # generate defaults
-        config = CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
-    else:
-        config = _conf[DOMAIN]
-
+    config = get_home_assistant_config(hass)
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")
@@ -78,7 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if usb_gateway is None:
         LOGGER.error(f"[Eltako Setup] USB device {gateway_device} is not supported.")
         return False
-
+    
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = usb_gateway
     
