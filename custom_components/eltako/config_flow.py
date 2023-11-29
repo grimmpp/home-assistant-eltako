@@ -24,7 +24,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle an Eltako config flow start."""
         serial_port_from_config = await async_get_gateway_config_serial_port(self.hass)
         if serial_port_from_config is not None:
-            return serial_port_from_config
+            return self.create_eltako_entry({
+                CONF_DEVICE: serial_port_from_config
+                })
 
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
