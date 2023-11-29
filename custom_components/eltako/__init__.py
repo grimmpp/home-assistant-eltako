@@ -97,8 +97,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 def _get_general_settings(hass) -> dict:
     settings = DEFAULT_GENERAL_SETTINGS
-    if CONF_GERNERAL_SETTINGS in hass.data.get[DATA_ELTAKO][ELTAKO_CONFIG]:
-        settings = hass.data.get[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS][0]
+    if CONF_GERNERAL_SETTINGS in hass.data[DATA_ELTAKO][ELTAKO_CONFIG]:
+        settings = hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS][0]
     
     LOGGER.debug(f"General Settings: {settings}")
 
