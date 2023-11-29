@@ -19,10 +19,7 @@ from homeassistant.const import CONF_DEVICE
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 
-<<<<<<< HEAD
 from . import get_home_assistant_config
-=======
->>>>>>> b457c51678adc211c65795b12f5ebb21055ad717
 from .const import *
 
 DEFAULT_NAME = "Eltako gateway"
