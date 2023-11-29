@@ -20,8 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from . import GENERAL_SETTINGS
-
+from .configuration_helpers import get_general_settings_from_configuration
 from .device import *
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
@@ -48,6 +47,8 @@ async def async_setup_entry(
             sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
             sender_eep_string = sender_config.get(CONF_EEP)
 
+            general_settings = get_general_settings_from_configuration(hass)
+
             try:
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
@@ -56,9 +57,9 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(EltakoDimmableLight(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
                 elif dev_eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(EltakoSwitchableLight(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     log_entities_to_be_added(entities, Platform.LIGHT)
     async_add_entities(entities)
@@ -70,7 +71,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -80,6 +81,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
+        self.general_settings = general_settings
 
     @property
     def name(self):
@@ -116,7 +118,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
         
-        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._on_state = True
             self.schedule_update_ha_state()
 
@@ -130,7 +132,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
             
-        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_brightness = 0
             self._on_state = False
             self.schedule_update_ha_state()
@@ -181,7 +183,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -190,6 +192,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
+        self.general_settings = general_settings
 
     @property
     def name(self):
@@ -224,7 +227,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
-        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._on_state = True
             self.schedule_update_ha_state()
         
@@ -238,7 +241,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
         
-        if GENERAL_SETTINGS[CONF_FAST_STATUS_CHANGE]:
+        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._on_state = False
             self.schedule_update_ha_state()
 

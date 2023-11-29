@@ -1,6 +1,6 @@
 eltako:
-  general-settings:
-    fast-status-change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
+  general_settings:
+    fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
   gateway:
     device: fgw14usb            # Supported gateways: gam14, fgw14usb
   sensor:
@@ -64,7 +64,7 @@ eltako:
       eep: D5-00-01
       name: window 8
       device_class: window  # is displayed as window contact
-      invert-signal: True   # value is inverted and shows closed contact as open.
+      invert_signal: True   # value is inverted and shows closed contact as open.
   cover:
   - id: 00-00-00-06
     eep: G5-3F-7F

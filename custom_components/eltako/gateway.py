@@ -14,10 +14,12 @@ from eltakobus.error import ParseError
 from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket, PARSE_RESULT
 
+from homeassistant.core import HomeAssistant
+from homeassistant.const import CONF_DEVICE
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 
-from .const import SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, LOGGER, MANUFACTURER, DOMAIN
+from .const import *
 
 DEFAULT_NAME = "Eltako gateway"
 
@@ -35,7 +37,6 @@ def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
     #TODO: implement converter
     raise Exception("Message conversion from ESP3 to ESP2 NOT YET IMPLEMENTED.")
 
-    
 
 class EltakoGateway:
     """Representation of an Eltako gateway.
