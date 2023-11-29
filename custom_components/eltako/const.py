@@ -26,8 +26,8 @@ CONF_EEP: Final = "eep"
 CONF_SWITCH_BUTTON: Final = "switch-button"
 CONF_SENDER: Final = "sender"
 CONF_SENSOR: Final = "sensor"
-CONF_GERNERAL_SETTINGS: Final = "general-settings"
-CONF_FAST_STATUS_CHANGE: Final = "fast-status-change"
+CONF_GERNERAL_SETTINGS: Final = "general_settings"
+CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
 CONF_GATEWAY: Final = "gateway"
 CONF_SERIAL_PATH: Final = "serial_path"
 CONF_MAX_TARGET_TEMPERATURE: Final = "max_target_temperature"
@@ -38,8 +38,8 @@ CONF_ID_REGEX: Final = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-
 CONF_METER_TARIFFS: Final = "meter_tariffs"
 CONF_TIME_CLOSES: Final = "time_closes"
 CONF_TIME_OPENS: Final = "time_opens"
-CONF_INVERT_SIGNAL: Final = "invert-signal"
-CONF_VOC_TYPE_INDEXES: Final = "voc-type-indexes"
+CONF_INVERT_SIGNAL: Final = "invert_signal"
+CONF_VOC_TYPE_INDEXES: Final = "voc_type_indexes"
 
 class LANGUAGE_ABBREVIATIONS(StrEnum):
     LANG_ENGLISH = 'en'

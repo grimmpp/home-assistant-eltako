@@ -1,5 +1,9 @@
 # Changes and Feature List
 
+## Version 1.1.2
+* Docs for configuration added
+* USB port for serial communication can be configured in gateway section.
+
 ## version 1.1.1 - BugFix
 * Problems with general-settings in configuration file.
 

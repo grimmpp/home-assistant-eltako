@@ -11,5 +11,7 @@ If you want to change the gateway you need to add the following part into the el
 eltako:
   gateway:
     device: fgw14usb    # allowed values: fam14, fgw14usb, enocean-usb300
+    # serial path is optional: Can be configured manually during the initial setup.
+    serial_path: '/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A10MAMIG-if00-port0'
  ...
 ```
