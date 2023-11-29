@@ -33,7 +33,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-GENERAL_SETTINGS = {}
+GENERAL_SETTINGS = DEFAULT_GENERAL_SETTINGS
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
@@ -84,7 +84,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = usb_gateway
     global GENERAL_SETTINGS 
-    GENERAL_SETTINGS = config[CONF_GERNERAL_SETTINGS][0]
+    GENERAL_SETTINGS = _get_general_settings(hass)
+    
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
@@ -94,6 +95,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     return True
 
+def _get_general_settings(hass) -> dict:
+    settings = DEFAULT_GENERAL_SETTINGS
+    if CONF_GERNERAL_SETTINGS in hass.data[DATA_ELTAKO][ELTAKO_CONFIG]:
+        settings = hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS][0]
+    
+    LOGGER.debug(f"General Settings: {settings}")
+
+    return settings
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""

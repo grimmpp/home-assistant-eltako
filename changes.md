@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## version 1.1.1 - BugFix
+* Problems with general-settings in configuration file.
+
 ## version 1.1.0 - Heating and Cooling
 * Change file introduced
 * **Climate Panel introduced** incl. support for actors like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14 and EEP A5-10-06 as well as control panels like FTAF55ED.

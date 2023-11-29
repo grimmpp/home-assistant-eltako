@@ -1,5 +1,5 @@
 """Constants for the Eltako integration."""
-from enum import StrEnum
+from strenum import StrEnum
 import logging
 
 from typing import Final
@@ -54,3 +54,7 @@ PLATFORMS: Final = [
     Platform.CLIMATE,
     Platform.BUTTON,
 ]
+
+DEFAULT_GENERAL_SETTINGS = {
+    CONF_FAST_STATUS_CHANGE: False
+}
