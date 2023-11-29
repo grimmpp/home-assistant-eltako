@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if usb_gateway is None:
         LOGGER.error(f"[Eltako Setup] USB device {gateway_device} is not supported.")
         return False
-
+    
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = usb_gateway
     

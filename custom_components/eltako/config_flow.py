@@ -7,6 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 
 from . import gateway
+from .gateway import get_gateway_config_serial_port
 from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
 
 
@@ -21,6 +22,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
+        serial_port_from_config = get_gateway_config_serial_port(self.hass)
+        if serial_port_from_config is not None:
+            return serial_port_from_config
+
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
