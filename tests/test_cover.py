@@ -4,6 +4,7 @@ from homeassistant.helpers.entity import Entity
 from custom_components.eltako.cover import EltakoCover
 from custom_components.eltako.device import EltakoEntity
 from eltakobus import *
+from custom_components.eltako.global_settings import DEFAULT_GENERAL_SETTINGS
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -15,6 +16,7 @@ class TestCover(unittest.TestCase):
         self.last_sent_command = msg
 
     def create_cover(self) -> EltakoCover:
+        general_settings = DEFAULT_GENERAL_SETTINGS
         gateway = None
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
@@ -29,7 +31,7 @@ class TestCover(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        ec = EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens)
+        ec = EltakoCover(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens)
         ec.send_message = self.mock_send_message
 
         ec._attr_is_closing = False

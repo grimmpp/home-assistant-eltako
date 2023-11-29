@@ -55,6 +55,3 @@ PLATFORMS: Final = [
     Platform.BUTTON,
 ]
 
-DEFAULT_GENERAL_SETTINGS = {
-    CONF_FAST_STATUS_CHANGE: False
-}
