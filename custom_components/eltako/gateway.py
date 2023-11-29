@@ -43,11 +43,7 @@ def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
 
 
 def get_gateway_config(hass: HomeAssistant) -> dict:
-<<<<<<< HEAD
     config = get_home_assistant_config(hass)
-=======
-    config = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
->>>>>>> b457c51678adc211c65795b12f5ebb21055ad717
     if CONF_GATEWAY in config:
         if len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
             return config[CONF_GATEWAY][0]
