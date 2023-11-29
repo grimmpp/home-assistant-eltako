@@ -9,43 +9,13 @@ from homeassistant.helpers.reload import async_integration_yaml_config, async_ge
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
+from .configuration_helpers import async_get_home_assistant_config
 from .gateway import EltakoGateway, GatewayDeviceTypes, EnoceanUSB300Gateway
-from .schema import *
-
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.All(
-            vol.Schema(
-                {
-                    **GeneralSettings.platform_node(),
-                    **GatewaySchema.platform_node(),
-                    **BinarySensorSchema.platform_node(),
-                    **LightSchema.platform_node(),
-                    **SwitchSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **CoverSchema.platform_node(),
-                    **ClimateSchema.platform_node(),
-                }
-            ),
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
     return True
 
-
-async def async_get_home_assistant_config(hass: HomeAssistant) -> dict:
-    _conf = await async_integration_yaml_config(hass, DOMAIN)
-    if not _conf or DOMAIN not in _conf:
-        LOGGER.warning("No `eltako:` key found in configuration.yaml.")
-        # generate defaults
-        return CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
-    else:
-        return _conf[DOMAIN]
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""

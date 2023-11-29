@@ -7,7 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 
 from . import gateway
-from .gateway import async_get_gateway_config_serial_port
+from .configuration_helpers import async_get_gateway_config_serial_port
 from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
 
 

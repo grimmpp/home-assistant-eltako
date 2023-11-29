@@ -39,20 +39,6 @@ def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
     raise Exception("Message conversion from ESP3 to ESP2 NOT YET IMPLEMENTED.")
 
 
-async def async_get_gateway_config(hass: HomeAssistant) -> dict:
-    config = await async_get_home_assistant_config(hass)
-    if CONF_GATEWAY in config:
-        if len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
-            return config[CONF_GATEWAY][0]
-    return None
-
-async def async_get_gateway_config_serial_port(hass: HomeAssistant) -> dict:
-    gateway_config = await async_get_gateway_config(hass)
-    if gateway_config is not None:
-        return gateway_config[CONF_SERIAL_PATH]
-    return None
-
-
 class EltakoGateway:
     """Representation of an Eltako gateway.
 
