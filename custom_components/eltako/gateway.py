@@ -26,6 +26,7 @@ DEFAULT_NAME = "Eltako gateway"
 class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
     GatewayEltakoFGW14USB = 'fgw14usb'
+    GatewayEltakoFAMUSB = 'fam-usb' # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
     EnOceanUSB300 = 'enocean-usb300' # not yet supported
 
 
@@ -45,12 +46,12 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass, serial_path, config_entry):
+    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, config_entry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
-        self._bus = RS485SerialInterface(serial_path)
+        self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
         self.serial_path = serial_path
         self.identifier = basename(normpath(serial_path))
         self.hass = hass

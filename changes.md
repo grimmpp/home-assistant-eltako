@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.1.3
+* Added support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
+
 ## Version 1.1.2
 * Docs for configuration added
 * USB port for serial communication can be configured in gateway section.
