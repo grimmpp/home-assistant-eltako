@@ -33,7 +33,7 @@ eltako:
   # optional section 'gateways'
   # currently it makes no differences which devices is configured because all supported devices behave the same. In future ESP3 protocol shall be supported. 
   gateway:
-    device: fgw14usb            # Supported gateways: gam14, fgw14usb
+    device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
     serial_path: "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A10MAMIG-if00-port0"   # example value
 
   # binary sensors can be switches, door or window contacts, ...

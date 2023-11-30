@@ -26,8 +26,8 @@ DEFAULT_NAME = "Eltako gateway"
 class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
     GatewayEltakoFGW14USB = 'fgw14usb'
-    GatewayEltakoFAMUSB = 'fam-usb' # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
-    EnOceanUSB300 = 'enocean-usb300' # not yet supported
+    GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
+    EnOceanUSB300 = 'enocean-usb300'    # not yet supported
 
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
