@@ -52,10 +52,10 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * [Climate](./docs/heating-and-cooling/readme.md) (**Experimental** - Not properly test. Interaction and synchronization of temperature controllers may change.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
  
-**Gateway**
-  * Eltako FAM14 and Eltako FGW14-USB (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
-  * Eltako FAM-USB (**NOT YET IMPLEMENTED - read-only mode already supported**) (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) **Important**: FAM14 is adding a base address to all telegrams. You need to add this base address on every actuator id in your configuration
-  * EnOcean USB300 (**NOT YET IMPLEMENTED**) (based on ESP3 and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
+[**Gateway**](./docs/gateways/readme.md)
+  * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
+  * **Eltako FAM-USB** (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
+  * **EnOcean USB300** (**NOT YET IMPLEMENTED**) (based on ESP3 and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
     * Library is integrated and USB300 can be configured. Message conversion from ESP3 to ESp2 and back is not yet implemented. This means this dongle is not yet working.
 
 
