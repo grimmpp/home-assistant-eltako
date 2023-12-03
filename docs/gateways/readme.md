@@ -74,7 +74,7 @@ eltako:
     device: fam14
 
   light:
-  - id: FF-AA-00-01         # internal address from PCT14
+  - id: 00-00-00-01         # internal address from PCT14
     eep: M5-38-08
     name: FSR14_4x - 1
     sender:
