@@ -353,6 +353,14 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Received update from thermostat: {self.thermostat_id}")
                 self.change_temperature_values(msg)
 
+        if self.cooling_switch_id:
+            try:
+                cooling_switch_address, _ = AddressExpression.parse(self.cooling_switch_id)
+                if msg.address == cooling_switch_address:
+                    LOGGER.debug(f"[climate {self.dev_id}] Received update from cooling switch: {cooling_switch_address}")
+            except Exception as e:
+                LOGGER.error(e)
+
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
             if  msg.org == 0x07:
