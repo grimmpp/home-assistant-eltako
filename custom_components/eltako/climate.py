@@ -151,13 +151,20 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if thermostat_sender_id:
             self.listen_to_addresses.append(thermostat_sender_id)
 
-        self.cooling_switch_id = cooling_switch_id
+        self.cooling_switch_id_string = cooling_switch_id
         self.cooling_switch_button = cooling_switch_button
         self.cooling_switch_last_signal_timestamp = 0
 
+        if cooling_switch_id is not None:
+            try:
+                self.cooling_switch_id = AddressExpression.parse(self.cooling_switch_id_string)
+                self.listen_to_addresses.append(self.cooling_switch_id)
+            except Exception as e:
+                LOGGER.error(e)
+
         self._cooling_sender_id = cooling_sender_id
         
-        if self.cooling_switch_id:
+        if self.cooling_switch_id_string:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
@@ -178,7 +185,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency}s for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
-                if self.cooling_switch_id:
+                if self.cooling_switch_id_string:
                     await self._async_check_if_cooling_is_activated()
                     
                     await self._async_send_mode_cooling()
@@ -316,7 +323,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def _get_mode(self) -> HVACMode:
 
         # if no cooling switch is define return mode from config
-        if self.cooling_switch_id is None:
+        if self.cooling_switch_id_string is None:
             return self._hvac_mode_from_heating 
 
         # does cooling signal stays within the time range?
@@ -354,9 +361,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat_id}")
                 self.change_temperature_values(msg)
 
-        if self.cooling_switch_id:
+        if self.cooling_switch_id_string:
             try:
-                cooling_switch_address, _ = AddressExpression.parse(self.cooling_switch_id)
+                cooling_switch_address, _ = AddressExpression.parse(self.cooling_switch_id_string)
                 if msg.address == cooling_switch_address:
                     LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {cooling_switch_address}")
             except Exception as e:
