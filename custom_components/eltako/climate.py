@@ -112,7 +112,7 @@ async def async_setup_entry(
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
-    _update_frequency = 50 # sec
+    _update_frequency = 55 # sec
     _actuator_mode: A5_10_06.Heater_Mode = None
     _hvac_mode_from_heating = HVACMode.HEAT
 
@@ -151,6 +151,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if thermostat_sender_id:
             self.listen_to_addresses.append(thermostat_sender_id)
 
+        self.cooling_switch_id = None
         self.cooling_switch_id_string = cooling_switch_id
         self.cooling_switch_button = cooling_switch_button
         self.cooling_switch_last_signal_timestamp = 0
@@ -361,13 +362,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat_id}")
                 self.change_temperature_values(msg)
 
-        if self.cooling_switch_id_string:
-            try:
-                cooling_switch_address, _ = AddressExpression.parse(self.cooling_switch_id_string)
-                if msg.address == cooling_switch_address:
-                    LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {cooling_switch_address}")
-            except Exception as e:
-                LOGGER.error(e)
+        if self.cooling_switch_id:
+            cooling_switch_address, _ = self.cooling_switch_id
+            if msg.address == cooling_switch_address:
+                LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {cooling_switch_address}")
+                LOGGER.debug(f"NOT YET IMPLEMENTED");
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
