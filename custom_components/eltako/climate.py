@@ -343,15 +343,17 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def value_changed(self, msg: ESP2Message) -> None:
         """Update the internal state of this device."""
 
-        LOGGER.debug(f"[climate {self.dev_id}] Received msg: {type(msg)} - {msg}")
+        LOGGER.debug(f"[climate {self.dev_id}] Received msg: {type(msg)} - {msg} - {msg.address}")
 
         sender_address, _ = self._sender_id
+        LOGGER.debug(f"[climate {self.dev_id}] sender id: {sender_address}")
         if msg.address == sender_address:
             LOGGER.debug(f"[climate {self.dev_id}] Received update from actuator: {self._sender_id}")
             self.change_temperature_values(msg)
 
         if self.thermostat_id:
             thermostat_address, _ = self.thermostat_id
+            LOGGER.debug(f"[climate {self.dev_id}] thermostat id: {thermostat_address}")
             if msg.address == thermostat_address:
                 LOGGER.debug(f"[climate {self.dev_id}] Received update from thermostat: {self.thermostat_id}")
                 self.change_temperature_values(msg)
@@ -359,6 +361,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self.cooling_switch_id:
             try:
                 cooling_switch_address, _ = AddressExpression.parse(self.cooling_switch_id)
+                LOGGER.debug(f"[climate {self.dev_id}] cooling switch id: {cooling_switch_address}")
                 if msg.address == cooling_switch_address:
                     LOGGER.debug(f"[climate {self.dev_id}] Received update from cooling switch: {cooling_switch_address}")
             except Exception as e:
