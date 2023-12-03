@@ -1,6 +1,7 @@
 """Support for Eltako buttons."""
 from __future__ import annotations
 
+import asyncio
 from enum import Enum
 
 from collections.abc import Callable
@@ -119,6 +120,9 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         # msg = TeachIn4BSMessage2(controller_address, status, data, True)
         # msg = Regular4BSMessage(address=b'\xFF\xBC\xC8\x0C', data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
         msg = Regular4BSMessage(address=controller_address, data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
+        self.send_message(msg)
+        await asyncio.sleep(0.4)
+        msg = Regular4BSMessage(address=controller_address, data=b'\x00\xbc\x00\x0e', outgoing=True, status=0x80)
         self.send_message(msg)
 
     @property
