@@ -345,10 +345,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
         LOGGER.debug(f"[climate {self.dev_id}] Received msg: {type(msg)} - {msg} - {msg.address}")
 
-        sender_address, _ = self._sender_id
-        LOGGER.debug(f"[climate {self.dev_id}] sender id: {sender_address}")
-        if msg.address == sender_address:
-            LOGGER.debug(f"[climate {self.dev_id}] Received update from actuator: {self._sender_id}")
+        climate_address, _ = self.dev_id
+        LOGGER.debug(f"[climate {self.dev_id}] climate id: {climate_address}")
+        if msg.address == climate_address:
+            LOGGER.debug(f"[climate {self.dev_id}] Received update from actuator: {self.dev_id}")
             self.change_temperature_values(msg)
 
         if self.thermostat_id:
