@@ -109,21 +109,13 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         self.sender_id = sender_id
 
     async def async_press(self) -> None:
-        """Handle the button press."""
+        """
+        Handle the button press.
+        Send teach-in command for A5-10-06 e.g. FUTH
+        """
         controller_address, _ = self.sender_id
-        data=b'\x40\x30\x0D\x87'        # A5-10-06
-        # data = b'\x40\x90\x0D\x80'    # A5-10-12
-        data=b'\x40\x30\x0d\x85'
-        # data=b'@0\r\x85'
-        # controller_address=b'\xff\xf4\xc2\x98'
-        status = 0x80
-        # msg = TeachIn4BSMessage2(controller_address, status, data, True)
-        # msg = Regular4BSMessage(address=b'\xFF\xBC\xC8\x0C', data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
         msg = Regular4BSMessage(address=controller_address, data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
         self.send_message(msg)
-        # await asyncio.sleep(0.4)
-        # msg = Regular4BSMessage(address=controller_address, data=b'\x00\xbc\x00\x0e', outgoing=True, status=0x80)
-        # self.send_message(msg)
 
     @property
     def device_info(self) -> DeviceInfo:

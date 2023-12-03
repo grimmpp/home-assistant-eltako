@@ -52,8 +52,16 @@ async def async_setup_entry(
             sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
             sender_eep_string = sender_config.get(CONF_EEP)
 
+            thermostat_sender_id = None
+            thermostat_sender_eep_string = None
+            thermostat_sender_eep = None
+            if CONF_ROOM_THERMOSTAT in entity_config.keys():
+                thermostat_sender_id = AddressExpression.parse(entity_config.get(CONF_ROOM_THERMOSTAT).get(CONF_ID))
+                thermostat_sender_eep_string = entity_config.get(CONF_ROOM_THERMOSTAT).get(CONF_EEP)
+
+
             cooling_switch_id = None
-            switch_button = None
+            cooling_switch_button = None
             cooling_sender_id = None
             cooling_sender_eep_string = None
             cooling_sender_eep = None
@@ -61,7 +69,7 @@ async def async_setup_entry(
                 LOGGER.debug("[Climate] Read cooling switch config")
                 # cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
                 cooling_switch_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID)
-                switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
+                cooling_switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
                     LOGGER.debug("[Climate] Read cooling sender config")
@@ -71,6 +79,7 @@ async def async_setup_entry(
             try:
                 dev_eep = EEP.find(eep_string)
                 sender_eep = EEP.find(sender_eep_string)
+                if thermostat_sender_eep_string: thermostat_sender_eep = EEP.find(thermostat_sender_eep_string)
                 if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
             except Exception as e:
                 LOGGER.warning("[Climate] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
@@ -79,19 +88,11 @@ async def async_setup_entry(
             else:
                 if dev_eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
-                    # cooling_switch_entity = None
-                    # if cooling_switch_id:
-                    #     cooling_switch_entity = get_entity_from_hass(hass, Platform.BINARY_SENSOR, cooling_switch_id)
-                    #     if cooling_switch_entity is None:
-                    #         raise Exception(f"Specified cooling switch id: {cooling_switch_id} not found for climate device id: {dev_id}, name: {dev_name}")
-                    #     e = cooling_switch_entity
-                    #     LOGGER.debug(f"[Climate] Found cooling switch {e}, dev_id: {e.dev_id}, dev_eep: {e.dev_eep} for climate dev_id: {dev_id} name: {dev_name}")
-
                     climate_entity = ClimateController(gateway, dev_id, dev_name, dev_eep, 
                                                        sender_id, sender_eep, 
                                                        temp_unit, min_temp, max_temp, 
-                                                       cooling_switch_id, switch_button,
-                                                       # cooling_switch_entity, switch_button, 
+                                                       thermostat_sender_id, thermostat_sender_eep,
+                                                       cooling_switch_id, cooling_switch_button,
                                                        cooling_sender_id, cooling_sender_eep)
                     entities.append(climate_entity)
 
@@ -134,7 +135,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
-                 # cooling_switch: EltakoBinarySensor=None, cooling_switch_button:int=0,
+                 thermostat_sender_id: AddressExpression=None, thermostat_eep: EEP=None,
                  cooling_switch_id:str=None, cooling_switch_button:int=0,
                  cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
@@ -144,6 +145,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
+
+        self.thermostat_id = thermostat_sender_id
+        self.thermostat_eep = thermostat_eep
+        if thermostat_sender_id:
+            self.listen_to_addresses.append(thermostat_sender_id)
 
         self.cooling_switch_id = cooling_switch_id
         self.cooling_switch_button = cooling_switch_button
@@ -336,6 +342,14 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def value_changed(self, msg: ESP2Message) -> None:
         """Update the internal state of this device."""
+        sender_address, _ = self._sender_id
+        if msg.address == sender_address:
+            LOGGER.debug(f"[climate {self.dev_id}] Received update from actuator: {self._sender_id}")
+
+        thermostat_address, _ = self.thermostat_id
+        if msg.address == thermostat_address:
+            LOGGER.debug(f"[climate {self.dev_id}] Received update from thermostat: {self.thermostat_id}")
+
         try:
             if  msg.org == 0x07:
                 decoded = self.dev_eep.decode_message(msg)
