@@ -345,11 +345,15 @@ class ClimateController(EltakoEntity, ClimateEntity):
         sender_address, _ = self._sender_id
         if msg.address == sender_address:
             LOGGER.debug(f"[climate {self.dev_id}] Received update from actuator: {self._sender_id}")
+            self.change_temperature_values(msg)
 
-        thermostat_address, _ = self.thermostat_id
-        if msg.address == thermostat_address:
-            LOGGER.debug(f"[climate {self.dev_id}] Received update from thermostat: {self.thermostat_id}")
+        if self.thermostat_id:
+            thermostat_address, _ = self.thermostat_id
+            if msg.address == thermostat_address:
+                LOGGER.debug(f"[climate {self.dev_id}] Received update from thermostat: {self.thermostat_id}")
+                self.change_temperature_values(msg)
 
+    def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
             if  msg.org == 0x07:
                 decoded = self.dev_eep.decode_message(msg)
