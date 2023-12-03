@@ -342,6 +342,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     def value_changed(self, msg: ESP2Message) -> None:
         """Update the internal state of this device."""
+
+        LOGGER.debug(f"[climate {self.dev_id}] Received msg: {type(msg)} - {msg}")
+
         sender_address, _ = self._sender_id
         if msg.address == sender_address:
             LOGGER.debug(f"[climate {self.dev_id}] Received update from actuator: {self._sender_id}")
