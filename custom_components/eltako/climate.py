@@ -183,16 +183,18 @@ class ClimateController(EltakoEntity, ClimateEntity):
     async def _wrapped_update(self, *args) -> None:
         while True:    
             try:
-                LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency}s for next status update.")
+                # LOGGER.debug(f"[climate {self.dev_id}] Wait {self._update_frequency}s for next status update.")
                 await asyncio.sleep(self._update_frequency)
                 
-                if self.cooling_switch_id_string:
+                # fakes physical switch and sends frequently in cooling state.
+                if self.cooling_switch_id:
                     await self._async_check_if_cooling_is_activated()
                     
                     await self._async_send_mode_cooling()
 
-                LOGGER.debug(f"[climate {self.dev_id}] Send status update")
-                await self._async_send_command(self._actuator_mode, self.target_temperature)
+                # send frequently status update if not connected with thermostat. 
+                if self.thermostat_id is None:
+                    await self._async_send_command(self._actuator_mode, self.target_temperature)
                 
             except Exception as e:
                 LOGGER.exception(e)
@@ -234,11 +236,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""
-        LOGGER.debug("async func")
-        LOGGER.debug(f"hvac_mode {hvac_mode}")
-        LOGGER.debug(f"self.hvac_mode {self.hvac_mode}")
-        LOGGER.debug(f"target temp {self.target_temperature}")
-        LOGGER.debug(f"current temp {self.current_temperature}")
+        # LOGGER.debug("async func")
+        # LOGGER.debug(f"hvac_mode {hvac_mode}")
+        # LOGGER.debug(f"self.hvac_mode {self.hvac_mode}")
+        # LOGGER.debug(f"target temp {self.target_temperature}")
+        # LOGGER.debug(f"current temp {self.current_temperature}")
 
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
@@ -257,13 +259,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        LOGGER.debug("async func")
-        LOGGER.debug(f"hvac_mode {self.hvac_mode}")
-        LOGGER.debug(f"hvac_action {self.hvac_action}")
-        LOGGER.debug(f"target temp {self.target_temperature}")
-        LOGGER.debug(f"current temp {self.current_temperature}")
-        LOGGER.debug(f"kwargs {kwargs}")
-        LOGGER.debug(f"actor_mode {self._actuator_mode}")
+        # LOGGER.debug("async func")
+        # LOGGER.debug(f"hvac_mode {self.hvac_mode}")
+        # LOGGER.debug(f"hvac_action {self.hvac_action}")
+        # LOGGER.debug(f"target temp {self.target_temperature}")
+        # LOGGER.debug(f"current temp {self.current_temperature}")
+        # LOGGER.debug(f"kwargs {kwargs}")
+        # LOGGER.debug(f"actor_mode {self._actuator_mode}")
 
         if self._actuator_mode != None and self.current_temperature > 0:
             new_target_temp = kwargs['temperature']
@@ -275,15 +277,21 @@ class ClimateController(EltakoEntity, ClimateEntity):
         else:
             LOGGER.debug(f"[climate {self.dev_id}] default state of actor was not yet transferred.")
 
+
+    async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
+        """Send command to set target temperature."""
+        self._send_command(mode, target_temp)
+
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
+        """Send command to set target temperature."""
         address, _ = self._sender_id
-        if self._sender_eep == A5_10_06:
-            if self.current_temperature and self.target_temperature:
-                msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
-                self.send_message(msg)
-            else:
-                LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set.")
-                #This is always the case when there was no sensor signal after HA started.
+        if self.current_temperature and self.target_temperature:
+            LOGGER.debug(f"[climate {self.dev_id}] Send status update: current temp: {self.target_temperature}, mode: {mode}")
+            msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+            self.send_message(msg)
+        else:
+            LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
+            #This is always the case when there was no sensor signal after HA started.
 
 
     def _send_set_normal_mode(self) -> None:
@@ -311,14 +319,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
 
     async def _async_send_mode_cooling(self) -> None:
+        """fake physical switch and send cooling status."""
         if self._cooling_sender_id:
-            LOGGER.debug(f"[climate {self.dev_id}] Send command for cooling:")
+            LOGGER.debug(f"[climate {self.dev_id}] Send command for cooling")
             address, _ = self._cooling_sender_id
             self.send_message(RPSMessage(address, 0x30, b'\x50', True))
-            # Regular4BSMessage???
-
-    async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
-        self._send_command(mode, target_temp)
 
 
     def _get_mode(self) -> HVACMode:
@@ -367,6 +372,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
             if msg.address == cooling_switch_address:
                 LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {cooling_switch_address}")
                 LOGGER.debug(f"NOT YET IMPLEMENTED");
+
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
