@@ -43,29 +43,32 @@ You can find the meaning of the numbers in the table above.
 ### Example with physical switch connected via FTS14EM (RECOMMENDED)
 ```
 eltako:
-  
+  gateway:
+    device: fam-usb
+    base_id: FF-80-80-00
   ...
+
   binary_sensor:
-  - id: "00-00-10-08"             # Wired via FTS14EM
-    eep: "D5-00-01"
+  - id: FF-AA-10-08               # Wired via FTS14EM
+    eep: D5-00-01
     name: "cooling switch"
   ...
 
   climate:
-    - id: "00-00-00-09"           # Address of actuator (1)
-      eep: "A5-10-06"             # Telegram type of the actuator (1)
+    - id: FF-AA-00-09             # Address of actuator (1)
+      eep: A5-10-06               # Telegram type of the actuator (1)
 
       temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
       min_target_temperature: 17  # Optional field, default value 17 (2)
       max_target_temperature: 25  # Optional field, default value 25 (2)
 
       sender:                     # Virtual temperature controller (2)
-        id: "00-00-B0-09"         # Sender address (2) needs to be entered .
-        eep: "A5-10-06"           # 2: Sender EEP
+        id: FF-AA-00-09           # Sender address (2) needs to be entered .
+        eep: A5-10-06             # 2: Sender EEP
 
       cooling_mode:               # Optional part - cooling mode
         sensor:                   # Rocker switch (3) must be specified in binary_sensor
-          id: "00-00-10-08"       # Address of switch (3)
+          id: 00-00-10-08         # Address of switch (3)
 ```
 
 
@@ -74,28 +77,36 @@ eltako:
 ```
 eltako:
   
+  gateway:
+    device: fam-usb
+    base_id: FF-80-80-00
+
   ...
   binary_sensor:
-  - id: "FF-DD-0A-1B"
+  - id: FF-DD-0A-1B
     eep: "F6-02-01"
-
+    name: "cooling switch"
   ...
 
   climate:
-    - id: "00-00-00-09"           # Address of actuator (1)
-      eep: "A5-10-06"             # Telegram type of the actuator (1)
+    - id: FF-AA-00-09             # Address of actuator (1)
+      eep: A5-10-06               # Telegram type of the actuator (1)
 
       temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
       min_target_temperature: 17  # Optional field, default value 17 (2)
       max_target_temperature: 25  # Optional field, default value 25 (2)
 
       sender:                     # Virtual temperature controller (2)
-        id: "00-00-B0-09"         # Sender address (2) needs to be entered .
-        eep: "A5-10-06"           # 2: Sender EEP
-        
+        id: FF-80-80-09           # Sender address (2) needs to be entered .
+        eep: A5-10-06             # 2: Sender EEP
+      
+      thermostat:                 # Optional section - physical thermostat for sync.
+        id: FF-EE-55-81           # Sender address of thermostat
+        eep: A5-10-06             # 5: EEP of thermostat
+
       cooling_mode:               # Optional part - cooling mode
         sensor:                   # Rocker switch (3) must be specified in binary_sensor
-          id: "FF-DD-0A-1B"       # Address of switch (3)
+          id: FF-DD-0A-1B         # Address of switch (3)
           switch-button: 0x50     # In case of switch button needs to be specified.
                                   # for rocker switches only
 ```
@@ -112,8 +123,8 @@ eltako:
 
 ```
 eltako:
-  gateway:
-    device: fgw14usb
+  ...
+
   sensor:
   - id: ff-ee-dd-81
     eep: A5-04-02
@@ -145,8 +156,8 @@ Actually the temperature controller (Climate Entity) in Home Assistant gets its 
 Example Hygrostat Sensor and single Temperature Sensor:
 ```
 eltako:
-  gateway:
-    device: fgw14usb
+  ...
+
   sensor:
   - id: FF-EE-55-92
     eep: A5-10-12
@@ -161,9 +172,11 @@ eltako:
 <img src="./Temp. Sensor - Room 1 FUTH.png" height="100">
 
 ## Teach-in FUTH
-You need to teach-in telegram to FUTH so that it takes over the target temperature set in Home Assistant, otherwise FUTH will overwrite its target temperature every 50 seconds. If you have successfully teached-in FUTH, it will receive the target temperature from Home Assistant and apply it.
+You need to teach-in telegram to FUTH so that it takes over the target temperature set in Home Assistant, otherwise FUTH will overwrite its target temperature every 55 seconds. If you have successfully teached-in FUTH, it will receive the target temperature from Home Assistant and apply it. Now both device will sync their target temperatures.
 
 In Home Assistant you will find in the climate controller device for a button entity to send teach-in telegram to FUTH. Before doing it go into the menu of FUTH `learn -> heating -> controller -> wait for telegram` so it is waiting for the teach-in telegram and then send it.
+
+**Hint**: Teach-in button only works when connected with USB transceiver. FAM14 and FGW14-USB do not send tech-in telegrams into the wireless network to FUTH.
 
 <img src="./climate-tech-in-button2.png" height="350">
 
