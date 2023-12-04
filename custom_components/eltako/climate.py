@@ -236,36 +236,28 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""
-        # LOGGER.debug("async func")
-        # LOGGER.debug(f"hvac_mode {hvac_mode}")
-        # LOGGER.debug(f"self.hvac_mode {self.hvac_mode}")
-        # LOGGER.debug(f"target temp {self.target_temperature}")
-        # LOGGER.debug(f"current temp {self.current_temperature}")
 
+        # We use off button as toggle switch
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
                 self._send_mode_off()
 
+            # when cooling is active swtich from off to cooling
             elif self._get_mode() == HVACMode.COOL:
                 await self.async_set_hvac_mode(HVACMode.COOL)
 
+            # when heating is actice swtich from off to heating
             else:
                 await self.async_set_hvac_mode(HVACMode.HEAT)
             
-        elif hvac_mode == self._hvac_mode_from_heating:
+        # mode can only be selected when active. e.g. heating can be selected if in heating mode. cooling would be inactive. cooling and heating mode needs to be switched via rocker swtich.
+        elif hvac_mode == self._get_mode():
             self._attr_hvac_mode = hvac_mode
             self._send_set_normal_mode()
 
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        # LOGGER.debug("async func")
-        # LOGGER.debug(f"hvac_mode {self.hvac_mode}")
-        # LOGGER.debug(f"hvac_action {self.hvac_action}")
-        # LOGGER.debug(f"target temp {self.target_temperature}")
-        # LOGGER.debug(f"current temp {self.current_temperature}")
-        # LOGGER.debug(f"kwargs {kwargs}")
-        # LOGGER.debug(f"actor_mode {self._actuator_mode}")
 
         if self._actuator_mode != None and self.current_temperature > 0:
             new_target_temp = kwargs['temperature']
