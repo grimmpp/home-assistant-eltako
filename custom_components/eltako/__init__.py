@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .configuration_helpers import *
-from .gateway import EltakoGateway, GatewayDeviceTypes, EnoceanUSB300Gateway
+from .gateway import *
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
