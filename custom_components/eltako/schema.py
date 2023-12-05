@@ -249,23 +249,3 @@ class ClimateSchema(EltakoPlatformSchema):
         ),
     )
 
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.All(
-            vol.Schema(
-                {
-                    **GeneralSettings.platform_node(),
-                    **GatewaySchema.platform_node(),
-                    **BinarySensorSchema.platform_node(),
-                    **LightSchema.platform_node(),
-                    **SwitchSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **CoverSchema.platform_node(),
-                    **ClimateSchema.platform_node(),
-                }
-            ),
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
