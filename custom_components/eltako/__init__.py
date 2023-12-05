@@ -31,6 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_config = await async_get_gateway_config(hass)
     if gateway_config:
         gateway_device = gateway_config[CONF_DEVICE]
+        gateway_base_id = gateway_config[CONF_BASE_ID]
         # if len(config[CONF_GATEWAY]) > 1:
         #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
     else:
@@ -43,13 +44,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     match gateway_device:
         case GatewayDeviceTypes.GatewayEltakoFAM14:
             baud_rate=57600
-            usb_gateway = EltakoGatewayFam14(hass, serial_path, baud_rate, config_entry)
+            usb_gateway = EltakoGatewayFam14(hass, serial_path, baud_rate, gateway_base_id, config_entry)
         case GatewayDeviceTypes.GatewayEltakoFGW14USB:
             baud_rate=57600
-            usb_gateway = EltakoGatewayFgw14Usb(hass, serial_path, baud_rate, config_entry)
+            usb_gateway = EltakoGatewayFgw14Usb(hass, serial_path, baud_rate, gateway_base_id, config_entry)
         case GatewayDeviceTypes.GatewayEltakoFAMUSB:
             baud_rate=9600
-            usb_gateway = EltakoGatewayFamUsb(hass, serial_path, baud_rate, config_entry)
+            usb_gateway = EltakoGatewayFamUsb(hass, serial_path, baud_rate, gateway_base_id, config_entry)
         case GatewayDeviceTypes.EnOceanUSB300:
             raise NotImplemented("EnOcean USB300 based on ESP3 protocol not yet supported!")
             usb_gateway = EnoceanUSB300Gateway(hass, serial_path, baud_rate, config_entry)
