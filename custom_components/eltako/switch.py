@@ -28,7 +28,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako switch platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
     entities: list[EltakoEntity] = []
     

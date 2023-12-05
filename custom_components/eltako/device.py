@@ -36,7 +36,7 @@ class EltakoEntity(Entity):
             )
         )
 
-    def _message_received_callback(self, msg: ESP2Message):
+    def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
         
         # Eltako wrapped RPS
@@ -106,6 +106,16 @@ class EltakoEntity(Entity):
         # TODO: check if gateway is available
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
 
+
+class EltakoActuatorEntity(EltakoEntity):
+    """ """
+
+    def __init__(self, **kwargs):
+        super(EltakoActuatorEntity, self).__init__(**kwargs)
+        
+        self.gateway.validate_dev_id(self.dev_id, self.dev_name)
+        self.gateway.validate_sender_id(self.sender_id, self.dev_name)
+        
 
 def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
     for e in entities:

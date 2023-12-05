@@ -3,28 +3,6 @@ from homeassistant.const import CONF_DEVICE
 from homeassistant.helpers.reload import async_integration_yaml_config
 
 from .const import *
-from .schema import *
-
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.All(
-            vol.Schema(
-                {
-                    **GeneralSettings.platform_node(),
-                    **GatewaySchema.platform_node(),
-                    **BinarySensorSchema.platform_node(),
-                    **LightSchema.platform_node(),
-                    **SwitchSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **CoverSchema.platform_node(),
-                    **ClimateSchema.platform_node(),
-                }
-            ),
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
 
 # default settings from configuration
 DEFAULT_GENERAL_SETTINGS = {
@@ -65,3 +43,11 @@ async def async_get_home_assistant_config(hass: HomeAssistant) -> dict:
         return CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
     else:
         return _conf[DOMAIN]
+    
+
+def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
+    """Compares two bytes arrays. len specifies the length to be checked."""
+    for i in range(0,len):
+        if id1[i] != id2[i]:
+            return False
+    return True

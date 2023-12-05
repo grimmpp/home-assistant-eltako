@@ -1,5 +1,10 @@
 # Changes and Feature List
 
+## Version 1.1.4
+* Full support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
+* Target temperature synchronization between climate panel in Home Assistant and thermostat implemented.
+* baseId validation for gateways introduced.
+
 ## Version 1.1.3
 * Added read-only support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
 

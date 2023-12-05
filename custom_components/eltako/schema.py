@@ -5,8 +5,14 @@ from typing import Final
 from abc import ABC
 from typing import ClassVar
 import voluptuous as vol
+
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
+
 from eltakobus.eep import *
 
+from .const import *
+from .gateway import GatewayDeviceTypes
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
@@ -40,11 +46,6 @@ from homeassistant.const import (
     UnitOfTemperature,
     CONF_LANGUAGE,
 )
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
-
-from .const import *
-from .gateway import GatewayDeviceTypes
 
 CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
@@ -86,6 +87,7 @@ class GatewaySchema(EltakoPlatformSchema):
 
     ENTITY_SCHEMA = vol.Schema({
             vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
+            vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_SERIAL_PATH): cv.string,
         })
 
@@ -246,3 +248,24 @@ class ClimateSchema(EltakoPlatformSchema):
             }
         ),
     )
+
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.All(
+            vol.Schema(
+                {
+                    **GeneralSettings.platform_node(),
+                    **GatewaySchema.platform_node(),
+                    **BinarySensorSchema.platform_node(),
+                    **LightSchema.platform_node(),
+                    **SwitchSchema.platform_node(),
+                    **SensorSchema.platform_node(),
+                    **SensorSchema.platform_node(),
+                    **CoverSchema.platform_node(),
+                    **ClimateSchema.platform_node(),
+                }
+            ),
+        )
+    },
+    extra=vol.ALLOW_EXTRA,
+)

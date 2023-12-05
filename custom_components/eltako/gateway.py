@@ -11,6 +11,9 @@ from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
 from eltakobus.error import ParseError
 
+from eltakobus.util import AddressExpression
+from eltakobus.message import  Regular4BSMessage
+
 from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket, PARSE_RESULT
 
@@ -20,6 +23,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatche
 from homeassistant.helpers import device_registry as dr
 
 from .const import *
+from .configuration_helpers import compare_enocean_ids
 
 DEFAULT_NAME = "Eltako gateway"
 
@@ -46,7 +50,7 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, config_entry):
+    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, config_entry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
@@ -56,6 +60,7 @@ class EltakoGateway:
         self.identifier = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
+        self.base_id = base_id
         
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
@@ -64,6 +69,12 @@ class EltakoGateway:
             manufacturer=MANUFACTURER,
             name=DEFAULT_NAME,
         )
+
+    def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        return False
+    
+    def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        return False
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
@@ -142,6 +153,62 @@ class EltakoGateway:
     def unique_id(self):
         """Return the unique id of the gateway."""
         return self.serial_path
+    
+
+class EltakoGatewayFam14 (EltakoGateway):
+    """Gateway class for Eltako FAM14."""
+
+    def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
+    
+    def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        result = compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0])
+        if not result:
+            LOGGER.error(f"Wrong id ({dev_id}) configured for device {device_name}")
+        return result
+
+class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
+    """Gateway class for Eltako FGW14-USB."""
+
+class EltakoGatewayFamUsb (EltakoGateway):
+    """Gateway class for Eltako FAM-USB."""
+
+    def __init__(self, **kwargs):
+        super(EltakoGatewayFamUsb, self).__init__(**kwargs)
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
+            )
+        )
+
+        # read base id from device
+        msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+
+    def _message_received_callback(self, msg: ESP2Message) -> None:
+        # receive base id and compare with base id in configuration
+        if msg.address == b'\x00\x00\x00\x00' and msg.body[0] == 0x8B and msg.body[1] == 0x98:
+            device_base_id = msg.body[2:5]
+            if not compare_enocean_ids(self.base_id, device_base_id, len=4):
+                raise Exception(f"Configured baseId {self.base_id} does not match device baseId {device_base_id}")
+            else:
+                LOGGER.debug(f"Received baseId form device {device_base_id} and compared with configuration.")
+        
+
+    def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        result = compare_enocean_ids(self.base_id[0], sender_id[0])
+        if not result:
+            LOGGER.error(f"Wrong sender id ({sender_id}) configured for device {device_name}")
+        return result
+
+    
+    def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        result = 0xFF == dev_id[0][0] and 0x80 <= dev_id[0][1]
+        if not result:
+            LOGGER.error(f"Wrong id ({dev_id}) configured for device {device_name}")
+        return result
+    
     
 
 class EnoceanUSB300Gateway:
