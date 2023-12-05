@@ -3,33 +3,11 @@ from homeassistant.const import CONF_DEVICE
 from homeassistant.helpers.reload import async_integration_yaml_config
 
 from .const import *
-from .schema import *
 
 # default settings from configuration
 DEFAULT_GENERAL_SETTINGS = {
     CONF_FAST_STATUS_CHANGE: False
 }
-
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.All(
-            vol.Schema(
-                {
-                    **GeneralSettings.platform_node(),
-                    **GatewaySchema.platform_node(),
-                    **BinarySensorSchema.platform_node(),
-                    **LightSchema.platform_node(),
-                    **SwitchSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **CoverSchema.platform_node(),
-                    **ClimateSchema.platform_node(),
-                }
-            ),
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     settings = DEFAULT_GENERAL_SETTINGS
@@ -57,7 +35,7 @@ async def async_get_gateway_config_serial_port(hass: HomeAssistant) -> dict:
         return gateway_config[CONF_SERIAL_PATH]
     return None
 
-async def async_get_home_assistant_config(hass: HomeAssistant) -> dict:
+async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: dict) -> dict:
     _conf = await async_integration_yaml_config(hass, DOMAIN)
     if not _conf or DOMAIN not in _conf:
         LOGGER.warning("No `eltako:` key found in configuration.yaml.")
