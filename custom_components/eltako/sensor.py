@@ -674,7 +674,7 @@ class EltakoHumiditySensor(EltakoSensor):
     - A5-04-02 (Temperature and Humidity)
     """
 
-    def __init__(self, general_settings:dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
