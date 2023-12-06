@@ -112,8 +112,8 @@ class EltakoEntity(Entity):
 class EltakoActuatorEntity(EltakoEntity):
     """ """
 
-    def __init__(self, **kwargs):
-        super(EltakoActuatorEntity, self).__init__(**kwargs)
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
+        super(EltakoActuatorEntity,self).__init__(gateway, dev_id, dev_name, dev_eep)
         
         self.gateway.validate_dev_id(self.dev_id, self.dev_name)
         self.gateway.validate_sender_id(self.sender_id, self.dev_name)
