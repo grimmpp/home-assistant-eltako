@@ -50,7 +50,7 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
-    validate_actuators_dev_and_sender_id(entities)
+    # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, Platform.BINARY_SENSOR)
     async_add_entities(entities)
     

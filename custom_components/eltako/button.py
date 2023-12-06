@@ -51,6 +51,9 @@ from .device import *
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
+EEP_WITH_TEACH_IN_BUTTONS = {
+    A5_10_06: b'\x40\x30\x0D\x85'
+}
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -69,7 +72,7 @@ async def async_setup_entry(
         return
     
     # check for temperature controller defined in config as temperature sensor or climate controller
-    for platform_id in DEVICES_WITH_TEACH_IN_BUTTONS:
+    for platform_id in PLATFORMS:
         if platform_id in config: 
             for entity_config in config[platform_id]:
                 if CONF_SENDER in entity_config:
@@ -86,7 +89,8 @@ async def async_setup_entry(
                         LOGGER.warning("[%s] Could not find EEP %s for device with address %s", Platform.BUTTON, eep_string, dev_id.plain_address())
                         continue
                     else:
-                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+                        if dev_eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
+                            entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.BUTTON)
@@ -120,7 +124,8 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         Send teach-in command for A5-10-06 e.g. FUTH
         """
         controller_address, _ = self.sender_id
-        msg = Regular4BSMessage(address=controller_address, data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
+        # msg = Regular4BSMessage(address=controller_address, data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
+        msg = Regular4BSMessage(address=controller_address, data=EEP_WITH_TEACH_IN_BUTTONS[self.dev_eep], outgoing=True, status=0x80)
         self.send_message(msg)
 
     @property
