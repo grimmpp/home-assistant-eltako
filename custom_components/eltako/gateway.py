@@ -65,7 +65,7 @@ class EltakoGateway:
         
         if isinstance(self, EltakoGatewayFam14):
             self.model = "Eltako Gateway - FAM14"
-        elif isinstance(self. EltakoGatewayFgw14Usb):
+        elif isinstance(self, EltakoGatewayFgw14Usb):
             self.model = "Eltako Gateway - FGW14-USB"
         elif isinstance(self, EltakoGatewayFamUsb):
             self.model = "Eltako Gateway - FAM-USB"
