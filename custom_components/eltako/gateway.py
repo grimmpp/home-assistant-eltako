@@ -74,7 +74,7 @@ class EltakoGateway:
         else:
             self.model = "Eltako Gateway"
 
-        if not self.dev_name and len(self.dev_name) == 0:
+        if not dev_name and len(dev_name) == 0:
             self.dev_name = self.model
         
         self.dev_name = get_device_name(dev_name, base_id, self.general_settings)
