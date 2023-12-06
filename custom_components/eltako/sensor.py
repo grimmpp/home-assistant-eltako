@@ -783,7 +783,7 @@ class EltakoAirQualitySensor(EltakoSensor):
 
 
 class DevAddressInfoEntity(EltakoEntity, SensorEntity):
-    """Button which sends teach-in telegram for temperature controller."""
+    """Info text about device address."""
 
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP):
         _dev_name = dev_name
