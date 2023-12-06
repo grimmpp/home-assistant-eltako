@@ -800,7 +800,7 @@ class DevAddressInfoEntity(EltakoEntity, SensorEntity):
         self._attr_state_class = None
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
         self.entity_id = f"sensor.address_info_{self.unique_id}"
-        self._attr_native_value = b2a(dev_id, '-')
+        self._attr_native_value = b2a(dev_id[0], '-')
 
     @property
     def device_info(self) -> DeviceInfo:
