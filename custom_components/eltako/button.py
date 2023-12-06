@@ -59,12 +59,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up an Eltako buttons."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
 
     entities: list[EltakoEntity] = []
     
     # if not supported by gateway skip creating teach-in button
     if not gateway.general_settings[CONF_ENABLE_TEACH_IN_BUTTONS]:
+        LOGGER.debug(f"[Button] Teach-in buttons are not supported by gateway {gateway.dev_name}")
         return
 
     # check for temperature controller defined in config as temperature sensor or climate controller
