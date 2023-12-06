@@ -63,7 +63,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class EltakoDimmableLight(EltakoEntity, LightEntity):
+class EltakoDimmableLight(EltakoActuatorEntity, LightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.BRIGHTNESS
@@ -174,7 +174,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             self.schedule_update_ha_state()
 
 
-class EltakoSwitchableLight(EltakoEntity, LightEntity):
+class EltakoSwitchableLight(EltakoActuatorEntity, LightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.ONOFF
