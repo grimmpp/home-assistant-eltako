@@ -80,7 +80,7 @@ class EltakoGateway:
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, self.unique_id)},
-            connection={(CONF_MAC, {b2a(self.base_id[0], '-').upper()})},
+            connection={(CONF_MAC, f"{b2a(self.base_id[0], '-').upper()}")},
             manufacturer=MANUFACTURER,
             name= f"{self.dev_name} ({b2a(self.base_id[0], '-').upper()})",  #TODO: enter gateway name, add model
             model=self.model,
