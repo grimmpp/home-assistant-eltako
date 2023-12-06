@@ -6,9 +6,11 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 
+from homeassistant.helpers.reload import async_integration_yaml_config
 from . import gateway
 from .configuration_helpers import async_get_gateway_config_serial_port
 from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
+from .schema import CONFIG_SCHEMA
 
 
 class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -22,7 +24,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
-        serial_port_from_config = await async_get_gateway_config_serial_port(self.hass)
+        serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
         if serial_port_from_config is not None:
             return self.create_eltako_entry({
                 CONF_DEVICE: serial_port_from_config

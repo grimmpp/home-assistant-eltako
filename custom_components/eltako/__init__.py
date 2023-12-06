@@ -29,7 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"config: {config}\n")
 
     # Initialise the gateway
-    gateway_config = await async_get_gateway_config(hass)
+    gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA, async_integration_yaml_config)
     if gateway_config:
         gateway_device = gateway_config[CONF_DEVICE]
         gateway_base_id = gateway_config[CONF_BASE_ID]
