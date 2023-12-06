@@ -25,7 +25,7 @@ class EltakoEntity(Entity):
         self.gateway = gateway
         self.general_settings = self.gateway.general_settings
         self.dev_id = dev_id
-        self.dev_name = get_device_name(self.dev_name, self.dev_id, self.general_settings)
+        self.dev_name = get_device_name(dev_name, dev_id, self.general_settings)
         self.dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id.plain_address())
