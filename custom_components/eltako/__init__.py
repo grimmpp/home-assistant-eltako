@@ -31,18 +31,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # Initialise the gateway
     gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA)
-    if gateway_config:
-        gateway_device = gateway_config[CONF_DEVICE]
-        gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
-        if CONF_NAME in gateway_config:
-            gateway_name = gateway_config[CONF_NAME]
-        else:
-            gateway_name = None
-        # if len(config[CONF_GATEWAY]) > 1:
-        #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
+    if not gateway_config:
+        raise Exception("[Eltako Integration Setup] No gateway configuration found.")
+    
+    gateway_device = gateway_config[CONF_DEVICE]
+    gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
+    if CONF_NAME in gateway_config:
+        gateway_name = gateway_config[CONF_NAME]
     else:
-        gateway_device = GatewayDeviceTypes.GatewayEltakoFGW14USB # default device
-        LOGGER.info("[Eltako Setup] Eltako FGW14USB was set as default device.")
+        gateway_name = None
+    # if len(config[CONF_GATEWAY]) > 1:
+    #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
 
     serial_path = config_entry.data[CONF_DEVICE]
 
