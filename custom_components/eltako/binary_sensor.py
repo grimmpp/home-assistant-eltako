@@ -70,9 +70,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
-        self.dev_id = dev_id
-        self.dev_name = dev_name
-        self.gateway = gateway
         self.invert_signal = invert_signal
 
     @property
