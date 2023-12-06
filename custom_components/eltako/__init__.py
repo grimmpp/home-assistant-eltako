@@ -2,7 +2,7 @@
 import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_DEVICE
+from homeassistant.const import CONF_DEVICE, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
@@ -32,6 +32,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if gateway_config:
         gateway_device = gateway_config[CONF_DEVICE]
         gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
+        if CONF_NAME in gateway_config:
+            gateway_name = gateway_config[CONF_NAME]
+        else:
+            gateway_name = None
         # if len(config[CONF_GATEWAY]) > 1:
         #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
     else:
@@ -44,13 +48,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     match gateway_device:
         case GatewayDeviceTypes.GatewayEltakoFAM14:
             baud_rate=57600
-            usb_gateway = EltakoGatewayFam14(hass, serial_path, baud_rate, gateway_base_id, config_entry)
+            usb_gateway = EltakoGatewayFam14(hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
         case GatewayDeviceTypes.GatewayEltakoFGW14USB:
             baud_rate=57600
-            usb_gateway = EltakoGatewayFgw14Usb(hass, serial_path, baud_rate, gateway_base_id, config_entry)
+            usb_gateway = EltakoGatewayFgw14Usb(hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
         case GatewayDeviceTypes.GatewayEltakoFAMUSB:
             baud_rate=9600
-            usb_gateway = EltakoGatewayFamUsb(hass, serial_path, baud_rate, gateway_base_id, config_entry)
+            usb_gateway = EltakoGatewayFamUsb(hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
         case GatewayDeviceTypes.EnOceanUSB300:
             raise NotImplemented("EnOcean USB300 based on ESP3 protocol not yet supported!")
             usb_gateway = EnoceanUSB300Gateway(hass, serial_path, baud_rate, config_entry)
