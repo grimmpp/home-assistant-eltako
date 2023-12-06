@@ -388,7 +388,7 @@ class EltakoMeterSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -457,7 +457,7 @@ class EltakoWindowHandle(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -513,7 +513,7 @@ class EltakoWeatherStation(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -600,7 +600,7 @@ class EltakoTemperatureSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -647,7 +647,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -694,7 +694,7 @@ class EltakoHumiditySensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -759,7 +759,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
+            name=f"{self.dev_name} ({b2a(self.dev_id[0],'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
