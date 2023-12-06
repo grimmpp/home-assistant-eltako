@@ -59,11 +59,12 @@ async def async_setup_entry(
                 elif dev_eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
+    validate_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.LIGHT)
     async_add_entities(entities)
 
 
-class EltakoDimmableLight(EltakoActuatorEntity, LightEntity):
+class EltakoDimmableLight(EltakoEntity, LightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.BRIGHTNESS
@@ -174,7 +175,7 @@ class EltakoDimmableLight(EltakoActuatorEntity, LightEntity):
             self.schedule_update_ha_state()
 
 
-class EltakoSwitchableLight(EltakoActuatorEntity, LightEntity):
+class EltakoSwitchableLight(EltakoEntity, LightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.ONOFF

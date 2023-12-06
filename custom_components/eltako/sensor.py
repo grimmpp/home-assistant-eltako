@@ -330,6 +330,7 @@ async def async_setup_entry(
                     if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
                         entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t, entity_config[CONF_LANGUAGE]))
 
+    validate_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
 

@@ -122,6 +122,11 @@ class EltakoEntity(Entity):
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
         
 
+def validate_dev_and_sender_id(entities:[EltakoEntity]):
+    for e in entities:
+        e.validate_dev_id()
+        e.validate_sender_id()
+
 def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
     for e in entities:
         LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep.eep_string}) of platform type {platform} to Home Assistant.")

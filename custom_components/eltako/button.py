@@ -83,6 +83,7 @@ async def async_setup_entry(
                 if dev_eep in [A5_10_06]:
                     entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
+    validate_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.BUTTON)
     async_add_entities(entities)
 

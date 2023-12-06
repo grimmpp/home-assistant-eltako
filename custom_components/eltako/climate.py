@@ -104,11 +104,17 @@ async def async_setup_entry(
                         event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id.upper()}"
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
-        
+    validate_ids_of_climate(entities)
     log_entities_to_be_added(entities, Platform.CLIMATE)
     async_add_entities(entities)
 
 
+def validate_ids_of_climate(entities:[EltakoEntity]):
+    for e in entities:
+        e.validate_dev_id()
+        e.validate_sender_id()
+        if hasattr(e, "cooling_sender_id"):
+            e.validate_sender_id(e.cooling_sender_id)
 class ClimateController(EltakoEntity, ClimateEntity):
     """Representation of an Eltako heating and cooling actor."""
 
