@@ -65,27 +65,28 @@ async def async_setup_entry(
     
     # if not supported by gateway skip creating teach-in button
     if not gateway.general_settings[CONF_ENABLE_TEACH_IN_BUTTONS]:
-        LOGGER.debug(f"[Button] Teach-in buttons are not supported by gateway {gateway.dev_name}")
+        LOGGER.debug("[%s] Teach-in buttons are not supported by gateway %s", Platform.BUTTON, gateway.dev_name)
         return
-
+    
     # check for temperature controller defined in config as temperature sensor or climate controller
     for platform_id in DEVICES_WITH_TEACH_IN_BUTTONS:
-        if platform_id in config and CONF_SENDER in config[platform_id]:
+        if platform_id in config: 
             for entity_config in config[platform_id]:
-                dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-                dev_name = entity_config[CONF_NAME]
-                eep_string = entity_config.get(CONF_EEP)
+                if CONF_SENDER in entity_config:
+                    dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+                    dev_name = entity_config[CONF_NAME]
+                    eep_string = entity_config.get(CONF_EEP)
 
-                sender_config = entity_config.get(CONF_SENDER)
-                sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+                    sender_config = entity_config.get(CONF_SENDER)
+                    sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
 
-                try:
-                    dev_eep = EEP.find(eep_string)
-                except:
-                    LOGGER.warning("[Button] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                    continue
-                else:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+                    try:
+                        dev_eep = EEP.find(eep_string)
+                    except:
+                        LOGGER.warning("[%s] Could not find EEP %s for device with address %s", Platform.BUTTON, eep_string, dev_id.plain_address())
+                        continue
+                    else:
+                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.BUTTON)

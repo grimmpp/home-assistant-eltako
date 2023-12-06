@@ -330,6 +330,7 @@ async def async_setup_entry(
                     if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
                         entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t, entity_config[CONF_LANGUAGE]))
 
+    validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
 
@@ -776,7 +777,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             return
         
         if decoded.voc_type.index == self.voc_type.index:
-            LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
+            # LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
             self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
