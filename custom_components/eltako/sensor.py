@@ -322,7 +322,7 @@ async def async_setup_entry(
             elif dev_eep in [A5_10_06]:
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
-                entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep)
+                entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep))
             
             elif dev_eep in [A5_09_0C]:
             ### Eltako FLGTF only supports VOCT Total
@@ -636,6 +636,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self.
 
     @property
     def name(self):
@@ -797,6 +798,7 @@ class DevAddressInfoEntity(EltakoEntity, SensorEntity):
             device_class=None,
             has_entity_name= True,
         )
+        self._attr_state_class = None
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
         self.entity_id = f"sensor.address_info_{self.unique_id}"
         self._attr_native_value = b2a(dev_id, '-')
