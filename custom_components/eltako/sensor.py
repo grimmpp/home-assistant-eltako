@@ -6,7 +6,7 @@ from enum import Enum
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message, Regular4BSMessage
 
@@ -22,7 +22,7 @@ from homeassistant.components.sensor import (
 from homeassistant.components.button import (
     ButtonEntity,
     ButtonDeviceClass,
-    ButtonEntityDescription
+    ButtonEntityDescription,
 )
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
@@ -322,7 +322,7 @@ async def async_setup_entry(
             elif dev_eep in [A5_10_06]:
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
                 entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
-
+                entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep)
             
             elif dev_eep in [A5_09_0C]:
             ### Eltako FLGTF only supports VOCT Total
@@ -780,3 +780,36 @@ class EltakoAirQualitySensor(EltakoSensor):
             self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
+
+
+class DevAddressInfoEntity(EltakoEntity, SensorEntity):
+    """Button which sends teach-in telegram for temperature controller."""
+
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP):
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = "dev_id_info"
+        super().__init__(gateway, dev_id, _dev_name, dev_eep)
+        self.entity_description = ButtonEntityDescription(
+            key="dev_id_info",
+            name="Device Address",
+            icon="mdi:button-cursor",
+            device_class=None,
+            has_entity_name= True,
+        )
+        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
+        self.entity_id = f"sensor.address_info_{self.unique_id}"
+        self._attr_native_value = b2a(dev_id, '-')
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.dev_id.plain_address().hex())
+            },
+            name=self.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.unique_id),
+        )
