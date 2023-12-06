@@ -70,7 +70,7 @@ async def async_setup_entry(
 
     # check for temperature controller defined in config as temperature sensor or climate controller
     for platform_id in DEVICES_WITH_TEACH_IN_BUTTONS:
-        if platform_id in config:
+        if platform_id in config and CONF_SENDER in config[platform_id]:
             for entity_config in config[platform_id]:
                 dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
                 dev_name = entity_config[CONF_NAME]
@@ -82,11 +82,10 @@ async def async_setup_entry(
                 try:
                     dev_eep = EEP.find(eep_string)
                 except:
-                    LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                    LOGGER.warning("[Button] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
                     continue
                 else:
-                    if dev_eep in [A5_10_06]:
-                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.BUTTON)
