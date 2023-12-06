@@ -77,6 +77,9 @@ class EltakoGateway:
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         return False
 
+    async def after_initialized(self):
+        pass
+
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
         self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
@@ -84,6 +87,8 @@ class EltakoGateway:
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
         )
+
+        await self.after_initialized()
 
     def unload(self):
         """Disconnect callbacks established at init time."""
@@ -183,6 +188,7 @@ class EltakoGatewayFamUsb (EltakoGateway, Entity):
             )
         )
 
+    async def after_initialized(self):
         # read base id from device
         msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
