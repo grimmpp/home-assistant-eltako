@@ -791,7 +791,7 @@ class DevAddressInfoEntity(EltakoEntity, SensorEntity):
         if _dev_name == "":
             _dev_name = "dev_id_info"
         super().__init__(gateway, dev_id, _dev_name, dev_eep)
-        self.entity_description = ButtonEntityDescription(
+        self.entity_description = SensorEntityDescription(
             key="dev_id_info",
             name="Device Address",
             icon="mdi:button-cursor",
