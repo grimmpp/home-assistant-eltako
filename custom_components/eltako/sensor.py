@@ -329,24 +329,6 @@ async def async_setup_entry(
                     if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
                         entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t, entity_config[CONF_LANGUAGE]))
 
-    # add id as label to device
-    for pl_id in DEVICES_HAVING_ADDRESSES:
-        if pl_id in config:
-            for entity_config in config[pl_id]:
-                dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-                dev_name = entity_config[CONF_NAME]
-                meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
-                eep_string = entity_config.get(CONF_EEP)
-
-                try:
-                    dev_eep = EEP.find(eep_string)
-                except:
-                    LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                    continue
-                else:
-                    entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep))
-    
-
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
 
