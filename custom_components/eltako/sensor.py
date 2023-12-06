@@ -345,7 +345,7 @@ async def async_setup_entry(
             else:
                 entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep))
 
-    
+
 
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
@@ -815,7 +815,7 @@ class DevAddressInfoEntity(EltakoEntity, SensorEntity):
         )
         self._attr_state_class = None
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
-        self.entity_id = f"sensor.address_info_{self.unique_id}"
+        self.entity_id = f"sensor.{self.unique_id}"
         self._attr_native_value = b2a(dev_id[0], '-').upper()
 
     @property
