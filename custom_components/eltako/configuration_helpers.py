@@ -18,8 +18,8 @@ def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     return settings
 
 
-async def async_get_gateway_config(hass: HomeAssistant) -> dict:
-    config = await async_get_home_assistant_config(hass)
+async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config) -> dict:
+    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     # LOGGER.debug(f"config: {config}")
     if CONF_GATEWAY in config:
         if isinstance(config[CONF_GATEWAY], dict) and CONF_DEVICE in config[CONF_GATEWAY]:
@@ -28,8 +28,8 @@ async def async_get_gateway_config(hass: HomeAssistant) -> dict:
             return config[CONF_GATEWAY][0]
     return None
 
-async def async_get_gateway_config_serial_port(hass: HomeAssistant) -> dict:
-    gateway_config = await async_get_gateway_config(hass)
+async def async_get_gateway_config_serial_port(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config) -> dict:
+    gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA, get_integration_config)
     if gateway_config is not None and CONF_SERIAL_PATH in gateway_config:
         return gateway_config[CONF_SERIAL_PATH]
     return None
