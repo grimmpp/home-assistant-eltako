@@ -11,7 +11,7 @@ from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
 from eltakobus.error import ParseError
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2a
 from eltakobus.message import  Regular4BSMessage
 
 from enocean.communicators import SerialCommunicator
@@ -77,7 +77,7 @@ class EltakoGateway:
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, self.unique_id)},
             manufacturer=MANUFACTURER,
-            name=self.base_id,  #TODO: enter gateway name, add model
+            name= f"{self.model} ({b2a(self.base_id).upper()})",  #TODO: enter gateway name, add model
             model=self.model,
         )
 
