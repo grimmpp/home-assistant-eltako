@@ -10,6 +10,8 @@ from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message, Regular4BSMessage
 
+from decimal import Decimal, InvalidOperation as DecimalInvalidOperation
+
 from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
     SensorDeviceClass,
@@ -343,7 +345,10 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self.entity_description = description
+        self._attr_native_value = Decimal
         self._attr_native_value = None
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
