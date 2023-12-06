@@ -77,7 +77,7 @@ class EltakoGateway:
         if not dev_name and len(dev_name) == 0:
             self.dev_name = self.model
         
-        self.dev_name = get_device_name(dev_name, base_id, self.general_settings)
+        self.dev_name = get_device_name(self.dev_name, base_id, self.general_settings)
 
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
