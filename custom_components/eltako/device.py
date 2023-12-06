@@ -116,7 +116,8 @@ class EltakoActuatorEntity(EltakoEntity):
         super(EltakoActuatorEntity,self).__init__(gateway, dev_id, dev_name, dev_eep)
         
         self.gateway.validate_dev_id(self.dev_id, self.dev_name)
-        self.gateway.validate_sender_id(self.sender_id, self.dev_name)
+        if hasattr(self, "sender_id"):
+            self.gateway.validate_sender_id(self.sender_id, self.dev_name)
         
 
 def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
