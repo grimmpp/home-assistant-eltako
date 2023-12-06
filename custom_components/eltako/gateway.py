@@ -26,7 +26,7 @@ from homeassistant.helpers.entity import Entity
 from .const import *
 from .configuration_helpers import compare_enocean_ids
 
-DEFAULT_NAME = "Eltako gateway"
+DEFAULT_NAME = "Eltako Gateway"
 
 class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
@@ -63,12 +63,22 @@ class EltakoGateway:
         self.dispatcher_disconnect_handle = None
         self.base_id = base_id
         
+        if isinstance(self, EltakoGatewayFam14):
+            self.model = "Eltako Gateway - FAM14"
+        elif isinstance(self. EltakoGatewayFgw14Usb):
+            self.model = "Eltako Gateway - FGW14-USB"
+        elif isinstance(self, EltakoGatewayFamUsb):
+            self.model = "Eltako Gateway - FAM-USB"
+        else:
+            self.model = "Eltako Gateway"
+
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, self.unique_id)},
             manufacturer=MANUFACTURER,
-            name=DEFAULT_NAME,
+            name=self.base_id,  #TODO: enter gateway name, add model
+            model=self.model,
         )
 
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:

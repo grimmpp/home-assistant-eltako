@@ -406,7 +406,7 @@ class EltakoMeterSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -475,7 +475,7 @@ class EltakoWindowHandle(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -531,7 +531,7 @@ class EltakoWeatherStation(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -618,7 +618,7 @@ class EltakoTemperatureSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -665,7 +665,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -712,7 +712,7 @@ class EltakoHumiditySensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -777,10 +777,11 @@ class EltakoAirQualitySensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=f"{self.dev_name} ({b2a(self.dev_id,'-').upper()})",
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
+            
         )
     
     def value_changed(self, msg):
@@ -796,37 +797,3 @@ class EltakoAirQualitySensor(EltakoSensor):
             self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
-
-
-class DevAddressInfoEntity(EltakoEntity, SensorEntity):
-    """Info text about device address."""
-
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP):
-        _dev_name = dev_name
-        if _dev_name == "":
-            _dev_name = "dev_id_info"
-        super().__init__(gateway, dev_id, _dev_name, dev_eep)
-        self.entity_description = SensorEntityDescription(
-            key="dev_id_info",
-            name="Device Address",
-            icon="mdi:information-box-outline",
-            device_class=None,
-            has_entity_name= True,
-        )
-        self._attr_state_class = None
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
-        self.entity_id = f"sensor.address_info_{self.unique_id}"
-        self._attr_native_value = b2a(dev_id[0], '-').upper()
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
