@@ -87,6 +87,7 @@ class GatewaySchema(EltakoPlatformSchema):
 
     ENTITY_SCHEMA = vol.Schema({
             vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
+            vol.Optional(CONF_NAME, default=""): cv.string,
             vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_SERIAL_PATH): cv.string,
         })

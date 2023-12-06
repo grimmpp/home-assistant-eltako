@@ -18,7 +18,7 @@ from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket, PARSE_RESULT
 
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_DEVICE
+from homeassistant.const import CONF_DEVICE, CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import Entity
@@ -51,7 +51,7 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, config_entry):
+    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
@@ -62,6 +62,7 @@ class EltakoGateway:
         self.hass = hass
         self.dispatcher_disconnect_handle = None
         self.base_id = base_id
+        self.dev_name = dev_name
         
         if isinstance(self, EltakoGatewayFam14):
             self.model = "Eltako Gateway - FAM14"
@@ -72,12 +73,16 @@ class EltakoGateway:
         else:
             self.model = "Eltako Gateway"
 
+        if not self.dev_name and len(self.dev_name) == 0:
+            self.dev_name = self.model
+
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, self.unique_id)},
+            connection={(CONF_MAC, {b2a(self.base_id[0], '-').upper()})},
             manufacturer=MANUFACTURER,
-            name= f"{self.model} ({b2a(self.base_id[0], '-').upper()})",  #TODO: enter gateway name, add model
+            name= f"{self.dev_name} ({b2a(self.base_id[0], '-').upper()})",  #TODO: enter gateway name, add model
             model=self.model,
         )
 
@@ -184,8 +189,8 @@ class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
 class EltakoGatewayFamUsb (EltakoGateway, Entity):
     """Gateway class for Eltako FAM-USB."""
 
-    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, config_entry):
-        super(EltakoGatewayFamUsb, self).__init__(hass, serial_path, baud_rate, base_id, config_entry)
+    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+        super(EltakoGatewayFamUsb, self).__init__(hass, serial_path, baud_rate, base_id, dev_name, config_entry)
 
     #     self.async_on_remove(
     #         async_dispatcher_connect(
