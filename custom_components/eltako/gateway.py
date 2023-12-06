@@ -21,6 +21,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_DEVICE
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.entity import Entity
 
 from .const import *
 from .configuration_helpers import compare_enocean_ids
@@ -170,7 +171,7 @@ class EltakoGatewayFam14 (EltakoGateway):
 class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
     """Gateway class for Eltako FGW14-USB."""
 
-class EltakoGatewayFamUsb (EltakoGateway):
+class EltakoGatewayFamUsb (EltakoGateway, Entity):
     """Gateway class for Eltako FAM-USB."""
 
     def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, config_entry):
