@@ -1,3 +1,4 @@
+from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_DEVICE
 
@@ -18,7 +19,7 @@ def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     return settings
 
 
-async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config) -> dict:
+async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     # LOGGER.debug(f"config: {config}")
     if CONF_GATEWAY in config:
@@ -28,20 +29,20 @@ async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get
             return config[CONF_GATEWAY][0]
     return None
 
-async def async_get_gateway_config_serial_port(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config) -> dict:
+async def async_get_gateway_config_serial_port(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
     gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA, get_integration_config)
     if gateway_config is not None and CONF_SERIAL_PATH in gateway_config:
         return gateway_config[CONF_SERIAL_PATH]
     return None
 
-async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config) -> dict:
+async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
     _conf = await get_integration_config(hass, DOMAIN)
     if not _conf or DOMAIN not in _conf:
         LOGGER.warning("No `eltako:` key found in configuration.yaml.")
         # generate defaults
         return CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
     else:
-        return CONFIG_SCHEMA(_conf[DOMAIN])
+        return _conf[DOMAIN]
     
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:

@@ -5,7 +5,6 @@ from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_DEVICE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.reload import async_integration_yaml_config, async_get_platform_without_config_entry
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
@@ -23,13 +22,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     
     # Read the config
-    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, async_integration_yaml_config)
+    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA)
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")
 
     # Initialise the gateway
-    gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA, async_integration_yaml_config)
+    gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA)
     if gateway_config:
         gateway_device = gateway_config[CONF_DEVICE]
         gateway_base_id = gateway_config[CONF_BASE_ID]
