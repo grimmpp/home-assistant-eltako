@@ -636,7 +636,6 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
-        self.
 
     @property
     def name(self):
