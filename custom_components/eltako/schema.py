@@ -79,6 +79,7 @@ class GeneralSettings(EltakoPlatformSchema):
 
     ENTITY_SCHEMA = vol.Schema({
             vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
+            vol.Optional(CONF_SHOW_DEV_ID_IN_DEV_NAME, default=False): cv.boolean,
         })
     
 class GatewaySchema(EltakoPlatformSchema):

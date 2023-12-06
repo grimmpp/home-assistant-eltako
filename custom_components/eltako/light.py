@@ -20,10 +20,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .configuration_helpers import get_general_settings_from_configuration
+from .configuration_helpers import *
 from .device import *
 from .gateway import EltakoGateway
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
+from .const import *
 
 
 async def async_setup_entry(
@@ -34,6 +34,7 @@ async def async_setup_entry(
     """Set up the Eltako light platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    general_settings = get_general_settings_from_configuration(hass)
 
     entities: list[EltakoEntity] = []
     
@@ -46,8 +47,6 @@ async def async_setup_entry(
             sender_config = entity_config.get(CONF_SENDER)
             sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
             sender_eep_string = sender_config.get(CONF_EEP)
-
-            general_settings = get_general_settings_from_configuration(hass)
 
             try:
                 dev_eep = EEP.find(eep_string)
@@ -206,7 +205,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=self.dev_name,
+            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),

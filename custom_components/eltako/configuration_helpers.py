@@ -2,11 +2,14 @@ from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_DEVICE
 
+from eltakobus.util import AddressExpression, b2a
+
 from .const import *
 
 # default settings from configuration
 DEFAULT_GENERAL_SETTINGS = {
-    CONF_FAST_STATUS_CHANGE: False
+    CONF_FAST_STATUS_CHANGE: False,
+    CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
 }
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
@@ -51,3 +54,9 @@ def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
         if id1[i] != id2[i]:
             return False
     return True
+
+def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: dict) -> str:
+    if general_config[CONF_SHOW_DEV_ID_IN_DEV_NAME]:
+        return f"{dev_name} ({b2a(dev_id[0],'-').upper()})"
+    else:
+        return dev_name,
