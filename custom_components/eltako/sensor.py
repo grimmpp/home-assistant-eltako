@@ -331,21 +331,21 @@ async def async_setup_entry(
 
     # add id as label to device
     for pl_id in DEVICES_HAVING_ADDRESSES:
-        for entity_config in config[pl_id]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config[CONF_NAME]
-            meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
-            eep_string = entity_config.get(CONF_EEP)
+        if pl_id in config:
+            for entity_config in config[pl_id]:
+                dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+                dev_name = entity_config[CONF_NAME]
+                meter_tariffs = entity_config.get(CONF_METER_TARIFFS)
+                eep_string = entity_config.get(CONF_EEP)
 
-            try:
-                dev_eep = EEP.find(eep_string)
-            except:
-                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep))
-
-
+                try:
+                    dev_eep = EEP.find(eep_string)
+                except:
+                    LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                    continue
+                else:
+                    entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep))
+    
 
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
@@ -815,7 +815,7 @@ class DevAddressInfoEntity(EltakoEntity, SensorEntity):
         )
         self._attr_state_class = None
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
+        self.entity_id = f"sensor.address_info_{self.unique_id}"
         self._attr_native_value = b2a(dev_id[0], '-').upper()
 
     @property
