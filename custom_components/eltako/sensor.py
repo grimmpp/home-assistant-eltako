@@ -794,7 +794,7 @@ class DevAddressInfoEntity(EltakoEntity, SensorEntity):
         self.entity_description = SensorEntityDescription(
             key="dev_id_info",
             name="Device Address",
-            icon="mdi:button-cursor",
+            icon="mdi:information-box-outline",
             device_class=None,
             has_entity_name= True,
         )
