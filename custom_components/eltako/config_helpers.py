@@ -10,6 +10,7 @@ from .const import *
 DEFAULT_GENERAL_SETTINGS = {
     CONF_FAST_STATUS_CHANGE: False,
     CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
+    CONF_ENABLE_TEACH_IN_BUTTONS: False,
 }
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:

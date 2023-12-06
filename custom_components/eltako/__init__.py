@@ -40,6 +40,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         gateway_name = gateway_config[CONF_NAME]
     else:
         gateway_name = None
+
+    general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = gateway_device in [GatewayDeviceTypes.GatewayEltakoFAMUSB, GatewayDeviceTypes.EnOceanUSB300]
     # if len(config[CONF_GATEWAY]) > 1:
     #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
 

@@ -28,6 +28,7 @@ CONF_SENDER: Final = "sender"
 CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"
 CONF_SHOW_DEV_ID_IN_DEV_NAME: Final = "show_dev_id_in_dev_name"
+CONF_ENABLE_TEACH_IN_BUTTONS: Final = "enable_teach_in_buttons"
 CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
 CONF_GATEWAY: Final = "gateway"
 CONF_BASE_ID: Final = "base_id"
@@ -48,10 +49,8 @@ class LANGUAGE_ABBREVIATIONS(StrEnum):
     LANG_ENGLISH = 'en'
     LANG_GERMAN = 'de'
 
-DEVICES_HAVING_ADDRESSES: Final = [
+DEVICES_WITH_TEACH_IN_BUTTONS: Final = [
     Platform.LIGHT,
-    Platform.BINARY_SENSOR,
-    Platform.SENSOR,
     Platform.SWITCH,
     Platform.COVER,
     Platform.CLIMATE,

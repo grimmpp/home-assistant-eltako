@@ -63,25 +63,29 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
+    # if not supported by gateway skip creating teach-in button
+    if not gateway.general_settings[CONF_ENABLE_TEACH_IN_BUTTONS]:
+        return
+
     # check for temperature controller defined in config as temperature sensor or climate controller
-    platform_id = Platform.CLIMATE
-    if platform_id in config:
-        for entity_config in config[platform_id]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config[CONF_NAME]
-            eep_string = entity_config.get(CONF_EEP)
+    for platform_id in DEVICES_WITH_TEACH_IN_BUTTONS:
+        if platform_id in config:
+            for entity_config in config[platform_id]:
+                dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
+                dev_name = entity_config[CONF_NAME]
+                eep_string = entity_config.get(CONF_EEP)
 
-            sender_config = entity_config.get(CONF_SENDER)
-            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
+                sender_config = entity_config.get(CONF_SENDER)
+                sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
 
-            try:
-                dev_eep = EEP.find(eep_string)
-            except:
-                LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                if dev_eep in [A5_10_06]:
-                    entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+                try:
+                    dev_eep = EEP.find(eep_string)
+                except:
+                    LOGGER.warning("[Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                    continue
+                else:
+                    if dev_eep in [A5_10_06]:
+                        entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.BUTTON)
