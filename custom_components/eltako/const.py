@@ -47,6 +47,15 @@ class LANGUAGE_ABBREVIATIONS(StrEnum):
     LANG_ENGLISH = 'en'
     LANG_GERMAN = 'de'
 
+DEVICES_HAVING_ADDRESSES: Final = [
+    Platform.LIGHT,
+    Platform.BINARY_SENSOR,
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.COVER,
+    Platform.CLIMATE,
+]
+
 PLATFORMS: Final = [
     Platform.LIGHT,
     Platform.BINARY_SENSOR,
