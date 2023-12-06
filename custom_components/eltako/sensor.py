@@ -318,6 +318,7 @@ async def async_setup_entry(
                 entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
                 if dev_eep in [A5_10_12]:
                     entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
+                entities.append(DevAddressInfoEntity(gateway, dev_id, dev_name, dev_eep))
 
             elif dev_eep in [A5_10_06]:
                 entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
