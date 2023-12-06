@@ -345,7 +345,6 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self.entity_description = description
-        self._attr_native_value = Decimal
         self._attr_native_value = None
         self._attr_state_class = SensorStateClass.MEASUREMENT
         
@@ -637,6 +636,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self._attr_device_class = SensorDeviceClass.TEMPERATURE
 
     @property
     def name(self):
@@ -684,6 +684,7 @@ class EltakoHumiditySensor(EltakoSensor):
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self._attr_device_class = SensorDeviceClass.HUMIDITY
 
     @property
     def name(self):
@@ -746,6 +747,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self.voc_type = voc_type
+        self._attr_device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS
         # self._attr_suggested_unit_of_measurement = voc_type.unit
 
         LOGGER.debug(f"entity_description: {self.entity_description}, voc_type: {voc_type}")
