@@ -30,6 +30,19 @@ class EltakoEntity(Entity):
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id.plain_address())
 
+    def validate_dev_id(self) -> bool:
+        return self.gateway.validate_dev_id(self.dev_id, self.dev_name)
+
+    def validate_sender_id(self, sender_id=None) -> bool:
+        
+        if sender_id is None:
+            if hasattr(self, "sender_id"):
+                sender_id = self.sender_id
+
+        if sender_id is not None:
+            return self.gateway.validate_sender_id(self.sender_id, self.dev_name)
+        return True
+
     async def async_added_to_hass(self):
         """Register callbacks."""
         self.async_on_remove(
@@ -107,17 +120,6 @@ class EltakoEntity(Entity):
     def send_message(self, msg: ESP2Message):
         # TODO: check if gateway is available
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
-
-
-class EltakoActuatorEntity(EltakoEntity):
-    """ """
-
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
-        super(EltakoActuatorEntity,self).__init__(gateway, dev_id, dev_name, dev_eep)
-        
-        self.gateway.validate_dev_id(self.dev_id, self.dev_name)
-        if hasattr(self, "sender_id"):
-            self.gateway.validate_sender_id(self.sender_id, self.dev_name)
         
 
 def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
