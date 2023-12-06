@@ -192,8 +192,8 @@ class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
 class EltakoGatewayFamUsb (EltakoGateway, Entity):
     """Gateway class for Eltako FAM-USB."""
 
-    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
-        super(EltakoGatewayFamUsb, self).__init__(hass, serial_path, baud_rate, base_id, dev_name, config_entry)
+    def __init__(self, general_settings:dict, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+        super(EltakoGatewayFamUsb, self).__init__(general_settings, hass, serial_path, baud_rate, base_id, dev_name, config_entry)
 
     #     self.async_on_remove(
     #         async_dispatcher_connect(
