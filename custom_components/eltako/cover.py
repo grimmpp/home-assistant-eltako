@@ -52,7 +52,7 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
         
-    validate_dev_and_sender_id(entities)
+    validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.COVER)
     async_add_entities(entities)
 

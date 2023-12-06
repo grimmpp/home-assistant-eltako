@@ -50,7 +50,6 @@ async def async_setup_entry(
             else:
                 entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
 
-    validate_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.BINARY_SENSOR)
     async_add_entities(entities)
     

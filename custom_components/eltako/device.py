@@ -122,7 +122,8 @@ class EltakoEntity(Entity):
         dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
         
 
-def validate_dev_and_sender_id(entities:[EltakoEntity]):
+def validate_actuators_dev_and_sender_id(entities:[EltakoEntity]):
+    """Only call it for actuators."""
     for e in entities:
         e.validate_dev_id()
         e.validate_sender_id()

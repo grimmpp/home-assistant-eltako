@@ -183,7 +183,7 @@ class EltakoGatewayFam14 (EltakoGateway):
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0])
         if not result:
-            LOGGER.error(f"Wrong id ({dev_id}) configured for device {device_name}")
+            LOGGER.error(f"{device_name} ({dev_id}): Wrong device id configured!")
         return result
 
 class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
@@ -218,14 +218,14 @@ class EltakoGatewayFamUsb (EltakoGateway, Entity):
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         result = compare_enocean_ids(self.base_id[0], sender_id[0])
         if not result:
-            LOGGER.error(f"Wrong sender id ({sender_id}) configured for device {device_name}")
+            LOGGER.error(f"{device_name} ({sender_id}): Wrong sender id configured!")
         return result
 
     
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = 0xFF == dev_id[0][0] and 0x80 <= dev_id[0][1]
         if not result:
-            LOGGER.error(f"Wrong id ({dev_id}) configured for device {device_name}")
+            LOGGER.error(f"{device_name} ({dev_id}): Wrong device id configured!")
         return result
     
     

@@ -59,7 +59,7 @@ async def async_setup_entry(
                 elif dev_eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
-    validate_dev_and_sender_id(entities)
+    validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.LIGHT)
     async_add_entities(entities)
 
