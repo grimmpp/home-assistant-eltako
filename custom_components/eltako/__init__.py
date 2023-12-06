@@ -9,6 +9,7 @@ from homeassistant.helpers.reload import async_integration_yaml_config, async_ge
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
+from .schema import CONFIG_SCHEMA
 from .configuration_helpers import *
 from .gateway import *
 
@@ -22,7 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     
     # Read the config
-    config = await async_get_home_assistant_config(hass)
+    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, async_integration_yaml_config)
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")

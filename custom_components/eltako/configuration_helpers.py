@@ -1,6 +1,5 @@
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_DEVICE
-from homeassistant.helpers.reload import async_integration_yaml_config
 
 from .const import *
 
@@ -35,14 +34,14 @@ async def async_get_gateway_config_serial_port(hass: HomeAssistant) -> dict:
         return gateway_config[CONF_SERIAL_PATH]
     return None
 
-async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: dict) -> dict:
-    _conf = await async_integration_yaml_config(hass, DOMAIN)
+async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config) -> dict:
+    _conf = await get_integration_config(hass, DOMAIN)
     if not _conf or DOMAIN not in _conf:
         LOGGER.warning("No `eltako:` key found in configuration.yaml.")
         # generate defaults
         return CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
     else:
-        return _conf[DOMAIN]
+        return CONFIG_SCHEMA(_conf[DOMAIN])
     
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:

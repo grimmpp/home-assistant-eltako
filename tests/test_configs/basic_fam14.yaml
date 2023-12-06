@@ -1,0 +1,13 @@
+eltako:
+  general_settings:
+    fast_status_change: False
+  gateway:
+    device: fam14
+    base_id: FF-BC-C8-00
+  light:
+  - id: 00-00-00-01
+    eep: M5-38-08
+    name: FSR14_4x - 1
+    sender:
+      id: 00-00-B0-01
+      eep: A5-38-08
