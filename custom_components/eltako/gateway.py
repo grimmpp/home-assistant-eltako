@@ -1,11 +1,11 @@
 """Representation of an Eltako gateway."""
 from enum import Enum
 import glob
-import asyncio
-import logging
+
 from os.path import basename, normpath
 
 import serial
+import asyncio
 
 from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
@@ -77,9 +77,6 @@ class EltakoGateway:
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         return False
 
-    async def after_initialized(self):
-        pass
-
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
         self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
@@ -87,8 +84,6 @@ class EltakoGateway:
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
         )
-
-        await self.after_initialized()
 
     def unload(self):
         """Disconnect callbacks established at init time."""
@@ -182,25 +177,24 @@ class EltakoGatewayFamUsb (EltakoGateway, Entity):
     def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, config_entry):
         super(EltakoGatewayFamUsb, self).__init__(hass, serial_path, baud_rate, base_id, config_entry)
 
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
-            )
-        )
+    #     self.async_on_remove(
+    #         async_dispatcher_connect(
+    #             self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
+    #         )
+    #     )
 
-    async def after_initialized(self):
-        # read base id from device
-        msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-        dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+    #     # read base id from device
+    #     msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    #     dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
 
-    def _message_received_callback(self, msg: ESP2Message) -> None:
-        # receive base id and compare with base id in configuration
-        if msg.address == b'\x00\x00\x00\x00' and msg.body[0] == 0x8B and msg.body[1] == 0x98:
-            device_base_id = msg.body[2:5]
-            if not compare_enocean_ids(self.base_id, device_base_id, len=4):
-                raise Exception(f"Configured baseId {self.base_id} does not match device baseId {device_base_id}")
-            else:
-                LOGGER.debug(f"Received baseId form device {device_base_id} and compared with configuration.")
+    # def _message_received_callback(self, msg: ESP2Message) -> None:
+    #     # receive base id and compare with base id in configuration
+    #     if msg.address == b'\x00\x00\x00\x00' and msg.body[0] == 0x8B and msg.body[1] == 0x98:
+    #         device_base_id = msg.body[2:5]
+    #         if not compare_enocean_ids(self.base_id, device_base_id, len=4):
+    #             raise Exception(f"Configured baseId {self.base_id} does not match device baseId {device_base_id}")
+    #         else:
+    #             LOGGER.debug(f"Received baseId form device {device_base_id} and compared with configuration.")
         
 
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
