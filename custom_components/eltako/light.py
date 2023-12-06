@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .configuration_helpers import *
+from .config_helpers import *
 from .device import *
 from .gateway import EltakoGateway
 from .const import *
@@ -34,7 +34,6 @@ async def async_setup_entry(
     """Set up the Eltako light platform."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
-    general_settings = get_general_settings_from_configuration(hass)
 
     entities: list[EltakoEntity] = []
     
@@ -56,9 +55,9 @@ async def async_setup_entry(
                 continue
             else:
                 if dev_eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(EltakoDimmableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
                 elif dev_eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                    entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
         
     log_entities_to_be_added(entities, Platform.LIGHT)
     async_add_entities(entities)
@@ -70,7 +69,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -80,7 +79,6 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
-        self.general_settings = general_settings
 
     @property
     def name(self):
@@ -182,7 +180,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -191,7 +189,6 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
         self._sender_eep = sender_eep
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"light.{self.unique_id}"
-        self.general_settings = general_settings
 
     @property
     def name(self):
@@ -205,7 +202,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),

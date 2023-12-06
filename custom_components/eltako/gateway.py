@@ -24,7 +24,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import Entity
 
 from .const import *
-from .configuration_helpers import compare_enocean_ids
+from .config_helpers import *
 
 DEFAULT_NAME = "Eltako Gateway"
 
@@ -51,7 +51,7 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
@@ -61,11 +61,10 @@ class EltakoGateway:
         self.identifier = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
+        self.general_settings = general_settings
         self.base_id = base_id
         self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
-        self.dev_name = dev_name
 
-        
         if isinstance(self, EltakoGatewayFam14):
             self.model = "Eltako Gateway - FAM14"
         elif isinstance(self, EltakoGatewayFgw14Usb):
@@ -77,6 +76,8 @@ class EltakoGateway:
 
         if not self.dev_name and len(self.dev_name) == 0:
             self.dev_name = self.model
+        
+        self.dev_name = get_device_name(dev_name, base_id, self.general_settings)
 
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
@@ -84,7 +85,7 @@ class EltakoGateway:
             identifiers={(DOMAIN, self.unique_id)},
             connections={(CONF_MAC, self.base_id_str)},
             manufacturer=MANUFACTURER,
-            name= f"{self.dev_name} ({self.base_id_str})",
+            name= self.dev_name,
             model=self.model,
         )
 

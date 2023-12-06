@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .schema import CONFIG_SCHEMA
-from .configuration_helpers import *
+from .config_helpers import *
 from .gateway import *
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

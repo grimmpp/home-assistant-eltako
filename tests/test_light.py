@@ -4,7 +4,7 @@ from homeassistant.helpers.entity import Entity
 from custom_components.eltako.light import EltakoDimmableLight, EltakoSwitchableLight
 from custom_components.eltako.device import EltakoEntity
 from eltakobus import *
-from custom_components.eltako.configuration_helpers import DEFAULT_GENERAL_SETTINGS
+from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)

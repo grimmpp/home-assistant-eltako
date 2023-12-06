@@ -1,6 +1,6 @@
 from unittest import IsolatedAsyncioTestCase
 import os
-from custom_components.eltako.configuration_helpers import async_get_home_assistant_config
+from custom_components.eltako.config_helpers import async_get_home_assistant_config
 from custom_components.eltako.schema import CONFIG_SCHEMA
 from custom_components.eltako.gateway import *
 from custom_components.eltako.const import *

@@ -1,5 +1,5 @@
 import unittest
-from custom_components.eltako.configuration_helpers import compare_enocean_ids
+from custom_components.eltako.config_helpers import compare_enocean_ids
 from eltakobus import AddressExpression
 
 class TestIdComparison(unittest.TestCase):

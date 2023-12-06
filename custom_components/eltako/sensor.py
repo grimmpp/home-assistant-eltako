@@ -52,7 +52,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import *
-from .configuration_helpers import *
+from .config_helpers import *
 from .gateway import EltakoGateway
 from .const import *
 
@@ -255,7 +255,6 @@ async def async_setup_entry(
     """Set up an Eltako sensor device."""
     config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
     gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
-    general_settings = get_general_settings_from_configuration(hass)
 
     entities: list[EltakoEntity] = []
     
@@ -276,60 +275,60 @@ async def async_setup_entry(
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
                 
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
-                entities.append(EltakoWeatherStation(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_RAIN))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
+                entities.append(EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
                 
             elif dev_eep in [F6_10_00]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
                 
-                entities.append(EltakoWindowHandle(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
+                entities.append(EltakoWindowHandle(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE))
                 
             elif dev_eep in [A5_12_01]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
                     
                 for tariff in meter_tariffs:
-                    entities.append(EltakoMeterSensor(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-                entities.append(EltakoMeterSensor(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+                    entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
+                entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
             elif dev_eep in [A5_12_02]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_GAS_METER
                     
                 for tariff in meter_tariffs:
-                    entities.append(EltakoMeterSensor(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
-                    entities.append(EltakoMeterSensor(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
 
             elif dev_eep in [A5_12_03]:
                 if dev_name == "":
                     dev_name = DEFAULT_DEVICE_NAME_WATER_METER
                     
                 for tariff in meter_tariffs:
-                    entities.append(EltakoMeterSensor(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
-                    entities.append(EltakoMeterSensor(general_settings, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
             elif dev_eep in [A5_04_02, A5_10_12]:
                 
-                entities.append(EltakoTemperatureSensor(general_settings, gateway, dev_id, dev_name, dev_eep))
-                entities.append(EltakoHumiditySensor(general_settings, gateway, dev_id, dev_name, dev_eep))
+                entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
+                entities.append(EltakoHumiditySensor(gateway, dev_id, dev_name, dev_eep))
                 if dev_eep in [A5_10_12]:
-                    entities.append(EltakoTargetTemperatureSensor(general_settings, gateway, dev_id, dev_name, dev_eep))
+                    entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
 
             elif dev_eep in [A5_10_06]:
-                entities.append(EltakoTemperatureSensor(general_settings, gateway, dev_id, dev_name, dev_eep))
-                entities.append(EltakoTargetTemperatureSensor(general_settings, gateway, dev_id, dev_name, dev_eep))
+                entities.append(EltakoTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
+                entities.append(EltakoTargetTemperatureSensor(gateway, dev_id, dev_name, dev_eep))
             
             elif dev_eep in [A5_09_0C]:
             ### Eltako FLGTF only supports VOCT Total
                 for t in VOC_SubstancesType:
                     if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
-                        entities.append(EltakoAirQualitySensor(general_settings, gateway, dev_id, dev_name, dev_eep, t, entity_config[CONF_LANGUAGE]))
+                        entities.append(EltakoAirQualitySensor(gateway, dev_id, dev_name, dev_eep, t, entity_config[CONF_LANGUAGE]))
 
     log_entities_to_be_added(entities, Platform.SENSOR)
     async_add_entities(entities)
@@ -339,11 +338,10 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
     """Representation of an  Eltako sensor device such as a power meter."""
 
     def __init__(
-        self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription
+        self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription
     ) -> None:
         """Initialize the Eltako sensor device."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
-        self.general_settings = general_settings
         self.dev_eep = dev_eep
         self.entity_description = description
         self._attr_native_value = None
@@ -372,9 +370,9 @@ class EltakoMeterSensor(EltakoSensor):
     - A5-12-02 (Automated Meter Reading, Gas)
     - A5-12-03 (Automated Meter Reading, Water)
     """
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
         """Initialize the Eltako meter sensor device."""
-        super().__init__(general_settings, gateway, dev_id, dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}_{tariff}"
         self.entity_id = f"sensor.{self.unique_id}"
         self._tariff = tariff
@@ -391,7 +389,7 @@ class EltakoMeterSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -441,9 +439,9 @@ class EltakoWindowHandle(EltakoSensor):
     - F6-10-00 (Mechanical handle / Hoppe AG)
     """
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako window handle sensor device."""
-        super().__init__(general_settings, gateway, dev_id, dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
@@ -460,7 +458,7 @@ class EltakoWindowHandle(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -498,9 +496,9 @@ class EltakoWeatherStation(EltakoSensor):
     - A5-13-01 (Weather station)
     """
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako weather station device."""
-        super().__init__(general_settings, gateway, dev_id, dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
@@ -516,7 +514,7 @@ class EltakoWeatherStation(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -582,12 +580,12 @@ class EltakoTemperatureSensor(EltakoSensor):
     - A5-04-02 (Temperature and Humidity)
     """
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
-        super().__init__(general_settings, gateway, dev_id, _dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
@@ -603,7 +601,7 @@ class EltakoTemperatureSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -629,12 +627,12 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
     - A5-10-06, A5-10-12
     """
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TARGET_TEMPERATURE) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TARGET_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
-        super().__init__(general_settings, gateway, dev_id, _dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
@@ -650,7 +648,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -681,7 +679,7 @@ class EltakoHumiditySensor(EltakoSensor):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_HYGROSTAT
-        super().__init__(general_settings, gateway, dev_id, _dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
@@ -697,7 +695,7 @@ class EltakoHumiditySensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
@@ -722,7 +720,7 @@ class EltakoAirQualitySensor(EltakoSensor):
     - A5-09-0C
     """
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATIONS) -> None:
+    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATIONS) -> None:
         """Initialize the Eltako air quality sensor."""
         _dev_name = dev_name
         if _dev_name == "":
@@ -742,7 +740,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             state_class=SensorStateClass.MEASUREMENT,
         )
 
-        super().__init__(general_settings, gateway, dev_id, _dev_name, dev_eep, description)
+        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self.voc_type = voc_type
@@ -762,7 +760,7 @@ class EltakoAirQualitySensor(EltakoSensor):
             identifiers={
                 (DOMAIN, self.dev_id.plain_address().hex())
             },
-            name=get_device_name(self.dev_name, self.dev_id, self.general_settings),
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.unique_id),
