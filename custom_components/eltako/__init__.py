@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA)
     if gateway_config:
         gateway_device = gateway_config[CONF_DEVICE]
-        gateway_base_id = gateway_config[CONF_BASE_ID]
+        gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
         # if len(config[CONF_GATEWAY]) > 1:
         #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
     else:

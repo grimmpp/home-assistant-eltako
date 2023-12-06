@@ -77,7 +77,7 @@ class EltakoGateway:
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, self.unique_id)},
             manufacturer=MANUFACTURER,
-            name= f"{self.model} ({b2a(self.base_id[0]).upper()})",  #TODO: enter gateway name, add model
+            name= f"{self.model} ({b2a(self.base_id[0], '-').upper()})",  #TODO: enter gateway name, add model
             model=self.model,
         )
 
