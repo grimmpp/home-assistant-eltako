@@ -63,7 +63,7 @@ def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: di
         return dev_name
     
 def get_bus_event_type(gateway_id :AddressExpression, function_id: str, source_id: AddressExpression = None) -> str:
-    event_id = f"{DOMAIN}.gw_{b2a(gateway_id[0],'-').upper()}_func_{function_id}"
+    event_id = f"{DOMAIN}.gw_{b2a(gateway_id[0],'-').upper()}.func_{function_id}"
     if source_id is not None:
-        event_id += f"_sid_{b2a(source_id[0],'-').upper()}"
+        event_id += f".sid_{b2a(source_id[0],'-').upper()}"
     return event_id
