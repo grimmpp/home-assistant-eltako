@@ -45,9 +45,10 @@ class EltakoEntity(Entity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
+        event_id = get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
+                self.hass, event_id, self._message_received_callback
             )
         )
 
@@ -119,7 +120,8 @@ class EltakoEntity(Entity):
     
     def send_message(self, msg: ESP2Message):
         # TODO: check if gateway is available
-        dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+        event_id = get_bus_event_type(self.gateway.base_id, SIGNAL_SEND_MESSAGE)
+        dispatcher_send(self.hass, event_id, msg)
         
 
 def validate_actuators_dev_and_sender_id(entities:[EltakoEntity]):

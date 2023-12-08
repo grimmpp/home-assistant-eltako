@@ -10,7 +10,7 @@ from .const import *
 DEFAULT_GENERAL_SETTINGS = {
     CONF_FAST_STATUS_CHANGE: False,
     CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
-    CONF_ENABLE_TEACH_IN_BUTTONS: False,
+    CONF_ENABLE_TEACH_IN_BUTTONS: False
 }
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
@@ -60,4 +60,10 @@ def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: di
     if general_config[CONF_SHOW_DEV_ID_IN_DEV_NAME]:
         return f"{dev_name} ({b2a(dev_id[0],'-').upper()})"
     else:
-        return dev_name,
+        return dev_name
+    
+def get_bus_event_type(gateway_id :AddressExpression, function_id: str, source_id: AddressExpression = None) -> str:
+    event_id = f"eltako.gw_{b2a(gateway_id).upper()}.func_{function_id}"
+    if source_id is not None:
+        event_id += f".sid_{b2a(source_id)}"
+    return event_id

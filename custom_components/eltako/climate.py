@@ -98,10 +98,12 @@ async def async_setup_entry(
 
                     # subscribe for cooling switch events
                     if cooling_switch_id is not None:
-                        event_id = f"{EVENT_BUTTON_PRESSED}_{cooling_switch_id.upper()}"
+                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch_id)
+                        # event_id = f"{EVENT_BUTTON_PRESSED}_{cooling_switch_id.upper()}"
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
-                        event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id.upper()}"
+                        event_id = get_bus_event_type(gateway.base_id, EVENT_CONTACT_CLOSED, cooling_switch_id)
+                        # event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id.upper()}"
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
     validate_actuators_dev_and_sender_id(entities)

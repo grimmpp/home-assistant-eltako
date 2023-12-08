@@ -7,13 +7,17 @@ This documentation is about how to control a heating like a heat pump which is a
 
 <img src="./HAClimatePanel.png" alt="Home Assistant Climate Panel" height="250"/>
 
-In the following scenario we have an actuator (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room temperature sensor and the target temperature can be set via control panel (e.g. Eltako FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
+In the following scenario we have an actuator (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room thermostat and the target temperature can be set via control panel (e.g. Eltako FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
 
-Both control panels are updated via a frequently sent telegram from the actuator based on EEP A5-10-06. For setting the target temperature the same EEP A5-10-06 is used.
+Both control panels can synchronize themself. If both are use together climate panel in HA sends a telegram to the heater actuator and the thermostat will adapt the taget temperature when it changes. This communication is based on EEP A5-10-06.
 
-Heating and cooling is supported, however it cannot be change via Climate Panel. It will be set via central rocker switch which defines the state for the whole heating. All actuators need to react on it.
+Switching between heating and cooling is supported, however it cannot be changed via Climate panel in Home Assistant. You can configure a switch connected via FTS14EM to change between heating and cooling mode and the Climate panel in Home Assistant will the react on it and show the selected mode.
 
-<img src="./heating-and-cooling-setup2.png" alt="Heating and cooling setup" height=600 />
+In the following picture you can see many possibility how you can combine all the sensors and actors with Home Assistant.
+
+**Hint**: If you want to use and fully integrate thermostats like FUTH in combination with Home Assistant. Then two gateways are required. You can also simplify the setup by having static configurations.
+
+<img src="./heating-and-cooling-setup3.png" alt="Heating and cooling setup" height=600 />
 
 | Number      | Component   | Description |
 | :---        | :---        | :---        |
@@ -21,8 +25,10 @@ Heating and cooling is supported, however it cannot be change via Climate Panel.
 | 2           | Climate Panel | Virtual temperature controller in Home Assistant. <br/>It requires an own address which needs to be entered in the function group 3 of the actuator e.g. via PCT14 programming software. <br/>It's EEP is "A5-10-06". |
 | 3           | Cooling Mode | Physical switch which is connected to FTS14EM and sends frequently (15min) a signal to stay in cooling mode or is off for heating. <br/>Supported EEPs: F6-02-01, F6-02-02, F6-10-00, D5-00-01, A5-08-01, M5-38-08 (FTS14EM contact signals and rocker switches are supported) <br/>In case of a rocker switch the button needs to be defined. 0x70 = top right, x50 = bottom right, 0x30 = top left, 0x10 = bottom left |
 | 4           | Room Temperature Sensor | Sensor sending periodically (every 50 seconds) the current temperature of the room. |
-| 5           | Temperature Controller | Physical wall-mounted temperature sensor and controller in one box. |
-| 6           | Actuator | Bringing the valve into the right position. |
+| 5           | Thermostat | Physical wall-mounted temperature sensor and controller in one device. |
+| 6           | Valve | Valve letting the water flow! |
+| 7           | EnOcean Transceiver  |  Receives and sends telegrams in wireless network. (In contrast to FAM14 is can send commands into wireless network and synchronized the target temperature of Home Assistant Cliemate Panel and Thermostat e.g. FUTH.) |
+| 8           | Heatpump | Heatpump which delivers warm or cold water to the valve. In the overview picture the switch for changing from warm to cold can be used for both automation and heating. |
 
 ## Actuator Configuration in Device via PCT14
 

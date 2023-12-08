@@ -15,10 +15,10 @@ MANUFACTURER: Final = "Eltako"
 
 ERROR_INVALID_GATEWAY_PATH: Final = "invalid_gateway_path"
 
-SIGNAL_RECEIVE_MESSAGE: Final = "eltako.receive_message"
-SIGNAL_SEND_MESSAGE: Final = "eltako.send_message"
-EVENT_BUTTON_PRESSED: Final = "eltako_button_pressed"
-EVENT_CONTACT_CLOSED: Final = "eltako_contact_closed"
+SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
+SIGNAL_SEND_MESSAGE: Final = "send_message"
+EVENT_BUTTON_PRESSED: Final = "button_pressed"
+EVENT_CONTACT_CLOSED: Final = "contact_closed"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 

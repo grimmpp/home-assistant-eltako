@@ -99,8 +99,9 @@ class EltakoGateway:
         """Finish the setup of the bridge and supported platforms."""
         self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
         
+        event_id = get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
+            self.hass, event_id, self._send_message_callback
         )
 
     def unload(self):
@@ -166,7 +167,8 @@ class EltakoGateway:
 
         LOGGER.debug("Received message: %s", message)
         if isinstance(message, ESP2Message):
-            dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, message)
+            event_id = get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+            dispatcher_send(self.hass, event_id, message)
             
     @property
     def unique_id(self):
@@ -237,7 +239,7 @@ class EnoceanUSB300Gateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, hass, serial_path, config_entry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
         """Initialize the EnOcean dongle."""
 
         self._communicator = SerialCommunicator(
@@ -247,6 +249,8 @@ class EnoceanUSB300Gateway:
         self.identifier = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
+        self.general_settings = general_settings
+        self.base_id = base_id
         
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
@@ -259,8 +263,9 @@ class EnoceanUSB300Gateway:
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
         self._communicator.start()
+        event_id = get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, SIGNAL_SEND_MESSAGE, self._send_message_callback
+            self.hass, event_id, self._send_message_callback
         )
 
     def unload(self):
@@ -286,7 +291,8 @@ class EnoceanUSB300Gateway:
             LOGGER.debug("Received radio packet: %s", packet)
             eltako_message = convert_esp3_to_esp2_message(packet)
             if eltako_message is not None:
-                dispatcher_send(self.hass, SIGNAL_RECEIVE_MESSAGE, eltako_message)
+                event_id = get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+                dispatcher_send(self.hass, event_id, eltako_message)
             
     @property
     def unique_id(self):

@@ -8,6 +8,7 @@ What gateway is preferred for what?
 ### FAM-USB
 * Is a good match for controlling actuators mounted on a RS485 bus with FAM14 and especially for decentralized actuators in Home Assistant.
 * It also allows to send teach-in telegrams so that you can teach-in actuators by using the Eltako Integration in Home Assistant.
+* It cannot receive RS485 bus internal commands. E.g. FTS14EM (wired rocker switches, window contacts, ...) telegrams cannot be received. Those telegrams must be consumed on the bus although status responses of the actuators will be sent into wireless network so that FAM-USB can see the result of the changes.
 
 ### FGW14-USB
 * Has good performance because it filters out polling messages from FAM14 what makes Home Assistant faster.
@@ -26,9 +27,11 @@ What gateway is preferred for what?
 * Use FAM-USB for operations with Home Assistant. FAM-USB is a must for decentralized actuators. If your setup only have actuators mounted on the RS485 bus FGW14-USB is a good choice. <br />
 * Use FAM14 to [generate Home Assistant configuration](../../eltakodevice_discovery/readme.md).
 
-
 ### Limitations
 Currently all gateways are limited to control 128 devices. It is wished to support more than one gateway in parallel and then you could operate as many devices as you like. 
+
+### Recoomendation
+Use both FGW14-USB to managed bus internal commands and FAM-USB to managed decentralized actuators. Eltako Integration is about to be prepased so that you can bring both areas together in Home Assistant.
 
 
 ## Types of gateways
@@ -51,6 +54,7 @@ You can use its usb port to connect it to Home Assistant.
 #### Pros
 * Can read memory of actuators. You can use it to [auto-generate a configuration file for Home Assistant](../../eltakodevice_discovery/readme.md). 
 * Not dependent on wireless network. Very stable connection.
+* Receives internal command on the RS485 bu. E.g. telegrams from rocker switches conncted via wires to FTS14EM.
 
 #### Cons
 * **Overhead traffic** is transferred to Home Assistant. It can slow down Home Assistant, better use FGW14-USB it delivers only status telegrams to Home Assistant. FGW14-USB is not allowed to access memory of actuators mounted on the bus. Thus it doesn't support auto-generation of Home Assistant configuration.
@@ -102,6 +106,7 @@ Is mounted on the rs485 bus and can read incoming telegrams from the wireless ne
 #### Pros
 * Less traffic overhead than FAM14.
 * Not dependent on wireless network. Very stable connection.
+* Receives internal command on the RS485 bu. E.g. telegrams from rocker switches conncted via wires to FTS14EM.
 
 #### Cons
 * FGW14-USB is not allowed to access memory of actuators mounted on the bus. Thus it doesn't support auto-generation of Home Assistant configuration. You can use FAM14 for it.
@@ -127,6 +132,14 @@ FAM-USB is a usb device which can receive and send ESP2 telegrams. You can use i
 | Baud rate | 9600 |
 | Tool for chip configuration | [DolphinStudio](https://www.enocean.com/de/produkt/dolphinstudio/?ts=1701468463) |
 | Sender Address Range | TCM300 has 128 address in the range of 0xFF80_0000 to 0xFFFF_FFFE starting at a base address (BaseId).  |
+
+#### Pro
+* Less traffic overhead than FAM14.
+* Can receive status telegrams from all actuators.
+* Can send telegrams to all actuators incl. teach-in telegrams.
+
+#### Con
+* Cannot receives internal command on the RS485 bu. E.g. telegrams from rocker switches conncted via wires to FTS14EM.
 
 #### Configuration 
 1. Specify the type of gateway in the configuration (/homeassistant/configuration.yaml) in Home Assistant.
@@ -157,7 +170,7 @@ eltako:
 
 ### [**EnOcean GmbH USB300**](https://www.enocean.com/en/product/usb-300/)
 
-FAM-USB is a usb device which can receive and send **ESP3** telegrams. 
+FAM-USB is a usb device which can receive and send **ESP3** telegrams. Bahvaior is most probably comparible to FAM-USB.
 
 **CURRENTLY NOT SUPPORTED AS HOME ASSISTANT GATEWAY!!!**
 

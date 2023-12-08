@@ -30,11 +30,13 @@ eltako:
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
 
-  # optional section 'gateways'
-  # currently it makes no differences which devices is configured because all supported devices behave the same. In future ESP3 protocol shall be supported. 
+  # section 'gateway'
+  # Currently only devices based on ESP2 protocol are supported. In future ESP3 protocol shall be extended. 
   gateway:
     device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
+    base_id: FF-AA-80-00        # Address which is used to send telegrams into wireless network. Mainly important for transceivers like FAM-USB
     serial_path: "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A10MAMIG-if00-port0"   # example value
+    
 
   # binary sensors can be switches, door or window contacts, ...
   # This section contains a list of sensor entities
@@ -93,9 +95,9 @@ eltako:
     sender:                   # virtual switch in Home Assistant.
       id: 00-00-B0-08         # every sender needs it's own address which needs to be entered in PCT14 / actuator with function group 30 for FHK14 and FAE14.
       eep: A5-10-06           
-    temperature_unit: °C        # optional. Supported values: °C, °F, K 
-    min_target_temperature: 17  # optional. Supported values: 17-25
-    max_target_temperature: 25  # optional. Supported values: 17-25
+    temperature_unit: °C        # optional: Supported values: °C, °F, K 
+    min_target_temperature: 17  # optional: Supported values: 17-25
+    max_target_temperature: 25  # optional: Supported values: 17-25
     cooling_mode:               # optional
       sensor:
         id: ff-bb-0a-1b         # usually a binary_sensor like a rocker switch which must be defined in binary_sensors. Eltako uses a physical switch to detect if the cooling mode of the e.g. heat pump is activated.
@@ -122,6 +124,7 @@ eltako:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
   gateway:
     device: fgw14usb            # Supported gateways: gam14, fgw14usb
+    base_id: FF-AA-80-00        # Offset address for sending telegrams into wireless network
   sensor:
   - id: 05-EE-88-15
     eep: A5-13-01
