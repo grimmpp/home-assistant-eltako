@@ -166,13 +166,12 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
                 }
-            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s', data: %s", event_id, json.dumps(pressed_buttons), msg.data)
             
-            LOGGER.debug(f"event_id 1: {event_id}")
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
             event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(pressed_buttons))
-            LOGGER.debug(f"event_id 2: {event_id}, {'-'.join(pressed_buttons)}")
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
             return
