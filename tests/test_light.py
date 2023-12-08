@@ -1,5 +1,6 @@
 import unittest
 from unittest import mock
+from .mocks import *
 from homeassistant.helpers.entity import Entity
 from custom_components.eltako.light import EltakoDimmableLight, EltakoSwitchableLight
 from custom_components.eltako.device import EltakoEntity
@@ -17,7 +18,7 @@ class TestLight(unittest.TestCase):
 
     def create_switchable_light(self) -> EltakoSwitchableLight:
         general_settings = DEFAULT_GENERAL_SETTINGS
-        gateway = None
+        gateway = GatewayMock()
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'M5-38-08'

@@ -155,7 +155,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 pass
 
             switch_address = b2a(msg.address, '-').upper()
-            event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, msg.address)
+            event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             
             self.hass.bus.fire(
@@ -203,7 +203,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             return
         
         if self.is_on:
-            event_id = get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, msg.address)
+            switch_address = b2a(msg.address, '-').upper()
+            event_id = get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
             self.hass.bus.fire(
                 event_id,
                 {

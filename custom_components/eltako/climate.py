@@ -67,8 +67,7 @@ async def async_setup_entry(
             cooling_sender_eep = None
             if CONF_COOLING_MODE in entity_config.keys():
                 LOGGER.debug("[Climate] Read cooling switch config")
-                # cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
-                cooling_switch_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID)
+                cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
                 cooling_switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
 
                 if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
@@ -144,7 +143,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
                  thermostat_sender_id: AddressExpression=None, thermostat_eep: EEP=None,
-                 cooling_switch_id:str=None, cooling_switch_button:int=0,
+                 cooling_switch_id: AddressExpression=None, cooling_switch_button:int=0,
                  cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
@@ -159,21 +158,13 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if thermostat_sender_id:
             self.listen_to_addresses.append(thermostat_sender_id)
 
-        self.cooling_switch_id = None
-        self.cooling_switch_id_string = cooling_switch_id
+        self.cooling_switch_id = cooling_switch_id
         self.cooling_switch_button = cooling_switch_button
         self.cooling_switch_last_signal_timestamp = 0
 
-        if cooling_switch_id is not None:
-            try:
-                self.cooling_switch_id = AddressExpression.parse(self.cooling_switch_id_string)
-                self.listen_to_addresses.append(self.cooling_switch_id)
-            except Exception as e:
-                LOGGER.error(e)
-
         self._cooling_sender_id = cooling_sender_id
         
-        if self.cooling_switch_id_string:
+        if self.cooling_switch_id:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
@@ -329,7 +320,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def _get_mode(self) -> HVACMode:
 
         # if no cooling switch is define return mode from config
-        if self.cooling_switch_id_string is None:
+        if self.cooling_switch_id is None:
             return self._hvac_mode_from_heating 
 
         # does cooling signal stays within the time range?

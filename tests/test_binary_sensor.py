@@ -1,5 +1,5 @@
 import unittest
-from mocks import HassMock
+from mocks import *
 from unittest import mock
 from homeassistant.helpers.entity import Entity
 from custom_components.eltako.binary_sensor import EltakoBinarySensor
@@ -13,7 +13,7 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 class TestBinarySensor(unittest.TestCase):
 
     def create_binary_sensor(self, eep_string:str="F6-02-01", device_class = "none", invert_signal:bool=False) -> EltakoBinarySensor:
-        gateway = None
+        gateway = GatewayMock()
         dev_id = AddressExpression.parse("00-00-00-01")
         dev_name = "device name"
         
@@ -38,11 +38,11 @@ class TestBinarySensor(unittest.TestCase):
 
         # check event type
         fired_event = bs.hass.bus.fired_events[0]
-        self.assertEqual(fired_event['event_type'], 'eltako_button_pressed_FE-DB-B6-40')
+        self.assertEqual(fired_event['event_type'], 'eltako.gw_FF-AA-80-00.func_button_pressed.sid_FE-DB-B6-40')
 
         # check event data
         exprected_data = {
-            'id': 'eltako_button_pressed_FE-DB-B6-40', 
+            'id': 'eltako.gw_FF-AA-80-00.func_button_pressed.sid_FE-DB-B6-40', 
             "data": 112,
             'switch_address': 'FE-DB-B6-40', 
             'pressed_buttons': ['RT'], 

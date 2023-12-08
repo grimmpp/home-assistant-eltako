@@ -2,6 +2,7 @@ import unittest
 from custom_components.eltako.sensor import *
 from mocks import HassMock
 from unittest import mock
+from .mocks import *
 from homeassistant.helpers.entity import Entity
 from custom_components.eltako.binary_sensor import EltakoBinarySensor
 from eltakobus import *
@@ -14,7 +15,7 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 class TestSensor(unittest.TestCase):
 
     def create_weatherstation_sensor(self, description: EltakoSensorEntityDescription) -> EltakoWeatherStation:
-        gateway = None
+        gateway = GatewayMock()
         dev_id = AddressExpression.parse("51-E8-00-01")
         dev_name = "dev name"
         dev_eep = EEP.find("A5-13-01")
