@@ -35,7 +35,7 @@ eltako:
   gateway:
     device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
     base_id: FF-AA-80-00        # Address which is used to send telegrams into wireless network. Mainly important for transceivers like FAM-USB
-    serial_path: "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A10MAMIG-if00-port0"   # example value
+    serial_path: "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A10MAMIG-if00-port0"   # optional: example value for usb path. 
     
 
   # binary sensors can be switches, door or window contacts, ...

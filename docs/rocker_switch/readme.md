@@ -1,11 +1,11 @@
 # How to detect Switch Signals and react on thoese in Home Assistant
 
-This example is about how to trigger complex automations defined in home assistant which can be triggered by wall-mounted switches.
+This example is about how to trigger complex automations in home assistant by wall-mounted rocker switches.
 
 <img src="./switch_triggered_ha_automation.png" alt="Home Assistant Automation" height="300"/>
 <img src="./Eltako-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
 
-First of all you need to register your switch into the home assistant configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
+First of all you need to register your switch in the Home assistant Configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
 
 <div style="border: 2px dotted darkgrey; padding: 12px; margin-top:20px; margin-bottom: 20px; ">
 📝 <b>Note:</b> <br />
@@ -32,7 +32,7 @@ See example snipped to declare your switch:
 After you have registered the switch in Home Assistant configuration and after you have restarted Home Assistant you can see messages in the logger view.
 
 To create an automation go in Home Assistant to ``Settings > Automation & Scenes > Create Automation``.
-As trigger choose ``Event`` and enter ``eltako_button_pressed_`` followed by your switch id in one word without spaces. Now any button on your switch will be detected. You can filter for specific buttons or button combinations on your switch by using conditions. To do so you need a ``template condition`` which is unfortunately not available in the webUI, therefore just switch to yaml mode. 
+As trigger choose ``Manual Event`` and enter ``eltako_button_pressed_`` followed by your switch id in one word without spaces. Now any button on your switch will be detected. You can filter for specific buttons or button combinations on your switch by using conditions. To do so you need a ``template condition`` which is unfortunately not available in the webUI, therefore just switch to yaml mode. 
 
 In my example below the automation is listening on switch. There is one condition which filters out the upper left button. Only then the action is triggered. the action itself is a simple relay which is switched either on or off.:
 ```
