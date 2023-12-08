@@ -72,4 +72,5 @@ def get_bus_event_type(gateway_id :AddressExpression, function_id: str, source_i
     # add data for better handling in automations
     if data is not None:
         event_id += f".d_{data}"
+        
     return event_id
