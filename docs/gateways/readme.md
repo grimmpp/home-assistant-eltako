@@ -76,6 +76,7 @@ Hint: Addresses in PCT14 are displayed in DEZ and in Home Assistant configuratio
 eltako:
   gateway:
     device: fam14
+    base_id: 
 
   light:
   - id: FF-AA-00-01         # internal address from PCT14

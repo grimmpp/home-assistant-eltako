@@ -3,6 +3,7 @@ eltako:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
   gateway:
     device: fgw14usb            # Supported gateways: gam14, fgw14usb
+    base_id: FF-AA-80-00
   sensor:
   - id: 05-EE-88-15
     eep: A5-13-01
