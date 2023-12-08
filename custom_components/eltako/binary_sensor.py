@@ -156,11 +156,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
 
             switch_address = b2a(msg.address, '-').upper()
             event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
-            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s', data: %s", event_id, json.dumps(pressed_buttons), msg.data, "big")
-            
-            self.hass.bus.fire(
-                event_id,
-                {
+            event_data = {
                     "id": event_id,
                     "data": int.from_bytes(msg.data, "big"),
                     "switch_address": switch_address,
@@ -169,8 +165,14 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     "two_buttons_pressed": two_buttons_pressed,
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
-                },
-            )
+                }
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s', data: %s", event_id, json.dumps(pressed_buttons), msg.data)
+            
+            self.hass.bus.fire(event_id, event_data)
+
+            event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(pressed_buttons))
+            self.hass.bus.fire(event_id, event_data)
+
             return
         elif self.dev_eep in [F6_10_00]:
             action = (decoded.movement & 0x70) >> 4
