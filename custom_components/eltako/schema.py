@@ -89,11 +89,12 @@ class GeneralSettings(EltakoPlatformSchema):
         })
     
     @classmethod
-    def platform_node(cls) -> dict[vol.Optional, vol.All]:
-        """Return a schema node for the platform."""
-        return {
-            vol.Optional(str(cls.PLATFORM)): cls.ENTITY_SCHEMA
-        }
+    def get_id(cls) -> str:
+        return cls.PLATFORM
+
+    @classmethod
+    def get_schema(cls) -> vol.Schema:
+        return cls.ENTITY_SCHEMA
 
 
 class BinarySensorSchema(EltakoPlatformSchema):
@@ -273,17 +274,18 @@ class GatewaySchema(EltakoPlatformSchema):
                 **ClimateSchema.platform_node(),
             })),
         })
+    
+    @classmethod
+    def get_schema(cls) -> vol.Schema:
+        """Return a schema."""
+        return cls.ENTITY_SCHEMA
 
 CONFIG_SCHEMA = vol.Schema(
     {
-        DOMAIN: vol.All(
-            vol.Schema(
-                {
-                    **GeneralSettings.platform_node(),
-                    **GatewaySchema.platform_node(),
-                }
-            ),
-        )
+        DOMAIN: vol.Schema({
+            vol.Required(CONF_GERNERAL_SETTINGS): GeneralSettings.get_schema(),
+            vol.Required(CONF_GATEWAY): vol.All( GatewaySchema.get_schema()),
+        })
     },
     extra=vol.ALLOW_EXTRA,
 )
