@@ -54,7 +54,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if await self.validate_eltako_conf(user_input):
                 return self.create_eltako_entry(user_input)
             
-            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
+            errors = {CONF_DEVICE: ERROR_INVALID_GATEWAY_PATH}
 
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
