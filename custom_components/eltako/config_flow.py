@@ -41,7 +41,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         
         if user_input is not None:
-            if user_input[CONF_SERIAL_PATH] == self.MANUAL_PATH_VALUE:
+            if user_input[CONF_DEVICE] == self.MANUAL_PATH_VALUE:
                 return await self.async_step_manual(None)
                 
             if await self.validate_eltako_conf(user_input):
