@@ -68,7 +68,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("serial_paths: %s", serial_paths)
 
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-        LOGGER.debug("g_list: %s", list(g_list.values()))
+        g_list_values = list(g_list.values())
+        LOGGER.debug("g_list: %s", g_list_values)
 
 
         #TODO: filter out initialized gateways
@@ -78,7 +79,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="Select USB Port for Gateway",
             data_schema=vol.Schema({
-                vol.Required(CONF_DEVICE): vol.In(g_list.values()),
+                vol.Required(CONF_DEVICE): vol.In(g_list_values),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
                 }),
             errors=errors,
