@@ -2,7 +2,7 @@
 
 This example is about how to trigger complex automations in home assistant by wall-mounted rocker switches.
 
-<img src="./switch_triggered_ha_automation.png" alt="Home Assistant Automation" height="300"/>
+<img src="./rocker_switch_automation_config.png" height="300px">
 <img src="./Eltako-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
 
 First of all you need to register your switch in the Home assistant Configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
@@ -32,13 +32,19 @@ See example snipped to declare your switch:
 After you have registered the switch in Home Assistant configuration and after you have restarted Home Assistant you can see messages in the logger view.
 
 To create an automation go in Home Assistant to ``Settings > Automation & Scenes > Create Automation``.
-As trigger choose ``Manual Event`` and enter ``eltako.gw_[GATEWAY_BASE_ID].func_button_pressed.sid_[SWITCH_ID]`` as event id. Replace brackets `[GATEWAY_BASE_ID]` by the base_id of your gateway and `[SWITCH_ID]` by the switch id, both you can find in your configuration. Ids must be entered in the following format and in upper letters: `FF-AA-80-00`.
+As trigger choose ``Manual Event`` and enter ``eltako.gw_[GATEWAY_BASE_ID].func_button_pressed.sid_[SWITCH_ID].d_[BUTTONS]`` as event id. Replace brackets `[GATEWAY_BASE_ID]` by the base_id of your gateway, `[SWITCH_ID]` by the switch id, and `[BUTTONS]` by the button positions. Gateway base id and switch id can be found in your configuration. Ids must be entered in the following format and in upper letters: `FF-AA-80-00`. Valid values for button positions are LT, LB, RT, RB (L = left, r = richt, T = top, B = bottom). Combinations are also possible. It always starts with left and then right. Valid values are: `LT-RT`, `LT-RB`, `LB-RT`, `LB-RB`.
 
 Choose your action you would like to trigger in the action section. In the following examples I change the state of light (toggle mode).
 
-Now any button on your rocker switch will be detected. You can filter for specific buttons or button combinations on your switch by using conditions. To do so you need a ``template condition`` which is unfortunately not available in the webUI, therefore just switch to yaml mode in the right upper corner. 
 
-## Automation Example Single Button
+## Advanced usage
+Events will be send twice with different event_ids.
+1. ``eltako.gw_[GATEWAY_BASE_ID].func_button_pressed.sid_[SWITCH_ID].d.[BUTTONS]`` (Described like above.)
+2. ``eltako.gw_[GATEWAY_BASE_ID].func_button_pressed.sid_[SWITCH_ID]`` and without button information
+
+Case 2 gives you the possibility to get all events of one rocker switch and to react with conditions on it. If you configure the same like above without the button positions then any button on your rocker switch will be detected. You can filter for specific buttons or button combinations on your switch by using conditions. To do so you need a ``template condition`` which is unfortunately not available in the webUI, therefore just switch to yaml mode in the right upper corner. 
+
+### Automation Example Single Button
 
 In my example below the automation is listening on a switch. There is one condition which filters out the upper left button. Only then the action is triggered. The action itself is a simple relay which is switched either on or off.:
 ```
@@ -46,7 +52,7 @@ alias: Eltako Taser Test - Single Button
 description: ""
 trigger:
   - platform: event
-    event_type: eltako.gw_FF-AA-00-00.func_button_pressed.sid_FE-DB-DA-04
+    event_type: eltako.gw_FF-AA-00-00.btn_pressed.sid_FE-DB-DA-04
 condition:
   - condition: template
     value_template: >-
@@ -62,7 +68,7 @@ mode: single
 ```
 After saving the automation and by pushing the switch you can see a popup when the automation recognizes the event triggered by the switch.
 
-## Automation Example Button Combination
+### Automation Example Button Combination
 
 In this example the upper left button and the lower right need to be pressed at the same time to change the light status.
 ```
@@ -70,7 +76,7 @@ alias: Trun light on
 description: ""
 trigger:
   - platform: event
-    event_type: eltako.gw_FF-AA-00-00.func_button_pressed.sid_FE-DB-DA-04
+    event_type: eltako.gw_FF-AA-00-00.btn_pressed.sid_FE-DB-DA-04
 condition:
   - condition:
       - condition: template

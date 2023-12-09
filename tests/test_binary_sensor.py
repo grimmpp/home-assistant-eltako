@@ -34,15 +34,18 @@ class TestBinarySensor(unittest.TestCase):
         bs.value_changed(msg)
         
         # test if processing was finished and event arrived on bus
-        self.assertEqual(len(bs.hass.bus.fired_events), 1)
+        self.assertEqual(len(bs.hass.bus.fired_events), 2)
 
         # check event type
-        fired_event = bs.hass.bus.fired_events[0]
-        self.assertEqual(fired_event['event_type'], 'eltako.gw_FF-AA-80-00.func_button_pressed.sid_FE-DB-B6-40')
+        fired_event_0 = bs.hass.bus.fired_events[0]
+        self.assertEqual(fired_event_0['event_type'], 'eltako.gw_FF-AA-80-00.btn_pressed.sid_FE-DB-B6-40')
+
+        fired_event_1 = bs.hass.bus.fired_events[1]
+        self.assertEqual(fired_event_1['event_type'], 'eltako.gw_FF-AA-80-00.btn_pressed.sid_FE-DB-B6-40.d_RT')
 
         # check event data
         exprected_data = {
-            'id': 'eltako.gw_FF-AA-80-00.func_button_pressed.sid_FE-DB-B6-40', 
+            'id': 'eltako.gw_FF-AA-80-00.btn_pressed.sid_FE-DB-B6-40', 
             "data": 112,
             'switch_address': 'FE-DB-B6-40', 
             'pressed_buttons': ['RT'], 
@@ -51,7 +54,7 @@ class TestBinarySensor(unittest.TestCase):
             'rocker_first_action': 3, 
             'rocker_second_action': 0
         }
-        self.assertEqual(fired_event['event_data'], exprected_data)
+        self.assertEqual(fired_event_0['event_data'], exprected_data)
 
 
     def test_binary_sensor_window_contact_triggered_via_FTS14EM(self):
