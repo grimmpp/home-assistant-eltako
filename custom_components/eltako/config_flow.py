@@ -59,16 +59,17 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             
         #     errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
 
-        # serial_paths = await self.hass.async_add_executor_job(gateway.detect)
+        serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
-        # if len(serial_paths) == 0:
-        #     return await self.async_step_manual(user_input)
+        if len(serial_paths) == 0:
+            return await self.async_step_manual(user_input)
 
         # serial_paths.append(self.MANUAL_PATH_VALUE)
+        LOGGER.debug("serial_paths: %s", serial_paths)
 
-        serial_paths = ["test"]
-        
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
+        LOGGER.debug("g_list: %s", g_list)
+
 
         #TODO: filter out initialized gateways
         #TODO: check if gateway is already inserted!
