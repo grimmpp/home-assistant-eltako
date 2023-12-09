@@ -10,7 +10,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.reload import async_integration_yaml_config
 from . import gateway
 from .config_helpers import async_get_gateway_config_serial_port, async_get_list_of_gateways
-from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
+from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER, CONF_SERIAL_PATH
 from .schema import CONFIG_SCHEMA
 
 
@@ -66,7 +66,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="detect",
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE): vol.In(g_list.values()),
-                vol.Required(CONF_DEVICE): vol.In(serial_paths),
+                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
                 }),
             errors=errors,
         )
@@ -89,7 +89,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="manual",
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE): vol.In(g_list.values()),
-                vol.Required(CONF_DEVICE, default=default_value): str
+                vol.Required(CONF_SERIAL_PATH, default=default_value): str
             }),
             errors=errors,
         )
