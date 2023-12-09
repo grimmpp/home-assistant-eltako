@@ -284,7 +284,7 @@ CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema({
             vol.Optional(CONF_GERNERAL_SETTINGS): GeneralSettings.get_schema(),
-            vol.Optional(CONF_GATEWAY): vol.All(cv.ensure_list, [GatewaySchema.get_schema()]),
+            **GatewaySchema.platform_node(),
         })
     },
     extra=vol.ALLOW_EXTRA,
