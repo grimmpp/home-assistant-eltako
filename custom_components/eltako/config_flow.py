@@ -28,7 +28,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
         if serial_port_from_config is not None:
             return self.create_eltako_entry({
-                CONF_SERIAL_PATH: serial_port_from_config
+                CONF_SERIAL_PATH: serial_port_from_config,
+                CONF_DEVICE: None,
                 })
 
         if self._async_current_entries():
@@ -41,7 +42,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         
         if user_input is not None:
-            if user_input[CONF_DEVICE] == self.MANUAL_PATH_VALUE:
+            if user_input[CONF_SERIAL_PATH] == self.MANUAL_PATH_VALUE:
                 return await self.async_step_manual(None)
                 
             if await self.validate_eltako_conf(user_input):
