@@ -47,39 +47,43 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_detect(self, user_input=None):
         """Propose a list of detected gateways."""
-        LOGGER.debug("async_step_detect")
-        errors = {}
-        
-        # if user_input is not None:
-        #     if self.is_input_available(user_input):
-        #         return await self.async_step_manual(None)
-                
-        #     if await self.validate_eltako_conf(user_input):
-        #         return self.create_eltako_entry(user_input)
+        try:
+            LOGGER.debug("async_step_detect")
+            errors = {}
             
-        #     errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
+            # if user_input is not None:
+            #     if self.is_input_available(user_input):
+            #         return await self.async_step_manual(None)
+                    
+            #     if await self.validate_eltako_conf(user_input):
+            #         return self.create_eltako_entry(user_input)
+                
+            #     errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
 
-        serial_paths = await self.hass.async_add_executor_job(gateway.detect)
+            serial_paths = await self.hass.async_add_executor_job(gateway.detect)
+            
+            if len(serial_paths) == 0:
+                return await self.async_step_manual(user_input)
+
+            # serial_paths.append(self.MANUAL_PATH_VALUE)
+            
+            g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
+
+            #TODO: filter out initialized gateways
+            #TODO: check if gateway is already inserted!
+            #TODO: filter out taken serial paths'
+
+            return self.async_show_form(
+                step_id="Select USB Port for Gateway",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_DEVICE): vol.In(g_list.values()),
+                    vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
+                    }),
+                errors=errors,
+            )
+        except Exception as e:
+            LOGGER.error(e)
         
-        if len(serial_paths) == 0:
-            return await self.async_step_manual(user_input)
-
-        # serial_paths.append(self.MANUAL_PATH_VALUE)
-        
-        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-
-        #TODO: filter out initialized gateways
-        #TODO: check if gateway is already inserted!
-        #TODO: filter out taken serial paths'
-
-        return self.async_show_form(
-            step_id="Select USB Port for Gateway",
-            data_schema=vol.Schema({
-                vol.Required(CONF_DEVICE): vol.In(g_list.values()),
-                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
-                }),
-            errors=errors,
-        )
 
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
