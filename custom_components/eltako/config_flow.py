@@ -31,15 +31,15 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
-        serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
-        if serial_port_from_config is not None:
-            return self.create_eltako_entry({
-                CONF_PATH: serial_port_from_config,
-                CONF_DEVICE: None,
-                })
+        # serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
+        # if serial_port_from_config is not None:
+        #     return self.create_eltako_entry({
+        #         CONF_PATH: serial_port_from_config,
+        #         CONF_DEVICE: None,
+        #         })
 
-        if self._async_current_entries():
-            return self.async_abort(reason="single_instance_allowed")
+        # if self._async_current_entries():
+        #     return self.async_abort(reason="single_instance_allowed")
 
         return await self.async_step_detect()
 
@@ -47,14 +47,14 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Propose a list of detected gateways."""
         errors = {}
         
-        if user_input is not None:
-            if self.is_input_available(user_input):
-                return await self.async_step_manual(None)
+        # if user_input is not None:
+        #     if self.is_input_available(user_input):
+        #         return await self.async_step_manual(None)
                 
-            if await self.validate_eltako_conf(user_input):
-                return self.create_eltako_entry(user_input)
+        #     if await self.validate_eltako_conf(user_input):
+        #         return self.create_eltako_entry(user_input)
             
-            errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
+        #     errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
