@@ -41,6 +41,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_TYPE,
     CONF_DEVICE,
+    CONF_DEVICES,
     Platform,
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
@@ -50,13 +51,18 @@ from homeassistant.const import (
 CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
 
-def _get_sender_schema(supported_sender_eep):
+def _get_sender_schema(supported_sender_eep) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Required(CONF_EEP): vol.In(supported_sender_eep),
         }
     )
+
+def _get_receiver_schema(supported_sender_eep) -> vol.Schema:
+    return _get_sender_schema(supported_sender_eep).extend({
+        vol.Optional(CONF_GATEWAY_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
+    })
 
 class EltakoPlatformSchema(ABC):
     """Voluptuous schema for Eltako platform entity configuration."""
@@ -81,17 +87,7 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
             vol.Optional(CONF_SHOW_DEV_ID_IN_DEV_NAME, default=False): cv.boolean,
         })
-    
-class GatewaySchema(EltakoPlatformSchema):
-    """Voluptuous schema for bus gateway"""
-    PLATFORM = CONF_GATEWAY
 
-    ENTITY_SCHEMA = vol.Schema({
-            vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
-            vol.Optional(CONF_NAME, default=""): cv.string,
-            vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
-            vol.Optional(CONF_SERIAL_PATH): cv.string,
-        })
 
 class BinarySensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako binary sensors."""
@@ -251,6 +247,26 @@ class ClimateSchema(EltakoPlatformSchema):
         ),
     )
 
+class GatewaySchema(EltakoPlatformSchema):
+    """Voluptuous schema for bus gateway"""
+    PLATFORM = CONF_GATEWAY
+
+    ENTITY_SCHEMA = vol.Schema({
+            vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
+            vol.Optional(CONF_NAME, default=""): cv.string,
+            vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Optional(CONF_SERIAL_PATH): cv.string,
+            vol.Required(CONF_DEVICES): vol.All(vol.Schema({
+                **BinarySensorSchema.platform_node(),
+                **LightSchema.platform_node(),
+                **SwitchSchema.platform_node(),
+                **SensorSchema.platform_node(),
+                **SensorSchema.platform_node(),
+                **CoverSchema.platform_node(),
+                **ClimateSchema.platform_node(),
+            })),
+        })
+
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.All(
@@ -258,13 +274,6 @@ CONFIG_SCHEMA = vol.Schema(
                 {
                     **GeneralSettings.platform_node(),
                     **GatewaySchema.platform_node(),
-                    **BinarySensorSchema.platform_node(),
-                    **LightSchema.platform_node(),
-                    **SwitchSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **SensorSchema.platform_node(),
-                    **CoverSchema.platform_node(),
-                    **ClimateSchema.platform_node(),
                 }
             ),
         )
