@@ -4,7 +4,7 @@
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_DEVICE, CONF_PATH
+from homeassistant.const import CONF_DEVICE
 from homeassistant.data_entry_flow import FlowResult
 
 from homeassistant.helpers.reload import async_integration_yaml_config
@@ -24,9 +24,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the Eltako config flow."""
 
     def is_input_available(self, user_input) -> bool:
-        if CONF_PATH not in user_input and user_input[CONF_PATH] is not None:
-            if CONF_DEVICE not in user_input and user_input[CONF_DEVICE] is not None:
-                return True
+        if user_input is not None:
+            if CONF_SERIAL_PATH not in user_input and user_input[CONF_SERIAL_PATH] is not None:
+                if CONF_DEVICE not in user_input and user_input[CONF_DEVICE] is not None:
+                    return True
         return False
 
     async def async_step_user(self, user_input=None):
@@ -75,7 +76,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="Select USB Port for Gateway",
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE): vol.In(g_list.values()),
-                vol.Required(CONF_PATH): vol.In(serial_paths),
+                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
                 }),
             errors=errors,
         )
@@ -86,12 +87,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         default_value = None
         errors = {}
         
-        if user_input is not None:
+        if self.is_input_available(user_input):
             if await self.validate_eltako_conf(user_input):
                 return self.create_eltako_entry(user_input)
             
-            default_value = user_input[CONF_PATH]
-            errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
+            default_value = user_input[CONF_SERIAL_PATH]
+            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
 
@@ -99,14 +100,14 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="manual",
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE): vol.In(g_list.values()),
-                vol.Required(CONF_PATH, default=default_value): str
+                vol.Required(CONF_SERIAL_PATH, default=default_value): str
             }),
             errors=errors,
         )
 
     async def validate_eltako_conf(self, user_input) -> bool:
         """Return True if the user_input contains a valid gateway path."""
-        serial_path: str = user_input[CONF_PATH]
+        serial_path: str = user_input[CONF_SERIAL_PATH]
         baud_rate: int = -1
         gateway_selection: str = user_input[CONF_DEVICE]
 

@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # if len(config[CONF_GATEWAY]) > 1:
     #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
 
-    serial_path = config_entry.data[CONF_PATH]
+    serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     LOGGER.debug(f"[Eltako Setup] Initializes USB device {gateway_device}")
     match gateway_device:
