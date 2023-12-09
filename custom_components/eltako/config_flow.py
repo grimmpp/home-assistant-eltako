@@ -68,7 +68,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("serial_paths: %s", serial_paths)
 
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-        LOGGER.debug("g_list: %s", g_list)
+        LOGGER.debug("g_list: %s", g_list.values())
 
 
         #TODO: filter out initialized gateways
