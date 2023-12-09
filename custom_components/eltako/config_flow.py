@@ -31,6 +31,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
+        LOGGER.debug("async_step_user")
         # serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
         # if serial_port_from_config is not None:
         #     return self.create_eltako_entry({
@@ -45,6 +46,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_detect(self, user_input=None):
         """Propose a list of detected gateways."""
+        LOGGER.debug("async_step_detect")
         errors = {}
         
         # if user_input is not None:
@@ -80,6 +82,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
+        LOGGER.debug("async_step_manual")
         default_value = None
         errors = {}
         
