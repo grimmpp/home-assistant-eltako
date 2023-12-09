@@ -5,10 +5,11 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
+from homeassistant.data_entry_flow import FlowResult
 
 from homeassistant.helpers.reload import async_integration_yaml_config
 from . import gateway
-from .config_helpers import async_get_gateway_config_serial_port
+from .config_helpers import async_get_gateway_config_serial_port, async_get_list_of_gateways
 from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER
 from .schema import CONFIG_SCHEMA
 
@@ -55,9 +56,18 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         serial_paths.append(self.MANUAL_PATH_VALUE)
         
+        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
+
+        #TODO: filter out initialized gateways
+        #TODO: check if gateway is already inserted!
+        #TODO: filter out taken serial paths'
+
         return self.async_show_form(
             step_id="detect",
-            data_schema=vol.Schema({vol.Required(CONF_DEVICE): vol.In(serial_paths)}),
+            data_schema=vol.Schema({
+                vol.Required(CONF_DEVICE): vol.In(g_list.values()),
+                vol.Required(CONF_DEVICE): vol.In(serial_paths),
+                }),
             errors=errors,
         )
 

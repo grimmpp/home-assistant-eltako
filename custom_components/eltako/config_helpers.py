@@ -1,6 +1,6 @@
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_DEVICE, CONF_DEVICES
+from homeassistant.const import CONF_DEVICE, CONF_DEVICES, CONF_NAME
 
 from eltakobus.util import AddressExpression, b2a
 
@@ -54,6 +54,22 @@ def get_device_config(config: dict, base_id: AddressExpression) -> dict:
         if g[CONF_BASE_ID].upper() == b2a(base_id[0],'-').upper():
             return g[CONF_DEVICES]
     return None
+
+async def async_get_list_of_gateways(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
+    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
+    return get_list_of_gateways_by_config(config)
+
+def get_list_of_gateways_by_config(config: dict) -> dict:
+    """Compiles a list of all gateways in config."""
+    result = {}
+    if CONF_GATEWAY in config:
+        for g in config[CONF_GATEWAY]:
+            g_name = g[CONF_NAME]
+            g_device = g[CONF_DEVICE]
+            g_base_id = g[CONF_BASE_ID]
+            display_name = f"{g_name} - {g_device} ({g_base_id.upper()})"
+            result[g_base_id.upper()] = display_name
+    return result
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
     """Compares two bytes arrays. len specifies the length to be checked."""
