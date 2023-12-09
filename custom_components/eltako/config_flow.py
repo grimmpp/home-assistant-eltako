@@ -23,6 +23,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the Eltako config flow."""
 
+    def is_input_available(self, user_input) -> bool:
+        if CONF_SERIAL_PATH not in user_input and user_input[CONF_SERIAL_PATH] is not None:
+            if CONF_DEVICE not in user_input and user_input[CONF_DEVICE] is not None:
+                return True
+        return False
+
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
         serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
@@ -42,7 +48,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         
         if user_input is not None:
-            if user_input[CONF_SERIAL_PATH] == self.MANUAL_PATH_VALUE:
+            if self.is_input_available(user_input):
                 return await self.async_step_manual(None)
                 
             if await self.validate_eltako_conf(user_input):
