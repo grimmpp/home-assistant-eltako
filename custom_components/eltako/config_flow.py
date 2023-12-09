@@ -54,7 +54,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if len(serial_paths) == 0:
             return await self.async_step_manual(user_input)
 
-        serial_paths.append(self.MANUAL_PATH_VALUE)
+        # serial_paths.append(self.MANUAL_PATH_VALUE)
         
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
 
@@ -83,11 +83,14 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             default_value = user_input[CONF_DEVICE]
             errors = {CONF_DEVICE: ERROR_INVALID_GATEWAY_PATH}
 
+        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
+
         return self.async_show_form(
             step_id="manual",
-            data_schema=vol.Schema(
-                {vol.Required(CONF_DEVICE, default=default_value): str}
-            ),
+            data_schema=vol.Schema({
+                vol.Required(CONF_DEVICE): vol.In(g_list.values()),
+                vol.Required(CONF_DEVICE, default=default_value): str
+            }),
             errors=errors,
         )
 
