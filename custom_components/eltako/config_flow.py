@@ -96,9 +96,17 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def validate_eltako_conf(self, user_input) -> bool:
         """Return True if the user_input contains a valid gateway path."""
-        serial_path = user_input[CONF_DEVICE]
+        serial_path: str = user_input[CONF_SERIAL_PATH]
+        baud_rate: int = -1
+        gateway_selection: str = user_input[CONF_SERIAL_PATH]
+
+        for gdc in gateway.GatewayDeviceTypes:
+            if str(gdc) in gateway_selection:
+                baud_rate = gateway.baud_rate_device_type_mapping[gdc]
+                break
+
         path_is_valid = await self.hass.async_add_executor_job(
-            gateway.validate_path, serial_path
+            gateway.validate_path, serial_path, baud_rate
         )
         return path_is_valid
 

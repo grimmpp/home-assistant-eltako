@@ -34,6 +34,12 @@ class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
     EnOceanUSB300 = 'enocean-usb300'    # not yet supported
 
+baud_rate_device_type_mapping: Final = {
+    GatewayDeviceTypes.GatewayEltakoFAM14: 57600,
+    GatewayDeviceTypes.GatewayEltakoFGW14USB: 57600,
+    GatewayDeviceTypes.GatewayEltakoFAMUSB: 9600,
+    GatewayDeviceTypes.EnOceanUSB300: 57600,
+}
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
     #TODO: implement converter
@@ -314,10 +320,10 @@ def detect():
     return found_paths
 
 
-def validate_path(path: str):
+def validate_path(path: str, baud_rate: int):
     """Return True if the provided path points to a valid serial port, False otherwise."""
     try:
-        serial.Serial(path, 57600, timeout=0.1)
+        serial.Serial(path, baud_rate, timeout=0.1)
         return True
     except serial.SerialException as exception:
         LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
