@@ -183,7 +183,7 @@ class EltakoGatewayFam14 (EltakoGateway):
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
     
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-        result = compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], pos=2)
+        result = compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
