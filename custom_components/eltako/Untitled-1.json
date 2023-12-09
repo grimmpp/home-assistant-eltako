@@ -1,0 +1,89 @@
+{'general_settings': [
+        {'fast_status_change': False, 'show_dev_id_in_dev_name': True
+        }
+    ], 'gateway': [
+        {'device': 'fam-usb', 
+        'base_id': 'FF-BC-C8-00', 
+        'devices': {'sensor': [
+                    {'id': '05-1E-83-15', 'eep': 'A5-13-01', 'name': 'Wetterstation', 'meter_tariffs': [
+                            1
+                        ], 'language': 'en', 'voc_type_indexes': [
+                            0
+                        ]
+                    },
+                    {'id': 'ff-a6-df-81', 'eep': 'A5-04-02', 'name': 'Temperature and Humidity Sensor - FLGTF55', 'meter_tariffs': [
+                            1
+                        ], 'language': 'en', 'voc_type_indexes': [
+                            0
+                        ]
+                    },
+                    {'id': 'ff-a6-dd-81', 'eep': 'A5-04-02', 'name': 'Temp. Sensor 2 - FLGTF55', 'meter_tariffs': [
+                            1
+                        ], 'language': 'en', 'voc_type_indexes': [
+                            0
+                        ]
+                    },
+                    {'id': 'FF-E2-35-81', 'eep': 'A5-10-06', 'name': 'Temp. Sensor and Controller - FUTH A5-10-06', 'meter_tariffs': [
+                            1
+                        ], 'language': 'en', 'voc_type_indexes': [
+                            0
+                        ]
+                    },
+                    {'id': 'FF-E2-35-92', 'eep': 'A5-10-12', 'name': 'Hygrostat - FUTH', 'meter_tariffs': [
+                            1
+                        ], 'language': 'en', 'voc_type_indexes': [
+                            0
+                        ]
+                    },
+                    {'id': 'ff-a6-df-80', 'eep': 'A5-09-0C', 'name': 'Air Quality Sensor - FLGTF55', 'meter_tariffs': [
+                            1
+                        ], 'language': 'en', 'voc_type_indexes': [
+                            0
+                        ]
+                    }
+                ], 'light': [
+                    {'id': 'FF-A2-24-01', 'eep': 'M5-38-08', 'name': 'FSR14_4x - 1', 'sender': {'id': 'FF-BC-C8-01', 'eep': 'A5-38-08'
+                        }
+                    },
+                    {'id': 'FF-A2-24-02', 'eep': 'M5-38-08', 'name': 'FSR14_4x - 2', 'sender': {'id': 'FF-BC-C8-02', 'eep': 'A5-38-08'
+                        }
+                    },
+                    {'id': 'FF-A2-24-03', 'eep': 'M5-38-08', 'name': 'FSR14_4x - 3', 'sender': {'id': 'FF-BC-C8-03', 'eep': 'A5-38-08'
+                        }
+                    },
+                    {'id': 'FF-A2-24-04', 'eep': 'M5-38-08', 'name': 'FSR14_4x - 4', 'sender': {'id': 'FF-BC-C8-04', 'eep': 'A5-38-08'
+                        }
+                    },
+                    {'id': 'FF-A2-24-05', 'eep': 'A5-38-08', 'name': 'FUD14 - 5', 'sender': {'id': 'FF-BC-C8-05', 'eep': 'A5-38-08'
+                        }
+                    }
+                ], 'binary_sensor': [
+                    {'id': 'FE-DB-0A-1B', 'eep': 'F6-02-01', 'name': 'Binary sensor', 'invert_signal': False
+                    },
+                    {'id': 'FE-DB-DA-04', 'eep': 'F6-02-01', 'name': 'Binary sensor', 'invert_signal': False
+                    },
+                    {'id': 'FE-DB-B6-40', 'eep': 'F6-02-01', 'name': 'Binary sensor', 'invert_signal': False
+                    },
+                    {'id': '00-00-10-08', 'eep': 'D5-00-01', 'name': 'window 8', 'device_class': <BinarySensorDeviceClass.WINDOW: 'window'>, 'invert_signal': True
+                    }
+                ], 'cover': [
+                    {'id': 'FF-A2-24-06', 'eep': 'G5-3F-7F', 'sender': {'id': 'FF-BC-C8-06', 'eep': 'H5-3F-7F'
+                        }, 'time_closes': 3, 'time_opens': 3, 'device_class': <CoverDeviceClass.SHUTTER: 'shutter'>, 'name': 'Cover'
+                    },
+                    {'id': 'FF-A2-24-07', 'eep': 'G5-3F-7F', 'sender': {'id': 'FF-BC-C8-07', 'eep': 'H5-3F-7F'
+                        }, 'time_closes': 3, 'time_opens': 3, 'device_class': <CoverDeviceClass.SHUTTER: 'shutter'>, 'name': 'Cover'
+                    }
+                ], 'climate': [
+                    {'id': 'FF-A2-24-0B', 'eep': 'A5-10-06', 'name': 'Room 0B', 'temperature_unit': '°C', 'sender': {'id': 'FF-BC-C8-0B', 'eep': 'A5-10-06'
+                        }, 'min_target_temperature': 17, 'max_target_temperature': 25
+                    },
+                    {'id': 'FF-A2-24-09', 'eep': 'A5-10-06', 'temperature_unit': '°C', 'sender': {'id': 'FF-BC-C8-09', 'eep': 'A5-10-06'
+                        }, 'cooling_mode': {'sensor': {'id': 'FE-DB-0A-1B', 'switch-button': 80
+                            }
+                        }, 'min_target_temperature': 17, 'max_target_temperature': 25, 'name': 'Climate'
+                    }
+                ]
+            }, 'name': ''
+        }
+    ]
+}

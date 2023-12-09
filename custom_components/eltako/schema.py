@@ -87,6 +87,13 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
             vol.Optional(CONF_SHOW_DEV_ID_IN_DEV_NAME, default=False): cv.boolean,
         })
+    
+    @classmethod
+    def platform_node(cls) -> dict[vol.Optional, vol.All]:
+        """Return a schema node for the platform."""
+        return {
+            vol.Optional(str(cls.PLATFORM)): cls.ENTITY_SCHEMA
+        }
 
 
 class BinarySensorSchema(EltakoPlatformSchema):
