@@ -283,8 +283,8 @@ class GatewaySchema(EltakoPlatformSchema):
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema({
-            vol.Required(CONF_GERNERAL_SETTINGS): GeneralSettings.get_schema(),
-            vol.Required(CONF_GATEWAY): vol.All( GatewaySchema.get_schema()),
+            vol.Optional(CONF_GERNERAL_SETTINGS): GeneralSettings.get_schema(),
+            vol.Optional(CONF_GATEWAY): vol.All(cv.ensure_list, [GatewaySchema.get_schema()]),
         })
     },
     extra=vol.ALLOW_EXTRA,
