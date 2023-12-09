@@ -16,7 +16,7 @@ DEFAULT_GENERAL_SETTINGS = {
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     settings = DEFAULT_GENERAL_SETTINGS
     if hass and CONF_GERNERAL_SETTINGS in hass.data[DATA_ELTAKO][ELTAKO_CONFIG]:
-        settings = hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS][0]
+        settings = hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS]
     
     # LOGGER.debug(f"General Settings: {settings}")
 
