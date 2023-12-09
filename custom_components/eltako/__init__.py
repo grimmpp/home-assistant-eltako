@@ -2,7 +2,7 @@
 import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_DEVICE, CONF_NAME
+from homeassistant.const import CONF_DEVICE, CONF_NAME, CONF_PATH
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # if len(config[CONF_GATEWAY]) > 1:
     #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
 
-    serial_path = config_entry.data[CONF_SERIAL_PATH]
+    serial_path = config_entry.data[CONF_PATH]
 
     LOGGER.debug(f"[Eltako Setup] Initializes USB device {gateway_device}")
     match gateway_device:

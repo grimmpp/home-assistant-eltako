@@ -65,9 +65,11 @@ def get_list_of_gateways_by_config(config: dict) -> dict:
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:
             g_name = g[CONF_NAME]
+            if g_name:
+                g_name += " - "
             g_device = g[CONF_DEVICE]
             g_base_id = g[CONF_BASE_ID]
-            display_name = f"{g_name} - {g_device} ({g_base_id.upper()})"
+            display_name = f"{g_name}{g_device} ({g_base_id.upper()})"
             result[g_base_id.upper()] = display_name
     return result
 
