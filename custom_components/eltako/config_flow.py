@@ -28,7 +28,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
         if serial_port_from_config is not None:
             return self.create_eltako_entry({
-                CONF_DEVICE: serial_port_from_config
+                CONF_SERIAL_PATH: serial_port_from_config
                 })
 
         if self._async_current_entries():
@@ -41,13 +41,13 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         
         if user_input is not None:
-            if user_input[CONF_DEVICE] == self.MANUAL_PATH_VALUE:
+            if user_input[CONF_SERIAL_PATH] == self.MANUAL_PATH_VALUE:
                 return await self.async_step_manual(None)
                 
             if await self.validate_eltako_conf(user_input):
                 return self.create_eltako_entry(user_input)
             
-            errors = {CONF_DEVICE: ERROR_INVALID_GATEWAY_PATH}
+            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
@@ -63,7 +63,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         #TODO: filter out taken serial paths'
 
         return self.async_show_form(
-            step_id="detect",
+            step_id="Select USB Port for Gateway",
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE): vol.In(g_list.values()),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
@@ -80,8 +80,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if await self.validate_eltako_conf(user_input):
                 return self.create_eltako_entry(user_input)
             
-            default_value = user_input[CONF_DEVICE]
-            errors = {CONF_DEVICE: ERROR_INVALID_GATEWAY_PATH}
+            default_value = user_input[CONF_SERIAL_PATH]
+            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
 
@@ -100,8 +100,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         baud_rate: int = -1
         gateway_selection: str = user_input[CONF_DEVICE]
 
+        LOGGER.debug("serial_path: %s", serial_path)
+        LOGGER.debug("gateway_selection: %s", gateway_selection)
         for gdc in gateway.GatewayDeviceTypes:
-            if str(gdc) in gateway_selection:
+            LOGGER.debug("gdc %s", gdc)
+            if gdc in gateway_selection:
                 baud_rate = gateway.baud_rate_device_type_mapping[gdc]
                 break
 
