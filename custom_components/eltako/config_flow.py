@@ -98,7 +98,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Return True if the user_input contains a valid gateway path."""
         serial_path: str = user_input[CONF_SERIAL_PATH]
         baud_rate: int = -1
-        gateway_selection: str = user_input[CONF_SERIAL_PATH]
+        gateway_selection: str = user_input[CONF_DEVICE]
 
         for gdc in gateway.GatewayDeviceTypes:
             if str(gdc) in gateway_selection:
