@@ -97,12 +97,8 @@ async def async_setup_entry(
 
                     # subscribe for cooling switch events
                     if cooling_switch_id is not None:
-                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch_id)
-                        # event_id = f"{EVENT_BUTTON_PRESSED}_{cooling_switch_id.upper()}"
-                        hass.bus.async_listen(event_id, climate_entity.async_handle_event)
-
-                        event_id = get_bus_event_type(gateway.base_id, EVENT_CONTACT_CLOSED, cooling_switch_id)
-                        # event_id = f"{EVENT_CONTACT_CLOSED}_{cooling_switch_id.upper()}"
+                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch_id, convert_button_pos_from_hex_to_str(cooling_switch_button))
+                        LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
     validate_actuators_dev_and_sender_id(entities)
@@ -222,13 +218,8 @@ class ClimateController(EltakoEntity, ClimateEntity):
         """Receives signal from cooling switches if defined in configuration."""
         # LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
-        if call.data['id'].startswith(EVENT_BUTTON_PRESSED):
-            if (call.data['pressed'] or call.data['two_buttons_pressed']) and call.data['data'] == self.cooling_switch_button:
-                LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} for button {hex(call.data['data'])} timestamp set.")
-                self.cooling_switch_last_signal_timestamp = time.time()
-        elif call.data['id'].startswith(EVENT_CONTACT_CLOSED):
-            LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} timestamp set.")
-            self.cooling_switch_last_signal_timestamp = time.time()
+        LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} for button {hex(call.data['data'])} timestamp set.")
+        self.cooling_switch_last_signal_timestamp = time.time()
 
         await self._async_check_if_cooling_is_activated()
 

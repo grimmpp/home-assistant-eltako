@@ -72,5 +72,16 @@ def get_bus_event_type(gateway_id :AddressExpression, function_id: str, source_i
     # add data for better handling in automations
     if data is not None:
         event_id += f".d_{data}"
-        
+
     return event_id
+
+def convert_button_pos_from_hex_to_str(pos: int) -> str:
+    if pos == 0x10:
+        return "LB"
+    if pos == 0x30:
+        return "LT"
+    if pos == 0x70:
+        return "RT"
+    if pos == 0x50:
+        return "RB"
+    return None
