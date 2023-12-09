@@ -69,12 +69,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = usb_gateway
     
-    devices_config = get_config_seciont_devices_for_gateway_base_id(config_entry, usb_gateway.base_id)
-
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
         hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(devices_config, platform)
+            hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
     
     return True

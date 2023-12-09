@@ -253,8 +253,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako sensor device."""
-    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []
     

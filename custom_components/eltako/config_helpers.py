@@ -48,7 +48,7 @@ async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: di
     else:
         return _conf[DOMAIN]
     
-def get_config_seciont_devices_for_gateway_base_id(config: dict, base_id: AddressExpression) -> dict:
+def get_device_config(config: dict, base_id: AddressExpression) -> dict:
     gateways = config[CONF_GATEWAY]
     for g in gateways:
         if g[CONF_BASE_ID].upper() == b2a(base_id[0],'-').upper():
