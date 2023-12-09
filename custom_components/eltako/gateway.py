@@ -306,7 +306,7 @@ class EnoceanUSB300Gateway:
         return self.serial_path
 
 
-def detect():
+def detect() -> [str]:
     """Return a list of candidate paths for USB Eltako gateways.
 
     This method is currently a bit simplistic, it may need to be
