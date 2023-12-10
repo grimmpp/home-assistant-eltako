@@ -53,16 +53,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"[Eltako Setup] Initializes USB device {gateway_device}")
     match gateway_device:
         case GatewayDeviceTypes.GatewayEltakoFAM14:
-            baud_rate= baud_rate_device_type_mapping[GatewayDeviceTypes.GatewayEltakoFAM14]
+            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.GatewayEltakoFAM14]
             usb_gateway = EltakoGatewayFam14(general_settings, hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
         case GatewayDeviceTypes.GatewayEltakoFGW14USB:
-            baud_rate= baud_rate_device_type_mapping[GatewayDeviceTypes.GatewayEltakoFGW14USB]
+            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.GatewayEltakoFGW14USB]
             usb_gateway = EltakoGatewayFgw14Usb(general_settings, hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
         case GatewayDeviceTypes.GatewayEltakoFAMUSB:
-            baud_rate= baud_rate_device_type_mapping[GatewayDeviceTypes.GatewayEltakoFAMUSB]
+            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.GatewayEltakoFAMUSB]
             usb_gateway = EltakoGatewayFamUsb(general_settings, hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
         case GatewayDeviceTypes.EnOceanUSB300:
-            baud_rate= baud_rate_device_type_mapping[GatewayDeviceTypes.EnOceanUSB300]
+            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.EnOceanUSB300]
             raise NotImplemented("EnOcean USB300 based on ESP3 protocol not yet supported!")
             usb_gateway = EnoceanUSB300Gateway(hass, serial_path, baud_rate, config_entry)
     

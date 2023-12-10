@@ -120,7 +120,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         for gdc in gateway.GatewayDeviceTypes:
             LOGGER.debug("gdc %s", gdc)
             if gdc in gateway_selection:
-                baud_rate = gateway.baud_rate_device_type_mapping[gdc]
+                baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
 
         path_is_valid = await self.hass.async_add_executor_job(
