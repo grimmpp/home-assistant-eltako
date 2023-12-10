@@ -70,7 +70,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         device_registry = dr.async_get(self.hass)
         base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
-        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, base_id_of_registed_gateways)
+        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
 
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
