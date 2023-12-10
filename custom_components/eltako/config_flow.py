@@ -38,11 +38,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_detect(self, user_input=None):
         """Propose a list of detected gateways."""
-        return self.manual_selection_routine(user_input)
+        return await self.manual_selection_routine(user_input)
         
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
-        return self.manual_selection_routine(user_input, manual_setp=True)
+        return await self.manual_selection_routine(user_input, manual_setp=True)
     
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
         errors = {}
