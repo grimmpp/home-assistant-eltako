@@ -64,7 +64,7 @@ class EltakoGateway:
         self._bus_task = None
         self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
         self.serial_path = serial_path
-        self.unique_id = basename(normpath(serial_path))
+        self.identifier = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
         self.general_settings = general_settings
