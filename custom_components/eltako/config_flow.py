@@ -76,7 +76,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         #TODO: filter out initialized gateways
         base_id_list = []
         device_registry = dr.async_get(self.hass)
-        for d in device_registry.devices:
+        for d in device_registry.devices.values():
             LOGGER.debug("device type: %s", type(d).__name__)
             if d.model.startswith(gateway.DEFAULT_NAME):
                 LOGGER.debug("gateway identifiers: %s", d.identifiers)
