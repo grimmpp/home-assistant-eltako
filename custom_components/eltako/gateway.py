@@ -88,7 +88,7 @@ class EltakoGateway:
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
-            identifiers={(DOMAIN, self.base_id)},
+            identifiers={(DOMAIN, self.serial_path)},
             connections={(CONF_MAC, self.base_id_str)},
             manufacturer=MANUFACTURER,
             name= self.dev_name,
