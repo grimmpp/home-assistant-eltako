@@ -77,8 +77,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         base_id_list = []
         device_registry = dr.async_get(self.hass)
         for d in device_registry.devices.values():
-            LOGGER.debug("device type: %s", type(d).__name__)
-            if d.model.startswith(gateway.DEFAULT_NAME):
+            LOGGER.debug("device id: %s, name: %s", d.id, d.name)
+            if d.model and d.model.startswith(gateway.DEFAULT_NAME):
                 LOGGER.debug("gateway identifiers: %s", d.identifiers)
                 base_id_list.append( d.identifiers[0][1] )
 
