@@ -33,81 +33,52 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
-        LOGGER.debug("async_step_user")
-        # serial_port_from_config = await async_get_gateway_config_serial_port(self.hass, CONFIG_SCHEMA, async_integration_yaml_config)
-        # if serial_port_from_config is not None:
-        #     return self.create_eltako_entry({
-        #         CONF_PATH: serial_port_from_config,
-        #         CONF_DEVICE: None,
-        #         })
-
-        # if self._async_current_entries():
-        #     return self.async_abort(reason="single_instance_allowed")
-
+        # is called when adding a new gateway
         return await self.async_step_detect()
 
     async def async_step_detect(self, user_input=None):
         """Propose a list of detected gateways."""
-        LOGGER.debug("async_step_detect")
+        return self.manual_selection_routine(user_input)
+        
+    async def async_step_manual(self, user_input=None):
+        """Request manual USB gateway path."""
+        return self.manual_selection_routine(user_input, manual_setp=True)
+    
+    async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
         errors = {}
         
+        # goes recursively ...
+        # check if values were set in the step before
         if user_input is not None:
             if self.is_input_available(user_input):
-                return await self.async_step_manual(None)
+                if not manual_setp:
+                    return await self.async_step_manual(None)
                 
             if await self.validate_eltako_conf(user_input):
                 return self.create_eltako_entry(user_input)
             
             errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
+        # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
         if len(serial_paths) == 0:
             return await self.async_step_manual(user_input)
 
-        # serial_paths.append(self.MANUAL_PATH_VALUE)
-        # LOGGER.debug("serial_paths: %s", serial_paths)
-
         device_registry = dr.async_get(self.hass)
+        # get all baseIds of existing/registered gateways so that those will be filtered out for selection
         base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
+        # get all serial paths which are not taken by existing gateways
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
-
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
 
-        LOGGER.debug("list of base_ids: %s", g_list)
-        LOGGER.debug("list of serial_paths: %s", serial_paths)
-
-
+        # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
             step_id="detect",
             data_schema=vol.Schema({
                 vol.Required(CONF_DEVICE): vol.In(g_list.values()),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
-            }),
-            errors=errors,
-        )
-
-    async def async_step_manual(self, user_input=None):
-        """Request manual USB gateway path."""
-        LOGGER.debug("async_step_manual")
-        default_value = None
-        errors = {}
-        
-        if self.is_input_available(user_input):
-            if await self.validate_eltako_conf(user_input):
-                return self.create_eltako_entry(user_input)
-            
-            default_value = user_input[CONF_SERIAL_PATH]
-            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
-
-        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-
-        return self.async_show_form(
-            step_id="manual",
-            data_schema=vol.Schema({
-                vol.Required(CONF_DEVICE): vol.In(g_list.values()),
-                vol.Required(CONF_SERIAL_PATH, default=default_value): str
             }),
             errors=errors,
         )
