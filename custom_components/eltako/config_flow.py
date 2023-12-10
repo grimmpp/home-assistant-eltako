@@ -85,7 +85,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 LOGGER.debug("gateway identifiers: %s", d.identifiers)
                 taken_serial_paths.append( list(d.identifiers)[0][1] )
 
-
+        for b_id in base_id_list:
+            del g_list[b_id]
+        for t_sp in taken_serial_paths:
+            serial_paths.remove(t_sp)
         LOGGER.debug("list of base_ids: %s", base_id_list)
         LOGGER.debug("list of serial_paths: %s", taken_serial_paths)
 
