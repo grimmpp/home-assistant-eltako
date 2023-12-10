@@ -72,25 +72,23 @@ class EltakoGateway:
         self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
 
         if isinstance(self, EltakoGatewayFam14):
-            self.model = "Eltako Gateway - FAM14"
+            self.model = DEFAULT_NAME + " - " + GatewayDeviceTypes.GatewayEltakoFAM14.value.upper()
         elif isinstance(self, EltakoGatewayFgw14Usb):
-            self.model = "Eltako Gateway - FGW14-USB"
+            self.model = DEFAULT_NAME + " - " + GatewayDeviceTypes.GatewayEltakoFGW14USB.value.upper()
         elif isinstance(self, EltakoGatewayFamUsb):
-            self.model = "Eltako Gateway - FAM-USB"
+            self.model = DEFAULT_NAME + " - " +  GatewayDeviceTypes.GatewayEltakoFAMUSB.value.upper()
         else:
-            self.model = "Eltako Gateway"
+            self.model = DEFAULT_NAME
 
         if not dev_name and len(dev_name) == 0:
             self.dev_name = self.model
-        
-        LOGGER.debug("Gateway entry_id: %s", config_entry.entry_id)
 
         self.dev_name = get_device_name(self.dev_name, base_id, self.general_settings)
 
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
-            config_entry_id=self.base_id_str,
-            identifiers={(DOMAIN, self.unique_id)},
+            config_entry_id=config_entry.entry_id,
+            identifiers={(DOMAIN, self.base_id)},
             connections={(CONF_MAC, self.base_id_str)},
             manufacturer=MANUFACTURER,
             name= self.dev_name,
