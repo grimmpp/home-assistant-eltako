@@ -50,14 +50,14 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("async_step_detect")
         errors = {}
         
-        # if user_input is not None:
-        #     if self.is_input_available(user_input):
-        #         return await self.async_step_manual(None)
+        if user_input is not None:
+            if self.is_input_available(user_input):
+                return await self.async_step_manual(None)
                 
-        #     if await self.validate_eltako_conf(user_input):
-        #         return self.create_eltako_entry(user_input)
+            if await self.validate_eltako_conf(user_input):
+                return self.create_eltako_entry(user_input)
             
-        #     errors = {CONF_PATH: ERROR_INVALID_GATEWAY_PATH}
+            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
@@ -65,11 +65,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_manual(user_input)
 
         # serial_paths.append(self.MANUAL_PATH_VALUE)
-        LOGGER.debug("serial_paths: %s", serial_paths)
+        # LOGGER.debug("serial_paths: %s", serial_paths)
 
         g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-        g_list_values = list(g_list.values())
-        LOGGER.debug("g_list: %s", g_list_values)
+        # g_list_values = list(g_list.values())
+        # LOGGER.debug("g_list: %s", g_list_values)
 
 
         #TODO: filter out initialized gateways
@@ -79,16 +79,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="detect",
             data_schema=vol.Schema({
-                vol.Required(CONF_DEVICE): vol.In(g_list_values),
+                vol.Required(CONF_DEVICE): vol.In(g_list.values()),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
             }),
             errors=errors,
         )
-        # return self.async_show_form(
-        #     step_id="detect",
-        #     data_schema=vol.Schema({vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths)}),
-        #     errors=errors,
-        # )
 
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
