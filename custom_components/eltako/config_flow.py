@@ -76,19 +76,19 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         #TODO: check if gateway is already inserted!
         #TODO: filter out taken serial paths'
 
-        # return self.async_show_form(
-        #     step_id="Select USB Port for Gateway",
-        #     data_schema=vol.Schema({
-        #         # vol.Required(CONF_DEVICE): vol.In(g_list_values),
-        #         vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
-        #     }),
-        #     errors=errors,
-        # )
         return self.async_show_form(
             step_id="detect",
-            data_schema=vol.Schema({vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths)}),
+            data_schema=vol.Schema({
+                vol.Required(CONF_DEVICE): vol.In(g_list_values),
+                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
+            }),
             errors=errors,
         )
+        # return self.async_show_form(
+        #     step_id="detect",
+        #     data_schema=vol.Schema({vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths)}),
+        #     errors=errors,
+        # )
 
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
