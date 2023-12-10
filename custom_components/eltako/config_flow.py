@@ -86,7 +86,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # )
         return self.async_show_form(
             step_id="detect",
-            data_schema=vol.Schema({vol.Required(CONF_DEVICE): vol.In(serial_paths)}),
+            data_schema=vol.Schema({vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths)}),
             errors=errors,
         )
 
