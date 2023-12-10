@@ -68,37 +68,16 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # serial_paths.append(self.MANUAL_PATH_VALUE)
         # LOGGER.debug("serial_paths: %s", serial_paths)
 
-        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-        # g_list_values = list(g_list.values())
-        # LOGGER.debug("g_list: %s", g_list_values)
-
-
-        #TODO: filter out initialized gateways
-        base_id_list = []
-        taken_serial_paths = []
         device_registry = dr.async_get(self.hass)
-        for d in device_registry.devices.values():
-            LOGGER.debug("device id: %s, name: %s", d.id, d.name)
-            if d.model and d.model.startswith(gateway.DEFAULT_NAME):
-                LOGGER.debug("gateway connections: %s", d.connections)
-                base_id_list.append( list(d.connections)[0][1] )
-                LOGGER.debug("gateway identifiers: %s", d.identifiers)
-                taken_serial_paths.append( list(d.identifiers)[0][1] )
+        base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
+        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, base_id_of_registed_gateways)
+        serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
 
-        for b_id in base_id_list:
-            del g_list[b_id]
-        for t_sp in taken_serial_paths:
-            serial_paths.remove(t_sp)
-        LOGGER.debug("list of base_ids: %s", base_id_list)
-        LOGGER.debug("list of serial_paths: %s", taken_serial_paths)
+        serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
 
-            
-        for g_id in g_list.keys():
-            if device_registry.async_get(g_id) is not None:
-                LOGGER.debug("Gateway %s found in registry", g_id)
+        LOGGER.debug("list of base_ids: %s", g_list)
+        LOGGER.debug("list of serial_paths: %s", serial_paths)
 
-        #TODO: check if gateway is already inserted!
-        #TODO: filter out taken serial paths'
 
         return self.async_show_form(
             step_id="detect",

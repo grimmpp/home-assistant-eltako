@@ -22,6 +22,7 @@ from homeassistant.const import CONF_DEVICE, CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.device_registry import DeviceRegistry
 
 from .const import *
 from .config_helpers import *
@@ -49,6 +50,21 @@ def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
     #TODO: implement converter
     raise Exception("Message conversion from ESP3 to ESP2 NOT YET IMPLEMENTED.")
 
+async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
+    base_id_list = []
+    for d in device_registry.devices.values():
+        LOGGER.debug("device id: %s, name: %s", d.id, d.name)
+        if d.model and d.model.startswith(DEFAULT_NAME):
+            base_id_list.append( list(d.connections)[0][1] )
+    return base_id_list
+
+async def async_get_serial_path_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
+    serial_path_list = []
+    for d in device_registry.devices.values():
+        LOGGER.debug("device id: %s, name: %s", d.id, d.name)
+        if d.model and d.model.startswith(DEFAULT_NAME):
+            serial_path_list.append( list(d.identifiers)[0][1] )
+    return serial_path_list
 
 class EltakoGateway:
     """Representation of an Eltako gateway.

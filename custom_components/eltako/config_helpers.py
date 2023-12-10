@@ -68,7 +68,7 @@ async def async_get_list_of_gateways(hass: HomeAssistant, CONFIG_SCHEMA: dict, g
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     return get_list_of_gateways_by_config(config)
 
-def get_list_of_gateways_by_config(config: dict) -> dict:
+def get_list_of_gateways_by_config(config: dict, filter_not_in: [str]=[]) -> dict:
     """Compiles a list of all gateways in config."""
     result = {}
     if CONF_GATEWAY in config:
@@ -77,9 +77,10 @@ def get_list_of_gateways_by_config(config: dict) -> dict:
             if g_name:
                 g_name += " - "
             g_device = g[CONF_DEVICE]
-            g_base_id = g[CONF_BASE_ID]
-            display_name = f"{g_name}{g_device} ({g_base_id.upper()})"
-            result[g_base_id.upper()] = display_name
+            g_base_id = g[CONF_BASE_ID].upper()
+            display_name = f"{g_name}{g_device} ({g_base_id})"
+            if g_base_id not in filter_not_in:
+                result[g_base_id] = display_name
     return result
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
