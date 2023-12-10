@@ -6,6 +6,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import device_registry as dr
 
 from homeassistant.helpers.reload import async_integration_yaml_config
 from . import gateway
@@ -73,6 +74,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
 
         #TODO: filter out initialized gateways
+        device_registry = dr.async_get(self.hass)
+        for g_id in g_list.keys():
+            if device_registry.async_get(g_id) is not None:
+                LOGGER.debug("Gateway %s found in registry", g_id)
+
         #TODO: check if gateway is already inserted!
         #TODO: filter out taken serial paths'
 

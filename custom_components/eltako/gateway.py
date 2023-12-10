@@ -64,7 +64,7 @@ class EltakoGateway:
         self._bus_task = None
         self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
         self.serial_path = serial_path
-        self.identifier = basename(normpath(serial_path))
+        self.unique_id = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
         self.general_settings = general_settings
@@ -83,11 +83,13 @@ class EltakoGateway:
         if not dev_name and len(dev_name) == 0:
             self.dev_name = self.model
         
+        LOGGER.debug("Gateway entry_id: %s", config_entry.entry_id)
+
         self.dev_name = get_device_name(self.dev_name, base_id, self.general_settings)
 
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
-            config_entry_id=config_entry.entry_id,
+            config_entry_id=self.base_id_str,
             identifiers={(DOMAIN, self.unique_id)},
             connections={(CONF_MAC, self.base_id_str)},
             manufacturer=MANUFACTURER,
