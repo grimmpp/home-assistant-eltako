@@ -34,7 +34,7 @@ class GatewayDeviceTypes(str, Enum):
     GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
     EnOceanUSB300 = 'enocean-usb300'    # not yet supported
 
-baud_rate_device_type_mapping: Final = {
+baud_rate_device_type_mapping: dict = {
     GatewayDeviceTypes.GatewayEltakoFAM14: 57600,
     GatewayDeviceTypes.GatewayEltakoFGW14USB: 57600,
     GatewayDeviceTypes.GatewayEltakoFAMUSB: 9600,

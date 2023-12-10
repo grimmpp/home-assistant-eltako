@@ -30,7 +30,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     general_settings = get_general_settings_from_configuration(hass)
 
     # Initialise the gateway
-    gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA)
+    # get base_id from user input
+    gateway_base_id = config_entry.data[CONF_DEVICE].split('(')[1].split(')')[0]
+    # get configuration section matching base_id
+    gateway_config = await async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
         raise Exception("[Eltako Integration Setup] No gateway configuration found.")
     

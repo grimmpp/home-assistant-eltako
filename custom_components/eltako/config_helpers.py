@@ -33,6 +33,15 @@ async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get
             return config[CONF_GATEWAY][0]
     return None
 
+async def async_find_gateway_config_by_base_id(base_id: str, hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
+    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
+    if CONF_GATEWAY in config:
+        for g in config[CONF_GATEWAY]:
+            if g[CONF_BASE_ID].upper() == base_id.upper():
+                return g
+    return None
+
+
 async def async_get_gateway_config_serial_port(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
     gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA, get_integration_config)
     if gateway_config is not None and CONF_SERIAL_PATH in gateway_config:
