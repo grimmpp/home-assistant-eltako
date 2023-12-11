@@ -85,9 +85,9 @@ class EltakoGateway:
         self.base_id = base_id
         self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
 
-        if isinstance(self, EltakoGatewayFam14):
+        if isinstance(self, EltakoGatewayFgw14Usb):
             self.model = DEFAULT_NAME + " - " + GatewayDeviceTypes.GatewayEltakoFAM14.value.upper()
-        elif isinstance(self, EltakoGatewayFgw14Usb):
+        elif isinstance(self, EltakoGatewayFam14):
             self.model = DEFAULT_NAME + " - " + GatewayDeviceTypes.GatewayEltakoFGW14USB.value.upper()
         elif isinstance(self, EltakoGatewayFamUsb):
             self.model = DEFAULT_NAME + " - " +  GatewayDeviceTypes.GatewayEltakoFAMUSB.value.upper()
