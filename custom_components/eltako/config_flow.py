@@ -44,6 +44,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.manual_selection_routine(user_input, manual_setp=True)
     
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
+        LOGGER.debug("Add new gateway")
         errors = {}
         
         # goes recursively ...
@@ -68,13 +69,15 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # get all baseIds of existing/registered gateways so that those will be filtered out for selection
         base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
         g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
-        # if len(g_list) == 0:
-        #     errors = {CONF_DEVICE: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
+        LOGGER.debug("Available gateways to be added: %s", g_list.values())
+        if len(g_list) == 0:
+            errors = {CONF_DEVICE: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
         # get all serial paths which are not taken by existing gateways
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
-        # if len(serial_paths) == 0:
-        #     errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
+        LOGGER.debug("Available serial paths: %s", serial_paths)
+        if len(serial_paths) == 0:
+            errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
