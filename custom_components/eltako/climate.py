@@ -49,10 +49,13 @@ async def async_setup_entry(
                 sender = config_helpers.get_device_conf(entity_config, CONF_SENDER)
                 thermostat = config_helpers.get_device_conf(entity_config, CONF_ROOM_THERMOSTAT)
 
-                LOGGER.debug("[Climate] Try to tead cooling switch config")
-                cooling_switch = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE, None), CONF_SENSOR [CONF_SWITCH_BUTTON])
-                LOGGER.debug("[Climate] Try to read cooling sender config")
-                cooling_sender = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE, None), CONF_SENDER)
+                cooling_switch = None
+                cooling_sender = None
+                if CONF_COOLING_MODE in config.keys():
+                    LOGGER.debug("[Climate] Read cooling switch config")
+                    cooling_switch = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENSOR [CONF_SWITCH_BUTTON])
+                    LOGGER.debug("[Climate] Read cooling sender config")
+                    cooling_sender = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENDER)
 
                 if dev_conf.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.

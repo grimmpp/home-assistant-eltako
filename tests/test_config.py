@@ -69,6 +69,7 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
+            self.assertEquals(CONFIG[k], dev_config.get(k))
 
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
@@ -85,6 +86,7 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
+            self.assertEquals(CONFIG[k], dev_config.get(k))
 
         self.assertTrue(CONF_MAX_TARGET_TEMPERATURE in dev_config)
         self.assertTrue(CONF_MIN_TARGET_TEMPERATURE in dev_config)
@@ -108,10 +110,12 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
+            self.assertEquals(CONFIG[k], dev_config.get(k))
 
         for k in [CONF_NAME, CONF_GATEWAY_BASE_ID, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertFalse(k in dev_config)
             self.assertFalse(hasattr(dev_config, k))
+            self.assertEquals(None, dev_config.get(k))
 
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
@@ -124,15 +128,18 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
+            self.assertEquals(CONFIG[k], dev_config.get(k))
 
         for k in [CONF_NAME, CONF_GATEWAY_BASE_ID]:
             self.assertFalse(k in dev_config)
             self.assertFalse(hasattr(dev_config, k))
+            self.assertEquals(None, dev_config.get(k))
 
         for k in [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
+            self.assertEquals(CONFIG[k], dev_config.get(k))
 
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
