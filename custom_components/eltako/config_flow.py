@@ -8,8 +8,8 @@ from homeassistant.const import CONF_DEVICE
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
-import gateway
-import config_helpers
+from . import gateway
+from . import config_helpers
 from .const import *
 from .schema import CONFIG_SCHEMA
 
