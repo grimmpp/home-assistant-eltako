@@ -1,8 +1,10 @@
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_DEVICE, CONF_DEVICES, CONF_NAME
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.const import CONF_DEVICE, CONF_DEVICES, CONF_NAME, CONF_ID
 
 from eltakobus.util import AddressExpression, b2a
+from eltakobus.eep import EEP
 
 from .const import *
 
@@ -12,6 +14,27 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
     CONF_ENABLE_TEACH_IN_BUTTONS: False
 }
+
+class device_conf(dict):
+    """Object representation of config."""
+    def __init__(self, config: ConfigType, extra_keys:[str]=[]):
+        self.update(config)
+        self.id = AddressExpression.parse(config.get(CONF_ID))
+        self.eep_string = config.get(CONF_EEP)
+        self.eep = EEP.find(self.eep_string)
+        if CONF_NAME in config:
+            self.name = config.get(CONF_NAME)
+        if CONF_GATEWAY_BASE_ID in config:
+            self.gateway_base_id = AddressExpression.parse(config.get(CONF_GATEWAY_BASE_ID))
+        for ek in extra_keys:
+            if ek in config:
+                setattr(self, ek, config.get(ek))
+        pass
+
+def get_device_conf(config: ConfigType, key: str, extra_keys:[str]=[]) -> device_conf:
+    if key in config.keys():
+        return device_conf(config.get(key))
+    return None
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     settings = DEFAULT_GENERAL_SETTINGS

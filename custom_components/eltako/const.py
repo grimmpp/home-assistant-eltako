@@ -14,6 +14,8 @@ ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "Eltako"
 
 ERROR_INVALID_GATEWAY_PATH: Final = "invalid_gateway_path"
+ERROR_NO_SERIAL_PATH_AVAILABLE: Final = "no_serial_path_available"
+ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE: Final = "no_gateway_configuration_available"
 
 SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
 SIGNAL_SEND_MESSAGE: Final = "send_message"
@@ -23,7 +25,7 @@ EVENT_CONTACT_CLOSED: Final = "contact_closed"
 LOGGER: Final = logging.getLogger(DOMAIN)
 
 CONF_EEP: Final = "eep"
-CONF_SWITCH_BUTTON: Final = "switch-button"
+CONF_SWITCH_BUTTON: Final = "switch_button"
 CONF_SENDER: Final = "sender"
 CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"

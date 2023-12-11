@@ -6,9 +6,9 @@
 * BaseId validation for gateways introduced. It will show warnings as output logs.
 * Device ids can be displayed in device name optionally.
 * Home Assistant eventing prepared to support more than one gateway
-* Manual installation of gateways/hubs implemented. #TODO: needs to be improved.
+* Manual installation of multiple gateways/hubs implemented. 
 
-**&#x26A0; Breaking Changes &#x26A0;**
+* **&#x26A0; Breaking Changes &#x26A0;**
 * Configuration: 'base_id' in 'gateway' in mandatory. See [docs](./docs/update_home_assistant_configuration.md)
 * Events in Home Assistant for switch telegrams have got different event_ids. This affects automations reacting on old event ids. See [docs](./docs/rocker_switch/readme.md)
 
@@ -43,7 +43,7 @@
 ## Backlog
 * Config generation shall be come more easy.
 * Docs for Configuration Schema
-* Extend device discovery for heating and cooling actors
+* Extend device discovery for heating and cooling actuators
 * Integrate Eltako FMZ14 ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))
 * Gateway availability checks for send commands.
 * Reconnect for serial interface.

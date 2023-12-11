@@ -8,10 +8,9 @@ from homeassistant.const import CONF_DEVICE
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
-from homeassistant.helpers.reload import async_integration_yaml_config
-from . import gateway
-from .config_helpers import async_get_gateway_config_serial_port, async_get_list_of_gateways
-from .const import DOMAIN, ERROR_INVALID_GATEWAY_PATH, LOGGER, CONF_SERIAL_PATH
+import gateway
+import config_helpers
+from .const import *
 from .schema import CONFIG_SCHEMA
 
 
@@ -68,10 +67,14 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         device_registry = dr.async_get(self.hass)
         # get all baseIds of existing/registered gateways so that those will be filtered out for selection
         base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
-        g_list = await async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
+        g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
+        if len(g_list) == 0:
+            errors = {CONF_DEVICE: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
         # get all serial paths which are not taken by existing gateways
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
+        if len(serial_paths) == 0:
+            errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(

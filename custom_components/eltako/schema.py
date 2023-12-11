@@ -236,6 +236,7 @@ class ClimateSchema(EltakoPlatformSchema):
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Required(CONF_EEP): vol.In([F6_02_01.eep_string, F6_02_02.eep_string]),
             vol.Optional(CONF_NAME, default=DEFAULT_COOLING_SENDER_NAME): cv.string,
+            vol.Optional(CONF_GATEWAY_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
         }),
     })
 
