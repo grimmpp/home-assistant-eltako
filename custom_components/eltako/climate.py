@@ -103,7 +103,7 @@ async def async_setup_entry(
                 LOGGER.critical(e, exc_info=True)
                 continue
             else:
-                if dev_config.dev_eep in [A5_10_06]:
+                if dev_config.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
                     climate_entity = ClimateController(gateway, dev_config.dev_id, dev_config.dev_name, dev_config.dev_eep, 
                                                        sender.id, sender.eep, 
