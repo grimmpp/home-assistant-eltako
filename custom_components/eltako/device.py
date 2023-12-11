@@ -132,7 +132,7 @@ def validate_actuators_dev_and_sender_id(entities:[EltakoEntity]):
 
 def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
     for e in entities:
-        LOGGER.debug(f"Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep.eep_string}) of platform type {platform} to Home Assistant.")
+        LOGGER.debug(f"[{platform}] Add entity {e.dev_name} (id: {e.dev_id}, eep: {e.dev_eep.eep_string}), gw: {e.gateway.dev_name}) to Home Assistant.")
 
 def get_entity_from_hass(hass: HomeAssistant, domain:Platform, dev_id: AddressExpression) -> bool:
     entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]
