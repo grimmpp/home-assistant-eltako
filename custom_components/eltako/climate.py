@@ -27,7 +27,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .gateway import EltakoGateway
 from .device import *
 from .const import *
-import config_helpers
+from . import config_helpers
 
 async def async_setup_entry(
     hass: HomeAssistant,
