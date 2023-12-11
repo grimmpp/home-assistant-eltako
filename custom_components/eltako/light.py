@@ -41,13 +41,13 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_config = device_conf(entity_config)
+                dev_conf = device_conf(entity_config)
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                if dev_config.eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
-                elif dev_config.eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
+                if dev_conf.eep in [A5_38_08]:
+                    entities.append(EltakoDimmableLight(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
+                elif dev_conf.eep in [M5_38_08]:
+                    entities.append(EltakoSwitchableLight(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)

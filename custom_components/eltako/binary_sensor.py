@@ -39,8 +39,9 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_config = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
-                entities.append(EltakoBinarySensor(gateway, dev_config.id, dev_config.name, dev_config.eep, dev_config[CONF_DEVICE_CLASS], dev_config[CONF_INVERT_SIGNAL]))
+                dev_conf = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
+                entities.append(EltakoBinarySensor(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                   dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
             except Exception as e:
                         LOGGER.warning("[%s] Could not load configuration", platform)

@@ -262,67 +262,67 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_config = device_conf(entity_config, [CONF_METER_TARIFFS])
-                dev_name = dev_config.name
+                dev_conf = device_conf(entity_config, [CONF_METER_TARIFFS])
+                dev_name = dev_conf.name
             
-                if dev_config.eep in [A5_13_01]:
-                    if dev_name == dev_config.name:
+                if dev_conf.eep in [A5_13_01]:
+                    if dev_name == dev_conf.name:
                         dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
                     
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_RAIN))
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
-                    entities.append(EltakoWeatherStation(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_RAIN))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
+                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
                     
-                elif dev_config.eep in [F6_10_00]:
+                elif dev_conf.eep in [F6_10_00]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
                     
-                    entities.append(EltakoWindowHandle(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WINDOWHANDLE))
+                    entities.append(EltakoWindowHandle(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WINDOWHANDLE))
                     
-                elif dev_config.eep in [A5_12_01]:
+                elif dev_conf.eep in [A5_12_01]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
                         
-                    for tariff in dev_config[CONF_METER_TARIFFS]:
-                        entities.append(EltakoMeterSensor(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-                    entities.append(EltakoMeterSensor(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+                    for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
+                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
-                elif dev_config.eep in [A5_12_02]:
+                elif dev_conf.eep in [A5_12_02]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_GAS_METER
                         
-                    for tariff in dev_config[CONF_METER_TARIFFS]:
-                        entities.append(EltakoMeterSensor(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
-                        entities.append(EltakoMeterSensor(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
+                    for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
+                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
+                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
 
-                elif dev_config.eep in [A5_12_03]:
+                elif dev_conf.eep in [A5_12_03]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_WATER_METER
                         
-                    for tariff in dev_config[CONF_METER_TARIFFS]:
-                        entities.append(EltakoMeterSensor(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
-                        entities.append(EltakoMeterSensor(gateway, dev_config.id, dev_name, dev_config.eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+                    for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
+                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
+                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
-                elif dev_config.eep in [A5_04_02, A5_10_12]:
+                elif dev_conf.eep in [A5_04_02, A5_10_12]:
                     
-                    entities.append(EltakoTemperatureSensor(gateway, dev_config.id, dev_name, dev_config.eep))
-                    entities.append(EltakoHumiditySensor(gateway, dev_config.id, dev_name, dev_config.eep))
-                    if dev_config.eep in [A5_10_12]:
-                        entities.append(EltakoTargetTemperatureSensor(gateway, dev_config.id, dev_name, dev_config.eep))
+                    entities.append(EltakoTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoHumiditySensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    if dev_conf.eep in [A5_10_12]:
+                        entities.append(EltakoTargetTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
 
-                elif dev_config.eep in [A5_10_06]:
-                    entities.append(EltakoTemperatureSensor(gateway, dev_config.id, dev_name, dev_config.eep))
-                    entities.append(EltakoTargetTemperatureSensor(gateway, dev_config.id, dev_name, dev_config.eep))
+                elif dev_conf.eep in [A5_10_06]:
+                    entities.append(EltakoTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoTargetTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
                 
-                elif dev_config.eep in [A5_09_0C]:
+                elif dev_conf.eep in [A5_09_0C]:
                 ### Eltako FLGTF only supports VOCT Total
                     for t in VOC_SubstancesType:
                         if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
-                            entities.append(EltakoAirQualitySensor(gateway, dev_config.id, dev_name, dev_config.eep, t, entity_config[CONF_LANGUAGE]))
+                            entities.append(EltakoAirQualitySensor(gateway, dev_conf.id, dev_name, dev_conf.eep, t, entity_config[CONF_LANGUAGE]))
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)

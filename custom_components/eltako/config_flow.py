@@ -98,7 +98,6 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # LOGGER.debug("serial_path: %s", serial_path)
         # LOGGER.debug("gateway_selection: %s", gateway_selection)
         for gdc in gateway.GatewayDeviceTypes:
-            LOGGER.debug("gdc %s", gdc)
             if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break

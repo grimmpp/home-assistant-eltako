@@ -45,29 +45,27 @@ async def async_setup_entry(
         for entity_config in config[platform]:
             
             try:
-                dev_config = device_conf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
+                dev_conf = device_conf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
                 sender = config_helpers.get_device_conf(entity_config, CONF_SENDER)
                 thermostat = config_helpers.get_device_conf(entity_config, CONF_ROOM_THERMOSTAT)
 
-                cooling_switch = None
-                cooling_sender = None
-                if CONF_COOLING_MODE in config.keys():
-                    LOGGER.debug("[Climate] Read cooling switch config")
-                    cooling_switch = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENSOR [CONF_SWITCH_BUTTON])
-                    LOGGER.debug("[Climate] Read cooling sender config")
-                    cooling_sender = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENDER)
+                LOGGER.debug("[Climate] Try to tead cooling switch config")
+                cooling_switch = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE, None), CONF_SENSOR [CONF_SWITCH_BUTTON])
+                LOGGER.debug("[Climate] Try to read cooling sender config")
+                cooling_sender = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE, None), CONF_SENDER)
 
-                if dev_config.eep in [A5_10_06]:
+                if dev_conf.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
-                    climate_entity = ClimateController(gateway, dev_config.id, dev_config.name, dev_config.eep, 
+                    climate_entity = ClimateController(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                                        sender.id, sender.eep, 
-                                                       dev_config[CONF_TEMPERATURE_UNIT], dev_config[CONF_MIN_TARGET_TEMPERATURE], dev_config[CONF_MAX_TARGET_TEMPERATURE], 
+                                                       dev_conf.get(CONF_TEMPERATURE_UNIT), 
+                                                       dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf(CONF_MAX_TARGET_TEMPERATURE), 
                                                        thermostat, cooling_switch, cooling_sender)
                     entities.append(climate_entity)
 
                     # subscribe for cooling switch events
                     if cooling_switch is not None:
-                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, convert_button_pos_from_hex_to_str(cooling_switch[CONF_SWITCH_BUTTON]))
+                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, convert_button_pos_from_hex_to_str(cooling_switch.get(CONF_SWITCH_BUTTON)))
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 

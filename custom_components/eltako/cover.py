@@ -36,12 +36,12 @@ async def async_setup_entry(
         for entity_config in config[platform]:
 
             try:
-                dev_config = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS])
+                dev_conf = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS])
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                entities.append(EltakoCover(gateway, dev_config.id, dev_config.name, dev_config.eep, 
+                entities.append(EltakoCover(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                             sender_config.id, sender_config.eep, 
-                                            dev_config[CONF_DEVICE_CLASS], dev_config[CONF_TIME_CLOSES], dev_config[CONF_TIME_OPENS]))
+                                            dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS)))
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)

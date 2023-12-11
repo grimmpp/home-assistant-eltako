@@ -31,9 +31,13 @@ class device_conf(dict):
                 setattr(self, ek, config.get(ek))
         pass
 
+    def get(self, key: str):
+        return super().get(key, None)
+
 def get_device_conf(config: ConfigType, key: str, extra_keys:[str]=[]) -> device_conf:
-    if key in config.keys():
-        return device_conf(config.get(key))
+    if config is not None:
+        if key in config.keys():
+            return device_conf(config.get(key))
     return None
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
