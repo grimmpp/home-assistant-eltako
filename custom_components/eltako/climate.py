@@ -108,14 +108,12 @@ async def async_setup_entry(
                     climate_entity = ClimateController(gateway, dev_config.id, dev_config.name, dev_config.eep, 
                                                        sender.id, sender.eep, 
                                                        dev_config[CONF_TEMPERATURE_UNIT], dev_config[CONF_MIN_TARGET_TEMPERATURE], dev_config[CONF_MAX_TARGET_TEMPERATURE], 
-                                                       thermostat,
-                                                       cooling_switch.id, cooling_switch[CONF_SWITCH_BUTTON],
-                                                       cooling_sender.id, cooling_sender.eep)
+                                                       thermostat, cooling_switch, cooling_sender)
                     entities.append(climate_entity)
 
                     # subscribe for cooling switch events
                     if cooling_switch is not None:
-                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, convert_button_pos_from_hex_to_str(cooling_switch.switch_button))
+                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, convert_button_pos_from_hex_to_str(cooling_switch[CONF_SWITCH_BUTTON]))
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
@@ -156,9 +154,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
-                 thermostat: device_conf, 
-                 cooling_switch_id: AddressExpression=None, cooling_switch_button:int=0,
-                 cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
+                 thermostat: device_conf, cooling_switch: device_conf, cooling_sender: device_conf):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._on_state = False
@@ -171,13 +167,12 @@ class ClimateController(EltakoEntity, ClimateEntity):
         if self.thermostat:
             self.listen_to_addresses.append(self.thermostat.id)
 
-        self.cooling_switch_id = cooling_switch_id
-        self.cooling_switch_button = cooling_switch_button
+        self.cooling_switch = cooling_switch
         self.cooling_switch_last_signal_timestamp = 0
 
-        self._cooling_sender_id = cooling_sender_id
+        self.cooling_sender = cooling_sender
         
-        if self.cooling_switch_id:
+        if self.cooling_switch:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
@@ -199,7 +194,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 await asyncio.sleep(self._update_frequency)
                 
                 # fakes physical switch and sends frequently in cooling state.
-                if self.cooling_switch_id:
+                if self.cooling_switch:
                     await self._async_check_if_cooling_is_activated()
                     
                     await self._async_send_mode_cooling()
@@ -319,16 +314,15 @@ class ClimateController(EltakoEntity, ClimateEntity):
 
     async def _async_send_mode_cooling(self) -> None:
         """fake physical switch and send cooling status."""
-        if self._cooling_sender_id:
+        if self.cooling_sender:
             LOGGER.debug(f"[climate {self.dev_id}] Send command for cooling")
-            address, _ = self._cooling_sender_id
-            self.send_message(RPSMessage(address, 0x30, b'\x50', True))
+            self.send_message(RPSMessage(self.cooling_sender.id[0], 0x30, b'\x50', True))
 
 
     def _get_mode(self) -> HVACMode:
 
         # if no cooling switch is define return mode from config
-        if self.cooling_switch_id is None:
+        if self.cooling_switch is None:
             return self._hvac_mode_from_heating 
 
         # does cooling signal stays within the time range?
@@ -366,10 +360,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat.id}")
                 self.change_temperature_values(msg)
 
-        if self.cooling_switch_id:
-            cooling_switch_address, _ = self.cooling_switch_id
-            if msg.address == cooling_switch_address:
-                LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {cooling_switch_address}")
+        if self.cooling_switch:
+            if msg.address == self.cooling_switch.id[0]:
+                LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
                 LOGGER.debug(f"NOT YET IMPLEMENTED");
 
 
