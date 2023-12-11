@@ -62,7 +62,7 @@ async def async_setup_entry(
                     climate_entity = ClimateController(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                                        sender.id, sender.eep, 
                                                        dev_conf.get(CONF_TEMPERATURE_UNIT), 
-                                                       dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf(CONF_MAX_TARGET_TEMPERATURE), 
+                                                       dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf.get(CONF_MAX_TARGET_TEMPERATURE), 
                                                        thermostat, cooling_switch, cooling_sender)
                     entities.append(climate_entity)
 
