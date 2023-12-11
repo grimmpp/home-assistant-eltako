@@ -48,6 +48,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import *
+from . import config_helpers
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
@@ -71,29 +72,25 @@ async def async_setup_entry(
         LOGGER.debug("[%s] Teach-in buttons are not supported by gateway %s", Platform.BUTTON, gateway.dev_name)
         return
     
+    platform = Platform.BUTTON
+
     # check for temperature controller defined in config as temperature sensor or climate controller
     for platform_id in PLATFORMS:
         if platform_id in config: 
             for entity_config in config[platform_id]:
                 if CONF_SENDER in entity_config:
-                    dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-                    dev_name = entity_config[CONF_NAME]
-                    eep_string = entity_config.get(CONF_EEP)
-
-                    sender_config = entity_config.get(CONF_SENDER)
-                    sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-
                     try:
-                        dev_eep = EEP.find(eep_string)
-                    except:
-                        LOGGER.warning("[%s] Could not find EEP %s for device with address %s", Platform.BUTTON, eep_string, dev_id.plain_address())
-                        continue
-                    else:
-                        if dev_eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
-                            entities.append(TemperatureControllerTeachInButton(gateway, dev_id, dev_name, dev_eep, sender_id))
+                        dev_config = device_conf(entity_config)
+                        sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
+
+                        if dev_config.eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
+                            entities.append(TemperatureControllerTeachInButton(gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id))
+                    except Exception as e:
+                        LOGGER.warning("[%s] Could not load configuration", platform)
+                        LOGGER.critical(e, exc_info=True)
 
     validate_actuators_dev_and_sender_id(entities)
-    log_entities_to_be_added(entities, Platform.BUTTON)
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
 

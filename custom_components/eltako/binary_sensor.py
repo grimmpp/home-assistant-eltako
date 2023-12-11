@@ -34,24 +34,20 @@ async def async_setup_entry(
     
     entities: list[EltakoEntity] = []
     
-    if Platform.BINARY_SENSOR in config:
-        for entity_config in config[Platform.BINARY_SENSOR]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config.get(CONF_NAME)
-            device_class = entity_config.get(CONF_DEVICE_CLASS)
-            eep_string = entity_config.get(CONF_EEP)
-            invert_signal =  entity_config.get(CONF_INVERT_SIGNAL)
+    platform = Platform.BINARY_SENSOR
 
+    if platform in config:
+        for entity_config in config[platform]:
             try:
-                dev_eep = EEP.find(eep_string)
-            except:
-                LOGGER.warning("[Binary Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
+                dev_config = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
+                entities.append(EltakoBinarySensor(gateway, dev_config.id, dev_config.name, dev_config.eep, dev_config[CONF_DEVICE_CLASS], dev_config[CONF_INVERT_SIGNAL]))
+
+            except Exception as e:
+                        LOGGER.warning("[%s] Could not load configuration", platform)
+                        LOGGER.critical(e, exc_info=True)
 
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
-    log_entities_to_be_added(entities, Platform.BINARY_SENSOR)
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
     
 

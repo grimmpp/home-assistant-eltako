@@ -16,6 +16,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import *
+from . import config_helpers
 from .gateway import EltakoGateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
@@ -30,30 +31,25 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
-    if Platform.COVER in config:
-        for entity_config in config[Platform.COVER]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config.get(CONF_NAME)
-            device_class = entity_config.get(CONF_DEVICE_CLASS)
-            time_closes = entity_config.get(CONF_TIME_CLOSES)
-            time_opens = entity_config.get(CONF_TIME_OPENS)
-            eep_string = entity_config.get(CONF_EEP)
-
-            sender_config = entity_config.get(CONF_SENDER)
-            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-            sender_eep_string = sender_config.get(CONF_EEP)
+    platform = Platform.COVER
+    if platform in config:
+        for entity_config in config[platform]:
 
             try:
-                dev_eep = EEP.find(eep_string)
-                sender_eep = EEP.find(sender_eep_string)
-            except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                entities.append(EltakoCover(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
+                dev_config = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS])
+                sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
+
+                entities.append(EltakoCover(gateway, dev_config.id, dev_config.name, dev_config.eep, 
+                                            sender_config.id, sender_config.eep, 
+                                            dev_config[CONF_DEVICE_CLASS], dev_config[CONF_TIME_CLOSES], dev_config[CONF_TIME_OPENS]))
+
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", platform)
+                LOGGER.critical(e, exc_info=True)
+                
         
     validate_actuators_dev_and_sender_id(entities)
-    log_entities_to_be_added(entities, Platform.COVER)
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity):

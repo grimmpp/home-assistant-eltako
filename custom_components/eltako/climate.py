@@ -40,52 +40,15 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
-    if Platform.CLIMATE in config:
-        for entity_config in config[Platform.CLIMATE]:
+    platform = Platform.CLIMATE
+    if platform in config:
+        for entity_config in config[platform]:
             
-            # dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            # dev_name = entity_config.get(CONF_NAME)
-            # eep_string = entity_config.get(CONF_EEP)
-            # temp_unit = entity_config.get(CONF_TEMPERATURE_UNIT)
-            # max_temp = entity_config.get(CONF_MAX_TARGET_TEMPERATURE)
-            # min_temp = entity_config.get(CONF_MIN_TARGET_TEMPERATURE)
-            
-            # sender_config = entity_config.get(CONF_SENDER)
-            # sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-            # sender_eep_string = sender_config.get(CONF_EEP)
-
-            # thermostat_sender_id = None
-            # thermostat_sender_eep_string = None
-            # thermostat_sender_eep = None
-            # if CONF_ROOM_THERMOSTAT in entity_config.keys():
-                # thermostat_sender_id = AddressExpression.parse(entity_config.get(CONF_ROOM_THERMOSTAT).get(CONF_ID))
-                # thermostat_sender_eep_string = entity_config.get(CONF_ROOM_THERMOSTAT).get(CONF_EEP)
-
-
-            # cooling_switch_id = None
-            # cooling_switch_button = None
-            # cooling_switch_gw_base_id = None
-            # cooling_sender_id = None
-            # cooling_sender_eep_string = None
-            # cooling_sender_eep = None
-            # if CONF_COOLING_MODE in entity_config.keys():
-            #     LOGGER.debug("[Climate] Read cooling switch config")
-            #     cooling_switch_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_ID))
-            #     cooling_switch_button = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_SWITCH_BUTTON)
-            #     cooling_switch_gw_base_id = entity_config.get(CONF_COOLING_MODE).get(CONF_SENSOR).get(CONF_GATEWAY_BASE_ID)
-            #     if cooling_switch_gw_base_id:
-            #         cooling_switch_gw_base_id = AddressExpression.parse(cooling_switch_gw_base_id)
-
-            #     if CONF_SENDER in entity_config.get(CONF_COOLING_MODE).keys():
-            #         LOGGER.debug("[Climate] Read cooling sender config")
-            #         cooling_sender_id = AddressExpression.parse(entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_ID))
-            #         cooling_sender_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_EEP)
-
             try:
-                LOGGER.debug("[Climate] Load configuration")
                 dev_config = device_conf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
                 sender = config_helpers.get_device_conf(entity_config, CONF_SENDER)
                 thermostat = config_helpers.get_device_conf(entity_config, CONF_ROOM_THERMOSTAT)
+
                 cooling_switch = None
                 cooling_sender = None
                 if CONF_COOLING_MODE in config.keys():
@@ -94,15 +57,6 @@ async def async_setup_entry(
                     LOGGER.debug("[Climate] Read cooling sender config")
                     cooling_sender = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENDER)
 
-                # dev_eep = EEP.find(eep_string)
-                # sender_eep = EEP.find(sender_eep_string)
-                # if thermostat_sender_eep_string: thermostat_sender_eep = EEP.find(thermostat_sender_eep_string)
-                # if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
-            except Exception as e:
-                LOGGER.warning("[Climate] Could not load configuration")
-                LOGGER.critical(e, exc_info=True)
-                continue
-            else:
                 if dev_config.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
                     climate_entity = ClimateController(gateway, dev_config.id, dev_config.name, dev_config.eep, 
@@ -117,8 +71,13 @@ async def async_setup_entry(
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", platform)
+                LOGGER.critical(e, exc_info=True)
+                continue
+
     validate_actuators_dev_and_sender_id(entities)
-    log_entities_to_be_added(entities, Platform.CLIMATE)
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
 

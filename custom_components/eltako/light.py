@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .config_helpers import *
+from . import config_helpers
 from .device import *
 from .gateway import EltakoGateway
 from .const import *
@@ -37,30 +37,24 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
-    if Platform.LIGHT in config:
-        for entity_config in config[Platform.LIGHT]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config.get(CONF_NAME)
-            eep_string = entity_config.get(CONF_EEP)
-            
-            sender_config = entity_config.get(CONF_SENDER)
-            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-            sender_eep_string = sender_config.get(CONF_EEP)
-
+    platform = Platform.LIGHT
+    if platform in config:
+        for entity_config in config[platform]:
             try:
-                dev_eep = EEP.find(eep_string)
-                sender_eep = EEP.find(sender_eep_string)
-            except:
-                LOGGER.warning("[Light] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                if dev_eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
-                elif dev_eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                dev_config = device_conf(entity_config)
+                sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
+
+                if dev_config.eep in [A5_38_08]:
+                    entities.append(EltakoDimmableLight(gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
+                elif dev_config.eep in [M5_38_08]:
+                    entities.append(EltakoSwitchableLight(gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
+            
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", platform)
+                LOGGER.critical(e, exc_info=True)
         
     validate_actuators_dev_and_sender_id(entities)
-    log_entities_to_be_added(entities, Platform.LIGHT)
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
 
