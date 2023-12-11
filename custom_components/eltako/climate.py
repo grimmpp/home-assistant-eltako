@@ -82,6 +82,7 @@ async def async_setup_entry(
             #         cooling_sender_eep_string = entity_config.get(CONF_COOLING_MODE).get(CONF_SENDER).get(CONF_EEP)
 
             try:
+                LOGGER.debug("[Climate] Load configuration")
                 dev_config = device_conf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
                 sender = config_helpers.get_device_conf(entity_config, CONF_SENDER)
                 thermostat = config_helpers.get_device_conf(entity_config, CONF_ROOM_THERMOSTAT)
@@ -98,7 +99,7 @@ async def async_setup_entry(
                 # if thermostat_sender_eep_string: thermostat_sender_eep = EEP.find(thermostat_sender_eep_string)
                 # if cooling_sender_eep_string: cooling_sender_eep = EEP.find(cooling_sender_eep_string)
             except Exception as e:
-                # LOGGER.warning("[Climate] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
+                LOGGER.warning("[Climate] Could not load configuration")
                 LOGGER.critical(e, exc_info=True)
                 continue
             else:
