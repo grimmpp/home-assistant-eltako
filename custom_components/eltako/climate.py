@@ -108,7 +108,7 @@ async def async_setup_entry(
                     climate_entity = ClimateController(gateway, dev_config.id, dev_config.name, dev_config.eep, 
                                                        sender.id, sender.eep, 
                                                        dev_config[CONF_TEMPERATURE_UNIT], dev_config[CONF_MIN_TARGET_TEMPERATURE], dev_config[CONF_MAX_TARGET_TEMPERATURE], 
-                                                       thermostat.id, thermostat.eep,
+                                                       thermostat,
                                                        cooling_switch.id, cooling_switch[CONF_SWITCH_BUTTON],
                                                        cooling_sender.id, cooling_sender.eep)
                     entities.append(climate_entity)
@@ -156,7 +156,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
     def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
-                 thermostat_sender_id: AddressExpression=None, thermostat_eep: EEP=None,
+                 thermostat: device_conf, 
                  cooling_switch_id: AddressExpression=None, cooling_switch_button:int=0,
                  cooling_sender_id: AddressExpression=None, cooling_sender_eep: EEP=None):
         """Initialize the Eltako heating and cooling source."""
@@ -167,10 +167,9 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
-        self.thermostat_id = thermostat_sender_id
-        self.thermostat_eep = thermostat_eep
-        if thermostat_sender_id:
-            self.listen_to_addresses.append(thermostat_sender_id)
+        self.thermostat = thermostat
+        if self.thermostat:
+            self.listen_to_addresses.append(self.thermostat.id)
 
         self.cooling_switch_id = cooling_switch_id
         self.cooling_switch_button = cooling_switch_button
@@ -206,7 +205,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
                     await self._async_send_mode_cooling()
 
                 # send frequently status update if not connected with thermostat. 
-                if self.thermostat_id is None:
+                if self.thermostat is None:
                     await self._async_send_command(self._actuator_mode, self.target_temperature)
                 
             except Exception as e:
@@ -361,10 +360,10 @@ class ClimateController(EltakoEntity, ClimateEntity):
             LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by actuator: {self.dev_id}")
             self.change_temperature_values(msg)
 
-        if self.thermostat_id:
-            thermostat_address, _ = self.thermostat_id
+        if self.thermostat:
+            thermostat_address, _ = self.thermostat.id
             if msg.address == thermostat_address:
-                LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat_id}")
+                LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat.id}")
                 self.change_temperature_values(msg)
 
         if self.cooling_switch_id:
