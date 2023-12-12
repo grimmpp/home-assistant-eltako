@@ -27,8 +27,6 @@ from homeassistant.helpers.device_registry import DeviceRegistry
 from .const import *
 from . import config_helpers
 
-DEFAULT_NAME = "Eltako Gateway"
-
 class GatewayDeviceType(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
     GatewayEltakoFGW14USB = 'fgw14usb'
@@ -65,16 +63,17 @@ def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
     base_id_list = []
     for d in device_registry.devices.values():
-        if d.model and d.model.startswith(DEFAULT_NAME):
+        if d.model and d.model.startswith(GATEWAY_DEFAULT_NAME):
             base_id_list.append( list(d.connections)[0][1] )
     return base_id_list
 
 async def async_get_serial_path_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
     serial_path_list = []
     for d in device_registry.devices.values():
-        if d.model and d.model.startswith(DEFAULT_NAME):
+        if d.model and d.model.startswith(GATEWAY_DEFAULT_NAME):
             serial_path_list.append( list(d.identifiers)[0][1] )
     return serial_path_list
+
 
 class ESP2Gateway:
     """Representation of an Eltako gateway.
@@ -98,12 +97,9 @@ class ESP2Gateway:
         self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
         self.dev_type = dev_type
 
-        self.model = DEFAULT_NAME + " - " + self.dev_type.upper()
+        self.model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
-        if not dev_name and len(dev_name) == 0:
-            self.dev_name = self.model
-
-        self.dev_name = config_helpers.get_device_name(self.dev_name, base_id, self.general_settings)
+        self.dev_name = config_helpers.get_gateway_name(dev_name, dev_type, base_id)
 
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
@@ -315,7 +311,7 @@ class EnoceanUSB300Gateway:
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, self.unique_id)},
             manufacturer=MANUFACTURER,
-            name=DEFAULT_NAME,
+            name=GATEWAY_DEFAULT_NAME,
         )
 
     async def async_setup(self):

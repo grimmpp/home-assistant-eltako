@@ -101,13 +101,10 @@ def get_list_of_gateways_by_config(config: dict, filter_out: [str]=[]) -> dict:
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:
             g_name = g[CONF_NAME]
-            if g_name:
-                g_name += " - "
             g_device = g[CONF_DEVICE]
-            g_base_id = g[CONF_BASE_ID].upper()
-            display_name = f"{g_name}{g_device} ({g_base_id})"
+            g_base_id = g[CONF_BASE_ID]
             if g_base_id not in filter_out:
-                result[g_base_id] = display_name
+                result[g_base_id] = get_gateway_name(g_name, g_device, AddressExpression.parse(g_base_id))
     return result
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
@@ -116,6 +113,12 @@ def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
         if id1[i] != id2[i]:
             return False
     return True
+
+def get_gateway_name(dev_name:str, dev_type:str, base_id:AddressExpression) -> str:
+    if not dev_name or len(dev_name) == 0:
+        dev_name = GATEWAY_DEFAULT_NAME
+    dev_name += " - " + dev_type
+    return get_device_name(dev_name, base_id, {CONF_SHOW_DEV_ID_IN_DEV_NAME: True})
 
 def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: dict) -> str:
     if general_config[CONF_SHOW_DEV_ID_IN_DEV_NAME]:
