@@ -20,6 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
+from . import print_config_entry
 from . import config_helpers
 from .device import *
 from .gateway import EltakoGateway
@@ -32,6 +33,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako light platform."""
+    print_config_entry(config_entry)
+
     gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 

@@ -27,15 +27,21 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
+LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
     print_config_entry(config_entry)
 
-    eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
+    # Check domain
+    if config_entry.domain != DOMAIN:
+        raise Exception(f"[{LOG_PREFIX}] Ooops, received configuration entry of wrong domain '%s' (expected: '')!", config_entry.domain, DOMAIN)
+
     
     # Read the config
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA)
+    # set config for global access
+    eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")
@@ -44,43 +50,34 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # Initialise the gateway
     # get base_id from user input
-    gateway_base_id = config_entry.data[CONF_DEVICE].split('(')[1].split(')')[0]
-    # get configuration section matching base_id
+    gateway_description = config_entry.data[CONF_DEVICE]    # from user input
+    gateway_base_id = config_helpers.get_id_from_name(gateway_description)
+    
+    # get home assistant configuration section matching base_id
     gateway_config = await async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
-        raise Exception("[Eltako Integration Setup] No gateway configuration found.")
+        raise Exception(f"[{LOG_PREFIX}] No gateway configuration found.")
     
-    gateway_device = gateway_config[CONF_DEVICE]
-    gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
-    if CONF_NAME in gateway_config:
-        gateway_name = gateway_config[CONF_NAME]
+    gateway_device_type = gateway_config[CONF_DEVICE]    # from configuration
+    # gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])   # not needed
+    gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
+    gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
+
+    # only transmitter can send teach-in telegrams
+    general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = GatewayDeviceType.is_transmitter(gateway_device_type)
+    
+
+    LOGGER.debug(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
+    if GatewayDeviceType.is_eltako_gateway(gateway_device_type):
+        baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
+        usb_gateway = EltakoGateway(general_settings, hass, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
     else:
-        gateway_name = None
-
-    general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = gateway_device in [GatewayDeviceTypes.GatewayEltakoFAMUSB, GatewayDeviceTypes.EnOceanUSB300]
-    # if len(config[CONF_GATEWAY]) > 1:
-    #     LOGGER.warning("[Eltako Setup] More than 1 gateway is defined in the Home Assistant Configuration for Eltako Integration/Domain. Only the first entry is considered and the others will be ignored!")
-
-    serial_path = config_entry.data[CONF_SERIAL_PATH]
-
-    LOGGER.debug(f"[Eltako Setup] Initializes USB device {gateway_device}")
-    match gateway_device:
-        case GatewayDeviceTypes.GatewayEltakoFAM14:
-            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.GatewayEltakoFAM14]
-            usb_gateway = EltakoGatewayFam14(general_settings, hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
-        case GatewayDeviceTypes.GatewayEltakoFGW14USB:
-            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.GatewayEltakoFGW14USB]
-            usb_gateway = EltakoGatewayFgw14Usb(general_settings, hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
-        case GatewayDeviceTypes.GatewayEltakoFAMUSB:
-            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.GatewayEltakoFAMUSB]
-            usb_gateway = EltakoGatewayFamUsb(general_settings, hass, serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
-        case GatewayDeviceTypes.EnOceanUSB300:
-            baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceTypes.EnOceanUSB300]
-            raise NotImplemented("EnOcean USB300 based on ESP3 protocol not yet supported!")
-            usb_gateway = EnoceanUSB300Gateway(hass, serial_path, baud_rate, config_entry)
+        baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.EnOceanUSB300]
+        raise NotImplemented(f"[{LOG_PREFIX}] Gateway {gateway_device_type} not yet implemented and supported!")
+        usb_gateway = EnoceanUSB300Gateway(hass, serial_path, baud_rate, config_entry)
     
     if usb_gateway is None:
-        LOGGER.error(f"[Eltako Setup] USB device {gateway_device} is not supported.")
+        LOGGER.error(f"[{LOG_PREFIX}] USB device {gateway_device_type} is not supported.")
         return False
     
     await usb_gateway.async_setup()

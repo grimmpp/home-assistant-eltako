@@ -25,21 +25,33 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.device_registry import DeviceRegistry
 
 from .const import *
-from .config_helpers import *
+from . import config_helpers
 
 DEFAULT_NAME = "Eltako Gateway"
 
-class GatewayDeviceTypes(str, Enum):
+class GatewayDeviceType(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
     GatewayEltakoFGW14USB = 'fgw14usb'
     GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
     EnOceanUSB300 = 'enocean-usb300'    # not yet supported
 
+    @classmethod
+    def is_transmitter(cls, dev_type) -> bool:
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300]
+
+    @classmethod
+    def is_bus_gateway(cls, dev_type) -> bool:
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB]
+    
+    @classmethod
+    def is_eltako_gateway(cls, dev_type) -> bool:
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB]
+
 BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
-    GatewayDeviceTypes.GatewayEltakoFAM14: 57600,
-    GatewayDeviceTypes.GatewayEltakoFGW14USB: 57600,
-    GatewayDeviceTypes.GatewayEltakoFAMUSB: 9600,
-    GatewayDeviceTypes.EnOceanUSB300: 57600,
+    GatewayDeviceType.GatewayEltakoFAM14: 57600,
+    GatewayDeviceType.GatewayEltakoFGW14USB: 57600,
+    GatewayDeviceType.GatewayEltakoFAMUSB: 9600,
+    GatewayDeviceType.EnOceanUSB300: 57600,
 }
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
@@ -71,7 +83,7 @@ class EltakoGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
@@ -84,20 +96,14 @@ class EltakoGateway:
         self.general_settings = general_settings
         self.base_id = base_id
         self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
+        self.dev_type = dev_type
 
-        if isinstance(self, EltakoGatewayFgw14Usb):
-            self.model = DEFAULT_NAME + " - " + GatewayDeviceTypes.GatewayEltakoFAM14.value.upper()
-        elif isinstance(self, EltakoGatewayFam14):
-            self.model = DEFAULT_NAME + " - " + GatewayDeviceTypes.GatewayEltakoFGW14USB.value.upper()
-        elif isinstance(self, EltakoGatewayFamUsb):
-            self.model = DEFAULT_NAME + " - " +  GatewayDeviceTypes.GatewayEltakoFAMUSB.value.upper()
-        else:
-            self.model = DEFAULT_NAME
+        self.model = DEFAULT_NAME + " - " + self.dev_type.value.upper()
 
         if not dev_name and len(dev_name) == 0:
             self.dev_name = self.model
 
-        self.dev_name = get_device_name(self.dev_name, base_id, self.general_settings)
+        self.dev_name = config_helpers.get_device_name(self.dev_name, base_id, self.general_settings)
 
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
@@ -110,16 +116,45 @@ class EltakoGateway:
         )
 
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        if GatewayDeviceType.is_transmitter(self.dev_type):
+            return self.validate_sender_id_transmitter(sender_id, device_name)
+        elif GatewayDeviceType.is_bus_gateway(self.dev_type):
+            return self.validate_sender_id_bus_gateway(sender_id, device_name)
         return False
     
+    def sender_id_validation_by_transmitter(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        result = config_helpers.compare_enocean_ids(self.base_id[0], sender_id[0])
+        if not result:
+            LOGGER.warn(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
+        return result
+    
+    def sender_id_validation_by_bus_gateway(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
+    
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        if GatewayDeviceType.is_transmitter(self.dev_type):
+            return self.dev_id_validation_by_transmitter(dev_id, device_name)
+        elif GatewayDeviceType.is_bus_gateway(self.dev_type):
+            return self.dev_id_validation_by_bus_gateway(dev_id, device_name)
         return False
+
+    def dev_id_validation_by_transmitter(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        result = 0xFF == dev_id[0][0]
+        if not result:
+            LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+        return result
+    
+    def dev_id_validation_by_bus_gateway(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
+        if not result:
+            LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+        return result
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
         self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
         
-        event_id = get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._send_message_callback
         )
@@ -187,7 +222,7 @@ class EltakoGateway:
 
         LOGGER.debug("Received message: %s", message)
         if isinstance(message, ESP2Message):
-            event_id = get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+            event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
             dispatcher_send(self.hass, event_id, message)
             
     @property
@@ -196,59 +231,59 @@ class EltakoGateway:
         return self.serial_path
     
 
-class EltakoGatewayFam14 (EltakoGateway):
-    """Gateway class for Eltako FAM14."""
+# class EltakoGatewayFam14 (EltakoGateway):
+#     """Gateway class for Eltako FAM14."""
 
-    def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
-        return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
+#     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+#         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
     
-    def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-        result = compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
-        if not result:
-            LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
-        return result
+#     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+#         result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
+#         if not result:
+#             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+#         return result
 
-class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
-    """Gateway class for Eltako FGW14-USB."""
+# class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
+#     """Gateway class for Eltako FGW14-USB."""
 
-class EltakoGatewayFamUsb (EltakoGateway, Entity):
-    """Gateway class for Eltako FAM-USB."""
+# class EltakoGatewayFamUsb (EltakoGateway, Entity):
+#     """Gateway class for Eltako FAM-USB."""
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
-        super(EltakoGatewayFamUsb, self).__init__(general_settings, hass, serial_path, baud_rate, base_id, dev_name, config_entry)
+#     def __init__(self, general_settings:dict, hass: HomeAssistant, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+#         super(EltakoGatewayFamUsb, self).__init__(general_settings, hass, dev_type, serial_path, baud_rate, base_id, dev_name, config_entry)
 
-    #     self.async_on_remove(
-    #         async_dispatcher_connect(
-    #             self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
-    #         )
-    #     )
+#     #     self.async_on_remove(
+#     #         async_dispatcher_connect(
+#     #             self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
+#     #         )
+#     #     )
 
-    #     # read base id from device
-    #     msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-    #     dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
+#     #     # read base id from device
+#     #     msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+#     #     dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
 
-    # def _message_received_callback(self, msg: ESP2Message) -> None:
-    #     # receive base id and compare with base id in configuration
-    #     if msg.address == b'\x00\x00\x00\x00' and msg.body[0] == 0x8B and msg.body[1] == 0x98:
-    #         device_base_id = msg.body[2:5]
-    #         if not compare_enocean_ids(self.base_id, device_base_id, len=4):
-    #             raise Exception(f"Configured baseId {self.base_id} does not match device baseId {device_base_id}")
-    #         else:
-    #             LOGGER.debug(f"Received baseId form device {device_base_id} and compared with configuration.")
+#     # def _message_received_callback(self, msg: ESP2Message) -> None:
+#     #     # receive base id and compare with base id in configuration
+#     #     if msg.address == b'\x00\x00\x00\x00' and msg.body[0] == 0x8B and msg.body[1] == 0x98:
+#     #         device_base_id = msg.body[2:5]
+#     #         if not compare_enocean_ids(self.base_id, device_base_id, len=4):
+#     #             raise Exception(f"Configured baseId {self.base_id} does not match device baseId {device_base_id}")
+#     #         else:
+#     #             LOGGER.debug(f"Received baseId form device {device_base_id} and compared with configuration.")
         
 
-    def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
-        result = compare_enocean_ids(self.base_id[0], sender_id[0])
-        if not result:
-            LOGGER.warn(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
-        return result
+#     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+#         result = config_helpers.compare_enocean_ids(self.base_id[0], sender_id[0])
+#         if not result:
+#             LOGGER.warn(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
+#         return result
 
     
-    def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-        result = 0xFF == dev_id[0][0]
-        if not result:
-            LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
-        return result
+#     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+#         result = 0xFF == dev_id[0][0]
+#         if not result:
+#             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+#         return result
     
     
 
@@ -259,7 +294,7 @@ class EnoceanUSB300Gateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
         """Initialize the EnOcean dongle."""
 
         self._communicator = SerialCommunicator(
@@ -271,6 +306,7 @@ class EnoceanUSB300Gateway:
         self.dispatcher_disconnect_handle = None
         self.general_settings = general_settings
         self.base_id = base_id
+        self.dev_type = dev_type
         
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
@@ -283,7 +319,7 @@ class EnoceanUSB300Gateway:
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
         self._communicator.start()
-        event_id = get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._send_message_callback
         )
@@ -311,7 +347,7 @@ class EnoceanUSB300Gateway:
             LOGGER.debug("Received radio packet: %s", packet)
             eltako_message = convert_esp3_to_esp2_message(packet)
             if eltako_message is not None:
-                event_id = get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+                event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, eltako_message)
             
     @property

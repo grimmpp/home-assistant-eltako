@@ -29,7 +29,7 @@ class TestIdComparison(IsolatedAsyncioTestCase):
         self.assertTrue(not config[CONF_GERNERAL_SETTINGS][CONF_FAST_STATUS_CHANGE])
 
         self.assertTrue(CONF_GATEWAY in config)
-        self.assertTrue(config[CONF_GATEWAY][CONF_DEVICE] == GatewayDeviceTypes.GatewayEltakoFAM14)
+        self.assertTrue(config[CONF_GATEWAY][CONF_DEVICE] == GatewayDeviceType.GatewayEltakoFAM14)
         self.assertTrue(config[CONF_GATEWAY][CONF_BASE_ID] == 'FF-BC-C8-00')
 
         self.assertTrue(Platform.LIGHT in config)

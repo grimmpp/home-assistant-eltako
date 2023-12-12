@@ -12,7 +12,7 @@ from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 from eltakobus.eep import *
 
 from .const import *
-from .gateway import GatewayDeviceTypes
+from .gateway import GatewayDeviceType
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
@@ -261,7 +261,7 @@ class GatewaySchema(EltakoPlatformSchema):
     PLATFORM = CONF_GATEWAY
 
     ENTITY_SCHEMA = vol.Schema({
-            vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
+            vol.Required(CONF_DEVICE, default=GatewayDeviceType.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceType]),
             vol.Optional(CONF_NAME, default=""): cv.string,
             vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_SERIAL_PATH): cv.string,
