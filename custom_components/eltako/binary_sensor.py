@@ -4,25 +4,20 @@ from __future__ import annotations
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
 
-from homeassistant.components.binary_sensor import (
-    DEVICE_CLASSES_SCHEMA,
-    PLATFORM_SCHEMA,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant import config_entries
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, Platform
+from homeassistant.const import *
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 
 from .device import *
 from .const import *
 from .gateway import ESP2Gateway
-from . import print_config_entry, print_dict
+from . import get_gateway_from_hass
 
 import json
-import time
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -30,10 +25,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
-    print_config_entry(config_entry)
-    print_dict(hass.data[DATA_ELTAKO])
-
-    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
     
     entities: list[EltakoEntity] = []

@@ -28,16 +28,17 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
-def print_dict(_dict: dict):
-    LOGGER.debug("Print dict:")
-    for k in _dict.keys():
-        LOGGER.debug("- %s: %s", k, _dict[k])
+def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> ESP2Gateway:
+    return hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+
+def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: ESP2Gateway) -> None:
+    hass.data[DATA_ELTAKO][gateway_enity.dev_name] = gateway_enity
 
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
-    print_config_entry(config_entry)
+    # print_config_entry(config_entry)
 
     # Check domain
     if config_entry.domain != DOMAIN:
@@ -73,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = GatewayDeviceType.is_transceiver(gateway_device_type)
     
 
-    LOGGER.debug(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
+    LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
     if GatewayDeviceType.is_esp2_gateway(gateway_device_type):
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
         usb_gateway = ESP2Gateway(general_settings, hass, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
@@ -86,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return False
     
     await usb_gateway.async_setup()
-    hass.data[DATA_ELTAKO][usb_gateway.dev_name] = usb_gateway
+    set_gateway_to_hass(hass, usb_gateway)
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
@@ -98,14 +99,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
-    LOGGER.debug("async_unload_entry")
-    print_config_entry(config_entry)
+    gateway = get_gateway_from_hass(hass, config_entry)
 
-    gateway_name = config_entry.data[CONF_DEVICE]
-    eltako_gateway = hass.data[DATA_ELTAKO][gateway_name]
-    eltako_gateway.unload()
-    del hass.data[DATA_ELTAKO][gateway_name]
-    # if len(hass.data[DATA_ELTAKO]) == 0:
-    #     hass.data.remove(DATA_ELTAKO)
+    LOGGER.info("Unload %s and all its supported devices!", gateway.dev_name)
+    gateway.unload()
+    del hass.data[DATA_ELTAKO][gateway.dev_name]
 
     return True

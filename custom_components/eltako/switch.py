@@ -16,11 +16,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from . import config_helpers
-from . import print_config_entry, print_dict
+from . import config_helpers, get_gateway_from_hass
 from .device import *
 from .gateway import ESP2Gateway
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
+from .const import *
 
 
 async def async_setup_entry(
@@ -29,10 +28,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako switch platform."""
-    print_config_entry(config_entry)
-    print_dict(hass.data[DATA_ELTAKO])
-
-    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []

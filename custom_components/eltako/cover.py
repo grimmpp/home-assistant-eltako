@@ -20,7 +20,7 @@ from .device import *
 from . import config_helpers
 from .gateway import ESP2Gateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
-from . import print_config_entry, print_dict
+from . import get_gateway_from_hass
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -28,10 +28,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako cover platform."""
-    print_config_entry(config_entry)
-    print_dict(hass.data[DATA_ELTAKO])
-
-    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []

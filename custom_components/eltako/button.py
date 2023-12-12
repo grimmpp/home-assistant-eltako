@@ -1,59 +1,27 @@
 """Support for Eltako buttons."""
 from __future__ import annotations
 
-import asyncio
-import json
-from enum import Enum
-
-from collections.abc import Callable
-from dataclasses import dataclass
-
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
-from eltakobus.message import ESP2Message, Regular4BSMessage, TeachIn4BSMessage2
+from eltakobus.message import Regular4BSMessage
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
 from homeassistant.components.button import (
     ButtonEntity,
     ButtonDeviceClass,
     ButtonEntityDescription
 )
-from homeassistant.const import (
-    CONF_DEVICE_CLASS,
-    CONF_ID,
-    CONF_NAME,
-    PERCENTAGE,
-    STATE_CLOSED,
-    STATE_OPEN,
-    LIGHT_LUX,
-    UnitOfPower,
-    UnitOfTemperature,
-    UnitOfSpeed,
-    UnitOfEnergy,
-    UnitOfVolume,
-    UnitOfVolumeFlowRate,
-    Platform,
-    PERCENTAGE,
-)
+from homeassistant.const import Platform
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.typing import ConfigType
 
 from .device import *
 from . import config_helpers
 from .gateway import ESP2Gateway
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
-from . import print_config_entry, print_dict
+from .const import *
+from . import get_gateway_from_hass
 
 EEP_WITH_TEACH_IN_BUTTONS = {
     A5_10_06: b'\x40\x30\x0D\x85'
@@ -65,10 +33,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako buttons."""
-    print_config_entry(config_entry)
-    print_dict(hass.data[DATA_ELTAKO])
-
-    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []
@@ -98,12 +63,6 @@ async def async_setup_entry(
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
-
-    LOGGER.debug("Existing entities")
-    entity_reg = er.async_get(hass)
-    for e in entity_reg.entities.values():
-        LOGGER.debug("- name: %s, dev_id: %d, e_id: %s", e.name, e.device_id, e.entity_id)
-
 
 
 

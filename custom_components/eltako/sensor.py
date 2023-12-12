@@ -1,10 +1,6 @@
 """Support for Eltako sensors."""
 from __future__ import annotations
 
-from enum import Enum
-import json
-
-from collections.abc import Callable
 from dataclasses import dataclass
 
 from eltakobus.util import AddressExpression, b2a
@@ -19,11 +15,6 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
-)
-from homeassistant.components.button import (
-    ButtonEntity,
-    ButtonDeviceClass,
-    ButtonEntityDescription,
 )
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
@@ -56,7 +47,7 @@ from .device import *
 from .config_helpers import *
 from .gateway import ESP2Gateway
 from .const import *
-from . import print_config_entry, print_dict
+from . import get_gateway_from_hass
 
 DEFAULT_DEVICE_NAME_WINDOW_HANDLE = "Window handle"
 DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"
@@ -255,10 +246,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako sensor device."""
-    print_config_entry(config_entry)
-    print_dict(hass.data[DATA_ELTAKO])
-
-    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []
@@ -349,8 +337,8 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self.entity_description = description
-        self._attr_native_value = None
         self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_value = None
         
 
     async def async_added_to_hass(self) -> None:
