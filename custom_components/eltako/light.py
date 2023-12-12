@@ -22,7 +22,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers import device_registry as dr
 
-from . import print_config_entry
+from . import print_config_entry, print_dict
 from . import config_helpers
 from .device import *
 from .gateway import ESP2Gateway
@@ -36,7 +36,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako light platform."""
     print_config_entry(config_entry)
-    print(json.dumps(hass.data[DATA_ELTAKO], indent = 4))
+    print_dict(hass.data[DATA_ELTAKO])
 
     gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)

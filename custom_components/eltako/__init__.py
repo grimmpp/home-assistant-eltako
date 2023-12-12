@@ -27,6 +27,11 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
+def print_dict(_dict: dict):
+    LOGGER.debug("Print dict:")
+    for k in _dict.keys():
+        LOGGER.debug("- %s: %s", k, _dict[k])
+
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
