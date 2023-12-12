@@ -1,6 +1,6 @@
 from unittest import TestCase
 from unittest import mock
-from mocks import *
+from .mocks import *
 from homeassistant.helpers.entity import Entity
 from custom_components.eltako.cover import EltakoCover
 from custom_components.eltako.device import EltakoEntity

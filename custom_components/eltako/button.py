@@ -49,7 +49,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import *
 from . import config_helpers
-from .gateway import EltakoGateway
+from .gateway import ESP2Gateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
 
 EEP_WITH_TEACH_IN_BUTTONS = {
@@ -62,7 +62,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako buttons."""
-    gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.entry_id]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []
@@ -99,7 +99,7 @@ async def async_setup_entry(
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
     """Button which sends teach-in telegram for temperature controller."""
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression):
+    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = "temperature-controller-teach-in-button"

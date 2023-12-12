@@ -36,7 +36,7 @@ class GatewayDeviceType(str, Enum):
     EnOceanUSB300 = 'enocean-usb300'    # not yet supported
 
     @classmethod
-    def is_transmitter(cls, dev_type) -> bool:
+    def is_transceiver(cls, dev_type) -> bool:
         return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300]
 
     @classmethod
@@ -44,7 +44,7 @@ class GatewayDeviceType(str, Enum):
         return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB]
     
     @classmethod
-    def is_eltako_gateway(cls, dev_type) -> bool:
+    def is_esp2_gateway(cls, dev_type) -> bool:
         return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB]
 
 BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
@@ -76,7 +76,7 @@ async def async_get_serial_path_of_registered_gateway(device_registry: DeviceReg
             serial_path_list.append( list(d.identifiers)[0][1] )
     return serial_path_list
 
-class EltakoGateway:
+class ESP2Gateway:
     """Representation of an Eltako gateway.
 
     The gateway is responsible for receiving the Eltako frames,
@@ -116,7 +116,7 @@ class EltakoGateway:
         )
 
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
-        if GatewayDeviceType.is_transmitter(self.dev_type):
+        if GatewayDeviceType.is_transceiver(self.dev_type):
             return self.validate_sender_id_transmitter(sender_id, device_name)
         elif GatewayDeviceType.is_bus_gateway(self.dev_type):
             return self.validate_sender_id_bus_gateway(sender_id, device_name)
@@ -132,7 +132,7 @@ class EltakoGateway:
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
     
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-        if GatewayDeviceType.is_transmitter(self.dev_type):
+        if GatewayDeviceType.is_transceiver(self.dev_type):
             return self.dev_id_validation_by_transmitter(dev_id, device_name)
         elif GatewayDeviceType.is_bus_gateway(self.dev_type):
             return self.dev_id_validation_by_bus_gateway(dev_id, device_name)

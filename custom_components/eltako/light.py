@@ -19,11 +19,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers import device_registry as dr
 
 from . import print_config_entry
 from . import config_helpers
 from .device import *
-from .gateway import EltakoGateway
+from .gateway import ESP2Gateway
 from .const import *
 
 
@@ -35,7 +36,7 @@ async def async_setup_entry(
     """Set up the Eltako light platform."""
     print_config_entry(config_entry)
 
-    gateway: EltakoGateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.entry_id]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []
@@ -67,7 +68,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -178,7 +179,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep

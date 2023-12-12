@@ -63,14 +63,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
-    # only transmitter can send teach-in telegrams
-    general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = GatewayDeviceType.is_transmitter(gateway_device_type)
+    # only transceiver can send teach-in telegrams
+    general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = GatewayDeviceType.is_transceiver(gateway_device_type)
     
 
     LOGGER.debug(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
-    if GatewayDeviceType.is_eltako_gateway(gateway_device_type):
+    if GatewayDeviceType.is_esp2_gateway(gateway_device_type):
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
-        usb_gateway = EltakoGateway(general_settings, hass, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
+        usb_gateway = ESP2Gateway(general_settings, hass, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
     else:
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.EnOceanUSB300]
         raise NotImplemented(f"[{LOG_PREFIX}] Gateway {gateway_device_type} not yet implemented and supported!")
@@ -80,7 +80,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return False
     
     await usb_gateway.async_setup()
-    eltako_data[ELTAKO_GATEWAY] = usb_gateway
+    eltako_data[ELTAKO_GATEWAY] = {} 
+    eltako_data[ELTAKO_GATEWAY][config_entry.entry_id] = usb_gateway
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
