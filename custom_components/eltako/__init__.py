@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .schema import CONFIG_SCHEMA
-from .config_helpers import *
+from . import config_helpers
 from .gateway import *
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -39,14 +39,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     
     # Read the config
-    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA)
+    config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")
 
-    general_settings = get_general_settings_from_configuration(hass)
+    general_settings = config_helpers.get_general_settings_from_configuration(hass)
 
     # Initialise the gateway
     # get base_id from user input
