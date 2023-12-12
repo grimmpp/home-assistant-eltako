@@ -94,11 +94,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    LOGGER.debug("Existing entities")
-    entity_reg = er.async_get(hass)
-    for e in entity_reg.entities.values():
-        LOGGER.debug("- name: %s, dev_id: %d, e_id: %s", e.name, e.device_id, e.entity_id)
-
     return True
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

@@ -47,6 +47,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers import entity_registry as er
 
 from .device import *
 from . import config_helpers
@@ -97,6 +98,11 @@ async def async_setup_entry(
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
+
+    LOGGER.debug("Existing entities")
+    entity_reg = er.async_get(hass)
+    for e in entity_reg.entities.values():
+        LOGGER.debug("- name: %s, dev_id: %d, e_id: %s", e.name, e.device_id, e.entity_id)
 
 
 
