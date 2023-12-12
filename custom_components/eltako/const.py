@@ -14,24 +14,32 @@ ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "Eltako"
 
 ERROR_INVALID_GATEWAY_PATH: Final = "invalid_gateway_path"
+ERROR_NO_SERIAL_PATH_AVAILABLE: Final = "no_serial_path_available"
+ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE: Final = "no_gateway_configuration_available"
 
-SIGNAL_RECEIVE_MESSAGE: Final = "eltako.receive_message"
-SIGNAL_SEND_MESSAGE: Final = "eltako.send_message"
-EVENT_BUTTON_PRESSED: Final = "eltako_button_pressed"
-EVENT_CONTACT_CLOSED: Final = "eltako_contact_closed"
+SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
+SIGNAL_SEND_MESSAGE: Final = "send_message"
+EVENT_BUTTON_PRESSED: Final = "btn_pressed"
+EVENT_CONTACT_CLOSED: Final = "contact_closed"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 
 CONF_EEP: Final = "eep"
-CONF_SWITCH_BUTTON: Final = "switch-button"
+CONF_SWITCH_BUTTON: Final = "switch_button"
 CONF_SENDER: Final = "sender"
 CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"
+CONF_SHOW_DEV_ID_IN_DEV_NAME: Final = "show_dev_id_in_dev_name"
+CONF_ENABLE_TEACH_IN_BUTTONS: Final = "enable_teach_in_buttons"
 CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
+GATEWAY_DEFAULT_NAME: Final = "EnOcean ESP2 Gateway"
 CONF_GATEWAY: Final = "gateway"
+CONF_BASE_ID: Final = "base_id"
+CONF_GATEWAY_BASE_ID: Final = "gateway_base_id"
 CONF_SERIAL_PATH: Final = "serial_path"
 CONF_MAX_TARGET_TEMPERATURE: Final = "max_target_temperature"
 CONF_MIN_TARGET_TEMPERATURE: Final = "min_target_temperature"
+CONF_ROOM_THERMOSTAT: Final = "thermostat"
 CONF_COOLING_MODE: Final = "cooling_mode"
 
 CONF_ID_REGEX: Final = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})( (left|right))?$"
@@ -44,6 +52,7 @@ CONF_VOC_TYPE_INDEXES: Final = "voc_type_indexes"
 class LANGUAGE_ABBREVIATIONS(StrEnum):
     LANG_ENGLISH = 'en'
     LANG_GERMAN = 'de'
+
 
 PLATFORMS: Final = [
     Platform.LIGHT,

@@ -5,8 +5,14 @@ from typing import Final
 from abc import ABC
 from typing import ClassVar
 import voluptuous as vol
+
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
+
 from eltakobus.eep import *
 
+from .const import *
+from .gateway import GatewayDeviceType
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
@@ -35,27 +41,28 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_TYPE,
     CONF_DEVICE,
+    CONF_DEVICES,
     Platform,
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
     CONF_LANGUAGE,
 )
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
-
-from .const import *
-from .gateway import GatewayDeviceTypes
 
 CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
 
-def _get_sender_schema(supported_sender_eep):
+def _get_sender_schema(supported_sender_eep) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Required(CONF_EEP): vol.In(supported_sender_eep),
         }
     )
+
+def _get_receiver_schema(supported_sender_eep) -> vol.Schema:
+    return _get_sender_schema(supported_sender_eep).extend({
+        vol.Optional(CONF_GATEWAY_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
+    })
 
 class EltakoPlatformSchema(ABC):
     """Voluptuous schema for Eltako platform entity configuration."""
@@ -78,16 +85,17 @@ class GeneralSettings(EltakoPlatformSchema):
 
     ENTITY_SCHEMA = vol.Schema({
             vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
+            vol.Optional(CONF_SHOW_DEV_ID_IN_DEV_NAME, default=False): cv.boolean,
         })
     
-class GatewaySchema(EltakoPlatformSchema):
-    """Voluptuous schema for bus gateway"""
-    PLATFORM = CONF_GATEWAY
+    @classmethod
+    def get_id(cls) -> str:
+        return cls.PLATFORM
 
-    ENTITY_SCHEMA = vol.Schema({
-            vol.Required(CONF_DEVICE, default=GatewayDeviceTypes.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceTypes]),
-            vol.Optional(CONF_SERIAL_PATH): cv.string,
-        })
+    @classmethod
+    def get_schema(cls) -> vol.Schema:
+        return cls.ENTITY_SCHEMA
+
 
 class BinarySensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako binary sensors."""
@@ -228,6 +236,7 @@ class ClimateSchema(EltakoPlatformSchema):
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Required(CONF_EEP): vol.In([F6_02_01.eep_string, F6_02_02.eep_string]),
             vol.Optional(CONF_NAME, default=DEFAULT_COOLING_SENDER_NAME): cv.string,
+            vol.Optional(CONF_GATEWAY_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
         }),
     })
 
@@ -241,7 +250,43 @@ class ClimateSchema(EltakoPlatformSchema):
                 vol.Optional(CONF_MIN_TARGET_TEMPERATURE, default=17): cv.Number,
                 vol.Optional(CONF_MAX_TARGET_TEMPERATURE, default=25): cv.Number,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,  
+                vol.Optional(CONF_ROOM_THERMOSTAT): _get_sender_schema(CONF_CLIMATE_SENDER_EEP),    # physical thermostat like FUTH
                 vol.Optional(CONF_COOLING_MODE): CONF_COOLING_MODE_SCHEMA                           # if not provided cooling is not supported
             }
         ),
     )
+
+class GatewaySchema(EltakoPlatformSchema):
+    """Voluptuous schema for bus gateway"""
+    PLATFORM = CONF_GATEWAY
+
+    ENTITY_SCHEMA = vol.Schema({
+            vol.Required(CONF_DEVICE, default=GatewayDeviceType.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceType]),
+            vol.Optional(CONF_NAME, default=""): cv.string,
+            vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
+            vol.Optional(CONF_SERIAL_PATH): cv.string,
+            vol.Required(CONF_DEVICES): vol.All(vol.Schema({
+                **BinarySensorSchema.platform_node(),
+                **LightSchema.platform_node(),
+                **SwitchSchema.platform_node(),
+                **SensorSchema.platform_node(),
+                **SensorSchema.platform_node(),
+                **CoverSchema.platform_node(),
+                **ClimateSchema.platform_node(),
+            })),
+        })
+    
+    @classmethod
+    def get_schema(cls) -> vol.Schema:
+        """Return a schema."""
+        return cls.ENTITY_SCHEMA
+
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema({
+            vol.Optional(CONF_GERNERAL_SETTINGS): GeneralSettings.get_schema(),
+            vol.Optional(CONF_GATEWAY): vol.All(cv.ensure_list, [GatewaySchema.ENTITY_SCHEMA]),
+        })
+    },
+    extra=vol.ALLOW_EXTRA,
+)

@@ -15,10 +15,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .configuration_helpers import get_general_settings_from_configuration
+from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 from .device import *
-from .gateway import EltakoGateway
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
+from .gateway import ESP2Gateway
+from .const import *
 
 
 async def async_setup_entry(
@@ -27,32 +27,26 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako switch platform."""
-    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
     
-    if Platform.SWITCH in config:
-        for entity_config in config[Platform.SWITCH]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config.get(CONF_NAME)
-            eep_string = entity_config.get(CONF_EEP)
-            
-            sender_config = entity_config.get(CONF_SENDER)
-            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-            sender_eep_string = sender_config.get(CONF_EEP)
-
-            general_settings = get_general_settings_from_configuration(hass)
-
+    platform = Platform.SWITCH
+    if platform in config:
+        for entity_config in config[platform]:
             try:
-                dev_eep = EEP.find(eep_string)
-                sender_eep = EEP.find(sender_eep_string)
-            except:
-                LOGGER.warning("[Switch] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                entities.append(EltakoSwitch(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep))
+                dev_conf = device_conf(entity_config)
+                sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
+
+                entities.append(EltakoSwitch(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
+            
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", platform)
+                LOGGER.critical(e, exc_info=True)
+                
     
+    validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, Platform.SWITCH)
     async_add_entities(entities)
 
@@ -60,7 +54,7 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako switch device."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -69,7 +63,6 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         self._on_state = False
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"switch.{self.unique_id}"
-        self.general_settings = general_settings
 
     @property
     def device_info(self) -> DeviceInfo:

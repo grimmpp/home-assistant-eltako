@@ -4,24 +4,20 @@ from __future__ import annotations
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
 
-from homeassistant.components.binary_sensor import (
-    DEVICE_CLASSES_SCHEMA,
-    PLATFORM_SCHEMA,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant import config_entries
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, Platform
+from homeassistant.const import *
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 
 from .device import *
 from .const import *
-from .gateway import EltakoGateway
+from .gateway import ESP2Gateway
+from . import get_gateway_from_hass, get_device_config_for_gateway
 
 import json
-import time
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -29,28 +25,26 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
-    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
     
     entities: list[EltakoEntity] = []
     
-    if Platform.BINARY_SENSOR in config:
-        for entity_config in config[Platform.BINARY_SENSOR]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config.get(CONF_NAME)
-            device_class = entity_config.get(CONF_DEVICE_CLASS)
-            eep_string = entity_config.get(CONF_EEP)
-            invert_signal =  entity_config.get(CONF_INVERT_SIGNAL)
+    platform = Platform.BINARY_SENSOR
 
+    if platform in config:
+        for entity_config in config[platform]:
             try:
-                dev_eep = EEP.find(eep_string)
-            except:
-                LOGGER.warning("[Binary Sensor] Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                entities.append(EltakoBinarySensor(gateway, dev_id, dev_name, dev_eep, device_class, invert_signal))
+                dev_conf = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
+                entities.append(EltakoBinarySensor(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                   dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
-    log_entities_to_be_added(entities, Platform.BINARY_SENSOR)
+            except Exception as e:
+                        LOGGER.warning("[%s] Could not load configuration", platform)
+                        LOGGER.critical(e, exc_info=True)
+
+    # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
     
 
@@ -64,15 +58,12 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - D5-00-01
     """
 
-    def __init__(self, gateway: EltakoGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
+    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
         """Initialize the Eltako binary sensor."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._attr_device_class = device_class
         self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
-        self.dev_id = dev_id
-        self.dev_name = dev_name
-        self.gateway = gateway
         self.invert_signal = invert_signal
 
     @property
@@ -157,12 +148,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 pass
 
             switch_address = b2a(msg.address, '-').upper()
-            event_id = f"{EVENT_BUTTON_PRESSED}_{switch_address}"
-            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
-            
-            self.hass.bus.fire(
-                event_id,
-                {
+            event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
+            event_data = {
                     "id": event_id,
                     "data": int.from_bytes(msg.data, "big"),
                     "switch_address": switch_address,
@@ -171,8 +158,25 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                     "two_buttons_pressed": two_buttons_pressed,
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
-                },
-            )
+                }
+            
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
+            self.hass.bus.fire(event_id, event_data)
+
+            event_id = get_bus_event_type(self.gateway.base_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(pressed_buttons))
+            event_data = {
+                    "id": event_id,
+                    "data": int.from_bytes(msg.data, "big"),
+                    "switch_address": switch_address,
+                    "pressed_buttons": pressed_buttons,
+                    "pressed": pressed,
+                    "two_buttons_pressed": two_buttons_pressed,
+                    "rocker_first_action": decoded.rocker_first_action,
+                    "rocker_second_action": decoded.rocker_second_action,
+                }
+            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
+            self.hass.bus.fire(event_id, event_data)
+
             return
         elif self.dev_eep in [F6_10_00]:
             action = (decoded.movement & 0x70) >> 4
@@ -206,7 +210,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         
         if self.is_on:
             switch_address = b2a(msg.address, '-').upper()
-            event_id = f"{EVENT_CONTACT_CLOSED}_{switch_address}"
+            event_id = get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
             self.hass.bus.fire(
                 event_id,
                 {

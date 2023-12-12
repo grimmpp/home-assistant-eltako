@@ -1,5 +1,6 @@
 from typing import Any
 
+from custom_components.eltako.config_helpers import *
 class BusMock():
 
     def __init__(self):
@@ -23,3 +24,9 @@ class HassMock():
         
     def __init__(self) -> None:
         self.bus = BusMock()
+
+class GatewayMock():
+
+    def __init__(self, general_settings:dict=DEFAULT_GENERAL_SETTINGS, base_id:AddressExpression=AddressExpression.parse('FF-AA-80-00')):
+        self.general_settings = general_settings
+        self.base_id = base_id

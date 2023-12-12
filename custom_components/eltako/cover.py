@@ -1,6 +1,7 @@
 """Support for Eltako covers."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from eltakobus.util import AddressExpression
@@ -15,10 +16,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .configuration_helpers import get_general_settings_from_configuration
 from .device import *
-from .gateway import EltakoGateway
+from . import config_helpers
+from .gateway import ESP2Gateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
+from . import get_gateway_from_hass, get_device_config_for_gateway
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -26,42 +28,36 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako cover platform."""
-    config: ConfigType = hass.data[DATA_ELTAKO][ELTAKO_CONFIG]
-    gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
     
-    if Platform.COVER in config:
-        for entity_config in config[Platform.COVER]:
-            dev_id = AddressExpression.parse(entity_config.get(CONF_ID))
-            dev_name = entity_config.get(CONF_NAME)
-            device_class = entity_config.get(CONF_DEVICE_CLASS)
-            time_closes = entity_config.get(CONF_TIME_CLOSES)
-            time_opens = entity_config.get(CONF_TIME_OPENS)
-            eep_string = entity_config.get(CONF_EEP)
-
-            sender_config = entity_config.get(CONF_SENDER)
-            sender_id = AddressExpression.parse(sender_config.get(CONF_ID))
-            sender_eep_string = sender_config.get(CONF_EEP)
-
-            general_settings = get_general_settings_from_configuration(hass)
+    platform = Platform.COVER
+    if platform in config:
+        for entity_config in config[platform]:
 
             try:
-                dev_eep = EEP.find(eep_string)
-                sender_eep = EEP.find(sender_eep_string)
-            except:
-                LOGGER.warning("Could not find EEP %s for device with address %s", eep_string, dev_id.plain_address())
-                continue
-            else:
-                entities.append(EltakoCover(general_settings, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens))
+                dev_conf = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS])
+                sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
+
+                entities.append(EltakoCover(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                            sender_config.id, sender_config.eep, 
+                                            dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS)))
+
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", platform)
+                LOGGER.critical(e, exc_info=True)
+                
         
-    log_entities_to_be_added(entities, Platform.COVER)
+    validate_actuators_dev_and_sender_id(entities)
+    log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, general_settings: dict, gateway: EltakoGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
+    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
         """Initialize the Eltako cover device."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
@@ -76,7 +72,6 @@ class EltakoCover(EltakoEntity, CoverEntity):
         self.entity_id = f"cover.{self.unique_id}"
         self._time_closes = time_closes
         self._time_opens = time_opens
-        self.general_settings = general_settings
         
         self._attr_supported_features = (CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP)
         
