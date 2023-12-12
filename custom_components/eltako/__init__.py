@@ -34,6 +34,9 @@ def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> ESP
 def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: ESP2Gateway) -> None:
     hass.data[DATA_ELTAKO][gateway_enity.dev_name] = gateway_enity
 
+def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: ESP2Gateway) -> ConfigType:
+    return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
+
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

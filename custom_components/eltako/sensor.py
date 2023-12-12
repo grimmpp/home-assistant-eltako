@@ -47,7 +47,7 @@ from .device import *
 from .config_helpers import *
 from .gateway import ESP2Gateway
 from .const import *
-from . import get_gateway_from_hass
+from . import get_gateway_from_hass, get_device_config_for_gateway
 
 DEFAULT_DEVICE_NAME_WINDOW_HANDLE = "Window handle"
 DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"
@@ -247,7 +247,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up an Eltako sensor device."""
     gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
-    config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
+    config: ConfigType = get_device_config_for_gateway(hass, gateway)
 
     entities: list[EltakoEntity] = []
     

@@ -28,7 +28,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .gateway import ESP2Gateway
 from .device import *
 from .const import *
-from . import config_helpers, get_gateway_from_hass
+from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -37,7 +37,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako Temperature Control platform."""
     gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
-    config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
+    config: ConfigType = get_device_config_for_gateway(hass, gateway)
 
     entities: list[EltakoEntity] = []
     
