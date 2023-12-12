@@ -35,7 +35,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako Temperature Control platform."""
-    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.entry_id]
+    gateway: ESP2Gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.data[CONF_DEVICE]]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
     entities: list[EltakoEntity] = []
