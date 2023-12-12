@@ -74,7 +74,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     else:
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.EnOceanUSB300]
         raise NotImplemented(f"[{LOG_PREFIX}] Gateway {gateway_device_type} not yet implemented and supported!")
-        usb_gateway = EnoceanUSB300Gateway(hass, serial_path, baud_rate, config_entry)
     
     if usb_gateway is None:
         LOGGER.error(f"[{LOG_PREFIX}] USB device {gateway_device_type} is not supported.")

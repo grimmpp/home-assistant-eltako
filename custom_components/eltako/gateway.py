@@ -98,7 +98,7 @@ class EltakoGateway:
         self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
         self.dev_type = dev_type
 
-        self.model = DEFAULT_NAME + " - " + self.dev_type.value.upper()
+        self.model = DEFAULT_NAME + " - " + self.dev_type.upper()
 
         if not dev_name and len(dev_name) == 0:
             self.dev_name = self.model
