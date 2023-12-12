@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from enum import Enum
 
 from collections.abc import Callable
@@ -64,6 +65,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up an Eltako buttons."""
     print_config_entry(config_entry)
+    print(json.dumps(hass.data[DATA_ELTAKO], indent = 4))
 
     gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)

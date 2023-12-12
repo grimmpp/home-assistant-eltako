@@ -1,6 +1,7 @@
 """Support for Eltako covers."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from eltakobus.util import AddressExpression
@@ -28,6 +29,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Eltako cover platform."""
     print_config_entry(config_entry)
+    print(json.dumps(hass.data[DATA_ELTAKO], indent = 4))
 
     gateway: ESP2Gateway = hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
