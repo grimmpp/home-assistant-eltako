@@ -94,6 +94,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
+    LOGGER.debug("Existing entities")
+    entity_reg = er.async_get(hass)
+    for e in entity_reg.entities.values():
+        LOGGER.debug("- name: %s, dev_id: %d, e_id: %s", e.name, e.device_id, e.entity_id)
+
     return True
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -101,15 +106,12 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     LOGGER.debug("async_unload_entry")
     print_config_entry(config_entry)
 
-    LOGGER.debug("Existing entities")
-    entity_reg = er.async_get(hass)
-    for e in entity_reg.entities.values():
-        LOGGER.debug("- name: %s, dev_id: %d, e_id: %s", e.name, e.device_id, e.entity_id)
+    
 
     gateway_name = config_entry.data[CONF_DEVICE]
     eltako_gateway = hass.data[DATA_ELTAKO][gateway_name]
     eltako_gateway.unload()
-    hass.data[DATA_ELTAKO].remove(gateway_name)
+    del hass.data[DATA_ELTAKO][gateway_name]
     # if len(hass.data[DATA_ELTAKO]) == 0:
     #     hass.data.remove(DATA_ELTAKO)
 
