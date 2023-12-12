@@ -16,9 +16,22 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
     return True
 
+def print_config_entry(config_entry: ConfigEntry) -> None:
+    LOGGER.debug("ConfigEntry")
+    LOGGER.debug("- tilte: %s", config_entry.title)
+    LOGGER.debug("- domain: %s", config_entry.domain)
+    LOGGER.debug("- unique_id: %s", config_entry.unique_id)
+    LOGGER.debug("- version: %s", config_entry.version)
+    LOGGER.debug("- entry_id: %s", config_entry.entry_id)
+    LOGGER.debug("- state: %s", config_entry.state)
+    for k in config_entry.data.keys():
+        LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
+
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
+    print_config_entry(config_entry)
+
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     
     # Read the config
