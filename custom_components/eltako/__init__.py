@@ -87,8 +87,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     await usb_gateway.async_setup()
     if ELTAKO_GATEWAY not in hass.data[DATA_ELTAKO]:
-        hass.data[DATA_ELTAKO][ELTAKO_GATEWAY] = {}
-    hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][usb_gateway.dev_name] = usb_gateway
+        hass.data[DATA_ELTAKO] = {}
+    hass.data[DATA_ELTAKO][usb_gateway.dev_name] = usb_gateway
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
