@@ -117,9 +117,9 @@ class ESP2Gateway:
 
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         if GatewayDeviceType.is_transceiver(self.dev_type):
-            return self.validate_sender_id_transmitter(sender_id, device_name)
+            return self.sender_id_validation_by_transmitter(sender_id, device_name)
         elif GatewayDeviceType.is_bus_gateway(self.dev_type):
-            return self.validate_sender_id_bus_gateway(sender_id, device_name)
+            return self.sender_id_validation_by_bus_gateway(sender_id, device_name)
         return False
     
     def sender_id_validation_by_transmitter(self, sender_id: AddressExpression, device_name: str = "") -> bool:
@@ -131,6 +131,7 @@ class ESP2Gateway:
     def sender_id_validation_by_bus_gateway(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
     
+
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         if GatewayDeviceType.is_transceiver(self.dev_type):
             return self.dev_id_validation_by_transmitter(dev_id, device_name)
@@ -149,6 +150,7 @@ class ESP2Gateway:
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
+    
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""

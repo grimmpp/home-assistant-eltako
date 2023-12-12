@@ -93,8 +93,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
-    eltako_gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]
+    eltako_gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.entry_id]
     eltako_gateway.unload()
-    hass.data.pop(DATA_ELTAKO)
+    hass.data[DATA_ELTAKO][ELTAKO_GATEWAY].pop(config_entry.entry_id)
+    if len(hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]) == 0:
+        hass.data.pop(DATA_ELTAKO)
 
     return True
