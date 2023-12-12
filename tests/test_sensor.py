@@ -2,7 +2,7 @@ import unittest
 from custom_components.eltako.sensor import *
 from mocks import HassMock
 from unittest import mock
-from .mocks import *
+from mocks import *
 from homeassistant.helpers.entity import Entity
 from custom_components.eltako.binary_sensor import EltakoBinarySensor
 from eltakobus import *
