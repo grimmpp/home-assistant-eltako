@@ -81,7 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     await usb_gateway.async_setup()
     eltako_data[ELTAKO_GATEWAY] = {} 
-    eltako_data[ELTAKO_GATEWAY][config_entry.entry_id] = usb_gateway
+    eltako_data[ELTAKO_GATEWAY][gateway_description] = usb_gateway
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
@@ -95,9 +95,10 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     """Unload Eltako config entry."""
     LOGGER.debug("async_unload_entry")
     print_config_entry(config_entry)
-    eltako_gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.entry_id]
+    gateway_description = config_entry.data[CONF_DEVICE]
+    eltako_gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][gateway_description]
     eltako_gateway.unload()
-    hass.data[DATA_ELTAKO][ELTAKO_GATEWAY].pop(config_entry.entry_id)
+    hass.data[DATA_ELTAKO][ELTAKO_GATEWAY].pop(gateway_description)
     if len(hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]) == 0:
         hass.data.pop(DATA_ELTAKO)
 
