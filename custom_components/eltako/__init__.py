@@ -106,8 +106,6 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     LOGGER.debug("async_unload_entry")
     print_config_entry(config_entry)
 
-    
-
     gateway_name = config_entry.data[CONF_DEVICE]
     eltako_gateway = hass.data[DATA_ELTAKO][gateway_name]
     eltako_gateway.unload()
