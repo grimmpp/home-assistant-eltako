@@ -26,7 +26,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
     gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
-    config: ConfigType = get_device_config_for_gateway(hass, gateway)
+    config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
     
     entities: list[EltakoEntity] = []
     
