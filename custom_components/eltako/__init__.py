@@ -54,7 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = config_helpers.get_id_from_name(gateway_description)
     
     # get home assistant configuration section matching base_id
-    gateway_config = await async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
+    gateway_config = await config_helpers.async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
         raise Exception(f"[{LOG_PREFIX}] No gateway configuration found.")
     
