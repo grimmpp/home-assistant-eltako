@@ -55,29 +55,30 @@ eltako:
   gateway:
     device: fam-usb
     base_id: FF-80-80-00
+    devices:
   ...
 
-  binary_sensor:
-  - id: FF-AA-10-08               # Wired via FTS14EM
-    eep: D5-00-01
-    name: "cooling switch"
-  ...
+      binary_sensor:
+      - id: FF-AA-10-08               # Wired via FTS14EM
+        eep: D5-00-01
+        name: "cooling switch"
+      ...
 
-  climate:
-    - id: FF-AA-00-09             # Address of actuator (1)
-      eep: A5-10-06               # Telegram type of the actuator (1)
+      climate:
+        - id: FF-AA-00-09             # Address of actuator (1)
+          eep: A5-10-06               # Telegram type of the actuator (1)
 
-      temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
-      min_target_temperature: 17  # Optional field, default value 17 (2)
-      max_target_temperature: 25  # Optional field, default value 25 (2)
+          temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
+          min_target_temperature: 17  # Optional field, default value 17 (2)
+          max_target_temperature: 25  # Optional field, default value 25 (2)
 
-      sender:                     # Virtual temperature controller (2)
-        id: FF-AA-00-09           # Sender address (2) needs to be entered .
-        eep: A5-10-06             # 2: Sender EEP
+          sender:                     # Virtual temperature controller (2)
+            id: FF-AA-00-09           # Sender address (2) needs to be entered .
+            eep: A5-10-06             # 2: Sender EEP
 
-      cooling_mode:               # Optional part - cooling mode
-        sensor:                   # Rocker switch (3) must be specified in binary_sensor
-          id: 00-00-10-08         # Address of switch (3)
+          cooling_mode:               # Optional part - cooling mode
+            sensor:                   # Rocker switch (3) must be specified in binary_sensor
+              id: 00-00-10-08         # Address of switch (3)
 ```
 
 
@@ -89,35 +90,35 @@ eltako:
   gateway:
     device: fam-usb
     base_id: FF-80-80-00
-
+    devices:
   ...
-  binary_sensor:
-  - id: FF-DD-0A-1B
-    eep: "F6-02-01"
-    name: "cooling switch"
+      binary_sensor:
+      - id: FF-DD-0A-1B
+        eep: "F6-02-01"
+        name: "cooling switch"
   ...
 
-  climate:
-    - id: FF-AA-00-09             # Address of actuator (1)
-      eep: A5-10-06               # Telegram type of the actuator (1)
+      climate:
+        - id: FF-AA-00-09             # Address of actuator (1)
+          eep: A5-10-06               # Telegram type of the actuator (1)
 
-      temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
-      min_target_temperature: 17  # Optional field, default value 17 (2)
-      max_target_temperature: 25  # Optional field, default value 25 (2)
+          temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
+          min_target_temperature: 17  # Optional field, default value 17 (2)
+          max_target_temperature: 25  # Optional field, default value 25 (2)
 
-      sender:                     # Virtual temperature controller (2)
-        id: FF-80-80-09           # Sender address (2) needs to be entered .
-        eep: A5-10-06             # 2: Sender EEP
-      
-      thermostat:                 # Optional section - physical thermostat for sync.
-        id: FF-EE-55-81           # Sender address of thermostat
-        eep: A5-10-06             # 5: EEP of thermostat
+          sender:                     # Virtual temperature controller (2)
+            id: FF-80-80-09           # Sender address (2) needs to be entered .
+            eep: A5-10-06             # 2: Sender EEP
+          
+          thermostat:                 # Optional section - physical thermostat for sync.
+            id: FF-EE-55-81           # Sender address of thermostat
+            eep: A5-10-06             # 5: EEP of thermostat
 
-      cooling_mode:               # Optional part - cooling mode
-        sensor:                   # Rocker switch (3) must be specified in binary_sensor
-          id: FF-DD-0A-1B         # Address of switch (3)
-          switch-button: 0x50     # In case of switch button needs to be specified.
-                                  # for rocker switches only
+          cooling_mode:               # Optional part - cooling mode
+            sensor:                   # Rocker switch (3) must be specified in binary_sensor
+              id: FF-DD-0A-1B         # Address of switch (3)
+              switch-button: 0x50     # In case of switch button needs to be specified.
+                                      # for rocker switches only
 ```
 
 ## Information about Eltako FLGTF
@@ -134,10 +135,10 @@ eltako:
 eltako:
   ...
 
-  sensor:
-  - id: ff-ee-dd-81
-    eep: A5-04-02
-    name: "Temp. and Humidity Sensor - FLGTF"
+      sensor:
+      - id: ff-ee-dd-81
+        eep: A5-04-02
+        name: "Temp. and Humidity Sensor - FLGTF"
  ...
 ```
 
@@ -167,13 +168,13 @@ Example Hygrostat Sensor and single Temperature Sensor:
 eltako:
   ...
 
-  sensor:
-  - id: FF-EE-55-92
-    eep: A5-10-12
-    name: "Temp. and Humidity Sensor - FUTH"
-  - id: FF-EE-55-81
-    eep: A5-04-02
-    name: "Temp. Sensor - Room 1 FUTH"
+      sensor:
+      - id: FF-EE-55-92
+        eep: A5-10-12
+        name: "Temp. and Humidity Sensor - FUTH"
+      - id: FF-EE-55-81
+        eep: A5-04-02
+        name: "Temp. Sensor - Room 1 FUTH"
  ...
 ```
 

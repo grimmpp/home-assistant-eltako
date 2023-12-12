@@ -1,6 +1,6 @@
 # Gateways
 
-A gateway is the component which builds the bridge between Home Assistant and the EnOcean wireless network or the RS485 bus. The gateway listens to telegrams on the RS485 bus or in the wireless network and transfers them to Home Assistant. In Home Assistant the Eltako Integration can send telegram either into wireless network or directly on the RS485 bus dependent on the type of gateway (USB based connection or radio transmitter). Based on the delivered EnOcean telegrams the Eltako Integration can the display the state of the actuators or send commands to change those states.
+A gateway is the component which builds the bridge between Home Assistant and the EnOcean wireless network or the RS485 bus. The gateway listens to telegrams on the RS485 bus or in the wireless network and transfers them to Home Assistant. In Home Assistant the Eltako Integration can send telegram either into wireless network or directly on the RS485 bus dependent on the type of gateway (USB based connection or radio transmitter). Based on the delivered EnOcean telegrams the Eltako Integration can display the state of the actuators or send commands to change those states. In Home Assistant gateways are also called hubs.
 
 ## Summary of Supported Gateways
 What gateway is preferred for what?
@@ -76,15 +76,15 @@ Hint: Addresses in PCT14 are displayed in DEZ and in Home Assistant configuratio
 eltako:
   gateway:
     device: fam14
-    base_id: 
-
-  light:
-  - id: FF-AA-00-01         # internal address from PCT14
-    eep: M5-38-08
-    name: FSR14_4x - 1
-    sender:
-      id: 00-00-B0-01       # HA sender baseId (00-00-B0-00) + internal address (0-80 HEX/128 DEZ)
-      eep: A5-38-08
+    base_id: FF-AA-00-00
+    devices:
+      light:
+      - id: 00-00-00-01         # internal address from PCT14
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: 00-00-B0-01       # HA sender baseId (00-00-B0-00) + internal address (0-80 HEX/128 DEZ)
+          eep: A5-38-08
 
 ```
 
@@ -158,14 +158,15 @@ FAM-USB is a usb device which can receive and send ESP2 telegrams. You can use i
 eltako:
   gateway:
     device: fam-usb
-
-  light:
-  - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address
-    eep: M5-38-08
-    name: FSR14_4x - 1
-    sender:
-      id: FF-80-80-01       # baseId of FAM-USB (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
-      eep: A5-38-08
+    base_id: FF-80-80-00        # baseId of FAM-USB gateway
+    devices:
+      light:
+      - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: FF-80-80-01       # baseId of FAM-USB (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
+          eep: A5-38-08
 
 ```
 

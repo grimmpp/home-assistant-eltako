@@ -285,7 +285,7 @@ class ESP2Gateway:
     
     
 
-class EnoceanUSB300Gateway:
+class ESP3Gateway:
     """Representation of Enocean USB300 transmitter.
 
     The dongle is responsible for receiving the ENOcean frames,
