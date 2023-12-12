@@ -19,6 +19,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .device import *
 from .const import *
 from .gateway import ESP2Gateway
+from . import print_config_entry
 
 import json
 import time
@@ -29,6 +30,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
+    print_config_entry(config_entry)
+    
     gateway: ESP2Gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.data[CONF_DEVICE]]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
     

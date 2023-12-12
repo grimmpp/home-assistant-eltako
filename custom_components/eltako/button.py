@@ -51,6 +51,7 @@ from .device import *
 from . import config_helpers
 from .gateway import ESP2Gateway
 from .const import CONF_ID_REGEX, CONF_EEP, CONF_METER_TARIFFS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
+from . import print_config_entry
 
 EEP_WITH_TEACH_IN_BUTTONS = {
     A5_10_06: b'\x40\x30\x0D\x85'
@@ -62,6 +63,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako buttons."""
+    print_config_entry(config_entry)
+
     gateway: ESP2Gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][config_entry.data[CONF_DEVICE]]
     config: ConfigType = get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
 
