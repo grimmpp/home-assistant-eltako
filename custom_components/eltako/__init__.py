@@ -80,7 +80,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return False
     
     await usb_gateway.async_setup()
-    eltako_data[ELTAKO_GATEWAY]: dict = {} 
     eltako_data[ELTAKO_GATEWAY][usb_gateway.dev_name] = usb_gateway
     
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
@@ -96,10 +95,10 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     LOGGER.debug("async_unload_entry")
     print_config_entry(config_entry)
     gateway_name = config_entry.data[CONF_DEVICE]
-    eltako_gateway = hass.data[DATA_ELTAKO][ELTAKO_GATEWAY][gateway_name]
+    eltako_gateway = hass.data[DATA_ELTAKO][gateway_name]
     eltako_gateway.unload()
-    hass.data[DATA_ELTAKO][ELTAKO_GATEWAY].remove(gateway_name)
-    if len(hass.data[DATA_ELTAKO][ELTAKO_GATEWAY]) == 0:
-        hass.data.remove(DATA_ELTAKO)
+    hass.data[DATA_ELTAKO].remove(gateway_name)
+    # if len(hass.data[DATA_ELTAKO]) == 0:
+    #     hass.data.remove(DATA_ELTAKO)
 
     return True
