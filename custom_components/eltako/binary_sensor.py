@@ -61,6 +61,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
         """Initialize the Eltako binary sensor."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
+        self.invert_signal = invert_signal
         self._attr_device_class = device_class
         self.entity_id = f"binary_sensor.{self.unique_id}"
 
