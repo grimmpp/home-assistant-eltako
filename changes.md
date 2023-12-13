@@ -7,10 +7,10 @@
 * Device ids can be displayed in device name optionally.
 * Home Assistant eventing prepared to support more than one gateway
 * Manual installation of multiple gateways/hubs implemented. 
-
 * **&#x26A0; Breaking Changes &#x26A0;**
-* Configuration: 'base_id' in 'gateway' in mandatory. See [docs](./docs/update_home_assistant_configuration.md)
-* Events in Home Assistant for switch telegrams have got different event_ids. This affects automations reacting on old event ids. See [docs](./docs/rocker_switch/readme.md)
+  * All devices get a new identifier. Unfortunately, all devices need to be deleted and recreated. History of data gets lost!!!
+  * Configuration: 'base_id' in 'gateway' in mandatory. See [docs](./docs/update_home_assistant_configuration.md)
+  * Events in Home Assistant for switch telegrams have got different event_ids. This affects automations reacting on old event ids. See [docs](./docs/rocker_switch/readme.md)
 
 ## Version 1.1.3
 * Added read-only support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
