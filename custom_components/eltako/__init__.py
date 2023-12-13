@@ -41,6 +41,7 @@ LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
+    LOGGER.info(f"[{LOG_PREFIX}] Start gateway setup.")
     # print_config_entry(config_entry)
 
     # Check domain
@@ -73,8 +74,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         raise Exception(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
     
     gateway_device_type = gateway_config[CONF_DEVICE]    # from configuration
-    # gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])   # not needed
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
+    
+    # get serial path info
+    if CONF_SERIAL_PATH not in config_entry.data.keys():
+        raise Exception("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams
