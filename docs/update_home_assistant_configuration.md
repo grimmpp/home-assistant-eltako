@@ -37,8 +37,8 @@ eltako:
   # 
   gateway:
   - base_id: FF-AA-80-00        # Address which is used to send telegrams into wireless network. Mainly important for transceivers like FAM-USB
-  - device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
-  # usb/serial port will be defined when you manaully add the gateway/hub to Home Assistant
+    device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
+    # usb/serial port will be defined when you manaully add the gateway/hub to Home Assistant
     devices:                    # list here all devices connected to this gateway
 
       # binary sensors can be switches, door or window contacts, ...
@@ -126,7 +126,7 @@ eltako:
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
   gateway:
-    device: fgw14usb            # Supported gateways: gam14, fgw14usb
+  - device: fgw14usb            # Supported gateways: gam14, fgw14usb
     base_id: FF-AA-80-00        # Offset address for sending telegrams into wireless network
     devices:
       sensor:
