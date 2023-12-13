@@ -366,7 +366,7 @@ class EltakoMeterSensor(EltakoSensor):
     def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
         """Initialize the Eltako meter sensor device."""
         super().__init__(gateway, dev_id, dev_name, dev_eep, description)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}_{tariff}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}_{tariff}"
         self.entity_id = f"sensor.{self.unique_id}"
         self._tariff = tariff
 
@@ -380,7 +380,7 @@ class EltakoMeterSensor(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -436,7 +436,7 @@ class EltakoWindowHandle(EltakoSensor):
         """Initialize the Eltako window handle sensor device."""
         super().__init__(gateway, dev_id, dev_name, dev_eep, description)
         
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
     @property
@@ -449,7 +449,7 @@ class EltakoWindowHandle(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -492,7 +492,7 @@ class EltakoWeatherStation(EltakoSensor):
     def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako weather station device."""
         super().__init__(gateway, dev_id, dev_name, dev_eep, description)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
     @property
@@ -505,7 +505,7 @@ class EltakoWeatherStation(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -579,8 +579,9 @@ class EltakoTemperatureSensor(EltakoSensor):
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
+        self._attr_native_value = None
 
     @property
     def name(self):
@@ -592,7 +593,7 @@ class EltakoTemperatureSensor(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -626,7 +627,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
     @property
@@ -639,7 +640,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -673,7 +674,7 @@ class EltakoHumiditySensor(EltakoSensor):
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_HYGROSTAT
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
 
     @property
@@ -686,7 +687,7 @@ class EltakoHumiditySensor(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -734,7 +735,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         )
 
         super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{description.key}"
         self.entity_id = f"sensor.{self.unique_id}"
         self.voc_type = voc_type
         # self._attr_suggested_unit_of_measurement = voc_type.unit
@@ -751,7 +752,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,

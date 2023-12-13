@@ -119,7 +119,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
         self.entity_id = f"climate.{self.unique_id}"
 
         self.thermostat = thermostat
@@ -177,7 +176,7 @@ class ClimateController(EltakoEntity, ClimateEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,

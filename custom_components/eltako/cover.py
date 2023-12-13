@@ -68,7 +68,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
         self._attr_is_closing = False
         self._attr_is_closed = False
         self._attr_current_cover_position = 100
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
+        self._attr_unique_id = f"{self.unique_id}_{device_class}"
         self.entity_id = f"cover.{self.unique_id}"
         self._time_closes = time_closes
         self._time_opens = time_opens
@@ -83,7 +83,7 @@ class EltakoCover(EltakoEntity, CoverEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
