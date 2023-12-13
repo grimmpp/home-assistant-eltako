@@ -13,9 +13,9 @@ ELTAKO_GATEWAY: Final = "gateway"
 ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "Eltako"
 
-ERROR_INVALID_GATEWAY_PATH: Final = "invalid_gateway_path"
-ERROR_NO_SERIAL_PATH_AVAILABLE: Final = "no_serial_path_available"
-ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE: Final = "no_gateway_configuration_available"
+ERROR_INVALID_GATEWAY_PATH: Final = "Invalid gateway path"
+ERROR_NO_SERIAL_PATH_AVAILABLE: Final = "No serial path available. Try to reconnect your usb plug."
+ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE: Final = "No gateway configuration available. Enter gateway into '/homeassistant/configuration.yaml'."
 
 SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
 SIGNAL_SEND_MESSAGE: Final = "send_message"

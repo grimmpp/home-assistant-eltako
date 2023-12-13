@@ -41,6 +41,7 @@ LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
+    LOGGER.info(f"[{LOG_PREFIX}] Start gateway setup.")
     # print_config_entry(config_entry)
 
     # Check domain
@@ -60,17 +61,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # Initialise the gateway
     # get base_id from user input
+    if CONF_DEVICE not in config_entry.data.keys():
+        raise Exception("[{LOG_PREFIX}] Ooops, device information for gateway is not avialable. Try to delete and recreate the gateway.")
     gateway_description = config_entry.data[CONF_DEVICE]    # from user input
+    if not ('(' in gateway_description and ')' in gateway_description):
+        raise Exception("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to detele and recreate the gateway.")
     gateway_base_id = config_helpers.get_id_from_name(gateway_description)
     
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
-        raise Exception(f"[{LOG_PREFIX}] No gateway configuration found.")
+        raise Exception(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
     
     gateway_device_type = gateway_config[CONF_DEVICE]    # from configuration
-    # gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])   # not needed
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
+    
+    # get serial path info
+    if CONF_SERIAL_PATH not in config_entry.data.keys():
+        raise Exception("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams

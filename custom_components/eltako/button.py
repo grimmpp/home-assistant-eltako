@@ -81,7 +81,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
         )
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{self.entity_description.key}"
+        self._attr_unique_id = f"{self.unique_id}_{self.entity_description.key}"
         self.entity_id = f"button.{self.unique_id}"
         self.sender_id = sender_id
 
@@ -100,7 +100,7 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,

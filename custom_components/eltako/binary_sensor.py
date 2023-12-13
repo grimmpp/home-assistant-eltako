@@ -62,9 +62,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """Initialize the Eltako binary sensor."""
         super().__init__(gateway, dev_id, dev_name, dev_eep)
         self._attr_device_class = device_class
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}_{device_class}"
         self.entity_id = f"binary_sensor.{self.unique_id}"
-        self.invert_signal = invert_signal
 
     @property
     def name(self):
@@ -86,7 +84,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
+                (DOMAIN, self.unique_id)
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
