@@ -29,6 +29,11 @@ class EltakoEntity(Entity):
         self.dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id.plain_address())
+        self.identifier = self.get_identifier(self.gateway.base_id, self.dev_id)
+
+    @classmethod
+    def get_identifier(cls, gateway_base_id, dev_id) -> str:
+        return f"{DOMAIN}_{b2a(gateway_base_id[0], '-').upper()}_{b2a(dev_id[0], '-').upper()}"
 
     def validate_dev_id(self) -> bool:
         return self.gateway.validate_dev_id(self.dev_id, self.dev_name)
