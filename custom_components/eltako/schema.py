@@ -21,9 +21,7 @@ from homeassistant.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
 )
 from homeassistant.components.sensor import (
-    CONF_STATE_CLASS,
     DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
-    STATE_CLASSES_SCHEMA,
 )
 from homeassistant.components.switch import (
     DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
@@ -33,13 +31,8 @@ from homeassistant.components.cover import (
 )
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
-    CONF_ENTITY_CATEGORY,
-    CONF_ENTITY_ID,
-    CONF_EVENT,
-    CONF_MODE,
     CONF_ID,
     CONF_NAME,
-    CONF_TYPE,
     CONF_DEVICE,
     CONF_DEVICES,
     Platform,
@@ -61,7 +54,7 @@ def _get_sender_schema(supported_sender_eep) -> vol.Schema:
 
 def _get_receiver_schema(supported_sender_eep) -> vol.Schema:
     return _get_sender_schema(supported_sender_eep).extend({
-        vol.Optional(CONF_GATEWAY_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
+        vol.Optional(CONF_GATEWAY_ID, default=None): cv.Number,
     })
 
 class EltakoPlatformSchema(ABC):
@@ -186,6 +179,7 @@ class SensorSchema(EltakoPlatformSchema):
                 vol.Optional(CONF_LANGUAGE, default="en"): vol.In([v for v in LANGUAGE_ABBREVIATIONS]),
                 vol.Optional(CONF_VOC_TYPE_INDEXES, default=[0]): vol.All(cv.ensure_list, [vol.In([v.index for v in VOC_SubstancesType])]),
                 vol.Optional(CONF_METER_TARIFFS, default=DEFAULT_METER_TARIFFS): vol.All(cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=1, max=16))]),
+                vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
             }
         ),
     )
@@ -236,7 +230,7 @@ class ClimateSchema(EltakoPlatformSchema):
             vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Required(CONF_EEP): vol.In([F6_02_01.eep_string, F6_02_02.eep_string]),
             vol.Optional(CONF_NAME, default=DEFAULT_COOLING_SENDER_NAME): cv.string,
-            vol.Optional(CONF_GATEWAY_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
+            vol.Optional(CONF_GATEWAY_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
         }),
     })
 
@@ -261,7 +255,8 @@ class GatewaySchema(EltakoPlatformSchema):
     PLATFORM = CONF_GATEWAY
 
     ENTITY_SCHEMA = vol.Schema({
-            vol.Required(CONF_DEVICE, default=GatewayDeviceType.GatewayEltakoFAM14.value): vol.In([g.value for g in GatewayDeviceType]),
+            vol.Required(CONF_ID): cv.Number,
+            vol.Required(CONF_DEVICE, default=GatewayDeviceType.GatewayEltakoFGW14USB.value): vol.In([g.value for g in GatewayDeviceType]),
             vol.Optional(CONF_NAME, default=""): cv.string,
             vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_SERIAL_PATH): cv.string,

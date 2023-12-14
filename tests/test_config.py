@@ -65,7 +65,7 @@ class TestDeviceConfig(TestCase):
 
     def test_device_config1_1(self):
         CONFIG = self.CONFIG1
-        dev_config = device_conf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
+        dev_config = DeviceConf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
 
         for k in [CONF_ID, CONF_EEP, CONF_NAME, CONF_GATEWAY_BASE_ID, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertTrue(k in dev_config)
@@ -82,7 +82,7 @@ class TestDeviceConfig(TestCase):
 
     def test_device_config1_2(self):
         CONFIG = self.CONFIG1
-        dev_config = device_conf(CONFIG)
+        dev_config = DeviceConf(CONFIG)
 
         for k in [CONF_ID, CONF_EEP, CONF_NAME, CONF_GATEWAY_BASE_ID]:
             self.assertTrue(k in dev_config)
@@ -106,7 +106,7 @@ class TestDeviceConfig(TestCase):
 
     def test_device_config2_1(self):
         CONFIG = self.CONFIG2
-        dev_config = device_conf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
+        dev_config = DeviceConf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
 
         for k in [CONF_ID, CONF_EEP]:
             self.assertTrue(k in dev_config)
@@ -124,7 +124,7 @@ class TestDeviceConfig(TestCase):
 
     def test_device_config3_1(self):
         CONFIG = self.CONFIG3
-        dev_config = device_conf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
+        dev_config = DeviceConf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
 
         for k in [CONF_ID, CONF_EEP]:
             self.assertTrue(k in dev_config)

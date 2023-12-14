@@ -15,7 +15,7 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_ENABLE_TEACH_IN_BUTTONS: False
 }
 
-class device_conf(dict):
+class DeviceConf(dict):
     """Object representation of config."""
     def __init__(self, config: ConfigType, extra_keys:[str]=[]):
         self.update(config)
@@ -24,8 +24,8 @@ class device_conf(dict):
         self.eep = EEP.find(self.eep_string)
         if CONF_NAME in config:
             self.name = config.get(CONF_NAME)
-        if CONF_GATEWAY_BASE_ID in config:
-            self.gateway_base_id = AddressExpression.parse(config.get(CONF_GATEWAY_BASE_ID))
+        if CONF_BASE_ID in config:
+            self.gateway_base_id = AddressExpression.parse(config.get(CONF_BASE_ID))
         for ek in extra_keys:
             if ek in config:
                 setattr(self, ek, config.get(ek))
@@ -34,10 +34,10 @@ class device_conf(dict):
     def get(self, key: str):
         return super().get(key, None)
 
-def get_device_conf(config: ConfigType, key: str, extra_keys:[str]=[]) -> device_conf:
+def get_device_conf(config: ConfigType, key: str, extra_keys:[str]=[]) -> DeviceConf:
     if config is not None:
         if key in config.keys():
-            return device_conf(config.get(key))
+            return DeviceConf(config.get(key))
     return None
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
@@ -64,10 +64,20 @@ async def async_find_gateway_config_by_base_id(base_id: AddressExpression, hass:
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:
-            if g[CONF_BASE_ID].upper() == b2a(base_id[0],'-').upper():
+            if g[CONF_BASE_ID].upper() == format_address(base_id[0]):
                 return g
     return None
 
+async def async_find_gateway_config_by_id(id: int, hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
+    config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
+    return find_gateway_config_by_id(config, id)
+
+def find_gateway_config_by_id(config: dict, id: int) -> dict:
+    if CONF_GATEWAY in config:
+        for g in config[CONF_GATEWAY]:
+            if g[CONF_ID] == id:
+                return g
+    return None
 
 async def async_get_gateway_config_serial_port(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
     gateway_config = await async_get_gateway_config(hass, CONFIG_SCHEMA, get_integration_config)
@@ -87,7 +97,7 @@ async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: di
 def get_device_config(config: dict, base_id: AddressExpression) -> dict:
     gateways = config[CONF_GATEWAY]
     for g in gateways:
-        if g[CONF_BASE_ID].upper() == b2a(base_id[0],'-').upper():
+        if g[CONF_BASE_ID].upper() == format_address(base_id[0]):
             return g[CONF_DEVICES]
     return None
 
@@ -100,11 +110,12 @@ def get_list_of_gateways_by_config(config: dict, filter_out: [str]=[]) -> dict:
     result = {}
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:
+            g_id = g[CONF_ID]
             g_name = g[CONF_NAME]
             g_device = g[CONF_DEVICE]
             g_base_id = g[CONF_BASE_ID]
             if g_base_id not in filter_out:
-                result[g_base_id] = get_gateway_name(g_name, g_device, AddressExpression.parse(g_base_id))
+                result[g_id] = get_gateway_name(g_name, g_device, g_id, AddressExpression.parse(g_base_id))
     return result
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
@@ -114,27 +125,29 @@ def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
             return False
     return True
 
-def get_gateway_name(dev_name:str, dev_type:str, base_id:AddressExpression) -> str:
+def get_gateway_name(dev_name:str, dev_type:str, dev_id: int, base_id:AddressExpression) -> str:
     if not dev_name or len(dev_name) == 0:
         dev_name = GATEWAY_DEFAULT_NAME
-    dev_name += " - " + dev_type
-    return get_device_name(dev_name, base_id, {CONF_SHOW_DEV_ID_IN_DEV_NAME: True})
+    return f"{dev_name} - {dev_type} (Id: {dev_id}, BaseId: {format_address(base_id)})"
+
+def format_address(address: AddressExpression, separator:str='-') -> str:
+    return b2a(address[0], '-').upper()
 
 def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: dict) -> str:
     if general_config[CONF_SHOW_DEV_ID_IN_DEV_NAME]:
-        return f"{dev_name} ({b2a(dev_id[0],'-').upper()})"
+        return f"{dev_name} ({format_address(dev_id)})"
     else:
         return dev_name
     
 def get_id_from_name(dev_name: str) -> AddressExpression:
-    return AddressExpression.parse(dev_name.split('(')[1].split(')')[0])
+    return int(dev_name.split('(Id: ')[1].split(',')[0])
     
-def get_bus_event_type(gateway_id :AddressExpression, function_id: str, source_id: AddressExpression = None, data: str=None) -> str:
-    event_id = f"{DOMAIN}.gw_{b2a(gateway_id[0],'-').upper()}.{function_id}"
+def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression = None, data: str=None) -> str:
+    event_id = f"{DOMAIN}.gw_{gateway_id}.{function_id}"
     
     # add source id e.g. switch id
     if source_id is not None:
-        event_id += f".sid_{b2a(source_id[0],'-').upper()}"
+        event_id += f".sid_{format_address(source_id)}"
     
     # add data for better handling in automations
     if data is not None:

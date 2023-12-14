@@ -1,9 +1,7 @@
 """Support for Eltako light sources."""
 from __future__ import annotations
 
-import math
 from typing import Any
-import json
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
@@ -23,6 +21,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers import device_registry as dr
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+from config_helpers import DeviceConf
 from .device import *
 from .gateway import ESP2Gateway
 from .const import *
@@ -43,13 +42,13 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_conf = device_conf(entity_config)
+                dev_conf = DeviceConf(entity_config)
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
                 if dev_conf.eep in [A5_38_08]:
-                    entities.append(EltakoDimmableLight(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
+                    entities.append(EltakoDimmableLight(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
                 elif dev_conf.eep in [M5_38_08]:
-                    entities.append(EltakoSwitchableLight(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
+                    entities.append(EltakoSwitchableLight(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -66,40 +65,20 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, platform:str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self._on_state = False
         self._attr_brightness = 50
         self._sender_id = sender_id
         self._sender_eep = sender_eep
-        self.entity_id = f"light.{self.unique_id}"
-
-    @property
-    def name(self):
-        """Return the name of the device if any."""
-        return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
 
     @property
     def is_on(self):
         """If light is on."""
         return self._on_state
     
-
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
         self._attr_brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
@@ -176,38 +155,17 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     _attr_color_mode = ColorMode.ONOFF
     _attr_supported_color_modes = {ColorMode.ONOFF}
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
-        self.dev_eep = dev_eep
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
-        self.entity_id = f"light.{self.unique_id}"
-
-    @property
-    def name(self):
-        """Return the name of the device if any."""
-        return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
 
     @property
     def is_on(self):
         """If light is on."""
         return self._on_state
-    
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""

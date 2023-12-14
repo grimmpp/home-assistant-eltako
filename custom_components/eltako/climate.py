@@ -26,6 +26,7 @@ from homeassistant.helpers.typing import ConfigType
 from .gateway import ESP2Gateway
 from .device import *
 from .const import *
+from .config_helpers import DeviceConf
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 async def async_setup_entry(
@@ -44,7 +45,7 @@ async def async_setup_entry(
         for entity_config in config[platform]:
             
             try:
-                dev_conf = device_conf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
+                dev_conf = DeviceConf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
                 sender = config_helpers.get_device_conf(entity_config, CONF_SENDER)
                 thermostat = config_helpers.get_device_conf(entity_config, CONF_ROOM_THERMOSTAT)
 
@@ -58,7 +59,7 @@ async def async_setup_entry(
 
                 if dev_conf.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
-                    climate_entity = ClimateController(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                    climate_entity = ClimateController(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                                        sender.id, sender.eep, 
                                                        dev_conf.get(CONF_TEMPERATURE_UNIT), 
                                                        dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf.get(CONF_MAX_TARGET_TEMPERATURE), 
@@ -67,7 +68,8 @@ async def async_setup_entry(
 
                     # subscribe for cooling switch events
                     if cooling_switch is not None:
-                        event_id = get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, convert_button_pos_from_hex_to_str(cooling_switch.get(CONF_SWITCH_BUTTON)))
+                        event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, 
+                                                                     config_helpers.convert_button_pos_from_hex_to_str(cooling_switch.get(CONF_SWITCH_BUTTON)))
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
@@ -110,16 +112,15 @@ class ClimateController(EltakoEntity, ClimateEntity):
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
-                 thermostat: device_conf, cooling_switch: device_conf, cooling_sender: device_conf):
+                 thermostat: DeviceConf, cooling_switch: DeviceConf, cooling_sender: DeviceConf):
         """Initialize the Eltako heating and cooling source."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
-        self.entity_id = f"climate.{self.unique_id}"
 
         self.thermostat = thermostat
         if self.thermostat:
@@ -165,24 +166,6 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.exception(e)
                 # FIXME should I just restart with back-off?
 
-
-    @property
-    def name(self):
-        """Return the name of the device if any."""
-        return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
     
     async def async_handle_event(self, call):
         """Receives signal from cooling switches if defined in configuration."""
@@ -318,10 +301,11 @@ class ClimateController(EltakoEntity, ClimateEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat.id}")
                 self.change_temperature_values(msg)
 
-        if self.cooling_switch:
-            if msg.address == self.cooling_switch.id[0]:
-                LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
-                LOGGER.debug(f"NOT YET IMPLEMENTED");
+        # Implemented via eventing: async_handle_event
+        # if self.cooling_switch:
+        #     if msg.address == self.cooling_switch.id[0]:
+        #         LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
+        #         LOGGER.debug(f"NOT YET IMPLEMENTED")
 
 
     def change_temperature_values(self, msg: ESP2Message) -> None:

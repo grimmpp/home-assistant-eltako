@@ -255,67 +255,67 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_conf = device_conf(entity_config, [CONF_METER_TARIFFS])
+                dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
                 dev_name = dev_conf.name
             
                 if dev_conf.eep in [A5_13_01]:
                     if dev_name == dev_conf.name:
                         dev_name = DEFAULT_DEVICE_NAME_WEATHER_STATION
                     
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_RAIN))
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
-                    entities.append(EltakoWeatherStation(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_TEMPERATURE))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_WIND_SPEED))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_RAIN))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL))
+                    entities.append(EltakoWeatherStation(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST))
                     
                 elif dev_conf.eep in [F6_10_00]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_WINDOW_HANDLE
                     
-                    entities.append(EltakoWindowHandle(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WINDOWHANDLE))
+                    entities.append(EltakoWindowHandle(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WINDOWHANDLE))
                     
                 elif dev_conf.eep in [A5_12_01]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
                         
                     for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
-                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-                    entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+                        entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
+                    entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
 
                 elif dev_conf.eep in [A5_12_02]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_GAS_METER
                         
                     for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
-                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
-                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
+                        entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_GAS_CUMULATIVE, tariff=(tariff - 1)))
+                        entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_GAS_CURRENT, tariff=(tariff - 1)))
 
                 elif dev_conf.eep in [A5_12_03]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_WATER_METER
                         
                     for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
-                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
-                        entities.append(EltakoMeterSensor(gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
+                        entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
+                        entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
                 elif dev_conf.eep in [A5_04_02, A5_10_12]:
                     
-                    entities.append(EltakoTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
-                    entities.append(EltakoHumiditySensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoHumiditySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     if dev_conf.eep in [A5_10_12]:
-                        entities.append(EltakoTargetTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
+                        entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
 
                 elif dev_conf.eep in [A5_10_06]:
-                    entities.append(EltakoTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
-                    entities.append(EltakoTargetTemperatureSensor(gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                 
                 elif dev_conf.eep in [A5_09_0C]:
                 ### Eltako FLGTF only supports VOCT Total
                     for t in VOC_SubstancesType:
                         if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
-                            entities.append(EltakoAirQualitySensor(gateway, dev_conf.id, dev_name, dev_conf.eep, t, entity_config[CONF_LANGUAGE]))
+                            entities.append(EltakoAirQualitySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, t, entity_config[CONF_LANGUAGE]))
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -330,17 +330,21 @@ async def async_setup_entry(
 class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
     """Representation of an  Eltako sensor device such as a power meter."""
 
-    def __init__(
-        self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription
+    def __init__(self, platform: str, gateway: ESP2Gateway, 
+                 dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription
     ) -> None:
         """Initialize the Eltako sensor device."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
-        self.dev_eep = dev_eep
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.entity_description = description
         self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_unique_id = f"{self.identifier}_{description.key}"
         self._attr_native_value = None
         
-
+    @property
+    def name(self):
+        """Return the default name for the sensor."""
+        return self.entity_description.name
+        
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
         # If not None, we got an initial value.
@@ -363,11 +367,9 @@ class EltakoMeterSensor(EltakoSensor):
     - A5-12-02 (Automated Meter Reading, Gas)
     - A5-12-03 (Automated Meter Reading, Water)
     """
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
         """Initialize the Eltako meter sensor device."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
-        self._attr_unique_id = f"{self.unique_id}_{description.key}_{tariff}"
-        self.entity_id = f"sensor.{self.unique_id}"
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
         self._tariff = tariff
 
     @property
@@ -375,20 +377,7 @@ class EltakoMeterSensor(EltakoSensor):
         """Return the default name for the sensor."""
         return f"{self.entity_description.name} (Tariff {self._tariff + 1})"
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
-
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor.
         For cumulative values, we alway respect the channel.
         For current values, we respect the channel just for gas and water.
@@ -432,32 +421,11 @@ class EltakoWindowHandle(EltakoSensor):
     - F6-10-00 (Mechanical handle / Hoppe AG)
     """
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako window handle sensor device."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
-        
-        self._attr_unique_id = f"{self.unique_id}_{description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
 
-    @property
-    def name(self):
-        """Return the default name for the sensor."""
-        return None
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
-
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -489,31 +457,11 @@ class EltakoWeatherStation(EltakoSensor):
     - A5-13-01 (Weather station)
     """
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako weather station device."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep, description)
-        self._attr_unique_id = f"{self.unique_id}_{description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
 
-    @property
-    def name(self):
-        """Return the default name for the sensor."""
-        return self.entity_description.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
-
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -573,35 +521,15 @@ class EltakoTemperatureSensor(EltakoSensor):
     - A5-04-02 (Temperature and Humidity)
     """
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
-        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{self.unique_id}_{description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
-        self._attr_native_value = None
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
 
-    @property
-    def name(self):
-        """Return the default name for the sensor."""
-        return self.entity_description.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
     
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -621,34 +549,14 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
     - A5-10-06, A5-10-12
     """
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TARGET_TEMPERATURE) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TARGET_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
-        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{self.unique_id}_{description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
-
-    @property
-    def name(self):
-        """Return the default name for the sensor."""
-        return self.entity_description.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
     
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -668,34 +576,14 @@ class EltakoHumiditySensor(EltakoSensor):
     - A5-04-02 (Temperature and Humidity)
     """
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_HYGROSTAT
-        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{self.unique_id}_{description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
-
-    @property
-    def name(self):
-        """Return the default name for the sensor."""
-        return self.entity_description.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
     
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
             decoded = self.dev_eep.decode_message(msg)
@@ -714,7 +602,7 @@ class EltakoAirQualitySensor(EltakoSensor):
     - A5-09-0C
     """
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATIONS) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATIONS) -> None:
         """Initialize the Eltako air quality sensor."""
         _dev_name = dev_name
         if _dev_name == "":
@@ -734,34 +622,14 @@ class EltakoAirQualitySensor(EltakoSensor):
             state_class=SensorStateClass.MEASUREMENT,
         )
 
-        super().__init__(gateway, dev_id, _dev_name, dev_eep, description)
-        self._attr_unique_id = f"{self.unique_id}_{description.key}"
-        self.entity_id = f"sensor.{self.unique_id}"
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
         self.voc_type = voc_type
         # self._attr_suggested_unit_of_measurement = voc_type.unit
 
         LOGGER.debug(f"entity_description: {self.entity_description}, voc_type: {voc_type}")
-
-    @property
-    def name(self):
-        """Return the default name for the sensor."""
-        return self.entity_description.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-            
-        )
     
-    def value_changed(self, msg):
+    
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
             decoded = self.dev_eep.decode_message(msg)

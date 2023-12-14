@@ -66,10 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_description = config_entry.data[CONF_DEVICE]    # from user input
     if not ('(' in gateway_description and ')' in gateway_description):
         raise Exception("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to detele and recreate the gateway.")
-    gateway_base_id = config_helpers.get_id_from_name(gateway_description)
+    gateway_id = config_helpers.get_id_from_name(gateway_description)
     
     # get home assistant configuration section matching base_id
-    gateway_config = await config_helpers.async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
+    gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
         raise Exception(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
     
@@ -88,7 +88,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
     if GatewayDeviceType.is_esp2_gateway(gateway_device_type):
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
-        usb_gateway = ESP2Gateway(general_settings, hass, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
+        gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
+        usb_gateway = ESP2Gateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
     else:
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.EnOceanUSB300]
         raise NotImplemented(f"[{LOG_PREFIX}] Gateway {gateway_device_type} not yet implemented and supported!")

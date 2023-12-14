@@ -1,15 +1,14 @@
 """Support for Eltako covers."""
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
 from homeassistant import config_entries
-from homeassistant.components.cover import PLATFORM_SCHEMA, CoverEntity, CoverEntityFeature, ATTR_POSITION
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, Platform
+from homeassistant.components.cover import CoverEntity, CoverEntityFeature, ATTR_POSITION
+from homeassistant.const import CONF_DEVICE_CLASS, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -17,9 +16,10 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import *
-from . import config_helpers
+from . import config_helpers 
+from .config_helpers import DeviceConf
 from .gateway import ESP2Gateway
-from .const import CONF_ID_REGEX, CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, DATA_ELTAKO, ELTAKO_CONFIG, ELTAKO_GATEWAY, LOGGER
+from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, LOGGER
 from . import get_gateway_from_hass, get_device_config_for_gateway
 
 async def async_setup_entry(
@@ -38,10 +38,10 @@ async def async_setup_entry(
         for entity_config in config[platform]:
 
             try:
-                dev_conf = device_conf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS])
+                dev_conf = DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS])
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                entities.append(EltakoCover(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                entities.append(EltakoCover(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                             sender_config.id, sender_config.eep, 
                                             dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS)))
 
@@ -57,19 +57,17 @@ async def async_setup_entry(
 class EltakoCover(EltakoEntity, CoverEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
+    def __init__(self, platform:str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
         """Initialize the Eltako cover device."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
-        self.dev_eep = dev_eep
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._sender_id = sender_id
         self._sender_eep = sender_eep
+
         self._attr_device_class = device_class
         self._attr_is_opening = False
         self._attr_is_closing = False
         self._attr_is_closed = False
         self._attr_current_cover_position = 100
-        self._attr_unique_id = f"{self.unique_id}_{device_class}"
-        self.entity_id = f"cover.{self.unique_id}"
         self._time_closes = time_closes
         self._time_opens = time_opens
         
@@ -77,24 +75,6 @@ class EltakoCover(EltakoEntity, CoverEntity):
         
         if time_closes is not None and time_opens is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.unique_id)
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
-        
-    @property
-    def name(self):
-        """Return the device name."""
-        return None
 
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""

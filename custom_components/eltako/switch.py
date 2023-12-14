@@ -16,6 +16,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+from config_helpers import DeviceConf
 from .device import *
 from .gateway import ESP2Gateway
 from .const import *
@@ -36,10 +37,10 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_conf = device_conf(entity_config)
+                dev_conf = DeviceConf(entity_config)
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                entities.append(EltakoSwitch(gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
+                entities.append(EltakoSwitch(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -54,40 +55,18 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, platform:str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako switch device."""
-        super().__init__(gateway, dev_id, dev_name, dev_eep)
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.dev_eep = dev_eep
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         self._on_state = False
-        self._attr_unique_id = f"{DOMAIN}_{dev_id.plain_address().hex()}"
-        self.entity_id = f"switch.{self.unique_id}"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={
-                (DOMAIN, self.dev_id.plain_address().hex())
-            },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.unique_id),
-        )
         
     @property
     def is_on(self):
         """Return whether the switch is on or off."""
         return self._on_state
-
-
-    @property
-    def name(self):
-        """Return the device name."""
-        return None
-
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
@@ -135,7 +114,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             self.schedule_update_ha_state()
 
 
-    def value_changed(self, msg):
+    def value_changed(self, msg: ESP2Message):
         """Update the internal state of the switch."""
         try:
             decoded = self.dev_eep.decode_message(msg)
