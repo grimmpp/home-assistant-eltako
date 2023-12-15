@@ -16,7 +16,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
-from config_helpers import DeviceConf
+from .config_helpers import DeviceConf
 from .device import *
 from .gateway import ESP2Gateway
 from .const import *
