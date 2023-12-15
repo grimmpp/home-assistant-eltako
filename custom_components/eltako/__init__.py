@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
     if GatewayDeviceType.is_esp2_gateway(gateway_device_type):
         gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
-        baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
+        baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
         gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
         usb_gateway = ESP2Gateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
     else:
