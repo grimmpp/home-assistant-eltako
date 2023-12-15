@@ -29,7 +29,7 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> ESP2Gateway:
-    return hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    return hass.data[DATA_ELTAKO][config_entry.data[CONF_GATEWAY_DESCRIPTION]]
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: ESP2Gateway) -> None:
     hass.data[DATA_ELTAKO][gateway_enity.dev_name] = gateway_enity
