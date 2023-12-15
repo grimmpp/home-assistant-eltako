@@ -127,6 +127,20 @@ def get_list_of_gateways_by_config(config: dict, filter_out: [str]=[]) -> dict:
                 result[g_id] = get_gateway_name(g_name, g_device_type, g_id, AddressExpression.parse(g_base_id))
     return result
 
+def config_check_gateway(config: dict) -> bool:
+    #ids in gateway config are unique
+    g_ids = []
+    if CONF_GATEWAY in config:
+        for g in config[CONF_GATEWAY]:
+            if g[CONF_ID] in g_ids:
+                return False
+            g_ids.append(g[CONF_ID])
+    
+    if len(g_ids) == 0:
+        return False
+
+    return True
+
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
     """Compares two bytes arrays. len specifies the length to be checked."""
     for i in range(0,len):

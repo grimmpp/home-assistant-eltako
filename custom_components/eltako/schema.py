@@ -256,10 +256,10 @@ class GatewaySchema(EltakoPlatformSchema):
 
     ENTITY_SCHEMA = vol.Schema({
             vol.Required(CONF_ID): cv.Number,
-            vol.Required(CONF_DEVICE, default=GatewayDeviceType.GatewayEltakoFGW14USB.value): vol.In([g.value for g in GatewayDeviceType]),
-            vol.Optional(CONF_NAME, default=""): cv.string,
+            vol.Required(CONF_DEVICE_TYPE, default=GatewayDeviceType.GatewayEltakoFGW14USB.value): vol.In([g.value for g in GatewayDeviceType]),
             vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
-            vol.Optional(CONF_SERIAL_PATH): cv.string,
+            vol.Optional(CONF_NAME, default=""): cv.string,
+            # vol.Optional(CONF_SERIAL_PATH): cv.string,
             vol.Required(CONF_DEVICES): vol.All(vol.Schema({
                 **BinarySensorSchema.platform_node(),
                 **LightSchema.platform_node(),

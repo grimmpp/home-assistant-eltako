@@ -3,7 +3,7 @@ import os
 from mocks import *
 from unittest import mock, IsolatedAsyncioTestCase, TestCase
 from custom_components.eltako.config_helpers import async_get_home_assistant_config
-from custom_components.eltako.schema import CONFIG_SCHEMA
+from custom_components.eltako.schema import CONFIG_SCHEMA, GatewaySchema
 from custom_components.eltako.gateway import *
 from custom_components.eltako.const import *
 from custom_components.eltako import config_helpers
@@ -170,3 +170,47 @@ class TestDeviceConfig(TestCase):
 
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
+
+    config_str = """
+general_settings:
+  fast_status_change: False
+  show_dev_id_in_dev_name: True
+gateway:
+  - id: 1
+    device_type: fgw14usb
+    base_id: FF-AA-00-00
+    name: GW1
+    devices:
+      light:
+      - id: 00-00-00-01
+        eep: M5-38-08
+        name: "FSR14_4x - 1"
+        sender:
+          id: 00-00-B1-01
+          eep: A5-38-08
+
+  - id: 2
+    device_type: fam-usb
+    base_id: FF-BB-00-00
+    name: GW2
+    devices:
+    sensor:
+    - id: 05-1E-83-15
+      eep: A5-13-01
+      name: "Weather Station"
+"""
+
+    def test_config_validation(self):
+        config = yaml.safe_load(self.config_str)
+        CONFIG_SCHEMA(config)
+
+    def test_config_validation_example_file(self):
+        filename = os.path.join(os.getcwd(), 'ha.yaml')
+        with open(filename, 'r') as file:
+            config = yaml.safe_load(file)
+            CONFIG_SCHEMA(config[DOMAIN])
+
+        self.assertTrue(config_helpers.config_check_gateway(config[DOMAIN]))
+
+        g_conf = config_helpers.find_gateway_config_by_id(config[DOMAIN], 1)
+        GatewaySchema.ENTITY_SCHEMA(g_conf)
