@@ -86,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
         gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
-        LOGGER.debug(f"baud rate: {baud_rate}, device type: {gateway_device_type}")
+        LOGGER.debug(f"baud rate: {baud_rate}, device type: {gateway_device_type}, serial path: {gateway_serial_path}")
         usb_gateway = ESP2Gateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
     else:
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.EnOceanUSB300]
