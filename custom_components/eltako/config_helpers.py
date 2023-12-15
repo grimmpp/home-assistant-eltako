@@ -115,10 +115,10 @@ async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: di
     else:
         return _conf[DOMAIN]
     
-def get_device_config(config: dict, base_id: AddressExpression) -> dict:
+def get_device_config(config: dict, id: int) -> dict:
     gateways = config[CONF_GATEWAY]
     for g in gateways:
-        if g[CONF_BASE_ID].upper() == format_address(base_id[0]):
+        if g[CONF_ID] == id:
             return g[CONF_DEVICES]
     return None
 
