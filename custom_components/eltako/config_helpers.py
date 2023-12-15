@@ -18,23 +18,35 @@ DEFAULT_GENERAL_SETTINGS = {
 class DeviceConf(dict):
     """Object representation of config."""
     def __init__(self, config: ConfigType, extra_keys:[str]=[]):
+        # merge everything into dict
         self.update(config)
-        if CONF_ID in config:
-            if isinstance(config.get(CONF_ID), str):
-                self.id = AddressExpression.parse(config.get(CONF_ID))
-            else:
-                self.id = config.get(CONF_ID)
-        if CONF_EEP in config:
-            self.eep_string = config.get(CONF_EEP)
-            self.eep = EEP.find(self.eep_string)
-        if CONF_NAME in config:
-            self.name = config.get(CONF_NAME)
-        if CONF_BASE_ID in config:
-            self.base_id = AddressExpression.parse(config.get(CONF_BASE_ID))
-        if CONF_DEVICE_TYPE in config:
-            self.device_type = config.get(CONF_DEVICE_TYPE)
-        if CONF_GATEWAY_ID in config:
-            self.gateway_id = config.get(CONF_GATEWAY_ID)
+        
+        # additionally add attributes
+        self.id = config.get(CONF_ID, None)
+        if self.id is not None and isinstance(self.id, str):
+            self.id = AddressExpression.parse(self.id)
+        self[CONF_ID] = self.id
+
+        self.eep = config.get(CONF_EEP, None)
+        if self.eep is not None:
+            self.eep = EEP.find(self.eep)
+        self[CONF_EEP] = self.eep
+
+        self.name = config.get(CONF_NAME, None)
+        self[CONF_NAME] = self.name
+
+        self.base_id = config.get(CONF_BASE_ID, None)
+        if self.base_id is not None:
+            self.base_id = AddressExpression.parse(self.base_id)
+        self[CONF_BASE_ID] = self.base_id
+
+        self.device_type = config.get(CONF_DEVICE_TYPE, None)
+        self[CONF_DEVICE_TYPE] = self.device_type
+
+        self.gateway_id = config.get(CONF_GATEWAY_ID, None)
+        self[CONF_GATEWAY_ID] = self.gateway_id
+
+        # add extra fields
         for ek in extra_keys:
             if ek in config:
                 setattr(self, ek, config.get(ek))

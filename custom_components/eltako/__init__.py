@@ -1,17 +1,17 @@
 """Support for Eltako devices."""
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_DEVICE, CONF_NAME, CONF_PATH
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
+from .config_helpers import DeviceConf
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
@@ -58,12 +58,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"config: {config}\n")
 
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
-
     # Initialise the gateway
     # get base_id from user input
-    if CONF_DEVICE not in config_entry.data.keys():
+    if CONF_GATEWAY_DESCRIPTION not in config_entry.data.keys():
         raise Exception("[{LOG_PREFIX}] Ooops, device information for gateway is not avialable. Try to delete and recreate the gateway.")
-    gateway_description = config_entry.data[CONF_DEVICE]    # from user input
+    gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
+    DeviceConf(gateway_description)
     if not ('(' in gateway_description and ')' in gateway_description):
         raise Exception("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to detele and recreate the gateway.")
     gateway_id = config_helpers.get_id_from_name(gateway_description)
@@ -73,20 +73,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not gateway_config:
         raise Exception(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
     
-    gateway_device_type = gateway_config[CONF_DEVICE]    # from configuration
-    gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
-    
     # get serial path info
     if CONF_SERIAL_PATH not in config_entry.data.keys():
         raise Exception("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams
+    gateway_device_type = gateway_config[CONF_DEVICE_TYPE]    # from configuration
     general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = GatewayDeviceType.is_transceiver(gateway_device_type)
     
 
     LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
     if GatewayDeviceType.is_esp2_gateway(gateway_device_type):
+        gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
         gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
         usb_gateway = ESP2Gateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)

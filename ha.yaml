@@ -98,7 +98,7 @@ eltako:
           id: 00-00-B0-08
           eep: A5-10-06
         thermostat:
-          sender: FF-BB-80-81
+          id: FF-BB-80-81
           eep: A5-10-06
         cooling_mode:
           sensor:
