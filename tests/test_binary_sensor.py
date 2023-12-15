@@ -14,6 +14,19 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestBinarySensor(unittest.TestCase):
 
+    def test_parse_switch_config(self):
+        dev_id = AddressExpression.parse("00-00-00-01 left")
+        self.assertEquals(dev_id[0], b'\x00\x00\x00\x01')
+        self.assertEquals(dev_id[1], "left")
+
+        dev_id = AddressExpression.parse("FF-00-00-01 LB")
+        self.assertEquals(dev_id[0], b'\xFF\x00\x00\x01')
+        self.assertEquals(dev_id[1], "LB")
+
+        dev_id = AddressExpression.parse("FF-00-00-01 LT RB")
+        self.assertEquals(dev_id[0], b'\xFF\x00\x00\x01')
+        self.assertEquals(dev_id[1], "LT RB")
+
     def create_binary_sensor(self, eep_string:str="F6-02-01", device_class = "none", invert_signal:bool=False) -> EltakoBinarySensor:
         gateway = GatewayMock(dev_id=123)
         dev_id = AddressExpression.parse("00-00-00-01")

@@ -1,7 +1,7 @@
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.const import CONF_DEVICE, CONF_DEVICES, CONF_NAME, CONF_ID
+from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_ID
 
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import EEP
@@ -19,13 +19,22 @@ class DeviceConf(dict):
     """Object representation of config."""
     def __init__(self, config: ConfigType, extra_keys:[str]=[]):
         self.update(config)
-        self.id = AddressExpression.parse(config.get(CONF_ID))
-        self.eep_string = config.get(CONF_EEP)
-        self.eep = EEP.find(self.eep_string)
+        if CONF_ID in config:
+            if isinstance(config.get(CONF_ID), str):
+                self.id = AddressExpression.parse(config.get(CONF_ID))
+            else:
+                self.id = config.get(CONF_ID)
+        if CONF_EEP in config:
+            self.eep_string = config.get(CONF_EEP)
+            self.eep = EEP.find(self.eep_string)
         if CONF_NAME in config:
             self.name = config.get(CONF_NAME)
         if CONF_BASE_ID in config:
-            self.gateway_base_id = AddressExpression.parse(config.get(CONF_BASE_ID))
+            self.base_id = AddressExpression.parse(config.get(CONF_BASE_ID))
+        if CONF_DEVICE_TYPE in config:
+            self.device_type = config.get(CONF_DEVICE_TYPE)
+        if CONF_GATEWAY_ID in config:
+            self.gateway_id = config.get(CONF_GATEWAY_ID)
         for ek in extra_keys:
             if ek in config:
                 setattr(self, ek, config.get(ek))
@@ -54,9 +63,9 @@ async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     # LOGGER.debug(f"config: {config}")
     if CONF_GATEWAY in config:
-        if isinstance(config[CONF_GATEWAY], dict) and CONF_DEVICE in config[CONF_GATEWAY]:
+        if isinstance(config[CONF_GATEWAY], dict) and CONF_DEVICE_TYPE in config[CONF_GATEWAY]:
             return config[CONF_GATEWAY]
-        elif len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE in config[CONF_GATEWAY][0]:
+        elif len(config[CONF_GATEWAY]) > 0 and CONF_DEVICE_TYPE in config[CONF_GATEWAY][0]:
             return config[CONF_GATEWAY][0]
     return None
 
@@ -111,11 +120,11 @@ def get_list_of_gateways_by_config(config: dict, filter_out: [str]=[]) -> dict:
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:
             g_id = g[CONF_ID]
-            g_name = g[CONF_NAME]
-            g_device = g[CONF_DEVICE]
-            g_base_id = g[CONF_BASE_ID]
-            if g_base_id not in filter_out:
-                result[g_id] = get_gateway_name(g_name, g_device, g_id, AddressExpression.parse(g_base_id))
+            g_name = g.get(CONF_NAME, None)
+            g_device_type = g[CONF_DEVICE_TYPE]
+            g_base_id = g.get(CONF_BASE_ID, None)
+            if g_base_id and g_base_id not in filter_out:
+                result[g_id] = get_gateway_name(g_name, g_device_type, g_id, AddressExpression.parse(g_base_id))
     return result
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:

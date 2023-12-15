@@ -46,7 +46,7 @@ class TestDeviceConfig(TestCase):
         CONF_ID: "FF-AA-80-01",
         CONF_EEP: "A5-10-06",
         CONF_NAME: "My Device",
-        CONF_GATEWAY_BASE_ID: "FF-AA-80-00",
+        CONF_GATEWAY_ID: 123123,
         CONF_MAX_TARGET_TEMPERATURE: 25,
         CONF_MIN_TARGET_TEMPERATURE: 16,
     }
@@ -63,11 +63,17 @@ class TestDeviceConfig(TestCase):
         CONF_MIN_TARGET_TEMPERATURE: 16,
     }
 
+    CONFIG_GW = {
+        CONF_ID: 123123,
+        CONF_DEVICE_TYPE: GatewayDeviceType.GatewayEltakoFAMUSB.value,
+        CONF_BASE_ID: "FF-BB-80-00",
+    }
+
     def test_device_config1_1(self):
         CONFIG = self.CONFIG1
         dev_config = DeviceConf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
 
-        for k in [CONF_ID, CONF_EEP, CONF_NAME, CONF_GATEWAY_BASE_ID, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
+        for k in [CONF_ID, CONF_EEP, CONF_NAME, CONF_GATEWAY_ID, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
@@ -76,7 +82,7 @@ class TestDeviceConfig(TestCase):
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
         self.assertEquals(CONFIG[CONF_NAME], dev_config.name)
-        self.assertEquals(CONFIG[CONF_GATEWAY_BASE_ID], str(dev_config.gateway_base_id).upper())
+        self.assertEquals(CONFIG[CONF_GATEWAY_ID], dev_config.gateway_id)
         self.assertEquals(CONFIG[CONF_MAX_TARGET_TEMPERATURE], dev_config.max_target_temperature)
         self.assertEquals(CONFIG[CONF_MIN_TARGET_TEMPERATURE], dev_config.min_target_temperature)
 
@@ -84,7 +90,7 @@ class TestDeviceConfig(TestCase):
         CONFIG = self.CONFIG1
         dev_config = DeviceConf(CONFIG)
 
-        for k in [CONF_ID, CONF_EEP, CONF_NAME, CONF_GATEWAY_BASE_ID]:
+        for k in [CONF_ID, CONF_EEP, CONF_NAME, CONF_GATEWAY_ID]:
             self.assertTrue(k in dev_config)
             self.assertEquals(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
@@ -102,7 +108,7 @@ class TestDeviceConfig(TestCase):
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
         self.assertEquals(CONFIG[CONF_NAME], dev_config.name)
-        self.assertEquals(CONFIG[CONF_GATEWAY_BASE_ID], str(dev_config.gateway_base_id).upper())
+        self.assertEquals(CONFIG[CONF_GATEWAY_ID], dev_config.gateway_id)
 
     def test_device_config2_1(self):
         CONFIG = self.CONFIG2
@@ -114,13 +120,32 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(hasattr(dev_config, k))
             self.assertEquals(CONFIG[k], dev_config.get(k))
 
-        for k in [CONF_NAME, CONF_GATEWAY_BASE_ID, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
+        for k in [CONF_NAME, CONF_BASE_ID, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertFalse(k in dev_config)
             self.assertFalse(hasattr(dev_config, k))
             self.assertEquals(None, dev_config.get(k))
 
         self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
         self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
+
+    def test_device_configGW(self):
+        CONFIG = self.CONFIG_GW
+        dev_config = DeviceConf(CONFIG, [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
+
+        for k in [CONF_ID, CONF_BASE_ID, CONF_DEVICE_TYPE]:
+            self.assertTrue(k in dev_config)
+            self.assertEquals(CONFIG[k], dev_config[k])
+            self.assertTrue(hasattr(dev_config, k))
+            self.assertEquals(CONFIG[k], dev_config.get(k))
+
+        for k in [CONF_NAME, CONF_EEP, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
+            self.assertFalse(k in dev_config)
+            self.assertFalse(hasattr(dev_config, k))
+            self.assertEquals(None, dev_config.get(k))
+
+        self.assertEquals(CONFIG[CONF_ID], dev_config.id)
+        self.assertEquals(CONFIG[CONF_BASE_ID], str(dev_config.base_id).upper())
+        self.assertEquals(CONFIG[CONF_DEVICE_TYPE], dev_config.device_type)
 
     def test_device_config3_1(self):
         CONFIG = self.CONFIG3
@@ -132,7 +157,7 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(hasattr(dev_config, k))
             self.assertEquals(CONFIG[k], dev_config.get(k))
 
-        for k in [CONF_NAME, CONF_GATEWAY_BASE_ID]:
+        for k in [CONF_NAME, CONF_BASE_ID]:
             self.assertFalse(k in dev_config)
             self.assertFalse(hasattr(dev_config, k))
             self.assertEquals(None, dev_config.get(k))

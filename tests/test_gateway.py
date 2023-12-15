@@ -1,5 +1,4 @@
-from unittest import TestCase
-from unittest import mock
+from unittest import TestCase, mock
 from mocks import *
 from eltakobus import *
 from custom_components.eltako.gateway import *
@@ -8,10 +7,9 @@ import yaml
 
 # mock update of Home Assistant
 ESP2Gateway._register_device = mock.Mock(return_value=None)
-# EltakoEntity.send_message = mock.Mock(return_value=None)
+RS485SerialInterface.__init__ = mock.Mock(return_value=None)
 
-
-class Test_Gateway(TestCase):
+class TestGateway(TestCase):
 
     def test_gateway_types(self):
         for t in GatewayDeviceType:
@@ -43,7 +41,7 @@ general_settings:
   show_dev_id_in_dev_name: True
 gateway:
   - id: 1
-    device: fgw14usb
+    device_type: fgw14usb
     base_id: FF-AA-00-00
     name: GW1
     devices:
@@ -56,7 +54,7 @@ gateway:
           eep: A5-38-08
 
   - id: 2
-    device: fam-usb
+    device_type: fam-usb
     base_id: FF-BB-00-00
     name: GW2
     devices:
