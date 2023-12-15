@@ -114,7 +114,7 @@ class ESP2Gateway:
         device_registry.async_get_or_create(
             config_entry_id=entry_id,
             identifiers={(DOMAIN, self.serial_path)},
-            connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
+            # connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
             manufacturer=MANUFACTURER,
             name= self.dev_name,
             model=self.model,
