@@ -32,6 +32,13 @@ class GatewayDeviceType(str, Enum):
     EnOceanUSB300 = 'enocean-usb300'    # not yet supported
 
     @classmethod
+    def find(cls, value):
+        for t in GatewayDeviceType:
+            if t.value.lower() == value.lower():
+                return t
+        return None
+
+    @classmethod
     def is_transceiver(cls, dev_type) -> bool:
         return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300]
 
