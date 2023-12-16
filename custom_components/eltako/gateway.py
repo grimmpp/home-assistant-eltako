@@ -418,13 +418,13 @@ def validate_path(path: str, baud_rate: int):
         # ser = serial.Serial(path, baud_rate, timeout=0.1)
         ser = serial.Serial(path)
         ser.timeout = 0.5
-        for baudrate in ser.BAUDRATES:
-            if 300 <= baudrate <= 57600:
-                ser.baudrate = baudrate
-                ser.write(ESP2Message(b'\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00').serialize())
-                resp = ser.readall()
-                if len(resp) > 4 and resp[0] == 0xA5 and resp[1] == 0x5A and resp[2] == 0x8B and resp[3] == 98:
-                    return True
+        ser.baudrate = baud_rate
+        ser.write(ESP2Message(b'\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00').serialize())
+        resp = ser.readall()
+        if len(resp) > 4 and resp[0] == 0xA5 and resp[1] == 0x5A and resp[2] == 0x8B and resp[3] == 98:
+            ser.close()
+            return True
+        ser.close()
         return False
     except serial.SerialException as exception:
         LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
