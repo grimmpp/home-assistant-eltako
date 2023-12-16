@@ -29,7 +29,7 @@ class EltakoEntity(Entity):
         self._attr_dev_name = config_helpers.get_device_name(dev_name, dev_id, self.general_settings)
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
-        self.listen_to_addresses.append(self.dev_id.plain_address())
+        self.listen_to_addresses.append(self.dev_id[0])
         self._attr_identifier = self._get_identifier(self.gateway, self.dev_id)
         self._attr_unique_id = self.identifier
         self._attr_platform = platform
