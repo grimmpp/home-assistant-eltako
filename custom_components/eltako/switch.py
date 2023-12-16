@@ -58,7 +58,6 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
     def __init__(self, platform:str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako switch device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
-        self.dev_eep = dev_eep
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         self._on_state = False
