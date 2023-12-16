@@ -415,17 +415,8 @@ def detect() -> [str]:
 def validate_path(path: str, baud_rate: int):
     """Return True if the provided path points to a valid serial port, False otherwise."""
     try:
-        # ser = serial.Serial(path, baud_rate, timeout=0.1)
-        ser = serial.Serial(path)
-        ser.timeout = 0.5
-        ser.baudrate = baud_rate
-        ser.write(ESP2Message(b'\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00').serialize())
-        resp = ser.readall()
-        if len(resp) > 4 and resp[0] == 0xA5 and resp[1] == 0x5A and resp[2] == 0x8B and resp[3] == 98:
-            ser.close()
-            return True
-        ser.close()
-        return False
+        serial.Serial(path, baud_rate, timeout=0.1)
+        return True
     except serial.SerialException as exception:
         LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
         return False
