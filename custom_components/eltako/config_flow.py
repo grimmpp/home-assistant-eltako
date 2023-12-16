@@ -45,7 +45,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
         LOGGER.debug("Add new gateway")
         errors = {}
-        
+        step_id = "detect"
+        if manual_setp:
+            step_id = "manual"
+
         # goes recursively ...
         # check if values were set in the step before
         if user_input is not None:
