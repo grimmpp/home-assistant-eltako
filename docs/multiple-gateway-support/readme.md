@@ -8,7 +8,8 @@ There are two types of gateways supported:
 
 Currently only ESP2 devices are supproted.
 
-All gateways (hubs) need explicitely configured and devices connected through this gateway to Home Assistant need to be listed below the gateway section. After you provided the configuration + restart of Home Assistant you can add the gateways as hubs in Home Assistant.
+All gateways (hubs) need explicitely configured and devices connected through this gateway to Home Assistant need to be listed below the gateway section. Every gateway needs to have an unique id whicht is an arbritatry number which can be changed and exchanged. This number will be part of the device identifiers. If you want to change a gateway you can keep the id of the previouse gateway and with it all ids and histories of its devices can be kept.
+After you provided the configuration + restart of Home Assistant you can add the gateways as hubs in Home Assistant.
 
 ## Example
 In this example two gateways are connected to Home Assistant. The first one `Eltako FGW14-USB` connected directly to the Eltako RS485 bus builds a bridge for the communication to a light relay. The second one is a wireless transceiver `Eltako FAM-USB` which connects a weather station to Home Assistant.
