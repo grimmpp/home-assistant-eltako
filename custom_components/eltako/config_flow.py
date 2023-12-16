@@ -81,6 +81,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         step_id = "detect"
         if manual_setp:
             step_id = "manual"
+        LOGGER.debug("Step mode: %s", step_id)
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
