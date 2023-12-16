@@ -89,8 +89,6 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         baud_rate: int = -1
         gateway_selection: str = user_input[CONF_GATEWAY_DESCRIPTION]
 
-        # LOGGER.debug("serial_path: %s", serial_path)
-        # LOGGER.debug("gateway_selection: %s", gateway_selection)
         for gdc in gateway.GatewayDeviceType:
             if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
@@ -99,6 +97,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         path_is_valid = await self.hass.async_add_executor_job(
             gateway.validate_path, serial_path, baud_rate
         )
+        LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
         return path_is_valid
 
     def create_eltako_entry(self, user_input):
