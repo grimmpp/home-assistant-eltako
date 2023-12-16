@@ -50,11 +50,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # check if values were set in the step before
         if user_input is not None:
             if self.is_input_available(user_input):
-                
+                LOGGER.debug("is valid user_input")
                 if await self.validate_eltako_conf(user_input):
                     return self.create_eltako_entry(user_input)
-            
-            errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
+            else:
+                LOGGER.debug("is NO valid user_input")
+                errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
