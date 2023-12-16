@@ -51,6 +51,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     # Read the config
     config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
+
+    # Check if gateway ids are unique
+    if not config_helpers.config_check_gateway(config):
+        raise Exception("Gateway Ids are not unique.")
+
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config

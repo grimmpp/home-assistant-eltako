@@ -19,7 +19,8 @@ eltako:
     show_dev_id_in_dev_name: True
 
   gateway:
-  - device: fgw14usb
+  - id: 1
+    device: fgw14usb
     base_id: FF-AA-00-00
     devices:
       light:
@@ -30,7 +31,8 @@ eltako:
           id: 00-00-B1-01
           eep: A5-38-08
 
-  - device: fam-usb
+  - id: 2
+    device: fam-usb
     base_id: FF-BB-00-00
     devices:
       sensor:
