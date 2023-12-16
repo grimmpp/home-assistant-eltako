@@ -45,9 +45,6 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
         LOGGER.debug("Add new gateway")
         errors = {}
-        step_id="detect"
-        if manual_setp:
-            step_id="manual"
 
         # goes recursively ...
         # check if values were set in the step before
@@ -56,7 +53,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 if await self.validate_eltako_conf(user_input):
                     return self.create_eltako_entry(user_input)
             
-            # errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
+                errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
@@ -73,12 +70,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
         LOGGER.debug("Available serial paths: %s", serial_paths)
         if len(serial_paths) == 0:
-            # errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
-            step_id="manual"
+            errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
-            step_id=step_id,
+            step_id="detect",
             data_schema=vol.Schema({
                 vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list.values()),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
