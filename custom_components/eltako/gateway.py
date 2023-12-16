@@ -175,7 +175,7 @@ class ESP2Gateway:
     def _send_message_callback(self, msg):
         """Send a request through the Eltako gateway."""
         if isinstance(msg, ESP2Message):
-            LOGGER.debug("Send message: %s - Serialized: %s", msg, msg.serialize().hex())
+            LOGGER.debug("[Gateway] [Id: %s] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
             asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
 
     async def _initialize_bus_task(self, run):
@@ -227,7 +227,7 @@ class ESP2Gateway:
         is an incoming message.
         """
 
-        LOGGER.debug("Received message: %s", message)
+        LOGGER.debug("[Gateway] [Id: %s] Received message: %s", self.id, message)
         if isinstance(message, ESP2Message):
             event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
             dispatcher_send(self.hass, event_id, message)
