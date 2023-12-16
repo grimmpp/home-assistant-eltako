@@ -24,8 +24,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     def is_input_available(self, user_input) -> bool:
         if user_input is not None:
-            if CONF_SERIAL_PATH not in user_input and user_input[CONF_SERIAL_PATH] is not None:
-                if CONF_GATEWAY_DESCRIPTION not in user_input and user_input[CONF_GATEWAY_DESCRIPTION] is not None:
+            if CONF_SERIAL_PATH in user_input and user_input[CONF_SERIAL_PATH] is not None:
+                if CONF_GATEWAY_DESCRIPTION in user_input and user_input[CONF_GATEWAY_DESCRIPTION] is not None:
                     return True
         return False
 
