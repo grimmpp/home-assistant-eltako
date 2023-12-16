@@ -55,13 +55,13 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.create_eltako_entry(user_input)
             
             # errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
-            manual_setp = True
+            step_id = "manual"
 
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
         if len(serial_paths) == 0:
-            manual_setp = True
+            step_id = "manual"
 
         device_registry = dr.async_get(self.hass)
         # get all baseIds of existing/registered gateways so that those will be filtered out for selection
@@ -76,12 +76,11 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Available serial paths: %s", serial_paths)
         if len(serial_paths) == 0:
             # errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
-            manual_setp = True
-
-        step_id = "detect"
-        if manual_setp:
             step_id = "manual"
+
         LOGGER.debug("Step mode: %s", step_id)
+        if step_id == "manual" and not manual_setp:
+            return await self.async_step_manual(user_input)
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
