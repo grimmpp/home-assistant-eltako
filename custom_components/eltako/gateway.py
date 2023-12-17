@@ -9,20 +9,18 @@ import asyncio
 
 from eltakobus.serial import RS485SerialInterface
 from eltakobus.message import ESP2Message
-from eltakobus.error import ParseError
 
-from eltakobus.util import AddressExpression, b2a
-from eltakobus.message import  Regular4BSMessage
+from eltakobus.util import AddressExpression
 
 from enocean.communicators import SerialCommunicator
-from enocean.protocol.packet import RadioPacket, PARSE_RESULT
+from enocean.protocol.packet import RadioPacket
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_DEVICE, CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.device_registry import DeviceRegistry
+from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
@@ -32,6 +30,13 @@ class GatewayDeviceType(str, Enum):
     GatewayEltakoFGW14USB = 'fgw14usb'
     GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
     EnOceanUSB300 = 'enocean-usb300'    # not yet supported
+
+    @classmethod
+    def find(cls, value):
+        for t in GatewayDeviceType:
+            if t.value.lower() == value.lower():
+                return t
+        return None
 
     @classmethod
     def is_transceiver(cls, dev_type) -> bool:
@@ -74,7 +79,6 @@ async def async_get_serial_path_of_registered_gateway(device_registry: DeviceReg
             serial_path_list.append( list(d.identifiers)[0][1] )
     return serial_path_list
 
-
 class ESP2Gateway:
     """Representation of an Eltako gateway.
 
@@ -82,30 +86,35 @@ class ESP2Gateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, 
+                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, 
+                 config_entry: ConfigEntry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
         self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
-        self.serial_path = serial_path
-        self.identifier = basename(normpath(serial_path))
+        self._attr_serial_path = serial_path
+        self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass
         self.dispatcher_disconnect_handle = None
         self.general_settings = general_settings
-        self.base_id = base_id
-        self.base_id_str = f"{b2a(self.base_id[0], '-').upper()}"
-        self.dev_type = dev_type
+        self._attr_dev_id = dev_id
+        self._attr_base_id = base_id
+        self._attr_dev_type = dev_type
 
-        self.model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
+        self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
-        self.dev_name = config_helpers.get_gateway_name(dev_name, dev_type, base_id)
+        self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
 
+        self._register_device(hass, config_entry.entry_id)
+
+    def _register_device(self, hass, entry_id) -> None:
         device_registry = dr.async_get(hass)
         device_registry.async_get_or_create(
-            config_entry_id=config_entry.entry_id,
+            config_entry_id=entry_id,
             identifiers={(DOMAIN, self.serial_path)},
-            connections={(CONF_MAC, self.base_id_str)},
+            connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
             manufacturer=MANUFACTURER,
             name= self.dev_name,
             model=self.model,
@@ -166,7 +175,7 @@ class ESP2Gateway:
     def _send_message_callback(self, msg):
         """Send a request through the Eltako gateway."""
         if isinstance(msg, ESP2Message):
-            LOGGER.debug("Send message: %s - Serialized: %s", msg, msg.serialize().hex())
+            LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
             asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
 
     async def _initialize_bus_task(self, run):
@@ -218,15 +227,50 @@ class ESP2Gateway:
         is an incoming message.
         """
 
-        LOGGER.debug("Received message: %s", message)
+        LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
         if isinstance(message, ESP2Message):
             event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
             dispatcher_send(self.hass, event_id, message)
             
     @property
-    def unique_id(self):
+    def unique_id(self) -> str:
         """Return the unique id of the gateway."""
         return self.serial_path
+    
+    @property
+    def serial_path(self) -> str:
+        """Return the serial path of the gateway."""
+        return self._attr_serial_path
+    
+    @property
+    def dev_name(self) -> str:
+        """Return the device name of the gateway."""
+        return self._attr_dev_name
+    
+    @property
+    def dev_id(self) -> int:
+        """Return the device id of the gateway."""
+        return self._attr_dev_id
+    
+    @property
+    def dev_type(self) -> GatewayDeviceType:
+        """Return the device type of the gateway."""
+        return self._attr_dev_type
+    
+    @property
+    def base_id(self) -> AddressExpression:
+        """Return the base id of the gateway."""
+        return self._attr_base_id
+    
+    @property
+    def model(self) -> str:
+        """Return the model of the gateway."""
+        return self._attr_model
+    
+    @property
+    def identifier(self) -> str:
+        """Return the identifier of the gateway."""
+        return self._attr_identifier
     
 
 # class EltakoGatewayFam14 (EltakoGateway):

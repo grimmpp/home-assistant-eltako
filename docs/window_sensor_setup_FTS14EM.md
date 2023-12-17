@@ -25,6 +25,7 @@ goes on during 4 seconds.
 ## Home Assistant Configuration
 ```
 eltako:
+...
   binary_sensor:
     - id: "00-00-10-01"
       eep: "D5-00-01"

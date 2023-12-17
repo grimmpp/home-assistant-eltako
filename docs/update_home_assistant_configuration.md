@@ -36,9 +36,9 @@ eltako:
   # Currently only devices based on ESP2 protocol are supported. In future ESP3 protocol shall be extended. 
   # 
   gateway:
-  - base_id: FF-AA-80-00        # Address which is used to send telegrams into wireless network. Mainly important for transceivers like FAM-USB
+  - id: 1                       # virtual id
+    base_id: FF-AA-80-00        # Address which is used to send telegrams into wireless network. Mainly important for transceivers like FAM-USB
     device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
-    # usb/serial port will be defined when you manaully add the gateway/hub to Home Assistant
     devices:                    # list here all devices connected to this gateway
 
       # binary sensors can be switches, door or window contacts, ...
@@ -62,7 +62,7 @@ eltako:
       # switches are a generalization of lights and will be displayed differently in Home Assistant. 
       switch:
       - id: 00-00-00-02           # address (HEX) 
-        eep: M5-38-08             # Supported EEP telegrams: M5-38-08
+        eep: M5-38-08             # Supported EEP telegrams: M5-38-08 (1byte telegram)
         name: "Socket Basement"   # optional: display name
         sender:                   # virtual switch in Home Assistant.
           id: 00-00-B0-02         # every sender needs it's own address which needs to be entered in PCT14 / actuator with function group 51 for FSR14.

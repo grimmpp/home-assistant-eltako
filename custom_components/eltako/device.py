@@ -6,6 +6,7 @@ from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.const import Platform
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
@@ -13,28 +14,43 @@ from homeassistant.helpers.entity import Entity
 
 from .const import *
 from .gateway import ESP2Gateway
-from .config_helpers import *
+from . import config_helpers
 
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
 
-    def __init__(self, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
-        self.gateway = gateway
+        self._attr_gateway = gateway
         self.general_settings = self.gateway.general_settings
-        self.dev_id = dev_id
-        self.dev_name = get_device_name(dev_name, dev_id, self.general_settings)
-        self.dev_eep = dev_eep
+        self._attr_dev_id = dev_id
+        self._attr_dev_name = config_helpers.get_device_name(dev_name, dev_id, self.general_settings)
+        self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
-        self.listen_to_addresses.append(self.dev_id.plain_address())
-        self.identifier = self.get_identifier(self.gateway.base_id, self.dev_id)
+        self.listen_to_addresses.append(self.dev_id[0])
+        self._attr_identifier = self._get_identifier(self.gateway, self.dev_id)
         self._attr_unique_id = self.identifier
+        self._attr_platform = platform
+        self.entity_id = f"{platform}.{self.unique_id}"
 
     @classmethod
-    def get_identifier(cls, gateway_base_id, dev_id) -> str:
-        return f"{DOMAIN}_{b2a(gateway_base_id[0], '-').upper()}_{b2a(dev_id[0], '-').upper()}"
+    def _get_identifier(cls, gateway: ESP2Gateway, dev_id: AddressExpression) -> str:
+        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={
+                (DOMAIN, self.unique_id)
+            },
+            name=self.name,
+            manufacturer=MANUFACTURER,
+            model=self.dev_eep.eep_string,
+            via_device=(DOMAIN, self.gateway.serial_path),
+        )
 
     def validate_dev_id(self) -> bool:
         return self.gateway.validate_dev_id(self.dev_id, self.dev_name)
@@ -51,12 +67,47 @@ class EltakoEntity(Entity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        event_id = get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, event_id, self._message_received_callback
             )
         )
+
+    @property
+    def name(self) -> str:
+        """Return the name of device."""
+        return self._attr_dev_name
+    
+    @property
+    def dev_name(self) -> str:
+        """Return the name of device."""
+        return self._attr_dev_name
+
+    @property
+    def dev_eep(self):
+        """Return the eep of device."""
+        return self._attr_dev_eep
+    
+    @property
+    def dev_id(self) -> AddressExpression:
+        """Return the id of device."""
+        return self._attr_dev_id
+    
+    @property
+    def gateway(self) -> ESP2Gateway:
+        """Return the supporting gateway of device."""
+        return self._attr_gateway
+
+    @property
+    def dev_id(self) -> AddressExpression:
+        """Return the id of device."""
+        return self._attr_dev_id
+
+    @property
+    def identifier(self) -> str:
+        """Return the identifier of device."""
+        return self._attr_identifier
 
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
@@ -126,7 +177,7 @@ class EltakoEntity(Entity):
     
     def send_message(self, msg: ESP2Message):
         # TODO: check if gateway is available
-        event_id = get_bus_event_type(self.gateway.base_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
         
 

@@ -116,20 +116,22 @@ eltako:
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
   gateway:
+  - id: 1
     device: fgw14usb            # Supported gateways: gam14, fgw14usb
     base_id: FF-AA-00-00
-  light:
-    - id: "00-00-00-01"
-      name: "Relay Test"
-      eep: "M5-38-08"
-      sender:
+    devices:
+      light:
+      - id: "00-00-00-01"
+        name: "Relay Test"
+        eep: "M5-38-08"
+        sender:
           id: "00-00-B1-01"
           eep: "A5-38-08"
-  binary_sensor:
-    - id: "FE-DB-DA-04"  # taster 1
-      eep: "F6-02-01"
-    - id: "FE-DB-B6-40"  # taster 2
-      eep: "F6-02-01"
+      binary_sensor:
+      - id: "FE-DB-DA-04"  # taster 1
+        eep: "F6-02-01"
+      - id: "FE-DB-B6-40"  # taster 2
+        eep: "F6-02-01"
       
 logger:
   default: info

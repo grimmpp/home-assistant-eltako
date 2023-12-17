@@ -1,15 +1,16 @@
 # Changes and Feature List
 
-## Version 1.2.1 Support for Multiple Gateways
+## Version 1.2.2 Support for Multiple Gateways
 * Full support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
 * Target temperature synchronization between climate panel in Home Assistant and thermostat implemented.
 * BaseId validation for gateways introduced. It will show warnings as output logs.
-* Device ids can be displayed in device name optionally.
+* Device Id can be displayed in device name optionally.
 * Home Assistant eventing prepared to support more than one gateway
+* Introduced ids for gateways.
 * Manual installation of multiple gateways/hubs implemented. 
 * **&#x26A0; Breaking Changes &#x26A0;**
   * All devices get a new identifier. Unfortunately, all devices need to be deleted and recreated. History of data gets lost!!!
-  * Configuration: 'base_id' in 'gateway' in mandatory. See [docs](./docs/update_home_assistant_configuration.md)
+  * Configuration: 'id' in 'gateway' is mandatory. See [docs](./docs/update_home_assistant_configuration.md)
   * Events in Home Assistant for switch telegrams have got different event_ids. This affects automations reacting on old event ids. See [docs](./docs/rocker_switch/readme.md)
 
 ## Version 1.1.3

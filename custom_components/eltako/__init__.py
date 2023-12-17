@@ -1,17 +1,17 @@
 """Support for Eltako devices."""
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_DEVICE, CONF_NAME, CONF_PATH
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 
 from .const import *
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
+from .config_helpers import DeviceConf
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
@@ -29,13 +29,13 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> ESP2Gateway:
-    return hass.data[DATA_ELTAKO][config_entry.data[CONF_DEVICE]]
+    return hass.data[DATA_ELTAKO][config_entry.data[CONF_GATEWAY_DESCRIPTION]]
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: ESP2Gateway) -> None:
     hass.data[DATA_ELTAKO][gateway_enity.dev_name] = gateway_enity
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: ESP2Gateway) -> ConfigType:
-    return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.base_id)
+    return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
 
 LOG_PREFIX = "Eltako Integration Setup"
 
@@ -51,6 +51,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     # Read the config
     config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
+
+    # Check if gateway ids are unique
+    if not config_helpers.config_check_gateway(config):
+        raise Exception("Gateway Ids are not unique.")
+
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config
@@ -58,23 +63,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"config: {config}\n")
 
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
-
     # Initialise the gateway
     # get base_id from user input
-    if CONF_DEVICE not in config_entry.data.keys():
+    if CONF_GATEWAY_DESCRIPTION not in config_entry.data.keys():
         raise Exception("[{LOG_PREFIX}] Ooops, device information for gateway is not avialable. Try to delete and recreate the gateway.")
-    gateway_description = config_entry.data[CONF_DEVICE]    # from user input
+    gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
     if not ('(' in gateway_description and ')' in gateway_description):
         raise Exception("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to detele and recreate the gateway.")
-    gateway_base_id = config_helpers.get_id_from_name(gateway_description)
+    gateway_id = config_helpers.get_id_from_name(gateway_description)
     
     # get home assistant configuration section matching base_id
-    gateway_config = await config_helpers.async_find_gateway_config_by_base_id(gateway_base_id, hass, CONFIG_SCHEMA)
+    gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
         raise Exception(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
-    
-    gateway_device_type = gateway_config[CONF_DEVICE]    # from configuration
-    gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
     
     # get serial path info
     if CONF_SERIAL_PATH not in config_entry.data.keys():
@@ -82,13 +83,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams
+    gateway_device_type = GatewayDeviceType.find(gateway_config[CONF_DEVICE_TYPE])    # from configuration
     general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = GatewayDeviceType.is_transceiver(gateway_device_type)
-    
 
     LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
     if GatewayDeviceType.is_esp2_gateway(gateway_device_type):
-        baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.GatewayEltakoFAM14]
-        usb_gateway = ESP2Gateway(general_settings, hass, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
+        gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
+        baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
+        gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
+        LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
+        usb_gateway = ESP2Gateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
     else:
         baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[GatewayDeviceType.EnOceanUSB300]
         raise NotImplemented(f"[{LOG_PREFIX}] Gateway {gateway_device_type} not yet implemented and supported!")

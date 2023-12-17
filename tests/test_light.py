@@ -1,11 +1,11 @@
 import unittest
+from custom_components.eltako.sensor import *
 from unittest import mock
 from mocks import *
 from homeassistant.helpers.entity import Entity
-from custom_components.eltako.light import EltakoDimmableLight, EltakoSwitchableLight
-from custom_components.eltako.device import EltakoEntity
 from eltakobus import *
-from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
+from custom_components.eltako.light import EltakoSwitchableLight
+
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -13,7 +13,7 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestLight(unittest.TestCase):
 
-    def mock_send_message(self, msg):
+    def mock_send_message(self, msg: ESP2Message):
         self.last_sent_command = msg
 
     def create_switchable_light(self) -> EltakoSwitchableLight:
@@ -28,7 +28,7 @@ class TestLight(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        light = EltakoSwitchableLight(gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep)
+        light = EltakoSwitchableLight(Platform.LIGHT, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep)
         return light
 
     def test_switchable_light_value_changed(self):
@@ -76,5 +76,3 @@ class TestLight(unittest.TestCase):
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x01\x00\x00\x08\x00\x00\xb0\x01\x00')
-
-

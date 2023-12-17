@@ -4,6 +4,7 @@ from mocks import HassMock
 from unittest import mock
 from mocks import *
 from homeassistant.helpers.entity import Entity
+from homeassistant.const import Platform
 from custom_components.eltako.binary_sensor import EltakoBinarySensor
 from eltakobus import *
 
@@ -19,7 +20,7 @@ class TestSensor(unittest.TestCase):
         dev_id = AddressExpression.parse("51-E8-00-01")
         dev_name = "dev name"
         dev_eep = EEP.find("A5-13-01")
-        ews = EltakoWeatherStation(gateway, dev_id, dev_name, dev_eep, description)
+        ews = EltakoWeatherStation(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep, description)
 
         return ews
 

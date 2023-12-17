@@ -3,8 +3,10 @@ eltako:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
     show_dev_id_in_dev_name: True
   gateway:
-  - device: fgw14usb            # Supported gateways: gam14, fgw14usb
+  - id: 1
+    device_type: fgw14usb            # Supported gateways: gam14, fgw14usb
     base_id: FF-AA-80-00
+    name: FGW14-USB
     devices:
       sensor:
       - id: 05-EE-88-15
@@ -91,12 +93,21 @@ eltako:
       - id: 00-00-00-08
         eep: A5-10-06
         name: FAE14SSR - 8
+        temperature_unit: K
         sender:
           id: 00-00-B0-08
           eep: A5-10-06
+        thermostat:
+          id: FF-BB-80-81
+          eep: A5-10-06
+        cooling_mode:
+          sensor:
+            id: FF-BB-12-12
+            switch_button: 0x50
       - id: 00-00-00-09
         eep: A5-10-06
         name: FAE14SSR - 9
+        temperature_unit: K
         sender:
           id: 00-00-B0-09
           eep: A5-10-06

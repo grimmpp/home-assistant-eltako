@@ -20,7 +20,10 @@
             "program": "${file}",
             "purpose": ["debug-test"],
             "console": "integratedTerminal",
-            "env": {"PYTHONPATH": "${workspaceRoot}"},
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}",
+                "PYTEST_ADDOPTS": "--no-cov",
+            },
             // "cwd": "${workspaceRoot}/custom_component/eltako",
             "justMyCode": false
           }
