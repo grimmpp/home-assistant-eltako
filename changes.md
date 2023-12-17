@@ -1,6 +1,6 @@
 # Changes and Feature List
 
-## Version 1.2.1 Support for Multiple Gateways
+## Version 1.2.2 Support for Multiple Gateways
 * Full support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
 * Target temperature synchronization between climate panel in Home Assistant and thermostat implemented.
 * BaseId validation for gateways introduced. It will show warnings as output logs.
