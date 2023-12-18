@@ -161,6 +161,9 @@ class HaConfig():
 
         with open(filename, 'w') as f:
             print("eltako:", file=f)
+            print("  general_settings:", file=f)
+            print("    fast_status_change: False", file=f)
+            print("    show_dev_id_in_dev_name: False", file=f)
             print("  gateway:", file=f)
             print("  - id: 1", file=f)
             print("    device_type: fam14", file=f)
