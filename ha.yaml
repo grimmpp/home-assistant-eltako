@@ -1,12 +1,32 @@
 eltako:
   general_settings:
-    fast_status_change: False
-    show_dev_id_in_dev_name: False
+    fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
+    show_dev_id_in_dev_name: True
   gateway:
   - id: 1
-    device_type: fam14
-    base_id: FF-A2-24-00
+    device_type: fgw14usb            # Supported gateways: gam14, fgw14usb
+    base_id: FF-AA-80-00
+    name: FGW14-USB
     devices:
+      sensor:
+      - id: 05-EE-88-15
+        eep: A5-13-01
+        name: "Weather Station"
+      - id: ff-aa-dd-81
+        eep: A5-04-02
+        name: "Temperature and Humidity Sensor - FLGTF55"
+      - id: ff-66-dd-81
+        eep: A5-04-02
+        name: "Temp. Sensor 2 - FLGTF55"
+      - id: ff-ee-55-81
+        eep: A5-10-06
+        name: "Temp. Sensor and Controller - FUTH A5-10-06"
+      - id: ff-ee-55-92
+        eep: A5-10-12
+        name: "Hygrostat - FUTH"
+      - id: ff-66-dd-80
+        eep: A5-09-0C
+        name: "Air Quality Sensor - FLGTF55"
       light:
       - id: 00-00-00-01
         eep: M5-38-08
@@ -38,6 +58,18 @@ eltako:
         sender:
           id: 00-00-B0-05
           eep: A5-38-08
+      binary_sensor:
+        - id: ff-bb-0a-1b
+          eep: F6-02-01
+        - id: ff-bb-da-04
+          eep: F6-02-01     # rocker switch 1
+        - id: ff-dd-b6-40
+          eep: F6-02-01     # rocker switch 2
+        - id: 00-00-10-08   # address from FTS14EM (wired switch)
+          eep: D5-00-01
+          name: window 8
+          device_class: window  # is displayed as window contact
+          invert_signal: True   # value is inverted and shows closed contact as open.
       cover:
       - id: 00-00-00-06
         eep: G5-3F-7F
@@ -61,27 +93,25 @@ eltako:
       - id: 00-00-00-08
         eep: A5-10-06
         name: FAE14SSR - 8
+        temperature_unit: K
         sender:
           id: 00-00-B0-08
           eep: A5-10-06
+        thermostat:
+          id: FF-BB-80-81
+          eep: A5-10-06
+        cooling_mode:
+          sensor:
+            id: FF-BB-12-12
+            switch_button: 0x50
       - id: 00-00-00-09
         eep: A5-10-06
         name: FAE14SSR - 9
+        temperature_unit: K
         sender:
           id: 00-00-B0-09
           eep: A5-10-06
-      - id: 00-00-00-0B
-        eep: A5-10-06
-        name: FAE14SSR - 11
-        sender:
-          id: 00-00-B0-0B
-          eep: A5-10-06
-      - id: 00-00-00-0C
-        eep: A5-10-06
-        name: FAE14SSR - 12
-        sender:
-          id: 00-00-B0-0C
-          eep: A5-10-06
+
 logger:
   default: info
   logs:
