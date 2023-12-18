@@ -54,7 +54,7 @@ You can find the meaning of the numbers in the table above.
 eltako:
   gateway:
   - id: 1
-    device: fam-usb
+    device_type: fam-usb
     base_id: FF-80-80-00
     devices:
   ...
@@ -90,7 +90,7 @@ eltako:
   
   gateway:
   - id: 1
-    device: fam-usb
+    device_type: fam-usb
     base_id: FF-80-80-00
     devices:
   ...

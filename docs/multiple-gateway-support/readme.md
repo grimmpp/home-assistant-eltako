@@ -21,7 +21,7 @@ eltako:
 
   gateway:
   - id: 1
-    device: fgw14usb
+    device_type: fgw14usb
     base_id: FF-AA-00-00
     devices:
       light:
