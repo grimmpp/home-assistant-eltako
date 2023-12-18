@@ -124,3 +124,14 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
         if self.dev_eep in [M5_38_08]:
             self._on_state = decoded.state
             self.schedule_update_ha_state()
+
+        elif self.dev_eep in [F6_02_01, F6_02_02]:
+            # only if button pushed down / ignore button release message
+
+            button_filter = self.dev_id[1] is None
+            button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'left' and decoded.action == 1
+            button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'right' and decoded.action == 3
+            
+            if button_filter and decoded.energy_bow:
+                self._on_state = not self._on_state
+                self.schedule_update_ha_state()
