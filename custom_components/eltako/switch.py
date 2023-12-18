@@ -129,8 +129,8 @@ class EltakoSwitch(EltakoEntity, SwitchEntity):
             # only if button pushed down / ignore button release message
 
             button_filter = self.dev_id[1] is None
-            button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'left' and decoded.action == 1
-            button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'right' and decoded.action == 3
+            button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'left' and decoded.rocker_first_action == 1
+            button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'right' and decoded.rocker_first_action == 3
             
             if button_filter and decoded.energy_bow:
                 self._on_state = not self._on_state
