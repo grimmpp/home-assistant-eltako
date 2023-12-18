@@ -2,7 +2,7 @@ import ruamel.yaml
 import json
 from termcolor import colored
 import logging
-from eltakobus.device import BusObject
+from eltakobus.device import BusObject, FAM14
 from eltakobus.message import *
 
 EEP_MAPPING = [
@@ -49,6 +49,7 @@ class HaConfig():
         self.sener_id_list = []
         self.sender_address = default_sender_address
         self.export_logger = save_debug_log_config
+        self.fam14_base_id = '00-00-00-00'
 
 
     def find_device_info(self, name):
@@ -67,6 +68,12 @@ class HaConfig():
         device_name = type(device).__name__
         info = self.find_device_info(device_name)
 
+        # detects base if of FAM14
+        if isinstance(device, FAM14):
+            mem_line = await device.read_mem_line(1)
+            self.fam14_base_id = b2a(mem_line[0:4], '-').upper()
+
+        # add actuators
         if info != None:
             for i in range(0,info['address_count']):
 
@@ -166,8 +173,8 @@ class HaConfig():
             print("    show_dev_id_in_dev_name: False", file=f)
             print("  gateway:", file=f)
             print("  - id: 1", file=f)
-            print("    device_type: fam14", file=f)
-            print("    base_id: 00-00-00-00     # Must be replaced", file=f)
+            print("    device_type: fam14   # you can simply change fam14 to fgw14usb", file=f)
+            print("    base_id: "+self.fam14_base_id, file=f)
             print("    devices:", file=f)
             for type_key in e.keys():
                 print(f"      {type_key}:", file=f)

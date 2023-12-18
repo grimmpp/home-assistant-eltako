@@ -92,6 +92,9 @@ In the output file EEPs for sensors need to be manually extend before copying th
     p.add_argument('-eb', '--eltakobus', 
                    required=True,
                    help="file at which a RS485 Eltako bus can be opened")
+    p.add_argument("--baud_rate", 
+                   default=57600, 
+                   help="baud rate for transmitter or gateway (FAM15=57600, FGW14-USB=57600, FAM-USB=9600)")
     p.add_argument('-osa', '--offset-sender-address', 
                    default=DEFAULT_SENDER_ADDRESS, 
                    help="offset address for unique sender address used to send messages to devices mounted on the bus")
@@ -116,7 +119,7 @@ In the output file EEPs for sensors need to be manually extend before copying th
     asyncio.set_event_loop(loop)
 
     bus_ready = asyncio.Future(loop=loop)
-    bus = RS485SerialInterface(opts.eltakobus)
+    bus = RS485SerialInterface(opts.eltakobus, baud_rate=int(opts.baud_rate))
     asyncio.ensure_future(bus.run(loop, conn_made=bus_ready), loop=loop)
     loop.run_until_complete(bus_ready)
     # cache_rawpart = opts.eltakobus.replace('/', '-')
