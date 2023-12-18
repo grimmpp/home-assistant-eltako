@@ -8,6 +8,7 @@ import yaml
 # mock update of Home Assistant
 ESP2Gateway._register_device = mock.Mock(return_value=None)
 RS485SerialInterface.__init__ = mock.Mock(return_value=None)
+asyncio.get_event_loop = mock.Mock(return_value=None)
 
 class TestGateway(TestCase):
 

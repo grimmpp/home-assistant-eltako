@@ -29,7 +29,15 @@ Install eltako14bus library: ``pip install -e git+https://github.com/grimmpp/elt
 USB cable needs to be plugged into FAM14. The find out the right serial port in this example ``/dev/ttyUSB0``. Define an output file and offset address for the senders.
 
 ## Execute
-``python3 ha_discovery.py --verbose --eltakobus /dev/ttyUSB0 --output ha.yaml --offset-sender-address 0x0000B000``
+**Linux:** 
+`python3 ha_discovery.py --verbose --eltakobus /dev/ttyUSB0 --output ha.yaml --offset-sender-address 0x0000B000`
+
+**Windows:**
+`python3 ha_discovery.py --verbose --eltakobus COM3 --output ha.yaml --offset-sender-address 0x0000B000`
+
+**Debug Mode:**
+Start in VS Code `Python: device discoery`
+<img src="./debug_decice_discovery.png"/>
 
 If you want to programmatically write the sender address for Home Assistant into the device memories then add the parameter ``-wsa``.
 

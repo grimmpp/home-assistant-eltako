@@ -1,5 +1,9 @@
 # Changes and Feature List
 
+## ???
+* Eltako FMZ14 is working and tested ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))
+* Adjusted device discovery to multi-gateway support
+
 ## Version 1.2.2 Support for Multiple Gateways
 * Full support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
 * Target temperature synchronization between climate panel in Home Assistant and thermostat implemented.
@@ -42,9 +46,7 @@
 ## Version 1.0.0 Baseline
 
 ## Backlog
-* Config generation shall be come more easy.
 * Docs for Configuration Schema
 * Extend device discovery for heating and cooling actuators
-* Integrate Eltako FMZ14 ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))
 * Gateway availability checks for send commands.
 * Reconnect for serial interface.
