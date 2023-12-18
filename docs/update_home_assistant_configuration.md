@@ -38,7 +38,7 @@ eltako:
   gateway:
   - id: 1                       # virtual id
     base_id: FF-AA-80-00        # Address which is used to send telegrams into wireless network. Mainly important for transceivers like FAM-USB
-    device: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
+    device_type: fgw14usb            # Supported gateways: gam14, fgw14usb, fam-usb
     devices:                    # list here all devices connected to this gateway
 
       # binary sensors can be switches, door or window contacts, ...

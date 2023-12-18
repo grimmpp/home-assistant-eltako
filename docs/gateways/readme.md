@@ -76,7 +76,7 @@ Hint: Addresses in PCT14 are displayed in DEZ and in Home Assistant configuratio
 eltako:
   gateway:
   - id: 1
-    device: fam14
+    device_type: fam14
     base_id: FF-AA-00-00
     devices:
       light:
@@ -159,7 +159,7 @@ FAM-USB is a usb device which can receive and send ESP2 telegrams. You can use i
 eltako:
   gateway:
   - id: 1
-    device: fam-usb
+    device_type: fam-usb
     base_id: FF-80-80-00        # baseId of FAM-USB gateway
     devices:
       light:
