@@ -11,7 +11,7 @@ This repo contains an Home Assistant Integration for Eltako Baureihe 14.
 This integration allows you to get all information of the Eltako 14 Bus and it allows you to control all the devices via Home Assistant. (See supported devices.) You can also react on sensors like weather station, rocker switches, window contacts ... with automations in Home Assistant.
 
 For more details check out the provided [docs](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs) and links listed at the end.
-Check you the [example configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/ha.yaml). (It gets verifided by an unit test and should not be outdated.)
+Check out the [example configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/ha.yaml). (It gets verifided by an unit test and should not be outdated.)
 
 # Supported EEPs and devices
 
