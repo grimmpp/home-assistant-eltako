@@ -11,7 +11,10 @@
             "program": "${workspaceFolder}/eltakodevice_discovery/ha_discovery.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
+            //Linux
+            // "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
+            //Windows
+            "args": ["--verbose", "--eltakobus", "COM10", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
         },
         {
             "name": "Python: Debug Tests",

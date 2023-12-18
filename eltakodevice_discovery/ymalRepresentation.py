@@ -161,22 +161,27 @@ class HaConfig():
 
         with open(filename, 'w') as f:
             print("eltako:", file=f)
+            print("  gateway:", file=f)
+            print("  - id: 1", file=f)
+            print("    device_type: fam14", file=f)
+            print("    base_id: 00-00-00-00     # Must be replaced", file=f)
+            print("    devices:", file=f)
             for type_key in e.keys():
-                print(f"  {type_key}:", file=f)
+                print(f"      {type_key}:", file=f)
                 for item in e[type_key]:
-                    print(f"  - id: {item['id']}", file=f)
+                    print(f"      - id: {item['id']}", file=f)
                     for entry_key in item.keys():
                         if entry_key not in ['id', 'sender', 'comment']:
                             value = item[entry_key]
                             if type(value).__name__ == 'str' and '?' in value:
                                 value += " # <= NEED TO BE COMPLETED!!!"
-                            print(f"    {entry_key}: {value}", file=f)
+                            print(f"        {entry_key}: {value}", file=f)
                         if entry_key == 'sender':
-                            print("    sender:", file=f)
-                            print(f"      id: {item[entry_key]['id']}", file=f)
-                            print(f"      eep: {item[entry_key]['eep']}", file=f)
+                            print("        sender:", file=f)
+                            print(f"          id: {item[entry_key]['id']}", file=f)
+                            print(f"          eep: {item[entry_key]['eep']}", file=f)
                     if 'comment' in item.keys():
-                        print(f"    #{item['comment']}", file=f)
+                        print(f"        #{item['comment']}", file=f)
 
             # logs
             print("logger:", file=f)

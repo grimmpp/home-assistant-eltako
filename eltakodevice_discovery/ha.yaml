@@ -1,50 +1,55 @@
 eltako:
-  light:
-  - id: 00-00-00-01
-    eep: M5-38-08
-    name: FSR14_4x - 1
-    sender:
-      id: 00-00-B0-01
-      eep: A5-38-08
-  - id: 00-00-00-02
-    eep: M5-38-08
-    name: FSR14_4x - 2
-    sender:
-      id: 00-00-B0-02
-      eep: A5-38-08
-  - id: 00-00-00-03
-    eep: M5-38-08
-    name: FSR14_4x - 3
-    sender:
-      id: 00-00-B0-03
-      eep: A5-38-08
-  - id: 00-00-00-04
-    eep: M5-38-08
-    name: FSR14_4x - 4
-    sender:
-      id: 00-00-B0-04
-      eep: A5-38-08
-  - id: 00-00-00-05
-    eep: A5-38-08
-    name: FUD14 - 5
-    sender:
-      id: 00-00-B0-05
-      eep: A5-38-08
-  cover:
-  - id: 00-00-00-06
-    eep: G5-3F-7F
-    name: FSB14 - 6
-    sender:
-      id: 00-00-B0-06
-      eep: H5-3F-7F
-    device_class: shutter
-    time_closes: 24
-    time_opens: 25
-  sensor:
-  - id: FF-A6-DF-80
-    eep: A5-??-?? # <= NEED TO BE COMPLETED!!!
-    name: 4 Byte Communication FF-A6-DF-80
-    #Sensor Type: Multi-Sensor ? , Derived from Msg Type: Regular4BSMessage
+  gateway:
+  - id: 1
+    device_type: fam14
+    base_id: 00-00-00-00     # Must be replaced
+    devices:
+      light:
+      - id: 00-00-00-01
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: 00-00-B0-01
+          eep: A5-38-08
+      - id: 00-00-00-02
+        eep: M5-38-08
+        name: FSR14_4x - 2
+        sender:
+          id: 00-00-B0-02
+          eep: A5-38-08
+      - id: 00-00-00-03
+        eep: M5-38-08
+        name: FSR14_4x - 3
+        sender:
+          id: 00-00-B0-03
+          eep: A5-38-08
+      - id: 00-00-00-04
+        eep: M5-38-08
+        name: FSR14_4x - 4
+        sender:
+          id: 00-00-B0-04
+          eep: A5-38-08
+      - id: 00-00-00-05
+        eep: A5-38-08
+        name: FUD14 - 5
+        sender:
+          id: 00-00-B0-05
+          eep: A5-38-08
+      cover:
+      - id: 00-00-00-06
+        eep: G5-3F-7F
+        name: FSB14 - 6
+        sender:
+          id: 00-00-B0-06
+          eep: H5-3F-7F
+        device_class: shutter
+        time_closes: 24
+        time_opens: 25
+      sensor:
+      - id: FF-A6-DF-80
+        eep: A5-??-?? # <= NEED TO BE COMPLETED!!!
+        name: 4 Byte Communication FF-A6-DF-80
+        #Sensor Type: Multi-Sensor ? , Derived from Msg Type: Regular4BSMessage
 logger:
   default: info
   logs:
