@@ -10,7 +10,7 @@
 This repo contains an Home Assistant Integration for Eltako Baureihe 14. 
 This integration allows you to get all information of the Eltako 14 Bus and it allows you to control all the devices via Home Assistant. (See supported devices.) You can also react on sensors like weather station, rocker switches, window contacts ... with automations in Home Assistant.
 
-For more details check out the provided [docs](./docs) and links listed at the end.
+For more details check out the provided [docs](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs) and links listed at the end.
 
 # Supported EEPs and devices
 
@@ -19,14 +19,14 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 
 **Supported sensor EEPs**
 * Binary sensor
-  * F6-02-01 ([Rocker switch](./docs/rocker_switch/readme.md), FTS14EM)
-  * F6-02-02 ([Rocker switch](./docs/rocker_switch/readme.md))
+  * F6-02-01 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md), FTS14EM)
+  * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
   * F6-10-00 (Window handle, FTS14EM)
   * D5-00-01 (Contact sensor, FTS14EM) incl. signal inverter
   * A5-08-01 (Occupancy sensor, FTS14EM)
 * Sensor
   * A5-04-02 (Temperature and Humidity Sensor, FLGTF, FLT58)
-  * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](./docs/flgtf_temp_humidity_air_quality/readme.md))
+  * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))
   * A5-10-06 (Temperature Sensor and Controller e.g. FUTH)
   * A5-10-12 (Temperature Sensor and Controller and Humidity Sensor e.g. FUTH)
   * A5-12-01 (Automated meter reading - electricity, FSDG14)
@@ -45,14 +45,14 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 **Supported sender EEPs**
 * Light
   * A5-38-08 (Central command - gateway, FUD14)
-* [Switch](./docs/rocker_switch/readme.md)
+* [Switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
   * F6-02-01 (Rocker switch)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
-* [Climate](./docs/heating-and-cooling/readme.md) (**Experimental** - Not properly test. Interaction and synchronization of temperature controllers may change.)
+* [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** - Not properly test. Interaction and synchronization of temperature controllers may change.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
  
-[**Gateway**](./docs/gateways/readme.md) (See also [multiple gateway support](./docs/multiple-gateway-support/readme.md))
+[**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **Eltako FAM-USB** (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **EnOcean USB300** (**NOT YET IMPLEMENTED**) (based on ESP3 and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
@@ -73,8 +73,8 @@ While this is not integrated into home assistant's repositories. You need to ins
    *Alternative 2:* Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
    For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
 4. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
-5. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](./docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
-There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](./eltakodevice_discovery/)
+5. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
+There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
 
 # Testing
 
@@ -87,11 +87,11 @@ python -m unittest discover tests -v
 ```
 
 # Documentation
-* [Create Home Assistant Configuration File for Eltako Integration](./eltakodevice_discovery/)
+* [Create Home Assistant Configuration File for Eltako Integration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
 * [Eltako Home Automation](https://github.com/cvanlabe/Eltako-home-automation) from [Cedric Van Labeke](https://github.com/cvanlabe)
-* [Simple Eltako Setup](./docs/simple_eltako_setup.md)
-* [How to detect Switch Signals and react on thoese in Home Assistant](./docs/rocker_switch/readme.md)
-* [How to configure heating and cooling](./docs/heating-and-cooling/readme.md)
+* [Simple Eltako Setup](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/simple_eltako_setup.md)
+* [How to detect Switch Signals and react on thoese in Home Assistant](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
+* [How to configure heating and cooling](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md)
 
 
 # Dependencies
