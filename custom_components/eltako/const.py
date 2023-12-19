@@ -24,6 +24,7 @@ EVENT_CONTACT_CLOSED: Final = "contact_closed"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 
+CONF_COMMENT: Final = "comment"
 CONF_EEP: Final = "eep"
 CONF_SWITCH_BUTTON: Final = "switch_button"
 CONF_SENDER: Final = "sender"

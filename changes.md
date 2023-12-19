@@ -1,8 +1,12 @@
 # Changes and Feature List
 
-## ???
+## 1.2.3 
+* &#x1F41E; Fixed Bug &#x1F41E;: Entity grouping for devices were broken.
 * Eltako FMZ14 is working and tested ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))
-* Adjusted device discovery to multi-gateway support
+* Adjusted and extended [device discovery](./eltakodevice_discovery/readme.md) to multi-gateway support
+* Windows support for device discovery added
+* Device discovery detects base id of FAM14 automatically
+* Device discovery detects a few registered sensors and puts them into the auto generated configuration.
 
 ## Version 1.2.2 Support for Multiple Gateways
 * Full support for gateway [Eltako FAM-USB](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
