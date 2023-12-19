@@ -44,7 +44,7 @@ class EltakoEntity(Entity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, self.unique_id)
+                (DOMAIN, config_helpers.format_address(self.dev_id) )
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -107,7 +107,10 @@ class EltakoEntity(Entity):
     @property
     def identifier(self) -> str:
         """Return the identifier of device."""
-        return self._attr_identifier
+        description_key = ""
+        if self.entity_description and self.entity_description.key:
+            description_key = f"_{self.entity_description.key}"
+        return self._attr_identifier + description_key
 
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
