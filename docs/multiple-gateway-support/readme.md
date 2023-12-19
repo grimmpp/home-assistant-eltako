@@ -34,11 +34,18 @@ eltako:
 
   - id: 2
     device: fam-usb
-    base_id: FF-BB-00-00
+    base_id: FF-BB-80-00
     devices:
       sensor:
       - id: 05-1E-83-15
         eep: A5-13-01
         name: "Weather Station"
+      light:
+      - id: FF-AA-00-02             # base_id of FAM14 + 2 (internal address)
+        eep: M5-38-08
+        name: "FSR14_4x - 2"
+        sender:
+          id: FF-BB-80-02           # base_id of FAM-USB + 2
+          eep: A5-38-08
  ...
 ```
