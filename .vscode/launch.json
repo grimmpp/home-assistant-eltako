@@ -12,7 +12,10 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             // Change the serial path if it does not mach in your case.
-            "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
+            "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"],
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}",
+            }
         },
         {
             "name": "Python: device discovery (Windows)",
@@ -22,7 +25,10 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             // Change the number of the COM port if it does not mach in your case.
-            "args": ["--verbose", "--eltakobus", "COM10", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"]
+            "args": ["--verbose", "--eltakobus", "COM10", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"],
+            "env": {
+                "PYTHONPATH": "${workspaceRoot}",
+            }
         },
         {
             "name": "Python: Debug Tests",

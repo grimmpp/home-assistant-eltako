@@ -2,15 +2,21 @@
 import argparse
 from argparse import RawTextHelpFormatter
 import asyncio
-import sys
-import functools
+from typing import Iterator
 
 from termcolor import colored
 import logging
 
 from eltakobus import *
-from ymalRepresentation import HaConfig
+# from eltakobus.device import BusObject, HasProgrammableRPS, DimmerStyle, sorted_known_objects
+# from eltakobus.message import prettify, EltakoDiscoveryReply, EltakoDiscoveryRequest
+# from eltakobus.serial import RS485SerialInterface
+# from eltakobus import locking
+# from eltakobus.util import AddressExpression
+# from eltakobus.eep import A5_38_08
 from eltakobus.locking import buslocked
+from ymalRepresentation import HaConfig
+
 
 DEFAULT_SENDER_ADDRESS = 0x0000B000
 
@@ -65,15 +71,15 @@ async def ha_config(bus: RS485SerialInterface, config: HaConfig, offset_address:
 async def listen(bus: RS485SerialInterface, config: HaConfig, ensure_unlocked) -> None:
     logging.info(colored(f"Listen for sensor events ...", 'red'))
 
-    # if ensure_unlocked:
-    #     await lock_bus(bus)
-    #     await unlock_bus(bus)
+    if ensure_unlocked:
+        await lock_bus(bus)
+        await unlock_bus(bus)
 
     while True:
         msg = await bus.received.get()
         msg = prettify(msg)
 
-        await config.add_sensor(msg)
+        await config.add_sensor_from_wireless_telegram(msg)
 
 
 def main():
@@ -130,13 +136,13 @@ In the output file EEPs for sensors need to be manually extend before copying th
         maintask = asyncio.Task( ha_config(bus, config, opts.offset_sender_address, opts.write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
-        maintask = asyncio.Task( listen(bus, config, True), loop=loop )
-        result = loop.run_until_complete(maintask)
+        # maintask = asyncio.Task( listen(bus, config, True), loop=loop )
+        # result = loop.run_until_complete(maintask)
 
     except KeyboardInterrupt as e:
         logging.info("Received keyboard interrupt, cancelling")
         maintask.cancel()
-    finally:
+    else:
         config.save_as_yaml_to_flie(opts.output)
 
     # if result is not None:

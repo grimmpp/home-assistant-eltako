@@ -1,56 +1,84 @@
-import ruamel.yaml
 import json
 from termcolor import colored
 import logging
-from eltakobus.device import BusObject, FAM14
+from custom_components.eltako.const import *
+from custom_components.eltako.gateway import GatewayDeviceType
+from homeassistant.const import CONF_ID, CONF_DEVICES, CONF_NAME, CONF_PLATFORM, CONF_TYPE, CONF_DEVICE_CLASS, CONF_TEMPERATURE_UNIT, UnitOfTemperature
+from eltakobus.device import BusObject, FAM14, SensorInfo, KeyFunction
 from eltakobus.message import *
+from eltakobus.eep import *
+from eltakobus.util import b2s
+
+from homeassistant.const import Platform
 
 EEP_MAPPING = [
-    {'hw-type': 'FTS14EM', 'eep': 'F6-02-01', 'type': 'binary_sensor', 'description': 'Rocker switch', 'address_count': 1},
-    {'hw-type': 'FTS14EM', 'eep': 'F6-02-02', 'type': 'binary_sensor', 'description': 'Rocker switch', 'address_count': 1},
-    {'hw-type': 'FTS14EM', 'eep': 'F6-10-00', 'type': 'binary_sensor', 'description': 'Window handle', 'address_count': 1},
-    {'hw-type': 'FTS14EM', 'eep': 'D5-00-01', 'type': 'binary_sensor', 'description': 'Contact sensor', 'address_count': 1},
-    {'hw-type': 'FTS14EM', 'eep': 'A5-08-01', 'type': 'binary_sensor', 'description': 'Occupancy sensor', 'address_count': 1},
+    {'hw-type': 'FTS14EM', CONF_EEP: 'F6-02-01', CONF_TYPE: Platform.BINARY_SENSOR, 'description': 'Rocker switch', 'address_count': 1},
+    {'hw-type': 'FTS14EM', CONF_EEP: 'F6-02-02', CONF_TYPE: Platform.BINARY_SENSOR, 'description': 'Rocker switch', 'address_count': 1},
+    {'hw-type': 'FTS14EM', CONF_EEP: 'F6-10-00', CONF_TYPE: Platform.BINARY_SENSOR, 'description': 'Window handle', 'address_count': 1},
+    {'hw-type': 'FTS14EM', CONF_EEP: 'D5-00-01', CONF_TYPE: Platform.BINARY_SENSOR, 'description': 'Contact sensor', 'address_count': 1},
+    {'hw-type': 'FTS14EM', CONF_EEP: 'A5-08-01', CONF_TYPE: Platform.BINARY_SENSOR, 'description': 'Occupancy sensor', 'address_count': 1},
 
-    {'hw-type': 'FWG14', 'eep': 'A5-13-01', 'type': 'sensor', 'description': 'Weather station', 'address_count': 1},
-    {'hw-type': 'FTS14EM', 'eep': 'A5-12-01', 'type': 'sensor', 'description': 'Window handle', 'address_count': 1},
-    {'hw-type': 'FSDG14', 'eep': 'A5-12-02', 'type': 'sensor', 'description': 'Automated meter reading - electricity', 'address_count': 1},
-    {'hw-type': 'F3Z14D', 'eep': 'A5-13-01', 'type': 'sensor', 'description': 'Automated meter reading - gas', 'address_count': 1},
-    {'hw-type': 'F3Z14D', 'eep': 'A5-12-03', 'type': 'sensor', 'description': 'Automated meter reading - water', 'address_count': 1},
+    {'hw-type': 'FWG14', CONF_EEP: 'A5-13-01', CONF_TYPE: Platform.SENSOR, 'description': 'Weather station', 'address_count': 1},
+    {'hw-type': 'FTS14EM', CONF_EEP: 'A5-12-01', CONF_TYPE: Platform.SENSOR, 'description': 'Window handle', 'address_count': 1},
+    {'hw-type': 'FSDG14', CONF_EEP: 'A5-12-02', CONF_TYPE: Platform.SENSOR, 'description': 'Automated meter reading - electricity', 'address_count': 1},
+    {'hw-type': 'F3Z14D', CONF_EEP: 'A5-13-01', CONF_TYPE: Platform.SENSOR, 'description': 'Automated meter reading - gas', 'address_count': 1},
+    {'hw-type': 'F3Z14D', CONF_EEP: 'A5-12-03', CONF_TYPE: Platform.SENSOR, 'description': 'Automated meter reading - water', 'address_count': 1},
 
-    {'hw-type': 'FUD14', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Central command - gateway', 'address_count': 1},
-    {'hw-type': 'FSR14_1x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 1},
-    {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 2},
-    {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'light', 'description': 'Eltako relay', 'address_count': 4},
+    {'hw-type': 'FUD14', CONF_EEP: 'A5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.LIGHT, 'description': 'Central command - gateway', 'address_count': 1},
+    {'hw-type': 'FSR14_1x', CONF_EEP: 'M5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.LIGHT, 'description': 'Eltako relay', 'address_count': 1},
+    {'hw-type': 'FSR14_x2', CONF_EEP: 'M5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.LIGHT, 'description': 'Eltako relay', 'address_count': 2},
+    {'hw-type': 'FSR14_4x', CONF_EEP: 'M5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.LIGHT, 'description': 'Eltako relay', 'address_count': 4},
 
-    {'hw-type': 'FSR14_1x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 1},
-    {'hw-type': 'FSR14_x2', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 2},
-    {'hw-type': 'FSR14_4x', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'type': 'switch', 'description': 'Eltako relay', 'address_count': 4},
+    {'hw-type': 'FSR14_1x', CONF_EEP: 'M5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.SWITCH, 'description': 'Eltako relay', 'address_count': 1},
+    {'hw-type': 'FSR14_x2', CONF_EEP: 'M5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.SWITCH, 'description': 'Eltako relay', 'address_count': 2},
+    {'hw-type': 'FSR14_4x', CONF_EEP: 'M5-38-08', 'sender_eep': 'A5-38-08', CONF_TYPE: Platform.SWITCH, 'description': 'Eltako relay', 'address_count': 4},
 
-    {'hw-type': 'FSB14', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'type': 'cover', 'description': 'Eltako cover', 'address_count': 2},
+    {'hw-type': 'FSB14', CONF_EEP: 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', CONF_TYPE: Platform.COVER, 'description': 'Eltako cover', 'address_count': 2},
 
-    {'hw-type': 'FAE14SSR', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06', 'type': 'climate', 'description': 'Eltako heating/cooling', 'address_count': 2},
+    {'hw-type': 'FAE14SSR', CONF_EEP: 'A5-10-06', 'sender_eep': 'A5-10-06', CONF_TYPE: Platform.CLIMATE, 'description': 'Eltako heating/cooling', 'address_count': 2},
 ]
 
 ORG_MAPPING = {
-    5: {'Telegram': 'RPS', 'RORG': 'F6', 'name': 'Switch', 'type': 'binary_sensor', 'eep': 'F6-02-01'},
-    6: {'Telegram': '1BS', 'RORG': 'D5', 'name': '1 Byte Communication', 'type': 'sensor', 'eep': 'D5-??-??'},
-    7: {'Telegram': '4BS', 'RORG': 'A5', 'name': '4 Byte Communication', 'type': 'sensor', 'eep': 'A5-??-??'},
+    5: {'Telegram': 'RPS', 'RORG': 'F6', CONF_NAME: 'Switch', CONF_TYPE: Platform.BINARY_SENSOR, CONF_EEP: 'F6-02-01' },
+    6: {'Telegram': '1BS', 'RORG': 'D5', CONF_NAME: '1 Byte Communication', CONF_TYPE: Platform.SENSOR, CONF_EEP: 'D5-??-??' },
+    7: {'Telegram': '4BS', 'RORG': 'A5', CONF_NAME: '4 Byte Communication', CONF_TYPE: Platform.SENSOR, CONF_EEP: 'A5-??-??' },
 }
 
 SENSOR_MESSAGE_TYPES = [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage, EltakoMessage]
 
 class HaConfig():
 
-    def __init__(self, default_sender_address, save_debug_log_config:bool=False):
-        super()
-
+    def __init__(self, sender_base_address, save_debug_log_config:bool=False):
         self.eltako = {}
-        self.sener_id_list = []
-        self.sender_address = default_sender_address
+        for p in [Platform.BINARY_SENSOR, Platform.LIGHT, Platform.SENSOR, Platform.SWITCH, Platform.COVER, Platform.CLIMATE]:
+            self.eltako[p] = []
+        self.detected_sensors = {}
+        self.sender_base_address = sender_base_address
         self.export_logger = save_debug_log_config
         self.fam14_base_id = '00-00-00-00'
 
+        self.collected_sensor_list:[SensorInfo] = []
+
+    def get_detected_sensor_by_id(self, id:str) -> dict:
+        if id not in self.detected_sensors.keys():
+            self.detected_sensors[id] = {
+                CONF_ID: id
+            }
+
+        return self.detected_sensors[id]
+    
+    def find_sensors(self, dev_id:int, in_func_group: int) -> [SensorInfo]:
+        result = []
+        for s in self.collected_sensor_list: 
+            if int.from_bytes(s.dev_adr, "big") == dev_id and s.in_func_group == in_func_group:
+                result.append(s)
+        return result
+    
+    def find_sensor(self, dev_id:int, in_func_group: int) -> SensorInfo:
+        l = self.find_sensors(dev_id, in_func_group)
+        if len(l) > 0:
+            return l[0]
+        return None
 
     def find_device_info(self, name):
         for i in EEP_MAPPING:
@@ -59,9 +87,9 @@ class HaConfig():
         return None
     
     
-    def get_formatted_address(self, address):
-        a = f"{address:08x}".upper()
-        return f"{a[0:2]}-{a[2:4]}-{a[4:6]}-{a[6:8]}"
+    def a2s(self, address):
+        """address to string"""
+        return b2s( address.to_bytes(4, byteorder = 'big') )
 
 
     async def add_device(self, device: BusObject):
@@ -70,35 +98,46 @@ class HaConfig():
 
         # detects base if of FAM14
         if isinstance(device, FAM14):
-            mem_line = await device.read_mem_line(1)
-            self.fam14_base_id = b2a(mem_line[0:4], '-').upper()
+            self.fam14_base_id = await device.get_base_id()
 
         # add actuators
         if info != None:
+            self.collected_sensor_list.extend( await device.get_all_sensors() )
+
             for i in range(0,info['address_count']):
 
                 dev_obj = {
-                    'id': self.get_formatted_address(device.address+i),
-                    'eep': f"{info['eep']}",
-                    'name': f"{device_name} - {device.address+i}",
+                    # CONF_ID: self.get_formatted_address(device.address+i),
+                    CONF_ID: self.a2s( device.address+i ),
+                    CONF_EEP: f"{info[CONF_EEP]}",
+                    CONF_NAME: f"{device_name} - {device.address+i}",
                 }
 
-                if 'sender_eep' in info: #info['type'] in ['light', 'switch', 'cover']:
+                if 'sender_eep' in info: #info[CONF_TYPE] in ['light', 'switch', 'cover']:
                     dev_obj['sender'] = {
-                        'id': f"{self.get_formatted_address(self.sender_address+device.address+i)}",
-                        'eep': f"{info['sender_eep']}",
+                        CONF_ID: f"{self.a2s( self.sender_base_address+device.address+i )}",
+                        CONF_EEP: f"{info['sender_eep']}",
                     }
                 
-                if info['type'] == 'cover':
-                    dev_obj['device_class'] = 'shutter'
-                    dev_obj['time_closes'] = 24
-                    dev_obj['time_opens'] = 25
+                if info[CONF_TYPE] == Platform.COVER:
+                    dev_obj[CONF_DEVICE_CLASS] = 'shutter'
+                    dev_obj[CONF_TIME_CLOSES] = 24
+                    dev_obj[CONF_TIME_OPENS] = 25
 
-                if info['type'] not in self.eltako:
-                    self.eltako[info['type']] = []    
-                self.eltako[info['type']].append(dev_obj)
+                if info[CONF_TYPE] == Platform.CLIMATE:
+                    dev_obj[CONF_TEMPERATURE_UNIT] = f"'{UnitOfTemperature.KELVIN}'"
+                    dev_obj[CONF_MIN_TARGET_TEMPERATURE] = 16
+                    dev_obj[CONF_MAX_TARGET_TEMPERATURE] = 25
+                    thermostat = self.find_sensor(device.address, in_func_group=1)
+                    if thermostat:
+                        dev_obj[CONF_ROOM_THERMOSTAT] = {}
+                        dev_obj[CONF_ROOM_THERMOSTAT][CONF_ID] = b2s(thermostat.sensor_id)
+                        dev_obj[CONF_ROOM_THERMOSTAT][CONF_EEP] = A5_10_06.eep_string   #TODO: derive EEP from switch/sensor function
+                    # #TODO: cooling_mode
+
+                self.eltako[info[CONF_TYPE]].append(dev_obj)
                 
-                logging.info(colored(f"Add device {info['type']}: id: {dev_obj['id']}, eep: {dev_obj['eep']}, name: {dev_obj['name']}",'yellow'))
+                logging.info(colored(f"Add device {info[CONF_TYPE]}: id: {dev_obj[CONF_ID]}, eep: {dev_obj[CONF_EEP]}, name: {dev_obj[CONF_NAME]}",'yellow'))
 
 
     def guess_sensor_type_by_address(self, msg:ESP2Message)->str:
@@ -121,37 +160,40 @@ class HaConfig():
             return "Multi-Sensor ? "
 
         return "???"
-    
 
-    async def add_sensor(self, msg: ESP2Message):
+    # async def add_sensor_from_actuator(self, sensor_info: SensorInfo):
+    #     for si in sensor_info:
+
+
+
+    async def add_sensor_from_wireless_telegram(self, msg: ESP2Message):
         if type(msg) in SENSOR_MESSAGE_TYPES:
             logging.debug(msg)
             if hasattr(msg, 'outgoing'):
-                if msg.address not in self.sener_id_list:
+                address = b2s(msg.address)
+                if address not in self.detected_sensors.keys():
 
                     info = ORG_MAPPING[msg.org]
-                    address = b2a(msg.address).replace(' ','-').upper()
                     sensor_type = self.guess_sensor_type_by_address(msg)
                     msg_type = type(msg).__name__
                     comment = f"Sensor Type: {sensor_type}, Derived from Msg Type: {msg_type}"
 
-                    sensor = {
-                        'id': address,
-                        'eep': info['eep'],
-                        'name': f"{info['name']} {address}",
-                        'comment': comment
-                    }
+                    sensor = self.get_detected_sensor_by_id(address)
+                    sensor[CONF_EEP] = info[CONF_EEP]
+                    sensor[CONF_NAME] = f"{info[CONF_NAME]} {address}"
+                    sensor[CONF_PLATFORM] = info[CONF_TYPE]
+                    sensor[CONF_COMMENT] = comment
 
-                    if info['type'] == 'binary_sensor':
-                        sensor['device_class'] = 'window / door / smoke / motion / ?'
+                    if info[CONF_TYPE] == Platform.BINARY_SENSOR:
+                        sensor[CONF_DEVICE_CLASS] = 'window / door / smoke / motion / ?'
 
-                    if info['type'] not in self.eltako:
-                        self.eltako[info['type']] = []
+                    if info[CONF_TYPE] not in self.eltako:
+                        self.eltako[info[CONF_TYPE]] = []
 
-                    self.eltako[info['type']].append(sensor)
-                    self.sener_id_list.append(msg.address)
+                    self.eltako[info[CONF_TYPE]].append(sensor)
+                    self.detected_sensors[b2s(msg.address)] = sensor
                     
-                    logging.info(colored(f"Add Sensor ({msg_type} - {info['name']}): address: {address}, Sensor Type: {sensor_type}", 'yellow'))
+                    logging.info(colored(f"Add Sensor ({msg_type} - {info[CONF_NAME]}): address: {address}, Sensor Type: {sensor_type}", 'yellow'))
         else:
             if type(msg) == EltakoDiscoveryRequest and msg.address == 127:
                 logging.info(colored('Wait for incoming sensor singals. After you have recorded all your sensor singals press Ctrl+c to exist and store the configuration file.', 'red', attrs=['bold']))
@@ -162,39 +204,49 @@ class HaConfig():
     def save_as_yaml_to_flie(self, filename:str):
         logging.info(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
         
-        # go through manually to be able to add comments
-        yaml = ruamel.yaml.YAML()
         e = self.eltako
 
-        with open(filename, 'w') as f:
-            print("eltako:", file=f)
-            print("  general_settings:", file=f)
-            print("    fast_status_change: False", file=f)
-            print("    show_dev_id_in_dev_name: False", file=f)
-            print("  gateway:", file=f)
-            print("  - id: 1", file=f)
-            print("    device_type: fam14   # you can simply change fam14 to fgw14usb", file=f)
-            print("    base_id: "+self.fam14_base_id, file=f)
-            print("    devices:", file=f)
+        with open(filename, 'w', encoding="utf-8") as f:
+            print(f"{DOMAIN}:", file=f)
+            print(f"  {CONF_GERNERAL_SETTINGS}:", file=f)
+            print(f"    {CONF_FAST_STATUS_CHANGE}: False", file=f)
+            print(f"    {CONF_SHOW_DEV_ID_IN_DEV_NAME}: False", file=f)
+            print(f"  {CONF_GATEWAY}:", file=f)
+            print(f"  - {CONF_ID}: 1", file=f)
+            fam14 = GatewayDeviceType.GatewayEltakoFAM14.value
+            fgw14usb = GatewayDeviceType.GatewayEltakoFGW14USB.value
+            print(f"    {CONF_DEVICE_TYPE}: {fam14}   # you can simply change {fam14} to {fgw14usb}", file=f)
+            print(f"    {CONF_BASE_ID}: "+self.fam14_base_id, file=f)
+            print(f"    {CONF_DEVICES}:", file=f)
             for type_key in e.keys():
                 print(f"      {type_key}:", file=f)
                 for item in e[type_key]:
-                    print(f"      - id: {item['id']}", file=f)
-                    for entry_key in item.keys():
-                        if entry_key not in ['id', 'sender', 'comment']:
-                            value = item[entry_key]
-                            if type(value).__name__ == 'str' and '?' in value:
-                                value += " # <= NEED TO BE COMPLETED!!!"
-                            print(f"        {entry_key}: {value}", file=f)
-                        if entry_key == 'sender':
-                            print("        sender:", file=f)
-                            print(f"          id: {item[entry_key]['id']}", file=f)
-                            print(f"          eep: {item[entry_key]['eep']}", file=f)
-                    if 'comment' in item.keys():
-                        print(f"        #{item['comment']}", file=f)
-
+                    f.write( self.config_section_to_string(item, True, 0) )
             # logs
             print("logger:", file=f)
             print("  default: info", file=f)
             print("  logs:", file=f)
-            print("    eltako: debug", file=f)
+            print(f"    {DOMAIN}: debug", file=f)
+
+
+    def config_section_to_string(self, config, is_list:bool, space_count:int=0) -> str:
+        out = ""
+        spaces = space_count*" " + "        "
+        S = '-' if is_list else ' '
+
+        if CONF_COMMENT in config:
+            out += spaces + f"# {config[CONF_COMMENT]}\n"
+        out += spaces[:-2] + f"{S} {CONF_ID}: {config[CONF_ID]}\n"
+
+        for key in config.keys():
+            value = config[key]
+            if isinstance(value, str) or isinstance(value, int):
+                if key not in [CONF_ID, CONF_COMMENT]:
+                    if isinstance(value, str) and '?' in value:
+                        value += " # <= NEED TO BE COMPLETED!!!"
+                    out += spaces + f"{key}: {value}\n"
+            elif isinstance(value, dict):
+                out += spaces + f"{key}: \n"
+                out += self.config_section_to_string(value, False, space_count+2)
+        
+        return out
