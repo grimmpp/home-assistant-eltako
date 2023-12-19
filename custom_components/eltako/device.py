@@ -46,7 +46,7 @@ class EltakoEntity(Entity):
             identifiers={
                 (DOMAIN, self.unique_id)
             },
-            name=self.name,
+            name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.serial_path),

@@ -337,7 +337,8 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.entity_description = description
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_unique_id = f"{self.identifier}_{description.key}"
+        #self._attr_unique_id = f"{self.identifier}_{description.key}"
+        self.entity_id = f"{platform}.{self.unique_id}_{description.key}"
         self._attr_native_value = None
         
     @property
