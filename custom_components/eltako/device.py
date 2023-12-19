@@ -108,7 +108,7 @@ class EltakoEntity(Entity):
     def identifier(self) -> str:
         """Return the identifier of device."""
         description_key = ""
-        if self.entity_description and self.entity_description.key:
+        if hasattr(self, 'entity_description') and hasattr(self.entity_description, 'key'):
             description_key = f"_{self.entity_description.key}"
         return self._attr_identifier + description_key
 
