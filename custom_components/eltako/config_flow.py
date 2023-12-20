@@ -70,7 +70,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
         g_list = [g for g in g_list if g in self.hass.data[DATA_ELTAKO]]
 
-        LOGGER.debug("Available gateways to be added: %s", g_list.values())
+        LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
         # get all serial paths which are not taken by existing gateways
