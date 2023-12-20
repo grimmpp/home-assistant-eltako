@@ -46,6 +46,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Add new gateway")
         errors = {}
 
+        config = await config_helpers.async_get_home_assistant_config(self.hass, CONFIG_SCHEMA)
+        LOGGER.debug(f"Config: {config}\n")
+
         # goes recursively ...
         # check if values were set in the step before
         if user_input is not None:
@@ -61,6 +64,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         device_registry = dr.async_get(self.hass)
         # get all baseIds of existing/registered gateways so that those will be filtered out for selection
         base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
+        LOGGER.debug("Already registered gateways base ids get filtered out: %s", base_id_of_registed_gateways)
         g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
         LOGGER.debug("Available gateways to be added: %s", g_list.values())
         if len(g_list) == 0:
