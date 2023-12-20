@@ -86,11 +86,41 @@ class HaConfig():
                 return i
         return None
     
+    def add_or_get_sensor(self, platform:Platform, sensor_id:str) -> dict:
+        sensor = None
+        for s in self.eltako[platform]:
+            if s[CONF_ID] == sensor_id:
+                sensor = s
+                break
+        if sensor is None:
+            sensor = {
+                CONF_ID: sensor_id}
+            self.eltako[platform].append(sensor)
+
+        return sensor
+
     
     def a2s(self, address):
         """address to string"""
         return b2s( address.to_bytes(4, byteorder = 'big') )
 
+
+    def add_sensors(self, platform: Platform, sensors: [SensorInfo]) -> None:
+        self.collected_sensor_list.extend( sensors )
+
+        for s in sensors:
+            if platform == Platform.LIGHT:
+                if s.in_func_group == 2:
+                    if s.key_func in KeyFunction.get_switch_sensor_list():
+                        _s = self.add_or_get_sensor(Platform.BINARY_SENSOR, s.sensor_id_str)
+                        _s[CONF_EEP] = F6_02_01.eep_string
+                        _s[CONF_NAME] = "Switch"
+                    elif s.key_func in KeyFunction.get_contect_sensor_list():
+                        _s = self.add_or_get_sensor(Platform.BINARY_SENSOR, s.sensor_id_str)
+                        _s[CONF_EEP] = D5_00_01.eep_string
+                        _s[CONF_DEVICE_CLASS] = "Window"
+                        _s[CONF_NAME] = "Contact"
+                        _s[CONF_INVERT_SIGNAL] = False
 
     async def add_device(self, device: BusObject):
         device_name = type(device).__name__
@@ -102,7 +132,7 @@ class HaConfig():
 
         # add actuators
         if info != None:
-            self.collected_sensor_list.extend( await device.get_all_sensors() )
+            self.add_sensors(info[CONF_TYPE], ( await device.get_all_sensors() ) )
 
             for i in range(0,info['address_count']):
 
@@ -121,7 +151,7 @@ class HaConfig():
                 
                 if info[CONF_TYPE] == Platform.COVER:
                     dev_obj[CONF_DEVICE_CLASS] = 'shutter'
-                    dev_obj[CONF_TIME_CLOSES] = 24
+                    dev_obj[CONF_TIME_CLOSES] = 25
                     dev_obj[CONF_TIME_OPENS] = 25
 
                 if info[CONF_TYPE] == Platform.CLIMATE:
@@ -133,12 +163,18 @@ class HaConfig():
                         dev_obj[CONF_ROOM_THERMOSTAT] = {}
                         dev_obj[CONF_ROOM_THERMOSTAT][CONF_ID] = b2s(thermostat.sensor_id)
                         dev_obj[CONF_ROOM_THERMOSTAT][CONF_EEP] = A5_10_06.eep_string   #TODO: derive EEP from switch/sensor function
+
+                        # add thermostat into sensor 
+                        sensor = self.add_or_get_sensor(Platform.SENSOR, b2s(thermostat.sensor_id))
+                        sensor[CONF_EEP] = A5_10_06.eep_string
+                        sensor[CONF_NAME] = "Temperature Sensor and Controller"
                     # #TODO: cooling_mode
 
                 self.eltako[info[CONF_TYPE]].append(dev_obj)
                 
                 logging.info(colored(f"Add device {info[CONF_TYPE]}: id: {dev_obj[CONF_ID]}, eep: {dev_obj[CONF_EEP]}, name: {dev_obj[CONF_NAME]}",'yellow'))
 
+    
 
     def guess_sensor_type_by_address(self, msg:ESP2Message)->str:
         if type(msg) == Regular1BSMessage:
@@ -221,7 +257,7 @@ class HaConfig():
             for type_key in e.keys():
                 print(f"      {type_key}:", file=f)
                 for item in e[type_key]:
-                    f.write( self.config_section_to_string(item, True, 0) )
+                    f.write( self.config_section_to_string(item, True, 0) + "\n" )
             # logs
             print("logger:", file=f)
             print("  default: info", file=f)

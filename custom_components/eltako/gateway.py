@@ -415,7 +415,7 @@ def detect() -> [str]:
 def validate_path(path: str, baud_rate: int):
     """Return True if the provided path points to a valid serial port, False otherwise."""
     try:
-        serial.Serial(path, baud_rate, timeout=0.1)
+        serial.serial_for_url(path, baud_rate, timeout=0.1)
         return True
     except serial.SerialException as exception:
         LOGGER.warning("Gateway path %s is invalid: %s", path, str(exception))
