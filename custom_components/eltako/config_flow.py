@@ -62,7 +62,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
         # get available (not registered) gateways
-        g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA).values()
+        g_list = (await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)).values()
         # filter out registered gateways. all registered gateways are listen in data section
         g_list = list([g for g in g_list if g not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("Available gateways to be added: %s", g_list)
