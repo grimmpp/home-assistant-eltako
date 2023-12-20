@@ -75,11 +75,6 @@ class EltakoEntity(Entity):
         )
 
     @property
-    def name(self) -> str:
-        """Return the name of device."""
-        return self._attr_dev_name
-    
-    @property
     def dev_name(self) -> str:
         """Return the name of device."""
         return self._attr_dev_name
