@@ -47,7 +47,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         config = await config_helpers.async_get_home_assistant_config(self.hass, CONFIG_SCHEMA)
-        LOGGER.debug(f"Config: {config}\n")
+        LOGGER.debug(f"Config: {config}\n\n")
 
         # goes recursively ...
         # check if values were set in the step before
@@ -66,6 +66,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
         LOGGER.debug("Already registered gateways base ids get filtered out: %s", base_id_of_registed_gateways)
         g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
+
+        g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
+        g_list = [g for g in g_list if g in self.hass.data[DATA_ELTAKO].keys()]
+
         LOGGER.debug("Available gateways to be added: %s", g_list.values())
         if len(g_list) == 0:
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
