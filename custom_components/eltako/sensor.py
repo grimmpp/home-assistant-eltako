@@ -565,7 +565,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
-        self._attr_native_value = decoded.target_temperature
+        self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
 
         self.schedule_update_ha_state()
 
