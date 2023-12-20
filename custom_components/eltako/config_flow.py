@@ -68,7 +68,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
 
         g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)
-        g_list = [g for g in g_list if g in self.hass.data[DATA_ELTAKO]]
+        g_list = list([g for g in g_list.values() if g in self.hass.data[DATA_ELTAKO]])
 
         LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
@@ -82,7 +82,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({
-                    vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list.values()),
+                    vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
                     vol.Required(CONF_SERIAL_PATH): str
                 }),
                 errors=errors,
@@ -92,7 +92,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="detect",
             data_schema=vol.Schema({
-                vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list.values()),
+                vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
             }),
             errors=errors,
