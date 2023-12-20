@@ -69,9 +69,16 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
         LOGGER.debug("Available serial paths: %s", serial_paths)
-        if len(serial_paths) == 0 and not manual_setp:
+        if len(serial_paths) == 0:
             # errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
-            return await self.async_step_manual(user_input)
+            return self.async_show_form(
+                step_id="manual",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list.values()),
+                    vol.Required(CONF_SERIAL_PATH): str
+                }),
+                errors=errors,
+            )
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
