@@ -46,6 +46,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Add new gateway")
         errors = {}
 
+        config = await config_helpers.async_get_home_assistant_config(self.hass, CONFIG_SCHEMA)
+        LOGGER.debug(f"Config: {config}\n")
+
         # goes recursively ...
         # check if values were set in the step before
         if user_input is not None:
@@ -58,23 +61,26 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
-        device_registry = dr.async_get(self.hass)
-        # get all baseIds of existing/registered gateways so that those will be filtered out for selection
-        base_id_of_registed_gateways = await gateway.async_get_base_ids_of_registered_gateway(device_registry)
-        g_list = await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA, filter_out=base_id_of_registed_gateways)
-        LOGGER.debug("Available gateways to be added: %s", g_list.values())
+        # get available (not registered) gateways
+        g_list = (await config_helpers.async_get_list_of_gateways(self.hass, CONFIG_SCHEMA)).values()
+        # filter out registered gateways. all registered gateways are listen in data section
+        g_list = list([g for g in g_list if g not in self.hass.data[DATA_ELTAKO]])
+        LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
+
         # get all serial paths which are not taken by existing gateways
+        device_registry = dr.async_get(self.hass)
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
         serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
         LOGGER.debug("Available serial paths: %s", serial_paths)
+
         if manual_setp or len(serial_paths) == 0:
             # errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({
-                    vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list.values()),
+                    vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
                     vol.Required(CONF_SERIAL_PATH): str
                 }),
                 errors=errors,
@@ -84,7 +90,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="detect",
             data_schema=vol.Schema({
-                vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list.values()),
+                vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
                 vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
             }),
             errors=errors,
