@@ -136,17 +136,18 @@ In the output file EEPs for sensors need to be manually extend before copying th
         maintask = asyncio.Task( ha_config(bus, config, opts.offset_sender_address, opts.write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
-        # maintask = asyncio.Task( listen(bus, config, True), loop=loop )
-        # result = loop.run_until_complete(maintask)
+        maintask = asyncio.Task( listen(bus, config, True), loop=loop )
+        result = loop.run_until_complete(maintask)
 
     except KeyboardInterrupt as e:
         logging.info("Received keyboard interrupt, cancelling")
         maintask.cancel()
-    else:
-        config.save_as_yaml_to_flie(opts.output)
+    
+    config.add_detected_sensors_to_eltako_config()
+    config.save_as_yaml_to_flie(opts.output)
 
-    # if result is not None:
-    #     logging.info(result)
+    if result is not None:
+        logging.info(result)
 
 if __name__ == "__main__":
     main()
