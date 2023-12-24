@@ -80,8 +80,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({
-                    vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
-                    vol.Required(CONF_SERIAL_PATH): str
+                    vol.Required(CONF_GATEWAY_DESCRIPTION, description="Gateway to be initialized."): vol.In(g_list),
+                    vol.Required(CONF_SERIAL_PATH, description="Serial path for selected gateway."): str
                 }),
                 errors=errors,
             )
@@ -90,8 +90,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="detect",
             data_schema=vol.Schema({
-                vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
-                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths) | str,
+                vol.Required(CONF_GATEWAY_DESCRIPTION, description="Gateway to be initialized."): vol.In(g_list),
+                vol.Required(CONF_SERIAL_PATH, description="Discovered serial paths."): vol.In(serial_paths),
+                vol.Optional(CONF_CUSTOM_SERIAL_PATH, description="If specified it overrides proposed serial pathes."): str,
             }),
             errors=errors,
         )
