@@ -58,6 +58,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             
                 errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
+        if self.async_show_form(
+            step_id="manual",
+            data_schema=vol.Schema({
+                vol.Required("manual", default="Automatic Serial Path Selection."): vol.In(['Custom serial path definition.','Automatic Serial Path Selection.'])})).data['manual'] == 'Custom serial path definition.':
+            manual_setp = True
+
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
@@ -80,8 +86,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({
-                    vol.Required(CONF_GATEWAY_DESCRIPTION, description="Gateway to be initialized."): vol.In(g_list),
-                    vol.Required(CONF_SERIAL_PATH, description="Serial path for selected gateway."): str
+                    vol.Required(CONF_GATEWAY_DESCRIPTION, msg="EnOcean Gateway", description="Gateway to be initialized."): vol.In(g_list),
+                    vol.Required(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): str
                 }),
                 errors=errors,
             )
@@ -90,9 +96,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="detect",
             data_schema=vol.Schema({
-                vol.Required(CONF_GATEWAY_DESCRIPTION, description="Gateway to be initialized."): vol.In(g_list),
-                vol.Required(CONF_SERIAL_PATH, description="Discovered serial paths."): vol.In(serial_paths),
-                vol.Optional(CONF_CUSTOM_SERIAL_PATH, description="If specified it overrides proposed serial pathes."): str,
+                vol.Required(CONF_GATEWAY_DESCRIPTION, msg="EnOcean Gateway", description="Gateway to be initialized."): vol.In(g_list),
+                vol.Required(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): vol.In(serial_paths),
             }),
             errors=errors,
         )
