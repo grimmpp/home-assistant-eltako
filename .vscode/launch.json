@@ -43,6 +43,18 @@
             },
             // "cwd": "${workspaceRoot}/custom_component/eltako",
             "justMyCode": false
-          }
+          },
+          {
+              "name": "Python: Device Discovery GUI",
+              "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/eltakodevice_discovery/dd_gui.py",
+                "console": "integratedTerminal",
+                "justMyCode": true,
+                "env": {
+                    "PYTHONPATH": "${workspaceRoot}",
+                }
+            }
+          
     ]
 }
