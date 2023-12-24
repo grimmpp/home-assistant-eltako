@@ -58,7 +58,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             
                 errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
-        result = self.async_show_form(
+        result = await self.async_show_form(
             step_id="manual",
             data_schema=vol.Schema({
                 vol.Required("manual", default="Automatic Serial Path Selection."): vol.In(['Custom serial path definition.','Automatic Serial Path Selection.'])}))
