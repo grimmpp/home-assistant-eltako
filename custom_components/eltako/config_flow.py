@@ -61,8 +61,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         result = self.async_show_form(
             step_id="manual",
             data_schema=vol.Schema({
-                vol.Required("manual", default="Automatic Serial Path Selection."): vol.In(['Custom serial path definition.','Automatic Serial Path Selection.'])})).items()
-        LOGGER.debug(f"result keys: {result.keys()}")
+                vol.Required("manual"): vol.In(['Custom serial path definition.','Automatic Serial Path Selection.'])})).items()
         LOGGER.debug(f"result: {result}")
         if result['manual'] == 'Custom serial path definition.':
             manual_setp = True
