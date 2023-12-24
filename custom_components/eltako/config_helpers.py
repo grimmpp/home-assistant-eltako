@@ -122,11 +122,11 @@ def get_device_config(config: dict, id: int) -> dict:
             return g[CONF_DEVICES]
     return None
 
-async def async_get_list_of_gateways(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config, filter_out: [str]=[]) -> dict:
+async def async_get_list_of_gateway_descriptions(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config, filter_out: [str]=[]) -> dict:
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
-    return get_list_of_gateways_by_config(config, filter_out)
+    return get_list_of_gateway_descriptions(config, filter_out)
 
-def get_list_of_gateways_by_config(config: dict, filter_out: [str]=[]) -> dict:
+def get_list_of_gateway_descriptions(config: dict, filter_out: [str]=[]) -> dict:
     """Compiles a list of all gateways in config."""
     result = {}
     if CONF_GATEWAY in config:
