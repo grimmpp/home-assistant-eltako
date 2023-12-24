@@ -114,8 +114,13 @@ In the output file EEPs for sensors need to be manually extend before copying th
 
     opts = p.parse_args()
 
+    run(opts.verbose, opts.eltakobus, opts.baud_rate, opts.offset_sender_address, opts.write_sender_address_to_device, opts.output)
+
+
+def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_address:int=0, write_sender_address_to_device:bool=False, output:str=None):
+
     log_level = logging.INFO
-    if opts.verbose > 0:
+    if verbose > 0:
         log_level = logging.DEBUG
     logging.basicConfig(format='%(message)s', level=log_level)
 
@@ -125,15 +130,15 @@ In the output file EEPs for sensors need to be manually extend before copying th
     asyncio.set_event_loop(loop)
 
     bus_ready = asyncio.Future(loop=loop)
-    bus = RS485SerialInterface(opts.eltakobus, baud_rate=int(opts.baud_rate))
+    bus = RS485SerialInterface(eltakobus, baud_rate=int(baud_rate))
     asyncio.ensure_future(bus.run(loop, conn_made=bus_ready), loop=loop)
     loop.run_until_complete(bus_ready)
     # cache_rawpart = opts.eltakobus.replace('/', '-')
 
     try:
-        config = HaConfig(int(opts.offset_sender_address,16), save_debug_log_config=True)
+        config = HaConfig(int(offset_sender_address,16), save_debug_log_config=True)
 
-        maintask = asyncio.Task( ha_config(bus, config, opts.offset_sender_address, opts.write_sender_address_to_device), loop=loop )
+        maintask = asyncio.Task( ha_config(bus, config, offset_sender_address, write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
         # maintask = asyncio.Task( listen(bus, config, True), loop=loop )
@@ -142,11 +147,12 @@ In the output file EEPs for sensors need to be manually extend before copying th
     except KeyboardInterrupt as e:
         logging.info("Received keyboard interrupt, cancelling")
         maintask.cancel()
-    else:
-        config.save_as_yaml_to_flie(opts.output)
+    
+    config.add_detected_sensors_to_eltako_config()
+    config.save_as_yaml_to_flie(output)
 
-    # if result is not None:
-    #     logging.info(result)
+    if result is not None:
+        logging.info(result)
 
 if __name__ == "__main__":
     main()

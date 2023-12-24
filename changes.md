@@ -1,5 +1,12 @@
 # Changes and Feature List
 
+
+## Version 1.2.4 GUI for Automatic Generation of Configuration
+* Device and sensor discovery and automatic generation of configuration improved and GUI added (See [docs](./eltakodevice_discovery/readme.md))
+* &#x1F41E; Fixed Bug &#x1F41E;: Device names fixed.
+* Improved config flow
+* Support for serial over ethernet added
+
 ## Version 1.2.3 Improvements in Device Discovery
 * &#x1F41E; Fixed Bug &#x1F41E;: Entity grouping for devices were broken.
 * Eltako FMZ14 is working and tested ([Multifunction Time Relay](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FMZ14_30014009-2_gb.pdf))

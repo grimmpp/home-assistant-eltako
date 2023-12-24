@@ -7,7 +7,7 @@ from homeassistant.const import CONF_ID, CONF_DEVICES, CONF_NAME, CONF_PLATFORM,
 from eltakobus.device import BusObject, FAM14, SensorInfo, KeyFunction
 from eltakobus.message import *
 from eltakobus.eep import *
-from eltakobus.util import b2s
+from eltakobus.util import b2s, AddressExpression
 
 from homeassistant.const import Platform
 
@@ -48,10 +48,11 @@ SENSOR_MESSAGE_TYPES = [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular4
 
 class HaConfig():
 
-    def __init__(self, sender_base_address, save_debug_log_config:bool=False):
+    def __init__(self, sender_base_address:int, save_debug_log_config:bool=False):
         self.eltako = {}
-        for p in [Platform.BINARY_SENSOR, Platform.LIGHT, Platform.SENSOR, Platform.SWITCH, Platform.COVER, Platform.CLIMATE]:
+        for p in [CONF_UNKNOWN, Platform.BINARY_SENSOR, Platform.LIGHT, Platform.SENSOR, Platform.SWITCH, Platform.COVER, Platform.CLIMATE]:
             self.eltako[p] = []
+
         self.detected_sensors = {}
         self.sender_base_address = sender_base_address
         self.export_logger = save_debug_log_config
@@ -86,18 +87,29 @@ class HaConfig():
                 return i
         return None
     
-    def add_or_get_sensor(self, platform:Platform, sensor_id:str) -> dict:
+    def add_or_get_sensor(self, sensor_id:str, device_id:str, dev_type:str) -> dict:
         sensor = None
-        for s in self.eltako[platform]:
-            if s[CONF_ID] == sensor_id:
-                sensor = s
-                break
-        if sensor is None:
-            sensor = {
-                CONF_ID: sensor_id}
-            self.eltako[platform].append(sensor)
+        if sensor_id not in self.detected_sensors.keys():
+            logging.info(colored(f"Add sensor: address: {sensor_id} from device {device_id} and device type: {dev_type}", 'yellow'))
+            sensor = { 
+                CONF_ID: sensor_id,
+                CONF_PLATFORM: CONF_UNKNOWN,
+                CONF_EEP: CONF_UNKNOWN,
+                CONF_REGISTERED_IN: [] 
+            }
+            self.detected_sensors[sensor_id] = sensor
+        else:
+            sensor = self.detected_sensors[sensor_id]
+
+        if device_id is not None:
+            sensor[CONF_REGISTERED_IN].append(f"{device_id} ({dev_type})")
 
         return sensor
+
+
+    def add_detected_sensors_to_eltako_config(self):
+        for s in self.detected_sensors.values():
+            self.eltako[ s[CONF_PLATFORM] ].append( s )
 
     
     def a2s(self, address):
@@ -105,26 +117,43 @@ class HaConfig():
         return b2s( address.to_bytes(4, byteorder = 'big') )
 
 
-    def add_sensors(self, platform: Platform, sensors: [SensorInfo]) -> None:
+    def add_sensors(self, sensors: [SensorInfo]) -> None:
         self.collected_sensor_list.extend( sensors )
 
         for s in sensors:
-            if platform == Platform.LIGHT:
-                if s.in_func_group == 2:
-                    if s.key_func in KeyFunction.get_switch_sensor_list():
-                        _s = self.add_or_get_sensor(Platform.BINARY_SENSOR, s.sensor_id_str)
-                        _s[CONF_EEP] = F6_02_01.eep_string
-                        _s[CONF_NAME] = "Switch"
-                    elif s.key_func in KeyFunction.get_contect_sensor_list():
-                        _s = self.add_or_get_sensor(Platform.BINARY_SENSOR, s.sensor_id_str)
-                        _s[CONF_EEP] = D5_00_01.eep_string
-                        _s[CONF_DEVICE_CLASS] = "Window"
-                        _s[CONF_NAME] = "Contact"
-                        _s[CONF_INVERT_SIGNAL] = False
+            if self.filter_out_base_address(s.sensor_id):
+                _s = self.add_or_get_sensor(s.sensor_id_str, s.dev_adr_str, s.dev_type)
+                _s[CONF_COMMENT] = KeyFunction(s.key_func).name
+                _s[CONF_EEP] = self.get_eep_from_key_function_name(s.key_func)
+                _s[CONF_NAME] = CONF_UNKNOWN
+                
+                if s.key_func in KeyFunction.get_switch_sensor_list():
+                    _s[CONF_PLATFORM] = Platform.BINARY_SENSOR
+                    _s[CONF_EEP] = F6_02_01.eep_string
+                    _s[CONF_NAME] = "Switch"
+                elif s.key_func in KeyFunction.get_contect_sensor_list():
+                    _s[CONF_PLATFORM] = Platform.BINARY_SENSOR
+                    _s[CONF_EEP] = D5_00_01.eep_string
+                    _s[CONF_DEVICE_CLASS] = "Window"
+                    _s[CONF_NAME] = "Contact"
+                    _s[CONF_INVERT_SIGNAL] = False
+                    
+
+    def filter_out_base_address(self, sensor_id:bytes) -> bool:
+        sensor_id_int = int.from_bytes(sensor_id, "big")
+        return self.sender_base_address > sensor_id_int or self.sender_base_address+128 < sensor_id_int
+
+    def get_eep_from_key_function_name(self, kf: KeyFunction) -> str:
+        pos = KeyFunction(kf).name.find('EEP_')
+        if pos > -1:
+            substr = KeyFunction(kf).name[pos+4:pos+4+8]
+            return substr
+        return CONF_UNKNOWN
+
 
     async def add_device(self, device: BusObject):
-        device_name = type(device).__name__
-        info = self.find_device_info(device_name)
+        device_type = type(device).__name__
+        info = self.find_device_info(device_type)
 
         # detects base if of FAM14
         if isinstance(device, FAM14):
@@ -132,15 +161,15 @@ class HaConfig():
 
         # add actuators
         if info != None:
-            self.add_sensors(info[CONF_TYPE], ( await device.get_all_sensors() ) )
+            self.add_sensors(( await device.get_all_sensors() ) )
 
             for i in range(0,info['address_count']):
 
+                dev_id_str:str = self.a2s( device.address+i )
                 dev_obj = {
-                    # CONF_ID: self.get_formatted_address(device.address+i),
-                    CONF_ID: self.a2s( device.address+i ),
+                    CONF_ID: dev_id_str,
                     CONF_EEP: f"{info[CONF_EEP]}",
-                    CONF_NAME: f"{device_name} - {device.address+i}",
+                    CONF_NAME: f"{device_type} - {device.address+i}",
                 }
 
                 if 'sender_eep' in info: #info[CONF_TYPE] in ['light', 'switch', 'cover']:
@@ -165,7 +194,8 @@ class HaConfig():
                         dev_obj[CONF_ROOM_THERMOSTAT][CONF_EEP] = A5_10_06.eep_string   #TODO: derive EEP from switch/sensor function
 
                         # add thermostat into sensor 
-                        sensor = self.add_or_get_sensor(Platform.SENSOR, b2s(thermostat.sensor_id))
+                        sensor = self.add_or_get_sensor(b2s(thermostat.sensor_id), dev_id_str, device_type)
+                        sensor[CONF_PLATFORM] = Platform.SENSOR
                         sensor[CONF_EEP] = A5_10_06.eep_string
                         sensor[CONF_NAME] = "Temperature Sensor and Controller"
                     # #TODO: cooling_mode
@@ -207,29 +237,25 @@ class HaConfig():
             logging.debug(msg)
             if hasattr(msg, 'outgoing'):
                 address = b2s(msg.address)
+                info = ORG_MAPPING[msg.org]
+                
                 if address not in self.detected_sensors.keys():
 
-                    info = ORG_MAPPING[msg.org]
                     sensor_type = self.guess_sensor_type_by_address(msg)
                     msg_type = type(msg).__name__
                     comment = f"Sensor Type: {sensor_type}, Derived from Msg Type: {msg_type}"
 
-                    sensor = self.get_detected_sensor_by_id(address)
-                    sensor[CONF_EEP] = info[CONF_EEP]
-                    sensor[CONF_NAME] = f"{info[CONF_NAME]} {address}"
-                    sensor[CONF_PLATFORM] = info[CONF_TYPE]
-                    sensor[CONF_COMMENT] = comment
+                    sensor = self.add_or_get_sensor(address, None, None)
+                    if CONF_EEP not in sensor:
+                        sensor[CONF_EEP] = info[CONF_EEP]
+                    if CONF_NAME not in sensor:
+                        sensor[CONF_NAME] = f"{info[CONF_NAME]} {address}"
+                    if CONF_COMMENT not in sensor:
+                        sensor[CONF_COMMENT] = comment
 
                     if info[CONF_TYPE] == Platform.BINARY_SENSOR:
                         sensor[CONF_DEVICE_CLASS] = 'window / door / smoke / motion / ?'
 
-                    if info[CONF_TYPE] not in self.eltako:
-                        self.eltako[info[CONF_TYPE]] = []
-
-                    self.eltako[info[CONF_TYPE]].append(sensor)
-                    self.detected_sensors[b2s(msg.address)] = sensor
-                    
-                    logging.info(colored(f"Add Sensor ({msg_type} - {info[CONF_NAME]}): address: {address}, Sensor Type: {sensor_type}", 'yellow'))
         else:
             if type(msg) == EltakoDiscoveryRequest and msg.address == 127:
                 logging.info(colored('Wait for incoming sensor singals. After you have recorded all your sensor singals press Ctrl+c to exist and store the configuration file.', 'red', attrs=['bold']))
@@ -254,10 +280,15 @@ class HaConfig():
             print(f"    {CONF_DEVICE_TYPE}: {fam14}   # you can simply change {fam14} to {fgw14usb}", file=f)
             print(f"    {CONF_BASE_ID}: "+self.fam14_base_id, file=f)
             print(f"    {CONF_DEVICES}:", file=f)
+            # go through platforms
             for type_key in e.keys():
-                print(f"      {type_key}:", file=f)
-                for item in e[type_key]:
-                    f.write( self.config_section_to_string(item, True, 0) + "\n" )
+                if len(e[type_key]) > 0:
+                    if type_key == CONF_UNKNOWN:
+                        print(f"      # SECTION '{CONF_UNKNOWN}' NEEDS TO BE REMOVED!!!", file=f)
+                    print(f"      {type_key}:", file=f)
+                    for item in e[type_key]:
+                        # print devices and sensors recursively
+                        f.write( self.config_section_to_string(item, True, 0) + "\n" )
             # logs
             print("logger:", file=f)
             print("  default: info", file=f)
@@ -272,12 +303,16 @@ class HaConfig():
 
         if CONF_COMMENT in config:
             out += spaces + f"# {config[CONF_COMMENT]}\n"
+        if CONF_REGISTERED_IN in config:
+            dev_id_list = list(set(config[CONF_REGISTERED_IN]))
+            dev_id_list.sort()
+            out += spaces + f"# REGISTERD IN DEVICE: {dev_id_list}\n"
         out += spaces[:-2] + f"{S} {CONF_ID}: {config[CONF_ID]}\n"
 
         for key in config.keys():
             value = config[key]
             if isinstance(value, str) or isinstance(value, int):
-                if key not in [CONF_ID, CONF_COMMENT]:
+                if key not in [CONF_ID, CONF_COMMENT, CONF_REGISTERED_IN, CONF_PLATFORM]:
                     if isinstance(value, str) and '?' in value:
                         value += " # <= NEED TO BE COMPLETED!!!"
                     out += spaces + f"{key}: {value}\n"

@@ -24,6 +24,8 @@ EVENT_CONTACT_CLOSED: Final = "contact_closed"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 
+CONF_UNKNOWN: Final = "unknown"
+CONF_REGISTERED_IN: Final = "registered_in"
 CONF_COMMENT: Final = "comment"
 CONF_EEP: Final = "eep"
 CONF_SWITCH_BUTTON: Final = "switch_button"
@@ -40,6 +42,7 @@ CONF_GATEWAY_DESCRIPTION: Final = "gateway_description"
 CONF_BASE_ID: Final = "base_id"
 CONF_DEVICE_TYPE: Final = "device_type"
 CONF_SERIAL_PATH: Final = "serial_path"
+CONF_CUSTOM_SERIAL_PATH: Final = "custom_serial_path"
 CONF_MAX_TARGET_TEMPERATURE: Final = "max_target_temperature"
 CONF_MIN_TARGET_TEMPERATURE: Final = "min_target_temperature"
 CONF_ROOM_THERMOSTAT: Final = "thermostat"
