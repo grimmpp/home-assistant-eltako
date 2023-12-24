@@ -1,6 +1,8 @@
 # Changes and Feature List
 
-## Version 1.2.4
+
+## Version 1.2.4 GUI for Automatic Generation of Configuration
+* Device and sensor discovery and automatic generation of configuration improved and GUI added (See [docs](./eltakodevice_discovery/readme.md))
 * &#x1F41E; Fixed Bug &#x1F41E;: Device names fixed.
 * Improved config flow
 * Support for serial over ethernet added

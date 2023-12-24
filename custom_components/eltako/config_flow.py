@@ -91,7 +91,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="detect",
             data_schema=vol.Schema({
                 vol.Required(CONF_GATEWAY_DESCRIPTION): vol.In(g_list),
-                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths),
+                vol.Required(CONF_SERIAL_PATH): vol.In(serial_paths) | str,
             }),
             errors=errors,
         )
