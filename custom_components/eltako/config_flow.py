@@ -78,7 +78,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
-        serial_paths = [sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]
+        serial_paths = list(set([sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]))
         LOGGER.debug("Available serial paths: %s", serial_paths)
 
         if manual_setp or len(serial_paths) == 0:
