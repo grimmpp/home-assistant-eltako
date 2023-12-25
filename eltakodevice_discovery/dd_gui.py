@@ -84,6 +84,8 @@ def get_serial_ports() -> [str]:
         :returns:
             A list of the serial ports available on the system
     """
+    # python -m serial.tools.miniterm COM10 57600 --encoding hexlify
+    
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
@@ -221,5 +223,3 @@ logger.addHandler( TextHandler(st) )
 
 
 window.mainloop()
-
-# python -m serial.tools.miniterm COM10 57600 --encoding hexlify
