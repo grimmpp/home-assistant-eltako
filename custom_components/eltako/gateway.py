@@ -273,60 +273,6 @@ class ESP2Gateway:
         return self._attr_identifier
     
 
-# class EltakoGatewayFam14 (EltakoGateway):
-#     """Gateway class for Eltako FAM14."""
-
-#     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
-#         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
-    
-#     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-#         result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
-#         if not result:
-#             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
-#         return result
-
-# class EltakoGatewayFgw14Usb (EltakoGatewayFam14):
-#     """Gateway class for Eltako FGW14-USB."""
-
-# class EltakoGatewayFamUsb (EltakoGateway, Entity):
-#     """Gateway class for Eltako FAM-USB."""
-
-#     def __init__(self, general_settings:dict, hass: HomeAssistant, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
-#         super(EltakoGatewayFamUsb, self).__init__(general_settings, hass, dev_type, serial_path, baud_rate, base_id, dev_name, config_entry)
-
-#     #     self.async_on_remove(
-#     #         async_dispatcher_connect(
-#     #             self.hass, SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
-#     #         )
-#     #     )
-
-#     #     # read base id from device
-#     #     msg = ESP2Message(b'\xA5\x5A\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-#     #     dispatcher_send(self.hass, SIGNAL_SEND_MESSAGE, msg)
-
-#     # def _message_received_callback(self, msg: ESP2Message) -> None:
-#     #     # receive base id and compare with base id in configuration
-#     #     if msg.address == b'\x00\x00\x00\x00' and msg.body[0] == 0x8B and msg.body[1] == 0x98:
-#     #         device_base_id = msg.body[2:5]
-#     #         if not compare_enocean_ids(self.base_id, device_base_id, len=4):
-#     #             raise Exception(f"Configured baseId {self.base_id} does not match device baseId {device_base_id}")
-#     #         else:
-#     #             LOGGER.debug(f"Received baseId form device {device_base_id} and compared with configuration.")
-        
-
-#     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
-#         result = config_helpers.compare_enocean_ids(self.base_id[0], sender_id[0])
-#         if not result:
-#             LOGGER.warn(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
-#         return result
-
-    
-#     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-#         result = 0xFF == dev_id[0][0]
-#         if not result:
-#             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
-#         return result
-    
     
 
 class ESP3Gateway:

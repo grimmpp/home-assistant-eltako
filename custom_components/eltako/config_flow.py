@@ -46,8 +46,13 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Add new gateway")
         errors = {}
 
+        # get configuration for debug purpose
         config = await config_helpers.async_get_home_assistant_config(self.hass, CONFIG_SCHEMA)
         LOGGER.debug(f"Config: {config}\n")
+
+        # ensure data entry is set
+        if DATA_ELTAKO not in self.hass.data:
+            self.hass.data.setdefault(DATA_ELTAKO, {})
 
         # goes recursively ...
         # check if values were set in the step before
