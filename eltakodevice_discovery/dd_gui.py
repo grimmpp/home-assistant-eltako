@@ -3,6 +3,8 @@ import os
 from os.path import expanduser
 import glob
 import serial
+import serial.rs485
+# import pyserial
 from typing import Final
 import logging
 import asyncio
@@ -82,6 +84,8 @@ def get_serial_ports() -> [str]:
         :returns:
             A list of the serial ports available on the system
     """
+    # python -m serial.tools.miniterm COM10 57600 --encoding hexlify
+    
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
@@ -95,16 +99,25 @@ def get_serial_ports() -> [str]:
     result = []
     for port in ports:
         try:
-            s = serial.Serial(port)
+            echotest = b'\xff\x00\xff' * 5
+
+            s = serial.Serial(port, baudrate=57600, timeout=0.2)
+            s.rs485_mode = serial.rs485.RS485Settings()
+            s.write(echotest)
+            s_result = s.read_until(echotest)
             s.close()
-            result.append(port)
-        except (OSError, serial.SerialException):
+            if s_result == echotest: 
+                result.append(port)
+        except (OSError, serial.SerialException) as e:
             pass
     return result
 
 def refresh_serial_paths(combobox:ttk.Combobox):
     combobox['values'] = get_serial_ports()
-    logging.info(termcolor.colored("test ist ein test", 'red'))
+    if len(combobox['values']) > 0:
+        combobox_sp.set(combobox['values'][0])
+    else:
+        combobox_sp.set('')
 
 def get_base_address_range() -> [str]:
     result = []
@@ -148,11 +161,12 @@ label_sp.pack(side=tk.TOP, anchor='w')
 frame = tk.Frame(master=window, padx="5", pady="5")
 frame.pack(anchor='w')
 
-label_sp = tk.Label(master=frame, text="Serial Port:")
+label_sp = tk.Label(master=frame, text="Serial Port (FAM14):")
 label_sp.pack(side=tk.LEFT)
 
-combobox_sp = ttk.Combobox(frame, state="readonly", width="75", values=get_serial_ports()) 
-combobox_sp.set(get_serial_ports()[0])
+combobox_sp = ttk.Combobox(frame, state="readonly", width="75") 
+# combobox_sp['values'] = get_serial_ports()
+# combobox_sp.set(get_serial_ports()[0])
 combobox_sp.pack(side=tk.LEFT)
 
 btn_refresh_sp = tk.Button(master=frame, text="scan serial ports", command=lambda:refresh_serial_paths(combobox_sp)  )
@@ -196,9 +210,9 @@ btn_run['command'] = lambda:run_main([btn_run, btn_refresh_sp, btn_fn_dialog], c
 btn_run.pack(side=tk.LEFT)
 
 # Create textLogger
-st = ScrolledText.ScrolledText(window, state='disabled', background='black', foreground='lightgrey')
+st = ScrolledText.ScrolledText(window, state='disabled', background='black', foreground='lightgrey', font=('Arial', 14))
 st.configure(font='TkFixedFont')
-st.pack(anchor='w')
+st.pack(anchor='nw', fill="both")
 # log_box_1 = tk.Text(window, borderwidth=3, relief="sunken")
 # log_box_1.pack(anchor='w')
 
