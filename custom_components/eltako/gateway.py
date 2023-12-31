@@ -7,7 +7,7 @@ from os.path import basename, normpath
 import serial
 import asyncio
 
-from eltakobus.serial import RS485SerialInterface
+from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
 from eltakobus.message import ESP2Message
 
 from eltakobus.util import AddressExpression
@@ -93,7 +93,8 @@ class ESP2Gateway:
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
-        self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
+        # self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
+        self._bus = RS485SerialInterfaceV2(serial_path, baud_rate=baud_rate, callback=self._callback)
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass
@@ -159,7 +160,8 @@ class ESP2Gateway:
 
     async def async_setup(self):
         """Finish the setup of the bridge and supported platforms."""
-        self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
+        self._bus.start()
+        # self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
         
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
@@ -169,56 +171,60 @@ class ESP2Gateway:
     def unload(self):
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
+            self._bus.stop()
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
     def _send_message_callback(self, msg):
         """Send a request through the Eltako gateway."""
-        if isinstance(msg, ESP2Message):
-            LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
-            asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
+        if self._bus.is_active():
+            if isinstance(msg, ESP2Message):
+                LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
+                asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
+        else:
+            LOGGER.warn("[Gateway] [Id: %d] Serial port %s is not available!!!", self.dev_id, self.serial_path)
 
-    async def _initialize_bus_task(self, run):
-        """Call bus.run in a task that takes down main if it crashes, and is
-        properly shut down as well"""
-        if self._bus_task is not None:
-            self._bus_task.cancel()
+    # async def _initialize_bus_task(self, run):
+    #     """Call bus.run in a task that takes down main if it crashes, and is
+    #     properly shut down as well"""
+    #     if self._bus_task is not None:
+    #         self._bus_task.cancel()
 
-        conn_made = asyncio.Future()
-        self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
-        def bus_done(bus_future, _task=self._main_task):
-            self._bus_task = None
-            try:
-                result = bus_future.result()
-            except Exception as e:
-                LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
-                LOGGER.exception(e)
-            else:
-                LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
-            _task.cancel()
-        self._bus_task.add_done_callback(bus_done)
-        await conn_made
+    #     conn_made = asyncio.Future()
+    #     self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
+    #     def bus_done(bus_future, _task=self._main_task):
+    #         self._bus_task = None
+    #         try:
+    #             result = bus_future.result()
+    #         except Exception as e:
+    #             LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
+    #             LOGGER.exception(e)
+    #         else:
+    #             LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
+    #         _task.cancel()
+    #     self._bus_task.add_done_callback(bus_done)
+    #     await conn_made
     
-    async def _wrapped_main(self, *args):
-        try:
-            await self._main(*args)
-        except Exception as e:
-            LOGGER.exception(e)
-            # FIXME should I just restart with back-off?
+    # async def _wrapped_main(self, *args):
+    #     try:
+    #         await self._main(*args)
+    #     except Exception as e:
+    #         LOGGER.exception(e)
+    #         # FIXME should I just restart with back-off?
 
-        if self._bus_task is not None:
-            self._bus_task.cancel()
+    #     if self._bus_task is not None:
+    #         self._bus_task.cancel()
 
-    async def _main(self):
-        bus = self._bus
-        await self._initialize_bus_task(bus.run)
+    # async def _main(self):
+    #     bus = self._bus
+    #     await self._initialize_bus_task(bus.run)
 
-        while True:
-            await self._step(bus)
+    #     while True:
+    #         await self._step(bus)
 
-    async def _step(self, bus):
-        message = await bus.received.get()
-        self._callback(message)
+    # async def _step(self, bus):
+    #     message = await bus.received.get()
+    #     self._callback(message)
 
     def _callback(self, message):
         """Handle Eltako device's callback.

@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.0 Reliable Serial Communication
+* **Serial communication is able to automatically reconnect** in case of temporary connection/serial port loss.
+* Serial communication performance improved
 
 ## Version 1.2.4 GUI for Automatic Generation of Configuration
 * Device and sensor discovery and automatic generation of configuration improved and GUI added (See [docs](./eltakodevice_discovery/readme.md))
