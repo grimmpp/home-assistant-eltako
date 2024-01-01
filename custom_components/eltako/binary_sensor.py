@@ -15,7 +15,7 @@ from homeassistant.helpers.typing import ConfigType
 from .device import *
 from .const import *
 from .gateway import ESP2Gateway
-from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+from .eltako_integration import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 import json
 

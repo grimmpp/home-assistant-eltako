@@ -68,7 +68,7 @@ gateway:
     def test_gateway_list(self):
         config = yaml.safe_load(self.config_str)
 
-        g_list:dict = config_helpers.get_list_of_gateway_descriptionss(config)
+        g_list:dict = config_helpers.get_list_of_gateway_descriptions(config)
         self.assertEqual(len(g_list), 2)
         self.assertEqual(list(g_list.values())[0] ,'GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)')
         self.assertEqual(list(g_list.values())[1] ,'GW2 - fam-usb (Id: 2, BaseId: FF-BB-00-00)')

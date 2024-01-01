@@ -16,7 +16,7 @@ from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket
 
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_DEVICE, CONF_MAC
+from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry
@@ -24,38 +24,6 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-
-class GatewayDeviceType(str, Enum):
-    GatewayEltakoFAM14 = 'fam14'
-    GatewayEltakoFGW14USB = 'fgw14usb'
-    GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
-    EnOceanUSB300 = 'enocean-usb300'    # not yet supported
-
-    @classmethod
-    def find(cls, value):
-        for t in GatewayDeviceType:
-            if t.value.lower() == value.lower():
-                return t
-        return None
-
-    @classmethod
-    def is_transceiver(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300]
-
-    @classmethod
-    def is_bus_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB]
-    
-    @classmethod
-    def is_esp2_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB]
-
-BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
-    GatewayDeviceType.GatewayEltakoFAM14: 57600,
-    GatewayDeviceType.GatewayEltakoFGW14USB: 57600,
-    GatewayDeviceType.GatewayEltakoFAMUSB: 9600,
-    GatewayDeviceType.EnOceanUSB300: 57600,
-}
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
     #TODO: implement converter

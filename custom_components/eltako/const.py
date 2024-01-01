@@ -1,4 +1,5 @@
 """Constants for the Eltako integration."""
+from enum import Enum
 from strenum import StrEnum
 import logging
 
@@ -55,7 +56,7 @@ CONF_TIME_OPENS: Final = "time_opens"
 CONF_INVERT_SIGNAL: Final = "invert_signal"
 CONF_VOC_TYPE_INDEXES: Final = "voc_type_indexes"
 
-class LANGUAGE_ABBREVIATIONS(StrEnum):
+class LANGUAGE_ABBREVIATION(StrEnum):
     LANG_ENGLISH = 'en'
     LANG_GERMAN = 'de'
 
@@ -70,3 +71,34 @@ PLATFORMS: Final = [
     Platform.BUTTON,
 ]
 
+class GatewayDeviceType(str, Enum):
+    GatewayEltakoFAM14 = 'fam14'
+    GatewayEltakoFGW14USB = 'fgw14usb'
+    GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
+    EnOceanUSB300 = 'enocean-usb300'    # not yet supported
+
+    @classmethod
+    def find(cls, value):
+        for t in GatewayDeviceType:
+            if t.value.lower() == value.lower():
+                return t
+        return None
+
+    @classmethod
+    def is_transceiver(cls, dev_type) -> bool:
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300]
+
+    @classmethod
+    def is_bus_gateway(cls, dev_type) -> bool:
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB]
+    
+    @classmethod
+    def is_esp2_gateway(cls, dev_type) -> bool:
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB]
+
+BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
+    GatewayDeviceType.GatewayEltakoFAM14: 57600,
+    GatewayDeviceType.GatewayEltakoFGW14USB: 57600,
+    GatewayDeviceType.GatewayEltakoFAMUSB: 9600,
+    GatewayDeviceType.EnOceanUSB300: 57600,
+}

@@ -27,7 +27,7 @@ from .gateway import ESP2Gateway
 from .device import *
 from .const import *
 from .config_helpers import DeviceConf
-from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+from .eltako_integration import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 async def async_setup_entry(
     hass: HomeAssistant,
