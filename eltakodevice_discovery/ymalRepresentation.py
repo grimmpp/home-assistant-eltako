@@ -262,31 +262,34 @@ class HaConfig():
     def generate_config(self) -> str:
         e = self.eltako
 
-        out = f"{DOMAIN}:"
-        out += f"  {CONF_GERNERAL_SETTINGS}:"
-        out += f"    {CONF_FAST_STATUS_CHANGE}: False"
-        out += f"    {CONF_SHOW_DEV_ID_IN_DEV_NAME}: False"
-        out += f"  {CONF_GATEWAY}:"
-        out += f"  - {CONF_ID}: 1"
+        out = f"{DOMAIN}:\n"
+        out += f"  {CONF_GERNERAL_SETTINGS}:\n"
+        out += f"    {CONF_FAST_STATUS_CHANGE}: False\n"
+        out += f"    {CONF_SHOW_DEV_ID_IN_DEV_NAME}: False\n"
+        out += f"\n"
+        out += f"  {CONF_GATEWAY}:\n"
+        out += f"  - {CONF_ID}: 1\n"
         fam14 = GatewayDeviceType.GatewayEltakoFAM14.value
         fgw14usb = GatewayDeviceType.GatewayEltakoFGW14USB.value
-        out += f"    {CONF_DEVICE_TYPE}: {fam14}   # you can simply change {fam14} to {fgw14usb}"
-        out += f"    {CONF_BASE_ID}: "+self.fam14_base_id
-        out += f"    {CONF_DEVICES}:"
+        out += f"    {CONF_DEVICE_TYPE}: {fam14}   # you can simply change {fam14} to {fgw14usb}\n"
+        out += f"    {CONF_BASE_ID}: {self.fam14_base_id}\n"
+        out += f"    {CONF_DEVICES}:\n"
         # go through platforms
         for type_key in e.keys():
             if len(e[type_key]) > 0:
                 if type_key == CONF_UNKNOWN:
-                    out += f"      # SECTION '{CONF_UNKNOWN}' NEEDS TO BE REMOVED!!!"
+                    out += f"      # SECTION '{CONF_UNKNOWN}' NEEDS TO BE REMOVED!!!\n"
                 out += f"      {type_key}:"
                 for item in e[type_key]:
                     # print devices and sensors recursively
-                    out += self.config_section_to_string(item, True, 0) + "\n"
+                    out += self.config_section_to_string(item, True, 0) + "\n\n"
         # logs
-        out += "logger:"
-        out += "  default: info"
-        out += "  logs:"
-        out += f"    {DOMAIN}: debug"
+        out += "logger:\n"
+        out += "  default: info\n"
+        out += "  logs:\n"
+        out += f"    {DOMAIN}: debug\n"
+
+        return out
 
     def config_section_to_string(self, config, is_list:bool, space_count:int=0) -> str:
         out = ""

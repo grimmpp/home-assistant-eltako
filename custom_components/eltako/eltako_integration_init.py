@@ -1,13 +1,14 @@
 """Support for Eltako devices."""
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.core import HomeAssistant
 
 from .const import *
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-import sys
+import os
+os.environ.setdefault('SKIPP_IMPORT_HOME_ASSISTANT', "True")
+
 import argparse
 from argparse import RawTextHelpFormatter
 import asyncio
@@ -128,7 +130,7 @@ def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_addres
     logging.info(colored('Generate Home Assistant configuration.', 'red'))
 
     loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # asyncio.set_event_loop(loop)
 
     # bus_ready = asyncio.Future(loop=loop)
     # bus = RS485SerialInterface(eltakobus, baud_rate=int(baud_rate))
@@ -138,18 +140,22 @@ def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_addres
 
     bus2 = RS485SerialInterfaceV2(eltakobus, baud_rate=int(baud_rate) )
     bus2.start()
+    bus2.is_serial_connected.wait()
 
     try:
         config = HaConfig(int(offset_sender_address,16), save_debug_log_config=True)
-
-        # print( sys.modules.keys() )
+        
+        # asyncio.get_event_loop()
+        # task = loop.run_in_executor(None, ha_config, (bus2, config, offset_sender_address, write_sender_address_to_device) )
+        # _tasks.add(task)
+        # task.add_done_callback(_tasks.remove)
 
         maintask = asyncio.Task( ha_config(bus2, config, offset_sender_address, write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
         # maintask = asyncio.Task( listen(bus, config, True), loop=loop )
         # result = loop.run_until_complete(maintask)
-
+        
     except KeyboardInterrupt as e:
         logging.info("Received keyboard interrupt, cancelling")
         maintask.cancel()
@@ -164,6 +170,7 @@ def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_addres
         logging.info(result)
 
     return config.generate_config()
+    
 
 if __name__ == "__main__":
     main()
