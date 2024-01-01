@@ -172,6 +172,7 @@ class ESP2Gateway:
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
             self._bus.stop()
+            self._bus.join()
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
