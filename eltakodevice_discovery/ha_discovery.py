@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import os
+# there are problems with home assistant event loop handler which is blocking the execution of asyncio tasks. 
+# Therefore this flag is set so that it won't be loaded in __init__.py from the integration. 
+# Unfortunately, the logic in __init__.py cannot be moved somewehere else because home assistant is expecting it in there. :-(
 os.environ.setdefault('SKIPP_IMPORT_HOME_ASSISTANT', "True")
 
 import argparse
@@ -11,12 +14,6 @@ from termcolor import colored
 import logging
 
 from eltakobus import *
-# from eltakobus.device import BusObject, HasProgrammableRPS, DimmerStyle, sorted_known_objects
-# from eltakobus.message import prettify, EltakoDiscoveryReply, EltakoDiscoveryRequest
-# from eltakobus.serial import RS485SerialInterface
-# from eltakobus import locking
-# from eltakobus.util import AddressExpression
-# from eltakobus.eep import A5_38_08
 from eltakobus.locking import buslocked
 from ymalRepresentation import HaConfig
 
@@ -130,37 +127,25 @@ def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_addres
     logging.info(colored('Generate Home Assistant configuration.', 'red'))
 
     loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
 
-    # bus_ready = asyncio.Future(loop=loop)
-    # bus = RS485SerialInterface(eltakobus, baud_rate=int(baud_rate))
-    # asyncio.ensure_future(bus.run(loop, conn_made=bus_ready), loop=loop)
-    # loop.run_until_complete(bus_ready)
-    # cache_rawpart = opts.eltakobus.replace('/', '-')
-
-    bus2 = RS485SerialInterfaceV2(eltakobus, baud_rate=int(baud_rate) )
-    bus2.start()
-    bus2.is_serial_connected.wait()
+    bus = RS485SerialInterfaceV2(eltakobus, baud_rate=int(baud_rate) )
+    bus.start()
+    bus.is_serial_connected.wait()
 
     try:
         config = HaConfig(int(offset_sender_address,16), save_debug_log_config=True)
         
-        # asyncio.get_event_loop()
-        # task = loop.run_in_executor(None, ha_config, (bus2, config, offset_sender_address, write_sender_address_to_device) )
-        # _tasks.add(task)
-        # task.add_done_callback(_tasks.remove)
-
-        maintask = asyncio.Task( ha_config(bus2, config, offset_sender_address, write_sender_address_to_device), loop=loop )
+        maintask = asyncio.Task( ha_config(bus, config, offset_sender_address, write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
-        # maintask = asyncio.Task( listen(bus, config, True), loop=loop )
-        # result = loop.run_until_complete(maintask)
+        maintask = asyncio.Task( listen(bus, config, True), loop=loop )
+        result = loop.run_until_complete(maintask)
         
     except KeyboardInterrupt as e:
         logging.info("Received keyboard interrupt, cancelling")
         maintask.cancel()
 
-    bus2.stop()
+    bus.stop()
     
     config.add_detected_sensors_to_eltako_config()
     if filename is not None:
