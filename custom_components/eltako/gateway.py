@@ -7,7 +7,7 @@ from os.path import basename, normpath
 import serial
 import asyncio
 
-from eltakobus.serial import RS485SerialInterface
+from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
 from eltakobus.message import ESP2Message
 
 from eltakobus.util import AddressExpression
@@ -16,7 +16,7 @@ from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket
 
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_DEVICE, CONF_MAC
+from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry
@@ -24,38 +24,6 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-
-class GatewayDeviceType(str, Enum):
-    GatewayEltakoFAM14 = 'fam14'
-    GatewayEltakoFGW14USB = 'fgw14usb'
-    GatewayEltakoFAMUSB = 'fam-usb'     # ESP2 transceiver: https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/
-    EnOceanUSB300 = 'enocean-usb300'    # not yet supported
-
-    @classmethod
-    def find(cls, value):
-        for t in GatewayDeviceType:
-            if t.value.lower() == value.lower():
-                return t
-        return None
-
-    @classmethod
-    def is_transceiver(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300]
-
-    @classmethod
-    def is_bus_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB]
-    
-    @classmethod
-    def is_esp2_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB]
-
-BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
-    GatewayDeviceType.GatewayEltakoFAM14: 57600,
-    GatewayDeviceType.GatewayEltakoFGW14USB: 57600,
-    GatewayDeviceType.GatewayEltakoFAMUSB: 9600,
-    GatewayDeviceType.EnOceanUSB300: 57600,
-}
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
     #TODO: implement converter
@@ -93,7 +61,7 @@ class ESP2Gateway:
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
-        self._bus = RS485SerialInterface(serial_path, baud_rate=baud_rate)
+        self._bus = RS485SerialInterfaceV2(serial_path, baud_rate=baud_rate, callback=self._callback_receive_message_from_serial_bus)
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass
@@ -119,6 +87,8 @@ class ESP2Gateway:
             name= self.dev_name,
             model=self.model,
         )
+
+    ### address validation functions
 
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         if GatewayDeviceType.is_transceiver(self.dev_type):
@@ -157,70 +127,40 @@ class ESP2Gateway:
         return result
     
 
+    ### send and receive funtions for RS485 bus (serial bus)
+    ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
+
+
     async def async_setup(self):
-        """Finish the setup of the bridge and supported platforms."""
-        self._main_task = asyncio.ensure_future(self._wrapped_main(), loop=self._loop)
+        """Initialized serial bus and register callback function on HA event bus."""
+        self._bus.start()
         
+        # receive messages from HA event bus
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, event_id, self._send_message_callback
+            self.hass, event_id, self._callback_send_message_to_serial_bus
         )
 
     def unload(self):
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
+            self._bus.stop()
+            self._bus.join()
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
-    def _send_message_callback(self, msg):
-        """Send a request through the Eltako gateway."""
-        if isinstance(msg, ESP2Message):
-            LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
-            asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
+    def _callback_send_message_to_serial_bus(self, msg):
+        """Callback method call from HA when receiving events from serial bus."""
+        if self._bus.is_active():
+            if isinstance(msg, ESP2Message):
+                LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
+                # put message on serial bus
+                asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
+        else:
+            LOGGER.warn("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
 
-    async def _initialize_bus_task(self, run):
-        """Call bus.run in a task that takes down main if it crashes, and is
-        properly shut down as well"""
-        if self._bus_task is not None:
-            self._bus_task.cancel()
 
-        conn_made = asyncio.Future()
-        self._bus_task = asyncio.ensure_future(run(self._loop, conn_made=conn_made))
-        def bus_done(bus_future, _task=self._main_task):
-            self._bus_task = None
-            try:
-                result = bus_future.result()
-            except Exception as e:
-                LOGGER.error("Bus task terminated with %s, removing main task", bus_future.exception())
-                LOGGER.exception(e)
-            else:
-                LOGGER.error("Bus task terminated with %s (it should have raised an exception instead), removing main task", result)
-            _task.cancel()
-        self._bus_task.add_done_callback(bus_done)
-        await conn_made
-    
-    async def _wrapped_main(self, *args):
-        try:
-            await self._main(*args)
-        except Exception as e:
-            LOGGER.exception(e)
-            # FIXME should I just restart with back-off?
-
-        if self._bus_task is not None:
-            self._bus_task.cancel()
-
-    async def _main(self):
-        bus = self._bus
-        await self._initialize_bus_task(bus.run)
-
-        while True:
-            await self._step(bus)
-
-    async def _step(self, bus):
-        message = await bus.received.get()
-        self._callback(message)
-
-    def _callback(self, message):
+    def _callback_receive_message_from_serial_bus(self, message):
         """Handle Eltako device's callback.
 
         This is the callback function called by python-enocan whenever there

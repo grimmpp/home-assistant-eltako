@@ -219,7 +219,7 @@ gateway:
         filename = os.path.join(os.getcwd(), 'ha.yaml')
         with open(filename, 'r') as file:
             config = yaml.safe_load(file)
-            CONFIG_SCHEMA(config[DOMAIN])
+            CONFIG_SCHEMA(config[str(DOMAIN)])
 
         self.assertTrue(config_helpers.config_check_gateway(config[DOMAIN]))
 

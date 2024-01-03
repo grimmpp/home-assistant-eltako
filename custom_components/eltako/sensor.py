@@ -603,14 +603,14 @@ class EltakoAirQualitySensor(EltakoSensor):
     - A5-09-0C
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATIONS) -> None:
+    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATION) -> None:
         """Initialize the Eltako air quality sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
 
         self.voc_type_name = voc_type.name_en
-        if language == LANGUAGE_ABBREVIATIONS.LANG_GERMAN:
+        if language == LANGUAGE_ABBREVIATION.LANG_GERMAN:
             self.voc_type_name = voc_type.name_de
 
         description = EltakoSensorEntityDescription(

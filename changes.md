@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.0 Reliable Serial Communication
+* Switched to new **serial communication which automatically reconnect** in case of temporary connection/serial port loss.
+  E.g. USB cable can be disconnected and plugged back in again and it will automatically reconnect without manual HA restart.
 
 ## Version 1.2.4 GUI for Automatic Generation of Configuration
 * Device and sensor discovery and automatic generation of configuration improved and GUI added (See [docs](./eltakodevice_discovery/readme.md))
@@ -59,5 +62,3 @@
 ## Backlog
 * Docs for Configuration Schema
 * Extend device discovery for heating and cooling actuators
-* Gateway availability checks for send commands.
-* Reconnect for serial interface.

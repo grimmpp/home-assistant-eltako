@@ -176,7 +176,7 @@ class SensorSchema(EltakoPlatformSchema):
                 vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-                vol.Optional(CONF_LANGUAGE, default="en"): vol.In([v for v in LANGUAGE_ABBREVIATIONS]),
+                vol.Optional(CONF_LANGUAGE, default="en"): vol.In([v for v in LANGUAGE_ABBREVIATION]),
                 vol.Optional(CONF_VOC_TYPE_INDEXES, default=[0]): vol.All(cv.ensure_list, [vol.In([v.index for v in VOC_SubstancesType])]),
                 vol.Optional(CONF_METER_TARIFFS, default=DEFAULT_METER_TARIFFS): vol.All(cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=1, max=16))]),
                 vol.Optional(CONF_DEVICE_CLASS): BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,

@@ -1,15 +1,12 @@
-import json
 from termcolor import colored
 import logging
 from custom_components.eltako.const import *
-from custom_components.eltako.gateway import GatewayDeviceType
-from homeassistant.const import CONF_ID, CONF_DEVICES, CONF_NAME, CONF_PLATFORM, CONF_TYPE, CONF_DEVICE_CLASS, CONF_TEMPERATURE_UNIT, UnitOfTemperature
+from homeassistant.const import CONF_ID, CONF_DEVICES, CONF_NAME, CONF_PLATFORM, CONF_TYPE, CONF_DEVICE_CLASS, CONF_TEMPERATURE_UNIT, UnitOfTemperature, Platform
 from eltakobus.device import BusObject, FAM14, SensorInfo, KeyFunction
 from eltakobus.message import *
 from eltakobus.eep import *
 from eltakobus.util import b2s, AddressExpression
 
-from homeassistant.const import Platform
 
 EEP_MAPPING = [
     {'hw-type': 'FTS14EM', CONF_EEP: 'F6-02-01', CONF_TYPE: Platform.BINARY_SENSOR, 'description': 'Rocker switch', 'address_count': 1},
@@ -262,39 +259,37 @@ class HaConfig():
             # to find message which are not displayed. Only for debugging because most of the messages are poll messages.
             # logging.debug(msg)
 
-
-    def save_as_yaml_to_flie(self, filename:str):
-        logging.info(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
-        
+    def generate_config(self) -> str:
         e = self.eltako
 
-        with open(filename, 'w', encoding="utf-8") as f:
-            print(f"{DOMAIN}:", file=f)
-            print(f"  {CONF_GERNERAL_SETTINGS}:", file=f)
-            print(f"    {CONF_FAST_STATUS_CHANGE}: False", file=f)
-            print(f"    {CONF_SHOW_DEV_ID_IN_DEV_NAME}: False", file=f)
-            print(f"  {CONF_GATEWAY}:", file=f)
-            print(f"  - {CONF_ID}: 1", file=f)
-            fam14 = GatewayDeviceType.GatewayEltakoFAM14.value
-            fgw14usb = GatewayDeviceType.GatewayEltakoFGW14USB.value
-            print(f"    {CONF_DEVICE_TYPE}: {fam14}   # you can simply change {fam14} to {fgw14usb}", file=f)
-            print(f"    {CONF_BASE_ID}: "+self.fam14_base_id, file=f)
-            print(f"    {CONF_DEVICES}:", file=f)
-            # go through platforms
-            for type_key in e.keys():
-                if len(e[type_key]) > 0:
-                    if type_key == CONF_UNKNOWN:
-                        print(f"      # SECTION '{CONF_UNKNOWN}' NEEDS TO BE REMOVED!!!", file=f)
-                    print(f"      {type_key}:", file=f)
-                    for item in e[type_key]:
-                        # print devices and sensors recursively
-                        f.write( self.config_section_to_string(item, True, 0) + "\n" )
-            # logs
-            print("logger:", file=f)
-            print("  default: info", file=f)
-            print("  logs:", file=f)
-            print(f"    {DOMAIN}: debug", file=f)
+        out = f"{DOMAIN}:\n"
+        out += f"  {CONF_GERNERAL_SETTINGS}:\n"
+        out += f"    {CONF_FAST_STATUS_CHANGE}: False\n"
+        out += f"    {CONF_SHOW_DEV_ID_IN_DEV_NAME}: False\n"
+        out += f"\n"
+        out += f"  {CONF_GATEWAY}:\n"
+        out += f"  - {CONF_ID}: 1\n"
+        fam14 = GatewayDeviceType.GatewayEltakoFAM14.value
+        fgw14usb = GatewayDeviceType.GatewayEltakoFGW14USB.value
+        out += f"    {CONF_DEVICE_TYPE}: {fam14}   # you can simply change {fam14} to {fgw14usb}\n"
+        out += f"    {CONF_BASE_ID}: {self.fam14_base_id}\n"
+        out += f"    {CONF_DEVICES}:\n"
+        # go through platforms
+        for type_key in e.keys():
+            if len(e[type_key]) > 0:
+                if type_key == CONF_UNKNOWN:
+                    out += f"      # SECTION '{CONF_UNKNOWN}' NEEDS TO BE REMOVED!!!\n"
+                out += f"      {type_key}:"
+                for item in e[type_key]:
+                    # print devices and sensors recursively
+                    out += self.config_section_to_string(item, True, 0) + "\n\n"
+        # logs
+        out += "logger:\n"
+        out += "  default: info\n"
+        out += "  logs:\n"
+        out += f"    {DOMAIN}: debug\n"
 
+        return out
 
     def config_section_to_string(self, config, is_list:bool, space_count:int=0) -> str:
         out = ""
@@ -321,3 +316,11 @@ class HaConfig():
                 out += self.config_section_to_string(value, False, space_count+2)
         
         return out
+    
+    def save_as_yaml_to_flie(self, filename:str):
+        logging.info(colored(f"\nStore config into {filename}", 'red', attrs=['bold']))
+        
+        config_str = self.generate_config()
+
+        with open(filename, 'w', encoding="utf-8") as f:
+            print(config_str, file=f)
