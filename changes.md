@@ -1,7 +1,7 @@
 # Changes and Feature List
 
 ## Version 1.3.0 Reliable Serial Communication
-* Switched to new serial communication which can recover after connection loss. 
+* Switched to new **serial communication which automatically reconnect** in case of temporary connection/serial port loss.
   E.g. USB cable can be disconnected and plugged back in again and it will automatically reconnect without manual HA restart.
 
 ## Version 1.2.4 GUI for Automatic Generation of Configuration
