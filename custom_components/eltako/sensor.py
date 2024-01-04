@@ -429,21 +429,16 @@ class EltakoWindowHandle(EltakoSensor):
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
-            decoded = self.dev_eep.decode_message(msg)
+            decoded:F6_10_00 = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
         
-        if decoded.learn_button != 1:
-            return
-        
-        action = (decoded.movement & 0x70) >> 4
-        
-        if action == 0x07:
+        if decoded.handle_position == WindowHandlePosition.CLOSED:
             self._attr_native_value = STATE_CLOSED
-        elif action in (0x04, 0x06):
+        elif decoded.handle_position == WindowHandlePosition.OPEN:
             self._attr_native_value = STATE_OPEN
-        elif action == 0x05:
+        elif decoded.handle_position == WindowHandlePosition.TILT:
             self._attr_native_value = "tilt"
         else:
             return
