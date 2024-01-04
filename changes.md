@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.1 Correction of Window Handle Positions (EEP F6-10-00)
+*  &#x1F41E; Fixed Bug &#x1F41E;: Window handle status was not evaluated correctly
+
 ## Version 1.3.0 Reliable Serial Communication
 * Switched to new **serial communication which automatically reconnect** in case of temporary connection/serial port loss.
   E.g. USB cable can be disconnected and plugged back in again and it will automatically reconnect without manual HA restart.
