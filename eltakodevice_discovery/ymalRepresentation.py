@@ -279,7 +279,7 @@ class HaConfig():
             if len(e[type_key]) > 0:
                 if type_key == CONF_UNKNOWN:
                     out += f"      # SECTION '{CONF_UNKNOWN}' NEEDS TO BE REMOVED!!!\n"
-                out += f"      {type_key}:"
+                out += f"      {type_key}:\n"
                 for item in e[type_key]:
                     # print devices and sensors recursively
                     out += self.config_section_to_string(item, True, 0) + "\n\n"
