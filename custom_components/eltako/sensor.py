@@ -435,11 +435,12 @@ class EltakoWindowHandle(EltakoSensor):
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
+        LOGGER.debug("[Window Handle Sensor] process message %s", msg)
         try:
             decoded:F6_10_00 = self.dev_eep.decode_message(msg)
-            LOGGER.debug("[Sensor] received message %s", msg)
+            LOGGER.debug("[Window Handle Sensor] received message %s", decoded)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
             return
         
         if decoded.handle_position == WindowHandlePosition.CLOSED:
@@ -451,7 +452,7 @@ class EltakoWindowHandle(EltakoSensor):
         else:
             return
         
-        LOGGER.debug("Changed state to %s", self.native_value)
+        LOGGER.debug("[Window Handle Sensor] Changed state to %s", self.native_value)
 
         self.schedule_update_ha_state()
 
