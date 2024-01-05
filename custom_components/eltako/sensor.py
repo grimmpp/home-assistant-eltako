@@ -140,7 +140,6 @@ SENSOR_DESC_WINDOWHANDLE = EltakoSensorEntityDescription(
     icon="mdi:window-open-variant",
     device_class='window',
     native_unit_of_measurement=None,
-    native_value=str,
     suggested_display_precision=None,
     suggested_unit_of_measurement=None,
     state_class=None
