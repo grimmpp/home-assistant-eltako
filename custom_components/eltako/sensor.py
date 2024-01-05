@@ -432,7 +432,6 @@ class EltakoWindowHandle(EltakoSensor):
     def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako window handle sensor device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
-        self._message_received_callback = self.value_changed
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
