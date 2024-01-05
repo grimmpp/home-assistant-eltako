@@ -437,6 +437,7 @@ class EltakoWindowHandle(EltakoSensor):
         """Update the internal state of the sensor."""
         try:
             decoded:F6_10_00 = self.dev_eep.decode_message(msg)
+            LOGGER.debug("[Sensor] received message %s", msg)
         except Exception as e:
             LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
             return
@@ -449,6 +450,8 @@ class EltakoWindowHandle(EltakoSensor):
             self._attr_native_value = "tilt"
         else:
             return
+        
+        LOGGER.debug("Changed state to %s", self.native_value)
 
         self.schedule_update_ha_state()
 
