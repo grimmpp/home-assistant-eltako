@@ -138,6 +138,12 @@ SENSOR_DESC_WINDOWHANDLE = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_WINDOWHANDLE,
     name="Window handle",
     icon="mdi:window-open-variant",
+    device_class='window',
+    native_unit_of_measurement=None,
+    native_value=str,
+    suggested_display_precision=None,
+    suggested_unit_of_measurement=None,
+    state_class=None
 )
 
 SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN = EltakoSensorEntityDescription(
@@ -335,7 +341,8 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
     ) -> None:
         """Initialize the Eltako sensor device."""
         self.entity_description = description
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_state_class = description.state_class
+        
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         #self._attr_unique_id = f"{self.identifier}_{description.key}"
         # self.entity_id = f"{platform}.{self.unique_id}_{description.key}"

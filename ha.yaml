@@ -1,118 +1,130 @@
 eltako:
   general_settings:
-    fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
-    show_dev_id_in_dev_name: True
+    fast_status_change: False
+    show_dev_id_in_dev_name: False
+
   gateway:
   - id: 1
-    device_type: fgw14usb            # Supported gateways: gam14, fgw14usb
-    base_id: FF-AA-80-00
-    name: FGW14-USB
+    device_type: fam14   # you can simply change fam14 to fgw14usb
+    base_id: FF-CD-60-80
     devices:
-      sensor:
-      - id: 05-EE-88-15
-        eep: A5-13-01
-        name: "Weather Station"
-      - id: ff-aa-dd-81
-        eep: A5-04-02
-        name: "Temperature and Humidity Sensor - FLGTF55"
-      - id: ff-66-dd-81
-        eep: A5-04-02
-        name: "Temp. Sensor 2 - FLGTF55"
-      - id: ff-ee-55-81
-        eep: A5-10-06
-        name: "Temp. Sensor and Controller - FUTH A5-10-06"
-      - id: ff-ee-55-92
-        eep: A5-10-12
-        name: "Hygrostat - FUTH"
-      - id: ff-66-dd-80
-        eep: A5-09-0C
-        name: "Air Quality Sensor - FLGTF55"
-      light:
-      - id: 00-00-00-01
-        eep: M5-38-08
-        name: FSR14_4x - 1
-        sender:
-          id: 00-00-B0-01
-          eep: A5-38-08
-      - id: 00-00-00-02
-        eep: M5-38-08
-        name: FSR14_4x - 2
-        sender:
-          id: 00-00-B0-02
-          eep: A5-38-08
-      - id: 00-00-00-03
-        eep: M5-38-08
-        name: FSR14_4x - 3
-        sender:
-          id: 00-00-B0-03
-          eep: A5-38-08
-      - id: 00-00-00-04
-        eep: M5-38-08
-        name: FSR14_4x - 4
-        sender:
-          id: 00-00-B0-04
-          eep: A5-38-08
-      - id: 00-00-00-05
-        eep: A5-38-08
-        name: FUD14 - 5
-        sender:
-          id: 00-00-B0-05
-          eep: A5-38-08
+      # SECTION 'unknown' NEEDS TO BE REMOVED!!!
+      unknown:
+        # UNIVERSAL_PUSH_BUTTON_ES
+        # REGISTERD IN DEVICE: ['00-00-00-07 (FSR14_4x)']
+      - id: 00-00-10-02
+        eep: unknown
+        name: unknown
+
+
+        # UNIVERSAL_PUSH_BUTTON_ES
+        # REGISTERD IN DEVICE: ['00-00-00-09 (FSR14_4x)']
+      - id: 00-00-10-26
+        eep: unknown
+        name: unknown
+
+
+        # SWITCHING_STATE_FROM_CONTROLLER
+        # REGISTERD IN DEVICE: ['00-00-00-07 (FSR14_4x)']
+      - id: FF-86-B0-8A
+        eep: unknown
+        name: unknown
+
+
+        # SWITCHING_STATE_FROM_CONTROLLER
+        # REGISTERD IN DEVICE: ['00-00-00-08 (FSR14_4x)']
+      - id: FF-86-B0-8B
+        eep: unknown
+        name: unknown
+
+
+        # SWITCHING_STATE_FROM_CONTROLLER
+        # REGISTERD IN DEVICE: ['00-00-00-09 (FSR14_4x)']
+      - id: FF-86-B0-8C
+        eep: unknown
+        name: unknown
+
+
       binary_sensor:
-        - id: ff-bb-0a-1b
-          eep: F6-02-01
-        - id: ff-bb-da-04
-          eep: F6-02-01     # rocker switch 1
-        - id: ff-dd-b6-40
-          eep: F6-02-01     # rocker switch 2
-        - id: 00-00-10-08   # address from FTS14EM (wired switch)
-          eep: D5-00-01
-          name: window 8
-          device_class: window  # is displayed as window contact
-          invert_signal: True   # value is inverted and shows closed contact as open.
+        # DIRECTION_PUSH_BUTTON_BOTTOM_ON
+        # REGISTERD IN DEVICE: ['00-00-00-08 (FSR14_4x)']
+      - id: FF-81-41-07
+        eep: F6-02-01
+        name: Switch
+
+
+        # DIRECTION_PUSH_BUTTON_BOTTOM_ON
+        # REGISTERD IN DEVICE: ['00-00-00-07 (FSR14_4x)', '00-00-00-08 (FSR14_4x)', '00-00-00-09 (FSR14_4x)', '00-00-00-0A (FSR14_4x)']
+      - id: FE-DB-0A-1B
+        eep: F6-02-01
+        name: Switch
+
+
+        # DIRECTION_PUSH_BUTTON_TOP_ON
+        # REGISTERD IN DEVICE: ['00-00-00-07 (FSR14_4x)', '00-00-00-08 (FSR14_4x)', '00-00-00-09 (FSR14_4x)', '00-00-00-0A (FSR14_4x)']
+      - id: FE-DB-DA-04
+        eep: F6-02-01
+        name: Switch
+
+
+      light:
+      - id: 00-00-00-07
+        eep: M5-38-08
+        name: FSR14_4x - 7
+        sender: 
+          id: 00-00-B0-07
+          eep: A5-38-08
+
+
+      - id: 00-00-00-08
+        eep: M5-38-08
+        name: FSR14_4x - 8
+        sender: 
+          id: 00-00-B0-08
+          eep: A5-38-08
+
+
+      - id: 00-00-00-09
+        eep: M5-38-08
+        name: FSR14_4x - 9
+        sender: 
+          id: 00-00-B0-09
+          eep: A5-38-08
+
+
+      - id: 00-00-00-0A
+        eep: M5-38-08
+        name: FSR14_4x - 10
+        sender: 
+          id: 00-00-B0-0A
+          eep: A5-38-08
+
+
       cover:
+      - id: 00-00-00-05
+        eep: G5-3F-7F
+        name: FSB14 - 5
+        sender: 
+          id: 00-00-B0-05
+          eep: H5-3F-7F
+        device_class: shutter
+        time_closes: 25
+        time_opens: 25
+
+
       - id: 00-00-00-06
         eep: G5-3F-7F
         name: FSB14 - 6
-        sender:
+        sender: 
           id: 00-00-B0-06
           eep: H5-3F-7F
         device_class: shutter
-        time_closes: 24
+        time_closes: 25
         time_opens: 25
-      - id: 00-00-00-07
-        eep: G5-3F-7F
-        name: FSB14 - 7
-        sender:
-          id: 00-00-B0-07
-          eep: H5-3F-7F
-        device_class: shutter
-        time_closes: 24
-        time_opens: 25
-      climate:
-      - id: 00-00-00-08
-        eep: A5-10-06
-        name: FAE14SSR - 8
-        temperature_unit: K
-        sender:
-          id: 00-00-B0-08
-          eep: A5-10-06
-        thermostat:
-          id: FF-BB-80-81
-          eep: A5-10-06
-        cooling_mode:
-          sensor:
-            id: FF-BB-12-12
-            switch_button: 0x50
-      - id: 00-00-00-09
-        eep: A5-10-06
-        name: FAE14SSR - 9
-        temperature_unit: K
-        sender:
-          id: 00-00-B0-09
-          eep: A5-10-06
+
 
 logger:
   default: info
   logs:
     eltako: debug
+
