@@ -1,6 +1,6 @@
 # Changes and Feature List
 
-## Version 1.3.1 Correction of Window Handle Positions (EEP F6-10-00)
+## Version 1.3.2 Correction of Window Handle Positions (EEP F6-10-00)
 *  &#x1F41E; Fixed Bug &#x1F41E;: Window handle status was not evaluated correctly
 
 ## Version 1.3.0 Reliable Serial Communication

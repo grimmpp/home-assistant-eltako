@@ -4,4 +4,4 @@ eltako14bus
 enocean
 homeassistant
 termcolor
-enumstr
+StrEnum
