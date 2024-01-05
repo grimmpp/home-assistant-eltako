@@ -110,6 +110,7 @@ python -m unittest discover tests -v
 
 
 # External Documentation
+* [Full setup journey and automation project with Eltako](https://github.com/cvanlabe/Eltako-home-automation/tree/main) from [Cedric Van Labeke](https://github.com/cvanlabe) **RECOMMENDED!!!**
 * [Home Assistant Developer Docs](https://developers.home-assistant.io/)
 * [EnOcean Equipment Profiles - EEP2.1](https://www.trio2sys.fr/images/media/EnOcean_Equipment_Profiles_EEP2.1.pdf)
 * [EnOcean Equipment Profiles - EEP v2.6.7](https://www.enocean-alliance.org/wp-content/uploads/2017/05/EnOcean_Equipment_Profiles_EEP_v2.6.7_public.pdf)
@@ -117,4 +118,5 @@ python -m unittest discover tests -v
 * [OpenHAB Binding for EnOcean/Binding](https://github.com/fruggy83/openocean)
 
 # Credits
-Credits for this code goes to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who made this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)).  This repository here on Github is meant to keep the Eltako integration alive, make it work again with the latest Home Asssistant Core and potentially add functionalities.
+Credits for this code goes to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who initiated and made this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)). Because of many many changes to the original repository the fork was decoupled. <br/>
+Big thanks as well to [Cedric Van Labeke](https://github.com/cvanlabe) who provides a very good [documentation](https://github.com/cvanlabe/Eltako-home-automation/tree/main) and helped me to make my first steps into this world.
