@@ -1,5 +1,9 @@
 # Changes and Feature List
 
+## Version 1.3.3 Experimental Support for USB300/ESP3
+* Wrapper for ESP3 serial communication added. (It can automatically reconnect as well.)
+* Converter for ESP3 to ESP2 messages added
+
 ## Version 1.3.2 Correction of Window Handle Positions (EEP F6-10-00)
 *  &#x1F41E; Fixed Bug &#x1F41E;: Window handle status was not evaluated correctly
 
