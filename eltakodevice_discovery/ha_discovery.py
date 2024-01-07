@@ -114,10 +114,10 @@ In the output file EEPs for sensors need to be manually extend before copying th
 
     opts = p.parse_args()
 
-    run(opts.verbose, opts.eltakobus, opts.baud_rate, opts.offset_sender_address, opts.write_sender_address_to_device, opts.output)
+    run(opts.verbose, opts.eltakobus, opts.baud_rate, opts.offset_sender_address, opts.write_sender_address_to_device, opts.output, check_sensors=True)
 
 
-def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_address:int=0, write_sender_address_to_device:bool=False, filename:str=None) -> str:
+def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_address:int=0, write_sender_address_to_device:bool=False, filename:str=None, check_sensors:bool=False) -> str:
 
     log_level = logging.INFO
     if verbose > 0:
@@ -138,8 +138,9 @@ def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_addres
         maintask = asyncio.Task( ha_config(bus, config, offset_sender_address, write_sender_address_to_device), loop=loop )
         result = loop.run_until_complete(maintask)
 
-        maintask = asyncio.Task( listen(bus, config, True), loop=loop )
-        result = loop.run_until_complete(maintask)
+        if check_sensors:
+            maintask = asyncio.Task( listen(bus, config, True), loop=loop )
+            result = loop.run_until_complete(maintask)
         
     except KeyboardInterrupt as e:
         logging.info("Received keyboard interrupt, cancelling")

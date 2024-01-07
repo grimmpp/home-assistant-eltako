@@ -184,6 +184,11 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
+
+        elif self.dev_eep in [A5_07_01]:
+
+            self._attr_is_on = decoded.pir_status_on == 1
+
         else:
             return
         
