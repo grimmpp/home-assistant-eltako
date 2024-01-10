@@ -35,6 +35,7 @@ from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
     CONF_LANGUAGE,
+    UnitOfElectricPotential,
 )
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -67,6 +68,8 @@ SENSOR_TYPE_WATER_CURRENT = "water_current"
 SENSOR_TYPE_TEMPERATURE = "temperature"
 SENSOR_TYPE_TARGET_TEMPERATURE = "target_temperature"
 SENSOR_TYPE_HUMIDITY = "humidity"
+SENSOR_TYPE_VOLTAGE = "voltage"
+SENSOR_TYPE_PIR = "pir"
 SENSOR_TYPE_WINDOWHANDLE = "windowhandle"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_DAWN = "weather_station_illuminance_dawn"
 SENSOR_TYPE_WEATHER_STATION_TEMPERATURE = "weather_station_temperature"
@@ -244,6 +247,25 @@ SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
     suggested_display_precision=1,
 )
 
+SENSOR_DESC_VOLTAGE = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_VOLTAGE,
+    name="voltage",
+    native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+    icon="mdi:sine-wave",
+    device_class=SensorDeviceClass.VOLTAGE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=1,
+)
+
+SENSOR_DESC_PIR = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_PIR,
+    name="pir",
+    native_unit_of_measurement=None,
+    icon="mdi:home-outline",
+    device_class=None,
+    state_class=SensorStateClass.MEASUREMENT,
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -322,6 +344,10 @@ async def async_setup_entry(
                         if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
                             entities.append(EltakoAirQualitySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, t, entity_config[CONF_LANGUAGE]))
 
+                elif dev_conf.eep in [A5_07_01]:
+                    entities.append(EltakoPirSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoVoltageSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
@@ -364,6 +390,46 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
+
+
+class EltakoPirSensor(EltakoSensor):
+    """Occupancy Sensor"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_PIR) -> None:
+        """Initialize the Eltako meter sensor device."""
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
+
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded:A5_07_01 = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.pir_status
+
+        self.schedule_update_ha_state()
+
+
+class EltakoVoltageSensor(EltakoSensor):
+    """Voltage Sensor"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_VOLTAGE) -> None:
+        """Initialize the Eltako meter sensor device."""
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
+
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded:A5_07_01 = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.support_voltage
+
+        self.schedule_update_ha_state()
 
 
 class EltakoMeterSensor(EltakoSensor):
