@@ -158,14 +158,15 @@ class SensorSchema(EltakoPlatformSchema):
 
     CONF_EEP_SUPPORTED = [A5_04_01.eep_string,
                           A5_04_02.eep_string,
+                          A5_07_01.eep_string,
                           A5_09_0C.eep_string,
                           A5_10_06.eep_string,
                           A5_10_12.eep_string,
                           A5_12_01.eep_string, 
                           A5_12_02.eep_string, 
                           A5_12_03.eep_string, 
-                          A5_13_01.eep_string, 
-                          F6_10_00.eep_string, 
+                          A5_13_01.eep_string,
+                          F6_10_00.eep_string,  
                           ]
 
     DEFAULT_NAME = ""
