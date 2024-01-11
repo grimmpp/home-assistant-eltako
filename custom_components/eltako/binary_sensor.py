@@ -38,7 +38,7 @@ async def async_setup_entry(
             for entity_config in config[platform]:
                 try:
                     dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
-                    if dev_conf.eep in CONF_EEP_SUPPORTED_BINARY_SENSOR:
+                    if dev_conf.eep.eep_string in CONF_EEP_SUPPORTED_BINARY_SENSOR:
                         entities.append(EltakoBinarySensor(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                                         dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
