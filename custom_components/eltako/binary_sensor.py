@@ -15,6 +15,7 @@ from homeassistant.helpers.typing import ConfigType
 from .device import *
 from .const import *
 from .gateway import EnOceanGateway
+from .schema import CONF_EEP_SUPPORTED_BINARY_SENSOR
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 import json
@@ -32,16 +33,18 @@ async def async_setup_entry(
     
     platform = Platform.BINARY_SENSOR
 
-    if platform in config:
-        for entity_config in config[platform]:
-            try:
-                dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
-                entities.append(EltakoBinarySensor(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
-                                                   dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
+    for platform in [Platform.BINARY_SENSOR, Platform.SENSOR]:
+        if platform in config:
+            for entity_config in config[platform]:
+                try:
+                    dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
+                    if dev_conf.eep in CONF_EEP_SUPPORTED_BINARY_SENSOR:
+                        entities.append(EltakoBinarySensor(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                        dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
-            except Exception as e:
-                        LOGGER.warning("[%s] Could not load configuration", platform)
-                        LOGGER.critical(e, exc_info=True)
+                except Exception as e:
+                            LOGGER.warning("[%s] Could not load configuration", platform)
+                            LOGGER.critical(e, exc_info=True)
 
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
