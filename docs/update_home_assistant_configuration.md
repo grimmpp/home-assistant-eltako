@@ -66,7 +66,7 @@ eltako:
         name: "Socket Basement"   # optional: display name
         sender:                   # virtual switch in Home Assistant.
           id: 00-00-B0-02         # every sender needs it's own address which needs to be entered in PCT14 / actuator with function group 51 for FSR14.
-          eep: A5-38-08 
+          eep: F6-02-01 
 
       # sensor can be almost everything what can send data.
       sensor:
