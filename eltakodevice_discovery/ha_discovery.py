@@ -122,7 +122,7 @@ def run(verbose:int=0, eltakobus:str=None, baud_rate:int=0, offset_sender_addres
     log_level = logging.INFO
     if verbose > 0:
         log_level = logging.DEBUG
-    logging.basicConfig(format='%(message)s', level=log_level)
+    logging.baicConfig(format='%(message)s', level=log_level)
 
     logging.info(colored('Generate Home Assistant configuration.', 'red'))
 
