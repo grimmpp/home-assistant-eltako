@@ -13,7 +13,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatche
 from homeassistant.helpers.entity import Entity
 
 from .const import *
-from .gateway import ESP2Gateway
+from .gateway import EnOceanGateway
 from . import config_helpers
 
 
@@ -21,7 +21,7 @@ class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
         self._attr_gateway = gateway
         self.general_settings = self.gateway.general_settings
@@ -36,7 +36,7 @@ class EltakoEntity(Entity):
         self.entity_id = f"{platform}.{self.unique_id}"
 
     @classmethod
-    def _get_identifier(cls, gateway: ESP2Gateway, dev_id: AddressExpression) -> str:
+    def _get_identifier(cls, gateway: EnOceanGateway, dev_id: AddressExpression) -> str:
         return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}"
 
     @property
@@ -90,7 +90,7 @@ class EltakoEntity(Entity):
         return self._attr_dev_id
     
     @property
-    def gateway(self) -> ESP2Gateway:
+    def gateway(self) -> EnOceanGateway:
         """Return the supporting gateway of device."""
         return self._attr_gateway
 

@@ -19,7 +19,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .device import *
 from . import config_helpers
-from .gateway import ESP2Gateway
+from .gateway import EnOceanGateway
 from .const import *
 from . import get_gateway_from_hass, get_device_config_for_gateway
 
@@ -33,7 +33,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako buttons."""
-    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    gateway: EnOceanGateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
@@ -69,7 +69,7 @@ async def async_setup_entry(
 class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
     """Button which sends teach-in telegram for temperature controller."""
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = "temperature-controller-teach-in-button"

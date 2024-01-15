@@ -41,7 +41,7 @@ from homeassistant.const import (
     CONF_LANGUAGE,
 )
 
-CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_08_01.eep_string]
+CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_02_01.eep_string, F6_02_02.eep_string, F6_10_00.eep_string, D5_00_01.eep_string, A5_07_01.eep_string, A5_08_01.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
 
 def _get_sender_schema(supported_sender_eep) -> vol.Schema:
@@ -156,15 +156,17 @@ class SensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako sensors."""
     PLATFORM = Platform.SENSOR
 
-    CONF_EEP_SUPPORTED = [A5_04_02.eep_string,
+    CONF_EEP_SUPPORTED = [A5_04_01.eep_string,
+                          A5_04_02.eep_string,
+                          A5_07_01.eep_string,
                           A5_09_0C.eep_string,
                           A5_10_06.eep_string,
                           A5_10_12.eep_string,
                           A5_12_01.eep_string, 
                           A5_12_02.eep_string, 
                           A5_12_03.eep_string, 
-                          A5_13_01.eep_string, 
-                          F6_10_00.eep_string, 
+                          A5_13_01.eep_string,
+                          F6_10_00.eep_string,  
                           ]
 
     DEFAULT_NAME = ""

@@ -1,5 +1,10 @@
 # Changes and Feature List
 
+## Version 1.3.3 Added Temp and Humidity (EEP A5-04-01) and Occupancy Sensor (EEP A5-07-01)
+* Added support for EEP A5-04-01 and A5-07-01
+* Wrapper for ESP3 serial communication added. (It can automatically reconnect as well.) (Experimental Support)
+* Converter for ESP3 to ESP2 messages added
+
 ## Version 1.3.2 Correction of Window Handle Positions (EEP F6-10-00)
 *  &#x1F41E; Fixed Bug &#x1F41E;: Window handle status was not evaluated correctly
 
