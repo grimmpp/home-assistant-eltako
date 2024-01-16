@@ -579,7 +579,7 @@ class EltakoHumiditySensor(EltakoSensor):
     """
 
     def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_HUMIDITY) -> None:
-        """Initialize the Eltako temperature sensor."""
+        """Initialize the Eltako humidity sensor."""
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = DEFAULT_DEVICE_NAME_HYGROSTAT
