@@ -50,7 +50,7 @@ class DeviceConf(dict):
         for ek in extra_keys:
             if ek in config:
                 setattr(self, ek, config.get(ek))
-        pass
+        
 
     def get(self, key: str):
         return super().get(key, None)
