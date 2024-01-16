@@ -8,12 +8,12 @@ import serial
 import asyncio
 
 from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
-from eltakobus.message import ESP2Message
+from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage
 
 from eltakobus.util import AddressExpression
 
 from enocean.communicators import SerialCommunicator
-from enocean.protocol.packet import RadioPacket
+from enocean.protocol.packet import RadioPacket, RORG, Packet
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
@@ -24,14 +24,33 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
+from .esp3_serial_com import ESP3SerialCommunicator
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
-    #TODO: implement converter
-    raise Exception("Message conversion from ESP2 to ESP3 NOT YET IMPLEMENTED.")
+    
+    org = 0xF6
+    if isinstance(message, RPSMessage):
+        org = RORG.RPS
+    elif isinstance(message, Regular1BSMessage):
+        org = RORG.BS1
+    elif isinstance(message, Regular4BSMessage):
+        org = RORG.BS4
+
+    data = [org] + message.data + message.address + message.status
+
+    packet = Packet(packet_type=0x01, data=data, optional=[])
+    return packet
 
 def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
-    #TODO: implement converter
-    raise Exception("Message conversion from ESP3 to ESP2 NOT YET IMPLEMENTED.")
+    
+    org = 0x05
+    if RORG.BS1:
+        org = 0x06
+    elif RORG.BS4:
+        org = 0x07
+
+    body:bytes = [0x0b, org] + packet.data[1:]
+    return ESP2Message(body)
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
     base_id_list = []
@@ -47,7 +66,7 @@ async def async_get_serial_path_of_registered_gateway(device_registry: DeviceReg
             serial_path_list.append( list(d.identifiers)[0][1] )
     return serial_path_list
 
-class ESP2Gateway:
+class EnOceanGateway:
     """Representation of an Eltako gateway.
 
     The gateway is responsible for receiving the Eltako frames,
@@ -61,7 +80,10 @@ class ESP2Gateway:
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
-        self._bus = RS485SerialInterfaceV2(serial_path, baud_rate=baud_rate, callback=self._callback_receive_message_from_serial_bus)
+        if GatewayDeviceType.is_esp2_gateway(dev_type):
+            self._bus = RS485SerialInterfaceV2(serial_path, baud_rate=baud_rate, callback=self._callback_receive_message_from_serial_bus)
+        else:
+            self._bus = ESP3SerialCommunicator(port=serial_path, callback=self._callback_receive_message_from_serial_bus)
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass
@@ -154,6 +176,11 @@ class ESP2Gateway:
         if self._bus.is_active():
             if isinstance(msg, ESP2Message):
                 LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
+
+                # convert ESP2 message to ESP3 in case of ESP3 gateway
+                if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
+                    msg = convert_esp3_to_esp2_message(msg)
+
                 # put message on serial bus
                 asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
         else:
@@ -166,6 +193,10 @@ class ESP2Gateway:
         This is the callback function called by python-enocan whenever there
         is an incoming message.
         """
+
+        # convert ESP3 message to ESP2 message for ESP3 gateway types
+        if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
+            message = convert_esp3_to_esp2_message(message)
 
         LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
         if isinstance(message, ESP2Message):
@@ -212,76 +243,6 @@ class ESP2Gateway:
         """Return the identifier of the gateway."""
         return self._attr_identifier
     
-
-    
-
-class ESP3Gateway:
-    """Representation of Enocean USB300 transmitter.
-
-    The dongle is responsible for receiving the ENOcean frames,
-    creating devices if needed, and dispatching messages to platforms.
-    """
-
-    def __init__(self, general_settings:dict, hass: HomeAssistant, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, base_id: AddressExpression, dev_name: str, config_entry):
-        """Initialize the EnOcean dongle."""
-
-        self._communicator = SerialCommunicator(
-            port=serial_path, callback=self.callback
-        )
-        self.serial_path = serial_path
-        self.identifier = basename(normpath(serial_path))
-        self.hass = hass
-        self.dispatcher_disconnect_handle = None
-        self.general_settings = general_settings
-        self.base_id = base_id
-        self.dev_type = dev_type
-        
-        device_registry = dr.async_get(hass)
-        device_registry.async_get_or_create(
-            config_entry_id=config_entry.entry_id,
-            identifiers={(DOMAIN, self.unique_id)},
-            manufacturer=MANUFACTURER,
-            name=GATEWAY_DEFAULT_NAME,
-        )
-
-    async def async_setup(self):
-        """Finish the setup of the bridge and supported platforms."""
-        self._communicator.start()
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
-        self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, event_id, self._send_message_callback
-        )
-
-    def unload(self):
-        """Disconnect callbacks established at init time."""
-        if self.dispatcher_disconnect_handle:
-            self.dispatcher_disconnect_handle()
-            self.dispatcher_disconnect_handle = None
-
-    def _send_message_callback(self, eltako_command):
-        """Send a command through the EnOcean dongle."""
-        enocean_command = convert_esp2_to_esp3_message(eltako_command)
-        if enocean_command is not None:
-            self._communicator.send(enocean_command)
-
-    def callback(self, packet):
-        """Handle EnOcean device's callback.
-
-        This is the callback function called by python-enocan whenever there
-        is an incoming packet.
-        """
-
-        if isinstance(packet, RadioPacket):
-            LOGGER.debug("Received radio packet: %s", packet)
-            eltako_message = convert_esp3_to_esp2_message(packet)
-            if eltako_message is not None:
-                event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
-                dispatcher_send(self.hass, event_id, eltako_message)
-            
-    @property
-    def unique_id(self):
-        """Return the unique id of the gateway."""
-        return self.serial_path
 
 
 def detect() -> [str]:

@@ -14,7 +14,8 @@ from homeassistant.helpers.typing import ConfigType
 
 from .device import *
 from .const import *
-from .gateway import ESP2Gateway
+from .gateway import EnOceanGateway
+from .schema import CONF_EEP_SUPPORTED_BINARY_SENSOR
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 import json
@@ -25,23 +26,25 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Binary Sensor platform for Eltako."""
-    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    gateway: EnOceanGateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
     
     entities: list[EltakoEntity] = []
     
     platform = Platform.BINARY_SENSOR
 
-    if platform in config:
-        for entity_config in config[platform]:
-            try:
-                dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
-                entities.append(EltakoBinarySensor(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
-                                                   dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
+    for platform in [Platform.BINARY_SENSOR, Platform.SENSOR]:
+        if platform in config:
+            for entity_config in config[platform]:
+                try:
+                    dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
+                    if dev_conf.eep.eep_string in CONF_EEP_SUPPORTED_BINARY_SENSOR:
+                        entities.append(EltakoBinarySensor(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                        dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
-            except Exception as e:
-                        LOGGER.warning("[%s] Could not load configuration", platform)
-                        LOGGER.critical(e, exc_info=True)
+                except Exception as e:
+                            LOGGER.warning("[%s] Could not load configuration", platform)
+                            LOGGER.critical(e, exc_info=True)
 
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
@@ -58,7 +61,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
     - D5-00-01
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
         """Initialize the Eltako binary sensor."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.invert_signal = invert_signal
@@ -89,7 +92,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         
         try:
             decoded = self.dev_eep.decode_message(msg)
-            # LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
+            LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
             LOGGER.warning("[Binary Sensor] Could not decode message: %s", str(e))
@@ -184,6 +187,11 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
+
+        elif self.dev_eep in [A5_07_01]:
+
+            self._attr_is_on = decoded.pir_status_on == 1
+
         else:
             return
         

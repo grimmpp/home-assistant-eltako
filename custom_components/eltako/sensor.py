@@ -35,6 +35,7 @@ from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_BILLION,
     CONF_LANGUAGE,
+    UnitOfElectricPotential,
 )
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -45,7 +46,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .device import *
 from .config_helpers import *
-from .gateway import ESP2Gateway
+from .gateway import EnOceanGateway
 from .const import *
 from . import get_gateway_from_hass, get_device_config_for_gateway
 
@@ -67,6 +68,8 @@ SENSOR_TYPE_WATER_CURRENT = "water_current"
 SENSOR_TYPE_TEMPERATURE = "temperature"
 SENSOR_TYPE_TARGET_TEMPERATURE = "target_temperature"
 SENSOR_TYPE_HUMIDITY = "humidity"
+SENSOR_TYPE_VOLTAGE = "voltage"
+SENSOR_TYPE_PIR = "pir"
 SENSOR_TYPE_WINDOWHANDLE = "windowhandle"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_DAWN = "weather_station_illuminance_dawn"
 SENSOR_TYPE_WEATHER_STATION_TEMPERATURE = "weather_station_temperature"
@@ -244,6 +247,25 @@ SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
     suggested_display_precision=1,
 )
 
+SENSOR_DESC_VOLTAGE = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_VOLTAGE,
+    name="voltage",
+    native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+    icon="mdi:sine-wave",
+    device_class=SensorDeviceClass.VOLTAGE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=1,
+)
+
+SENSOR_DESC_PIR = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_PIR,
+    name="pir",
+    native_unit_of_measurement=None,
+    icon="mdi:home-outline",
+    device_class=None,
+    state_class=SensorStateClass.MEASUREMENT,
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -251,7 +273,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up an Eltako sensor device."""
-    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    gateway: EnOceanGateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
@@ -305,7 +327,7 @@ async def async_setup_entry(
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
-                elif dev_conf.eep in [A5_04_02, A5_10_12]:
+                elif dev_conf.eep in [A5_04_02, A5_10_12, A5_04_01]:
                     
                     entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoHumiditySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
@@ -322,6 +344,10 @@ async def async_setup_entry(
                         if t.index in entity_config[CONF_VOC_TYPE_INDEXES]:
                             entities.append(EltakoAirQualitySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, t, entity_config[CONF_LANGUAGE]))
 
+                elif dev_conf.eep in [A5_07_01]:
+                    entities.append(EltakoPirSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoVoltageSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
@@ -335,7 +361,7 @@ async def async_setup_entry(
 class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
     """Representation of an  Eltako sensor device such as a power meter."""
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, 
+    def __init__(self, platform: str, gateway: EnOceanGateway, 
                  dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription
     ) -> None:
         """Initialize the Eltako sensor device."""
@@ -366,6 +392,46 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         """Update the internal state of the sensor."""
 
 
+class EltakoPirSensor(EltakoSensor):
+    """Occupancy Sensor"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_PIR) -> None:
+        """Initialize the Eltako meter sensor device."""
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
+
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded:A5_07_01 = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.pir_status
+
+        self.schedule_update_ha_state()
+
+
+class EltakoVoltageSensor(EltakoSensor):
+    """Voltage Sensor"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_VOLTAGE) -> None:
+        """Initialize the Eltako meter sensor device."""
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
+
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded:A5_07_01 = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.support_voltage
+
+        self.schedule_update_ha_state()
+
+
 class EltakoMeterSensor(EltakoSensor):
     """Representation of an Eltako electricity sensor.
 
@@ -374,7 +440,7 @@ class EltakoMeterSensor(EltakoSensor):
     - A5-12-02 (Automated Meter Reading, Gas)
     - A5-12-03 (Automated Meter Reading, Water)
     """
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
         """Initialize the Eltako meter sensor device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
         self._tariff = tariff
@@ -428,7 +494,7 @@ class EltakoWindowHandle(EltakoSensor):
     - F6-10-00 (Mechanical handle / Hoppe AG)
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako window handle sensor device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
 
@@ -459,7 +525,7 @@ class EltakoWeatherStation(EltakoSensor):
     - A5-13-01 (Weather station)
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription) -> None:
         """Initialize the Eltako weather station device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
 
@@ -523,7 +589,7 @@ class EltakoTemperatureSensor(EltakoSensor):
     - A5-04-02 (Temperature and Humidity)
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
@@ -551,7 +617,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
     - A5-10-06, A5-10-12
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TARGET_TEMPERATURE) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_TARGET_TEMPERATURE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
@@ -604,7 +670,7 @@ class EltakoAirQualitySensor(EltakoSensor):
     - A5-09-0C
     """
 
-    def __init__(self, platform: str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATION) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, voc_type:VOC_SubstancesType, language:LANGUAGE_ABBREVIATION) -> None:
         """Initialize the Eltako air quality sensor."""
         _dev_name = dev_name
         if _dev_name == "":

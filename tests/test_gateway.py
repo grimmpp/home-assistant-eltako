@@ -6,7 +6,7 @@ from custom_components.eltako import config_helpers
 import yaml
 
 # mock update of Home Assistant
-ESP2Gateway._register_device = mock.Mock(return_value=None)
+EnOceanGateway._register_device = mock.Mock(return_value=None)
 RS485SerialInterface.__init__ = mock.Mock(return_value=None)
 asyncio.get_event_loop = mock.Mock(return_value=None)
 
@@ -25,7 +25,7 @@ class TestGateway(TestCase):
         sub_type = GatewayDeviceType.GatewayEltakoFAM14
         baud_rate = BAUD_RATE_DEVICE_TYPE_MAPPING[sub_type]
         conf = ConfigEntry(1, DOMAIN, "gateway", {}, None)
-        gw = ESP2Gateway(DEFAULT_GENERAL_SETTINGS, HassMock(), 
+        gw = EnOceanGateway(DEFAULT_GENERAL_SETTINGS, HassMock(), 
                               dev_id=123, dev_type=sub_type, serial_path="serial_path",  baud_rate=baud_rate, base_id=AddressExpression.parse('FF-AA-00-00'), dev_name="GW", 
                               config_entry=conf)
         

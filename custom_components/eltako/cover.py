@@ -18,7 +18,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from .device import *
 from . import config_helpers 
 from .config_helpers import DeviceConf
-from .gateway import ESP2Gateway
+from .gateway import EnOceanGateway
 from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, DOMAIN, MANUFACTURER, LOGGER
 from . import get_gateway_from_hass, get_device_config_for_gateway
 
@@ -28,7 +28,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako cover platform."""
-    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    gateway: EnOceanGateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
@@ -57,7 +57,7 @@ async def async_setup_entry(
 class EltakoCover(EltakoEntity, CoverEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, platform:str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
+    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens):
         """Initialize the Eltako cover device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._sender_id = sender_id

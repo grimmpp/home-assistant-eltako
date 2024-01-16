@@ -18,7 +18,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 from .config_helpers import DeviceConf
 from .device import *
-from .gateway import ESP2Gateway
+from .gateway import EnOceanGateway
 from .const import *
 
 
@@ -28,7 +28,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Eltako switch platform."""
-    gateway: ESP2Gateway = get_gateway_from_hass(hass, config_entry)
+    gateway: EnOceanGateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
@@ -55,7 +55,7 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, platform:str, gateway: ESP2Gateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako switch device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._sender_id = sender_id
