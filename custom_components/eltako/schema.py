@@ -26,9 +26,7 @@ from homeassistant.components.sensor import (
 from homeassistant.components.switch import (
     DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.cover import (
-    DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
-)
+
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_ID,
