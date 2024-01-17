@@ -99,6 +99,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
+            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             pressed_buttons = []
             pressed = decoded.energy_bow == 1
             two_buttons_pressed = decoded.second_action == 1
@@ -162,6 +163,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
 
             return
         elif self.dev_eep in [F6_10_00]:
+            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             action = (decoded.movement & 0x70) >> 4
             
             if action == 0x07:
@@ -172,6 +174,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
 
         elif self.dev_eep in [D5_00_01]:
+            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             # learn button: 0=pressed, 1=not pressed
             # if decoded.learn_button == 0:
             #     return
@@ -183,21 +186,25 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 self._attr_is_on = decoded.contact == 1
 
         elif self.dev_eep in [A5_08_01]:
+            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             if decoded.learn_button == 1:
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
 
         elif self.dev_eep in [A5_07_01]:
+            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
 
             self._attr_is_on = decoded.pir_status_on == 1
 
         else:
+            LOGGER.warn("[Binary Sensor] eep %s not found for data processing.", self.dev_eep.eep_string)
             return
         
         self.schedule_update_ha_state()
 
         if self.is_on:
+            LOGGER.debug("Fire event for binary sensor.")
             switch_address = config_helpers.format_address((msg.address, None))
             event_id = config_helpers.get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
             self.hass.bus.fire(
