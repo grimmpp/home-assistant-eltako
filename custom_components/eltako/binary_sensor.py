@@ -131,6 +131,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 # button released but no detailed information available
                 pass
 
+            # fire first event for the entire switch
             switch_address = config_helpers.format_address((msg.address, None))
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
             event_data = {
@@ -147,6 +148,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
+            # fire second event for a specific buttons pushed on the swtich
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(pressed_buttons))
             event_data = {
                     "id": event_id,
@@ -160,6 +162,9 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 }
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
+
+            self._attr_is_on = len(pressed_buttons) > 0
+            self.schedule_update_ha_state()
 
             return
         elif self.dev_eep in [F6_10_00]:
