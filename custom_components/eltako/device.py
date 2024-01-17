@@ -110,6 +110,10 @@ class EltakoEntity(Entity):
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
         
+        if 'bin test' in self.name:
+            LOGGER.debug("%s - msg: %s", self.name, msg)
+
+
         # Eltako wrapped RPS
         msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
         for mt in msg_types:
