@@ -119,8 +119,9 @@ class EltakoEntity(Entity):
         for mt in msg_types:
             try:
                 msg = mt.parse(msg.serialize())
-            except ParseError:
-                pass
+            except ParseError as pe:
+                if 'bin test' in self.dev_name:
+                    LOGGER.error(pe)
             else:
                 if 'bin test' in self.dev_name:
                     LOGGER.debug("msg type: %s", mt.__name__)
