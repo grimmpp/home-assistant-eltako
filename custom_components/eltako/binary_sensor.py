@@ -1,7 +1,7 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
 
-from eltakobus.util import AddressExpression, b2a
+from eltakobus.util import AddressExpression, b2a, b2s
 from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -95,11 +95,11 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
-            LOGGER.warning("[Binary Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Binary Sensor][%s] Could not decode message: %s", b2s(self.dev_id[0]), str(e))
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
-            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             pressed_buttons = []
             pressed = decoded.energy_bow == 1
             two_buttons_pressed = decoded.second_action == 1
@@ -169,7 +169,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
 
             return
         elif self.dev_eep in [F6_10_00]:
-            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             action = (decoded.movement & 0x70) >> 4
             
             if action == 0x07:
@@ -180,7 +180,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
 
         elif self.dev_eep in [D5_00_01]:
-            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             # learn button: 0=pressed, 1=not pressed
             if decoded.learn_button == 0:
                 return
@@ -192,19 +192,19 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 self._attr_is_on = decoded.contact == 1
 
         elif self.dev_eep in [A5_08_01]:
-            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             if decoded.learn_button == 1:
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
 
         elif self.dev_eep in [A5_07_01]:
-            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
 
             self._attr_is_on = decoded.pir_status_on == 1
 
         else:
-            LOGGER.warn("[Binary Sensor] eep %s not found for data processing.", self.dev_eep.eep_string)
+            LOGGER.warn("[Binary Sensor][] eep %s not found for data processing.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             return
         
         self.schedule_update_ha_state()
