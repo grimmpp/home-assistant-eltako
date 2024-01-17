@@ -123,7 +123,8 @@ class EltakoEntity(Entity):
         #         return   
 
         if type(msg) in msg_types:
-            self.value_changed(msg)
+            if msg.address in self.listen_to_addresses:
+                self.value_changed(msg)
 
 
     def value_changed(self, msg: ESP2Message):
