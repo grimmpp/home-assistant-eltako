@@ -77,7 +77,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """Return telegram data for rocker switch."""
         return self._attr_data
 
-    def value_changed(self, msg: Regular4BSMessage):
+    def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
 
         This method is called when there is an incoming message associated
