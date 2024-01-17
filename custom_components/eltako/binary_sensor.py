@@ -96,6 +96,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
             LOGGER.warning("[Binary Sensor][%s] Could not decode message for eep %s. msg: %s", b2s(self.dev_id[0]), self.dev_eep.eep_string, str(msg) )
+            if self.dev_eep in [F6_02_01, F6_02_02, D5_00_01]:
+                LOGGER.info("In case of receiving telegrams from FTS14EM you must probably swtich from RT to UT or vice versa.")
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
