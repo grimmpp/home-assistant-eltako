@@ -122,6 +122,11 @@ class EltakoEntity(Entity):
             except ParseError:
                 pass
             else:
+                if 'bin test' in self.dev_name:
+                    LOGGER.debug("msg type: %s", mt.__name__)
+                    LOGGER.debug(f"address in list: {(msg.address in self.listen_to_addresses)}")
+                    LOGGER.debug(f"address list: {self.listen_to_addresses}")
+
                 if msg.address in self.listen_to_addresses:
                     self.value_changed(msg)
                 return    
