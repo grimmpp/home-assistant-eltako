@@ -83,7 +83,7 @@ class EnOceanGateway:
         if GatewayDeviceType.is_esp2_gateway(dev_type):
             self._bus = RS485SerialInterfaceV2(serial_path, baud_rate=baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:
-            self._bus = ESP3SerialCommunicator(port=serial_path, callback=self._callback_receive_message_from_serial_bus)
+            self._bus = ESP3SerialCommunicator(filename=serial_path, callback=self._callback_receive_message_from_serial_bus)
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass

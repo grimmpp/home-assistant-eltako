@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.4 
+*  &#x1F41E; ESP3 Serial Communicator bug dix  &#x1F41E; 
+
 ## Version 1.3.3 Added Temp and Humidity (EEP A5-04-01) and Occupancy Sensor (EEP A5-07-01)
 * Added support for EEP A5-04-01 and A5-07-01
 * Wrapper for ESP3 serial communication added. (It can automatically reconnect as well.) (Experimental Support)
