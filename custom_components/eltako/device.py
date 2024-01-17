@@ -111,7 +111,7 @@ class EltakoEntity(Entity):
         """Handle incoming messages."""
         
         if 'bin test' in self.dev_name:
-            LOGGER.debug("%s - msg: %s", self.name, msg)
+            LOGGER.debug("%s - msg: %s", self.dev_name, msg)
 
 
         # Eltako wrapped RPS
