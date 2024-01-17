@@ -110,7 +110,7 @@ class EltakoEntity(Entity):
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
         
-        if 'bin test' in self.name:
+        if 'bin test' in self.dev_name:
             LOGGER.debug("%s - msg: %s", self.name, msg)
 
 
