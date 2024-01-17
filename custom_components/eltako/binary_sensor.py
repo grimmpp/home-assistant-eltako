@@ -99,7 +99,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
-            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             pressed_buttons = []
             pressed = decoded.energy_bow == 1
             two_buttons_pressed = decoded.second_action == 1
@@ -163,12 +163,13 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
+            # Show status change in HA. It will only for the moment when the button is pushed down.
             self._attr_is_on = len(pressed_buttons) > 0
             self.schedule_update_ha_state()
 
             return
         elif self.dev_eep in [F6_10_00]:
-            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             action = (decoded.movement & 0x70) >> 4
             
             if action == 0x07:
@@ -179,10 +180,10 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
 
         elif self.dev_eep in [D5_00_01]:
-            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             # learn button: 0=pressed, 1=not pressed
-            # if decoded.learn_button == 0:
-            #     return
+            if decoded.learn_button == 0:
+                return
             
             # contact: 0=open, 1=closed
             if not self.invert_signal:
@@ -191,14 +192,14 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 self._attr_is_on = decoded.contact == 1
 
         elif self.dev_eep in [A5_08_01]:
-            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
             if decoded.learn_button == 1:
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
 
         elif self.dev_eep in [A5_07_01]:
-            LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
+            # LOGGER.debug("Received msg for processing eep %s telegram.", self.dev_eep.eep_string)
 
             self._attr_is_on = decoded.pir_status_on == 1
 
