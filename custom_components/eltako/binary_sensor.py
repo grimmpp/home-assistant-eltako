@@ -173,8 +173,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
 
         elif self.dev_eep in [D5_00_01]:
             # learn button: 0=pressed, 1=not pressed
-            if decoded.learn_button == 1:
-                return
+            # if decoded.learn_button == 0:
+            #     return
             
             # contact: 0=open, 1=closed
             if not self.invert_signal:
@@ -195,6 +195,8 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         else:
             return
         
+        self.schedule_update_ha_state()
+
         if self.is_on:
             switch_address = config_helpers.format_address((msg.address, None))
             event_id = config_helpers.get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
@@ -203,8 +205,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 {
                     "id": event_id,
                     "contact_address": switch_address,
+                    "is_on": self.is_on
                 },
             )
-
-        self.schedule_update_ha_state()
 
