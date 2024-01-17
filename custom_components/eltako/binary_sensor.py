@@ -95,7 +95,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
-            LOGGER.warning("[Binary Sensor][%s] Could not decode message for eep %s. msg: %s", b2s(self.dev_id[0]), self.dev_eep.eep_string, json.dumps(decoded.__dict__))
+            LOGGER.warning("[Binary Sensor][%s] Could not decode message for eep %s. msg: %s", b2s(self.dev_id[0]), self.dev_eep.eep_string, msg)
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
