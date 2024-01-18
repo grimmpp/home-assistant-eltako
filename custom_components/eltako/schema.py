@@ -128,7 +128,7 @@ class SwitchSchema(EltakoPlatformSchema):
     PLATFORM = Platform.SWITCH
 
     CONF_EEP_SUPPORTED = [M5_38_08.eep_string, F6_02_01.eep_string, F6_02_02.eep_string]
-    CONF_SENDER_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string, A5_38_08.eep_string]
 
     DEFAULT_NAME = "Switch"
 
