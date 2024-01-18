@@ -1,13 +1,10 @@
 """Voluptuous schemas for the Eltako integration."""
 
-from typing import Final
-
 from abc import ABC
 from typing import ClassVar
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 
 from eltakobus.eep import *
 
@@ -19,12 +16,6 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
-)
-from homeassistant.components.sensor import (
-    DEVICE_CLASSES_SCHEMA as SENSOR_DEVICE_CLASSES_SCHEMA,
-)
-from homeassistant.components.switch import (
-    DEVICE_CLASSES_SCHEMA as SWITCH_DEVICE_CLASSES_SCHEMA,
 )
 from homeassistant.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
@@ -137,7 +128,7 @@ class SwitchSchema(EltakoPlatformSchema):
     PLATFORM = Platform.SWITCH
 
     CONF_EEP_SUPPORTED = [M5_38_08.eep_string, F6_02_01.eep_string, F6_02_02.eep_string]
-    CONF_SENDER_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [F6_02_01.eep_string, F6_02_02.eep_string, A5_38_08.eep_string]
 
     DEFAULT_NAME = "Switch"
 
