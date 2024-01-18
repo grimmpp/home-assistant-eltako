@@ -3,6 +3,7 @@
 ## Version 1.3.4 
 *  &#x1F41E; ESP3 Serial Communicator bug dix  &#x1F41E; 
 *  Support for FTS14EM sending switches (EEP: F6-02-01, F6-02-02) and contacts (EEP: D5-00-01) telegram. (There are different FTS14EM versions sending different message types. Depending on that you need to choose the correct EEP)
+*  Added sender_eep A5-38-08 support for swtiches
 *  Filter for EltakoPoll messages inserted so that those messages won't span the whole Home Assistant bus.
 
 ## Version 1.3.3 Added Temp and Humidity (EEP A5-04-01) and Occupancy Sensor (EEP A5-07-01)
