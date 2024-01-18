@@ -1,7 +1,7 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
 
-from eltakobus.util import AddressExpression, b2a
+from eltakobus.util import AddressExpression, b2a, b2s
 from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -77,7 +77,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         """Return telegram data for rocker switch."""
         return self._attr_data
 
-    def value_changed(self, msg: Regular4BSMessage):
+    def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
 
         This method is called when there is an incoming message associated
@@ -95,10 +95,12 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
-            LOGGER.warning("[Binary Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Binary Sensor][%s] Could not decode message for eep %s does not fit to message type %s (org %s)", 
+                           b2s(self.dev_id[0]), self.dev_eep.eep_string, type(msg).__name__, str(msg.org) )
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             pressed_buttons = []
             pressed = decoded.energy_bow == 1
             two_buttons_pressed = decoded.second_action == 1
@@ -130,6 +132,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 # button released but no detailed information available
                 pass
 
+            # fire first event for the entire switch
             switch_address = config_helpers.format_address((msg.address, None))
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
             event_data = {
@@ -146,6 +149,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
+            # fire second event for a specific buttons pushed on the swtich
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(pressed_buttons))
             event_data = {
                     "id": event_id,
@@ -160,8 +164,13 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
             LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
+            # Show status change in HA. It will only for the moment when the button is pushed down.
+            self._attr_is_on = len(pressed_buttons) > 0
+            self.schedule_update_ha_state()
+
             return
         elif self.dev_eep in [F6_10_00]:
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             action = (decoded.movement & 0x70) >> 4
             
             if action == 0x07:
@@ -172,6 +181,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 return
 
         elif self.dev_eep in [D5_00_01]:
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             # learn button: 0=pressed, 1=not pressed
             if decoded.learn_button == 0:
                 return
@@ -183,19 +193,25 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 self._attr_is_on = decoded.contact == 1
 
         elif self.dev_eep in [A5_08_01]:
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             if decoded.learn_button == 1:
                 return
                 
             self._attr_is_on = decoded.pir_status == 1
 
         elif self.dev_eep in [A5_07_01]:
+            # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
 
             self._attr_is_on = decoded.pir_status_on == 1
 
         else:
+            LOGGER.warn("[Binary Sensor][] eep %s not found for data processing.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             return
         
+        self.schedule_update_ha_state()
+
         if self.is_on:
+            LOGGER.debug("Fire event for binary sensor.")
             switch_address = config_helpers.format_address((msg.address, None))
             event_id = config_helpers.get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
             self.hass.bus.fire(
@@ -203,8 +219,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 {
                     "id": event_id,
                     "contact_address": switch_address,
+                    "is_on": self.is_on
                 },
             )
-
-        self.schedule_update_ha_state()
 

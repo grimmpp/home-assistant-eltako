@@ -8,7 +8,7 @@ import serial
 import asyncio
 
 from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
-from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage
+from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll
 
 from eltakobus.util import AddressExpression
 
@@ -198,10 +198,11 @@ class EnOceanGateway:
         if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
             message = convert_esp3_to_esp2_message(message)
 
-        LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
-        if isinstance(message, ESP2Message):
-            event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
-            dispatcher_send(self.hass, event_id, message)
+        if type(message) not in [EltakoPoll]:
+            LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
+            if isinstance(message, ESP2Message):
+                event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+                dispatcher_send(self.hass, event_id, message)
             
     @property
     def unique_id(self) -> str:

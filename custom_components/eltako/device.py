@@ -110,65 +110,22 @@ class EltakoEntity(Entity):
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
         
-        # Eltako wrapped RPS
-        try:
-            msg = EltakoWrappedRPS.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
-            return
-        
-        # Eltako wrapped 1BS
-        try:
-            msg = EltakoWrapped1BS.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
-            return
+        msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
+        # for mt in msg_types:
+        #     try:
+        #         msg = mt.parse(msg.serialize())
+        #     except ParseError as pe:
+        #         if 'bin test' in self.dev_name:
+        #             LOGGER.error(pe)
+        #     else:
+        #         if msg.address in self.listen_to_addresses:
+        #             self.value_changed(msg)
+        #         return   
 
-        # Eltako wrapped 4BS
-        try:
-            msg = EltakoWrapped4BS.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
+        if type(msg) in msg_types:
             if msg.address in self.listen_to_addresses:
                 self.value_changed(msg)
-            return
-    
-        # RPS
-        try:
-            msg = RPSMessage.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
-            return
 
-        # 1BS
-        try:
-            msg = Regular1BSMessage.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
-            return
-
-        # 4BS
-        try:
-            msg = Regular4BSMessage.parse(msg.serialize())
-        except ParseError:
-            pass
-        else:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
-            return
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the device when a message arrives."""
