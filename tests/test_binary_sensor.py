@@ -45,11 +45,14 @@ class TestBinarySensor(unittest.TestCase):
         
         switch_address = b'\xfe\xdb\xb6\x40'
         msg:Regular1BSMessage = RPSMessage(switch_address, status=b'\x30', data=b'\x70')
-                
+
+        self.assertEqual(bs._attr_is_on, None)
+
         bs.value_changed(msg)
         
         # test if processing was finished and event arrived on bus
         self.assertEqual(len(bs.hass.bus.fired_events), 2)
+        self.assertEqual(bs._attr_is_on, True)
 
         expexced_event_type = 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40'
 
@@ -102,5 +105,20 @@ class TestBinarySensor(unittest.TestCase):
         self.assertEqual(bs._attr_is_on, False)
 
         # test if signal is processed correctly (switch off)
+        bs.value_changed(msg)
+        self.assertEqual(bs._attr_is_on, False)
+
+
+    def test_occupancy_sensor(self):
+        bs = self.create_binary_sensor(eep_string="A5-07-01")
+
+        self.assertEqual(bs._attr_is_on, None)
+
+        msg = Regular4BSMessage(address=b'\x00\x00\x10\x08', data=b'\x00\x96\xC8\x09', status=b'\x00')
+
+        bs.value_changed(msg)
+        self.assertEqual(bs._attr_is_on, True)
+
+        msg.data = b'\x00\x96\x0A\x09'
         bs.value_changed(msg)
         self.assertEqual(bs._attr_is_on, False)
