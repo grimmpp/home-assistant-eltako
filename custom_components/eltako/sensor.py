@@ -718,8 +718,11 @@ class GatewayLastReceivedMessage(EltakoSensor):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, 
-                         EltakoSensorEntityDescription(
+        super().__init__(platform, gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name=gateway.dev_name, 
+                         dev_eep=None,
+                         description=EltakoSensorEntityDescription(
                             key="Last Message Received",
                             name="Last Message Received",
                             icon="mdi:button-cursor",

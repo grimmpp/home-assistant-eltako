@@ -233,8 +233,9 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, )
+
+        self._attr_unique_id = f"{self.identifier}_Last Received Message - Gateway "+str(gateway.dev_id)
         self.gateway.set_connection_state_changed_handler(self.value_changed)
 
     @property
