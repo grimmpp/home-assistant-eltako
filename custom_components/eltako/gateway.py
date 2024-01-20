@@ -3,6 +3,7 @@ from enum import Enum
 import glob
 
 from os.path import basename, normpath
+import time
 
 import serial
 import asyncio
@@ -19,7 +20,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceRegistry
+from homeassistant.helpers.device_registry import DeviceRegistry, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 
 from .const import *
@@ -92,17 +93,23 @@ class EnOceanGateway:
         self._attr_dev_id = dev_id
         self._attr_base_id = base_id
         self._attr_dev_type = dev_type
+        self.config_entry_id = config_entry.entry_id
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
         self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
 
-        self._register_device(hass, config_entry.entry_id)
+        self._register_device()
 
-    def _register_device(self, hass, entry_id) -> None:
-        device_registry = dr.async_get(hass)
+    def get_device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        device_registry = dr.async_get(self.hass)
+        return device_registry.async_get(self.config_entry_id)
+
+    def _register_device(self) -> None:
+        device_registry = dr.async_get(self.hass)
         device_registry.async_get_or_create(
-            config_entry_id=entry_id,
+            config_entry_id=self.config_entry_id,
             identifiers={(DOMAIN, self.serial_path)},
             connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
             manufacturer=MANUFACTURER,
@@ -152,6 +159,8 @@ class EnOceanGateway:
     ### send and receive funtions for RS485 bus (serial bus)
     ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
 
+    def reconnect(self):
+        self._bus.reconnect()
 
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""

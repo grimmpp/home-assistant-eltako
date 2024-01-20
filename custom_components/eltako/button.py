@@ -60,6 +60,9 @@ async def async_setup_entry(
                         LOGGER.warning("[%s] Could not load configuration", platform)
                         LOGGER.critical(e, exc_info=True)
 
+    # add reconnect button for gateway
+    
+
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
@@ -93,3 +96,26 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         # msg = Regular4BSMessage(address=controller_address, data=b'\x40\x30\x0D\x85', outgoing=True, status=0x80)
         msg = Regular4BSMessage(address=controller_address, data=EEP_WITH_TEACH_IN_BUTTONS[self.dev_eep], outgoing=True, status=0x80)
         self.send_message(msg)
+
+class GatewayReconnectButton(EltakoEntity, ButtonEntity):
+    """Button for reconnecting serial bus"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
+        self.entity_description = ButtonEntityDescription(
+            key="Serial Reconnection",
+            name="Reconnect Gateway "+str(gateway.dev_id),
+            icon="mdi:button-cursor",
+            device_class=ButtonDeviceClass.UPDATE,
+            has_entity_name= True,
+        )
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return self.gateway.get_device_info()
+
+    async def async_press(self) -> None:
+        """Reconnect serial bus"""
+        self.gateway.reconnect()
