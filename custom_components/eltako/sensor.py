@@ -776,7 +776,6 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                          description=EltakoSensorEntityDescription(
                             key="gateway_" + str(gateway.dev_id) + "Received Messages per Session",
                             name="Received Messages per Session",
-                            icon="mdi:message-check-outline",
                             state_class=SensorStateClass.TOTAL_INCREASING,
                             device_class=SensorDeviceClass.VOLUME,
                             native_unit_of_measurement="Messages",
