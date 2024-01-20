@@ -106,10 +106,10 @@ class EnOceanGateway:
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus)
 
-    def get_device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        device_registry = dr.async_get(self.hass)
-        return device_registry.async_get(self.config_entry_id)
+    # def get_device_info(self) -> DeviceInfo:
+    #     """Return the device info."""
+    #     device_registry = dr.async_get(self.hass)
+    #     return device_registry.async_get(self.config_entry_id)
 
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)

@@ -114,7 +114,13 @@ class GatewayReconnectButton(EltakoEntity, ButtonEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
-        return self.gateway.get_device_info()
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
 
     async def async_press(self) -> None:
         """Reconnect serial bus"""
