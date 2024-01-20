@@ -782,6 +782,7 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             native_unit_of_measurement="Messages",
                             unit_of_measurement="",
                             has_entity_name= True,
+                            icon="mdi:chart-line",
                         )
         )
         self.has_entity_name = True
