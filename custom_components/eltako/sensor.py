@@ -356,7 +356,7 @@ async def async_setup_entry(
     # add gateway information
     # message received sensor for gateway (serial bus)
     entities.append(GatewayLastReceivedMessage(platform, gateway))
-    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.id)))
+    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id)))
     entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id)))
 
     validate_actuators_dev_and_sender_id(entities)
@@ -750,7 +750,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
         )
     
     async def async_value_changed(self, value: datetime) -> None:
-        self.set_value(value)
+        self.value_changed(value)
 
     def value_changed(self, value: datetime) -> None:
         """Update the current value."""
