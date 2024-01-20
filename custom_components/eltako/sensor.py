@@ -771,7 +771,6 @@ class GatewayInfo(EltakoSensor):
                             key=key,
                             name=key,
                             icon="mdi:button-cursor",
-                            device_class=SensorDeviceClass.TIMESTAMP,
                             has_entity_name= True,
                         )
         )
