@@ -731,7 +731,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
                         )
         )
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
-        self.gateway.set_last_message_received_handler(self.set_value)
+        self.gateway.set_last_message_received_handler(self.async_set_value)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -744,6 +744,9 @@ class GatewayLastReceivedMessage(EltakoSensor):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
     
+    async def async_set_value(self, value: datetime) -> None:
+        self.set_value(value)
+
     def set_value(self, value: datetime) -> None:
         """Update the current value."""
 

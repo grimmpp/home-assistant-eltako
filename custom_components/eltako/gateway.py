@@ -110,7 +110,7 @@ class EnOceanGateway:
 
     def _fire_connection_state_changed_event(self, connected:bool):
         if self._connection_state_handler:
-            self.hass.loop.call_soon_threadsafe(
+            self.hass.loop.create_task(
                 self._connection_state_handler,
                 connected )
 
@@ -119,7 +119,7 @@ class EnOceanGateway:
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            self.hass.loop.call_soon_threadsafe(
+            self.hass.loop.create_task(
                 self._last_message_received_handler,
                 datetime.utcnow().replace(tzinfo=pytz.utc) )
 
