@@ -751,7 +751,11 @@ class GatewayLastReceivedMessage(EltakoSensor):
         )
     
     async def async_value_changed(self, value: datetime) -> None:
-        self.value_changed(value)
+        try:
+            self.value_changed(value)
+        except AttributeError as e:
+            # Home Assistant not ready yet
+            pass  
 
     def value_changed(self, value: datetime) -> None:
         """Update the current value."""

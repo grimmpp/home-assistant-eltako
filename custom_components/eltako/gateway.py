@@ -106,7 +106,7 @@ class EnOceanGateway:
 
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
-        self._fire_connection_state_changed_event(self._bus.is_active())
+        self._fire_connection_state_changed_event(self._bus and self._bus.is_active())
 
     def _fire_connection_state_changed_event(self, connected:bool):
         if self._connection_state_handler:
