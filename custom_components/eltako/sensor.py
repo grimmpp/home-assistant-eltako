@@ -358,7 +358,7 @@ async def async_setup_entry(
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
     entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
-    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path), "mdi:usb")
+    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
