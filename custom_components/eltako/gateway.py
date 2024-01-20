@@ -95,6 +95,7 @@ class EnOceanGateway:
 
         self._last_message_received_handler = None
         self._connection_state_handler = None
+        self._received_message_count_handler = None
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 

@@ -103,7 +103,7 @@ class GatewayReconnectButton(EltakoEntity, ButtonEntity):
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
         self.entity_description = ButtonEntityDescription(
-            key="Serial Reconnection",
+            key="gateway_" + str(gateway.dev_id) + "Serial Reconnection",
             name="Reconnect Gateway "+str(gateway.dev_id),
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
