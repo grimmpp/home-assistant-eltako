@@ -46,6 +46,7 @@ async def async_setup_entry(
                             LOGGER.warning("[%s] Could not load configuration", platform)
                             LOGGER.critical(e, exc_info=True)
 
+    # is connection active sensor for gateway (serial connection)
     entities.append(GatewayConnectionState(platform, gateway))
 
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.

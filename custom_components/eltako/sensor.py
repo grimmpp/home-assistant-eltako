@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import datetime
 
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import *
@@ -40,7 +41,7 @@ from homeassistant.const import (
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
@@ -352,6 +353,8 @@ async def async_setup_entry(
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
 
+    # add message received sensor for gateway (serial bus)
+    entities.append(GatewayLastReceivedMessage(platform, gateway))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
@@ -709,4 +712,37 @@ class EltakoAirQualitySensor(EltakoSensor):
             # LOGGER.debug(f"[EltakoAirQualitySensor] received message - concentration: {decoded.concentration}, voc_type: {decoded.voc_type}, voc_unit: {decoded.voc_unit}")
             self._attr_native_value = decoded.concentration
 
+        self.schedule_update_ha_state()
+
+class GatewayLastReceivedMessage(EltakoSensor):
+    """Protocols last time when message received"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, 
+                         EltakoSensorEntityDescription(
+                            key="Last Message Received",
+                            name="Last Message Received",
+                            icon="mdi:button-cursor",
+                            device_class=SensorDeviceClass.DATE,
+                            has_entity_name= True,
+                        )
+        )
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self.gateway.set_last_message_received_handler(self.set_value)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    def set_value(self, value: datetime) -> None:
+        """Update the current value."""
+
+        self.native_value = value
         self.schedule_update_ha_state()
