@@ -120,7 +120,7 @@ class EnOceanGateway:
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
             self.hass.async_create_task(
-                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
+                self._last_message_received_handler( datetime.now() ) # datetime.utcnow().replace(tzinfo=pytz.utc) )
             )
 
     def _init_bus(self):
