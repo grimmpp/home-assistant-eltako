@@ -46,6 +46,8 @@ async def async_setup_entry(
                             LOGGER.warning("[%s] Could not load configuration", platform)
                             LOGGER.critical(e, exc_info=True)
 
+    entities.append(GatewayConnectionState(platform, gateway))
+
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
@@ -226,3 +228,27 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 },
             )
 
+class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
+    """Protocols last time when message received"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self.gateway.set_connection_state_changed_handler(self.value_changed)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    def value_changed(self, connected: bool) -> None:
+        """Update the current value."""
+
+        self.native_value = connected
+        self.schedule_update_ha_state()
