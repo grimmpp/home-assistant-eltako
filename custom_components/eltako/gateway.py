@@ -167,6 +167,7 @@ class EnOceanGateway:
     def reconnect(self):
         self._bus.stop()
         self._init_bus()
+        self._bus.start()
 
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
