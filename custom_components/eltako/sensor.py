@@ -761,8 +761,9 @@ class GatewayLastReceivedMessage(EltakoSensor):
         """Update the current value."""
         LOGGER.debug("[%s] Last message received", Platform.SENSOR)
 
-        self.native_value = value
-        self.schedule_update_ha_state()
+        if isinstance(value, datetime):
+            self.native_value = value
+            self.schedule_update_ha_state()
 
 class GatewayInfo(EltakoSensor):
     """Key value fields for gateway information"""
