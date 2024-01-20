@@ -233,7 +233,7 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name )
+        super().__init__(platform, gateway, gateway.base_id, "Connected" )
 
         self._attr_unique_id = f"{self.identifier}_Last Received Message - Gateway "+str(gateway.dev_id)
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
@@ -249,7 +249,7 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
     
-    async def async_value_changed(self, hass:HomeAssistant, connected:bool) -> None:
+    async def async_value_changed(self, connected:bool) -> None:
         self.value_changed(connected)
     
     def value_changed(self, connected: bool) -> None:

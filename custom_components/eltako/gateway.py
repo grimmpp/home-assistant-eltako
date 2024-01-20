@@ -111,7 +111,7 @@ class EnOceanGateway:
     def _fire_connection_state_changed_event(self, connected:bool):
         if self._connection_state_handler:
             self.hass.async_create_task(
-                self._connection_state_handler(self.hass, connected )
+                self._connection_state_handler( connected )
             )
 
     def set_last_message_received_handler(self, handler):
@@ -120,7 +120,7 @@ class EnOceanGateway:
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
             self.hass.async_create_task(
-                self._last_message_received_handler(self.hass, datetime.utcnow().replace(tzinfo=pytz.utc) )
+                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
             )
 
     def _init_bus(self):

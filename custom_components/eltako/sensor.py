@@ -720,7 +720,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
                          dev_id=gateway.base_id, 
-                         dev_name=gateway.dev_name, 
+                         dev_name="Last Message Received", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
                             key="Last Message Received",
@@ -744,7 +744,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
     
-    async def async_set_value(self, hass:HomeAssistant, value: datetime) -> None:
+    async def async_set_value(self, value: datetime) -> None:
         self.set_value(value)
 
     def set_value(self, value: datetime) -> None:
