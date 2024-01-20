@@ -123,7 +123,18 @@ class EnOceanGateway:
                 self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
             )
 
+    def set_received_message_count_handler(self, handler):
+        self._received_message_count_handler = handler
+
+    def _fire_received_message_count_event(self):
+        self._received_message_count += 1
+        if self._received_message_count_handler:
+            self.hass.async_create_task(
+                self._received_message_count_handler( self._received_message_count )
+            )
+
     def _init_bus(self):
+        self._received_message_count = 0
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:
@@ -242,6 +253,7 @@ class EnOceanGateway:
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
             self._fire_last_message_received_event()
+            self._fire_received_message_count_event()
             if isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
