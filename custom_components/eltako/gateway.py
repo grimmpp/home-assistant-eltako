@@ -81,10 +81,8 @@ class EnOceanGateway:
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
-        self.serial_path = serial_path
         self.baud_rate = baud_rate
         self._attr_dev_type = dev_type
-        self._init_bus()
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass
@@ -97,6 +95,8 @@ class EnOceanGateway:
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
         self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
+
+        self._init_bus()
 
         self._register_device()
 
