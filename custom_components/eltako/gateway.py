@@ -3,6 +3,7 @@ from enum import Enum
 import glob
 
 from os.path import basename, normpath
+import pytz
 from datetime import datetime
 
 import serial
@@ -116,7 +117,7 @@ class EnOceanGateway:
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            self._last_message_received_handler(datetime.now())
+            self._last_message_received_handler(datetime.utcnow().replace(tzinfo=pytz.utc))
 
     def _init_bus(self):
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
