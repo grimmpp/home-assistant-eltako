@@ -810,7 +810,7 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
 
     def value_changed(self, value: int) -> None:
         """Update the current value."""
-        LOGGER.debug("[%s] received amount of messages: %s", Platform.SENSOR, str(value))
+        # LOGGER.debug("[%s] received amount of messages: %s", Platform.SENSOR, str(value))
 
         self.native_value = value
         self.schedule_update_ha_state()
