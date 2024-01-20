@@ -253,7 +253,11 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
         )
     
     async def async_value_changed(self, connected:bool) -> None:
-        self.value_changed(connected)
+        try:
+            self.value_changed(connected)
+        except AttributeError as e:
+            # Home Assistant is not ready yet
+            pass
     
     def value_changed(self, connected: bool) -> None:
         """Update the current value."""

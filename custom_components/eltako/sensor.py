@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import datetime
+from datetime import datetime
 
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
