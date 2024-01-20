@@ -61,7 +61,7 @@ async def async_setup_entry(
                         LOGGER.critical(e, exc_info=True)
 
     # add reconnect button for gateway
-    
+    entities.append(GatewayReconnectButton(platform, gateway))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
