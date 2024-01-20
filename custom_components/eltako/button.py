@@ -38,27 +38,27 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
+    platform = Platform.BUTTON
+
     # if not supported by gateway skip creating teach-in button
     if not gateway.general_settings[CONF_ENABLE_TEACH_IN_BUTTONS]:
         LOGGER.debug("[%s] Teach-in buttons are not supported by gateway %s", Platform.BUTTON, gateway.dev_name)
-        return
     
-    platform = Platform.BUTTON
+    else:
+        # check for temperature controller defined in config as temperature sensor or climate controller
+        for platform_id in PLATFORMS:
+            if platform_id in config: 
+                for entity_config in config[platform_id]:
+                    if CONF_SENDER in entity_config:
+                        try:
+                            dev_config = config_helpers.DeviceConf(entity_config)
+                            sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-    # check for temperature controller defined in config as temperature sensor or climate controller
-    for platform_id in PLATFORMS:
-        if platform_id in config: 
-            for entity_config in config[platform_id]:
-                if CONF_SENDER in entity_config:
-                    try:
-                        dev_config = config_helpers.DeviceConf(entity_config)
-                        sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
-
-                        if dev_config.eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
-                            entities.append(TemperatureControllerTeachInButton(platform, gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id))
-                    except Exception as e:
-                        LOGGER.warning("[%s] Could not load configuration", platform)
-                        LOGGER.critical(e, exc_info=True)
+                            if dev_config.eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
+                                entities.append(TemperatureControllerTeachInButton(platform, gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id))
+                        except Exception as e:
+                            LOGGER.warning("[%s] Could not load configuration", platform)
+                            LOGGER.critical(e, exc_info=True)
 
     # add reconnect button for gateway
     entities.append(GatewayReconnectButton(platform, gateway))
