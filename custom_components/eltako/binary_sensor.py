@@ -254,6 +254,7 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
     
     def value_changed(self, connected: bool) -> None:
         """Update the current value."""
+        LOGGER.debug("[%s] [Gateway Id %s] connected %s", Platform.BINARY_SENSOR, str(self.gateway.dev_id), str(connected) )
 
         self.native_value = connected
         self.schedule_update_ha_state()
