@@ -110,18 +110,18 @@ class EnOceanGateway:
 
     def _fire_connection_state_changed_event(self, connected:bool):
         if self._connection_state_handler:
-            self.hass.loop.create_task(
-                self._connection_state_handler,
-                connected )
+            self.hass.async_create_task(
+                self._connection_state_handler(self.hass, connected )
+            )
 
     def set_last_message_received_handler(self, handler):
         self._last_message_received_handler = handler
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            self.hass.loop.create_task(
-                self._last_message_received_handler,
-                datetime.utcnow().replace(tzinfo=pytz.utc) )
+            self.hass.async_create_task(
+                self._last_message_received_handler(self.hass, datetime.utcnow().replace(tzinfo=pytz.utc) )
+            )
 
     def _init_bus(self):
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):

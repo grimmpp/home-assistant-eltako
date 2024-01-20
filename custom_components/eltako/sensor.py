@@ -744,7 +744,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
     
-    async def async_set_value(self, value: datetime) -> None:
+    async def async_set_value(self, hass:HomeAssistant, value: datetime) -> None:
         self.set_value(value)
 
     def set_value(self, value: datetime) -> None:

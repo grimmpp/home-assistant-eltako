@@ -249,7 +249,7 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
     
-    async def async_value_changed(self, connected:bool) -> None:
+    async def async_value_changed(self, hass:HomeAssistant, connected:bool) -> None:
         self.value_changed(connected)
     
     def value_changed(self, connected: bool) -> None:
