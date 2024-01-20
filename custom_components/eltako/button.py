@@ -105,7 +105,7 @@ class GatewayReconnectButton(EltakoEntity, ButtonEntity):
         self.entity_description = ButtonEntityDescription(
             key="Serial Reconnection",
             name="Reconnect Gateway "+str(gateway.dev_id),
-            icon="mdi:button-cursor",
+            icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
         )

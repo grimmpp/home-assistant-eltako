@@ -356,9 +356,9 @@ async def async_setup_entry(
     # add gateway information
     # message received sensor for gateway (serial bus)
     entities.append(GatewayLastReceivedMessage(platform, gateway))
-    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id)))
-    entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id[0])))
-    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path))
+    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
+    entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
+    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path), "mdi:usb")
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
@@ -729,7 +729,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
                          description=EltakoSensorEntityDescription(
                             key="Last Message Received",
                             name="Last Message Received",
-                            icon="mdi:button-cursor",
+                            icon="mdi:message-check-outline",
                             device_class=SensorDeviceClass.TIMESTAMP,
                             has_entity_name= True,
                         )
@@ -763,7 +763,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
 class GatewayInfo(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str):
+    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
         super().__init__(platform, gateway,
                          dev_id=gateway.base_id, 
                          dev_name=key, 
@@ -771,7 +771,7 @@ class GatewayInfo(EltakoSensor):
                          description=EltakoSensorEntityDescription(
                             key=key,
                             name=key,
-                            icon="mdi:button-cursor",
+                            icon=icon,
                             has_entity_name= True,
                         )
         )
