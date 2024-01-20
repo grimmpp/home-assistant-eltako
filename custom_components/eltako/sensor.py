@@ -726,12 +726,14 @@ class GatewayLastReceivedMessage(EltakoSensor):
                             key="Last Message Received",
                             name="Last Message Received",
                             icon="mdi:button-cursor",
-                            device_class=SensorDeviceClass.DATE,
+                            device_class=SensorDeviceClass.TIMESTAMP,
                             has_entity_name= True,
                         )
         )
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.async_set_value)
+        self.name = "Last Message Received"
+        self.has_entity_name = True
 
     @property
     def device_info(self) -> DeviceInfo:

@@ -237,6 +237,9 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
 
         self._attr_unique_id = f"{self.identifier}_Last Received Message - Gateway "+str(gateway.dev_id)
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
+        self.icon = "mdi:message-check-outline"
+        self.name = "Connected"
+        self.has_entity_name = True
 
     @property
     def device_info(self) -> DeviceInfo:
