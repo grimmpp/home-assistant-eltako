@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import datetime
 
-from eltakobus.util import AddressExpression, b2a
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message, Regular4BSMessage
 
@@ -353,8 +353,11 @@ async def async_setup_entry(
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
 
-    # add message received sensor for gateway (serial bus)
+    # add gateway information
+    # message received sensor for gateway (serial bus)
     entities.append(GatewayLastReceivedMessage(platform, gateway))
+    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.id)))
+    entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id)))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
@@ -733,7 +736,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
         self.has_entity_name = True
         self._attr_name = "Last Message Received"
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
-        self.gateway.set_last_message_received_handler(self.async_set_value)
+        self.gateway.set_last_message_received_handler(self.async_value_changed)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -746,12 +749,47 @@ class GatewayLastReceivedMessage(EltakoSensor):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
     
-    async def async_set_value(self, value: datetime) -> None:
+    async def async_value_changed(self, value: datetime) -> None:
         self.set_value(value)
 
-    def set_value(self, value: datetime) -> None:
+    def value_changed(self, value: datetime) -> None:
         """Update the current value."""
         LOGGER.debug("[%s] Last message received", Platform.SENSOR)
 
         self.native_value = value
         self.schedule_update_ha_state()
+
+class GatewayInfo(EltakoSensor):
+    """Key value fields for gateway information"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str):
+        super().__init__(platform, gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name=key, 
+                         dev_eep=None,
+                         description=EltakoSensorEntityDescription(
+                            key=key,
+                            name=key,
+                            icon="mdi:button-cursor",
+                            device_class=SensorDeviceClass.TIMESTAMP,
+                            has_entity_name= True,
+                        )
+        )
+        self.has_entity_name = True
+        self._attr_name = key
+        self._attr_native_value = value
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    def value_changed(self, value) -> None:
+        pass
