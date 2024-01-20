@@ -22,7 +22,12 @@ class ESP3SerialCommunicator(Communicator):
         self.is_serial_connected = threading.Event()
 
     def is_active(self) -> bool:
-        return not self._stop_flag.is_set() and self.is_serial_connected.is_set()        
+        return not self._stop_flag.is_set() and self.is_serial_connected.is_set()     
+
+    def reconnect(self):
+        self._stop_flag.set()
+        self._stop_flag.wait()
+        self.start()
 
     def run(self):
         self.logger.info('SerialCommunicator started')
