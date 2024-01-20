@@ -81,10 +81,10 @@ class EnOceanGateway:
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
-        if GatewayDeviceType.is_esp2_gateway(dev_type):
-            self._bus = RS485SerialInterfaceV2(serial_path, baud_rate=baud_rate, callback=self._callback_receive_message_from_serial_bus)
-        else:
-            self._bus = ESP3SerialCommunicator(filename=serial_path, callback=self._callback_receive_message_from_serial_bus)
+        self.serial_path = serial_path
+        self.baud_rate = baud_rate
+        self._attr_dev_type = dev_type
+        self._init_bus()
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
         self.hass = hass
@@ -92,7 +92,6 @@ class EnOceanGateway:
         self.general_settings = general_settings
         self._attr_dev_id = dev_id
         self._attr_base_id = base_id
-        self._attr_dev_type = dev_type
         self.config_entry_id = config_entry.entry_id
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
@@ -100,6 +99,12 @@ class EnOceanGateway:
         self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
 
         self._register_device()
+
+    def _init_bus(self):
+        if GatewayDeviceType.is_esp2_gateway(self.dev_type):
+            self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
+        else:
+            self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus)
 
     def get_device_info(self) -> DeviceInfo:
         """Return the device info."""
@@ -160,7 +165,8 @@ class EnOceanGateway:
     ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
 
     def reconnect(self):
-        self._bus.reconnect()
+        self._bus.stop()
+        self._init_bus()
 
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
