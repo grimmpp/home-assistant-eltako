@@ -6,6 +6,7 @@
 *  Added sender_eep A5-38-08 support for swtiches
 *  Filter for EltakoPoll messages inserted so that those messages won't span the whole Home Assistant bus.
 *  Gateway reconnect button added.
+*  Info fields added for Gateway (Id, Base Id, Serialo Port Path, Connected State, Last Received Message Timestamp, Received Message Count)
 
 ## Version 1.3.3 Added Temp and Humidity (EEP A5-04-01) and Occupancy Sensor (EEP A5-07-01)
 * Added support for EEP A5-04-01 and A5-07-01

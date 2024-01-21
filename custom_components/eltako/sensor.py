@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
-from eltakobus.util import AddressExpression, b2a
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message, Regular4BSMessage
 
@@ -40,7 +41,7 @@ from homeassistant.const import (
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
@@ -352,6 +353,12 @@ async def async_setup_entry(
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
 
+    # add gateway information
+    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
+    entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
+    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+    entities.append(GatewayLastReceivedMessage(platform, gateway))
+    entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
@@ -710,3 +717,134 @@ class EltakoAirQualitySensor(EltakoSensor):
             self._attr_native_value = decoded.concentration
 
         self.schedule_update_ha_state()
+
+class GatewayLastReceivedMessage(EltakoSensor):
+    """Protocols last time when message received"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name="Last Message Received", 
+                         dev_eep=None,
+                         description=EltakoSensorEntityDescription(
+                            key="Last Message Received",
+                            name="Last Message Received",
+                            icon="mdi:message-check-outline",
+                            device_class=SensorDeviceClass.TIMESTAMP,
+                            has_entity_name= True,
+                        )
+        )
+        self.has_entity_name = True
+        self._attr_name = "Last Message Received"
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self.gateway.set_last_message_received_handler(self.async_value_changed)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    async def async_value_changed(self, value: datetime) -> None:
+        try:
+            self.value_changed(value)
+        except AttributeError as e:
+            # Home Assistant not ready yet
+            pass  
+
+    def value_changed(self, value: datetime) -> None:
+        """Update the current value."""
+        # LOGGER.debug("[%s] Last message received", Platform.SENSOR)
+
+        if isinstance(value, datetime):
+            self.native_value = value
+            self.schedule_update_ha_state()
+
+class GatewayReceivedMessagesInActiveSession(EltakoSensor):
+    """Protocols amount of messages per session"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name="Received Messages per Session", 
+                         dev_eep=None,
+                         description=EltakoSensorEntityDescription(
+                            key="Received Messages per Session",
+                            name="Received Messages per Session",
+                            state_class=SensorStateClass.TOTAL_INCREASING,
+                            device_class=SensorDeviceClass.VOLUME,
+                            native_unit_of_measurement="Messages",
+                            unit_of_measurement="",
+                            has_entity_name= True,
+                            icon="mdi:chart-line",
+                        )
+        )
+        self.has_entity_name = True
+        self._attr_name="Received Messages per Session",
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self.gateway.set_received_message_count_handler(self.async_value_changed)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    async def async_value_changed(self, value: int) -> None:
+        try:
+            self.value_changed(value)
+        except AttributeError as e:
+            # Home Assistant not ready yet
+            pass  
+
+    def value_changed(self, value: int) -> None:
+        """Update the current value."""
+        # LOGGER.debug("[%s] received amount of messages: %s", Platform.SENSOR, str(value))
+
+        self.native_value = value
+        self.schedule_update_ha_state()
+
+
+class GatewayInfo(EltakoSensor):
+    """Key value fields for gateway information"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
+        super().__init__(platform, gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name=key, 
+                         dev_eep=None,
+                         description=EltakoSensorEntityDescription(
+                            key=key,
+                            name=key,
+                            icon=icon,
+                            has_entity_name= True,
+                        )
+        )
+        self.has_entity_name = True
+        self._attr_name = key
+        self._attr_native_value = value
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    def value_changed(self, value) -> None:
+        pass

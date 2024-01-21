@@ -46,6 +46,9 @@ async def async_setup_entry(
                             LOGGER.warning("[%s] Could not load configuration", platform)
                             LOGGER.critical(e, exc_info=True)
 
+    # is connection active sensor for gateway (serial connection)
+    entities.append(GatewayConnectionState(platform, gateway))
+
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
@@ -226,3 +229,39 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 },
             )
 
+class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
+    """Protocols last time when message received"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway, gateway.base_id, "Connected" )
+
+        self._attr_unique_id = f"{self.identifier}_Last Received Message - Gateway "+str(gateway.dev_id)
+        self.gateway.set_connection_state_changed_handler(self.async_value_changed)
+        self.icon = "mdi:connection"
+        self.name = "Connected"
+        self.has_entity_name = True
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+    
+    async def async_value_changed(self, connected:bool) -> None:
+        try:
+            self.value_changed(connected)
+        except AttributeError as e:
+            # Home Assistant is not ready yet
+            pass
+    
+    def value_changed(self, connected: bool) -> None:
+        """Update the current value."""
+        LOGGER.debug("[%s] [Gateway Id %s] connected %s", Platform.BINARY_SENSOR, str(self.gateway.dev_id), str(connected) )
+
+        self._attr_is_on = connected
+        self.schedule_update_ha_state()

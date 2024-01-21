@@ -3,7 +3,8 @@ from enum import Enum
 import glob
 
 from os.path import basename, normpath
-import time
+import pytz
+from datetime import datetime
 
 import serial
 import asyncio
@@ -92,6 +93,10 @@ class EnOceanGateway:
         self._attr_base_id = base_id
         self.config_entry_id = config_entry.entry_id
 
+        self._last_message_received_handler = None
+        self._connection_state_handler = None
+        self._received_message_count_handler = None
+
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
         self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
@@ -100,11 +105,43 @@ class EnOceanGateway:
 
         self._register_device()
 
+    def set_connection_state_changed_handler(self, handler):
+        self._connection_state_handler = handler
+        self._fire_connection_state_changed_event(self._bus and self._bus.is_active())
+
+    def _fire_connection_state_changed_event(self, connected:bool):
+        if self._connection_state_handler:
+            self.hass.async_create_task(
+                self._connection_state_handler( connected )
+            )
+
+    def set_last_message_received_handler(self, handler):
+        self._last_message_received_handler = handler
+
+    def _fire_last_message_received_event(self):
+        if self._last_message_received_handler:
+            self.hass.async_create_task(
+                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
+            )
+
+    def set_received_message_count_handler(self, handler):
+        self._received_message_count_handler = handler
+
+    def _fire_received_message_count_event(self):
+        self._received_message_count += 1
+        if self._received_message_count_handler:
+            self.hass.async_create_task(
+                self._received_message_count_handler( self._received_message_count )
+            )
+
     def _init_bus(self):
+        self._received_message_count = 0
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus)
+
+        self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
     # def get_device_info(self) -> DeviceInfo:
     #     """Return the device info."""
@@ -216,6 +253,8 @@ class EnOceanGateway:
 
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
+            self._fire_last_message_received_event()
+            self._fire_received_message_count_event()
             if isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
