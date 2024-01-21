@@ -727,7 +727,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
                          dev_name="Last Message Received", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
-                            key="gateway_" + str(gateway.dev_id) + "Last Message Received",
+                            key="Last Message Received",
                             name="Last Message Received",
                             icon="mdi:message-check-outline",
                             device_class=SensorDeviceClass.TIMESTAMP,
@@ -774,7 +774,7 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                          dev_name="Received Messages per Session", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
-                            key="gateway_" + str(gateway.dev_id) + "Received Messages per Session",
+                            key="Received Messages per Session",
                             name="Received Messages per Session",
                             state_class=SensorStateClass.TOTAL_INCREASING,
                             device_class=SensorDeviceClass.VOLUME,
@@ -824,7 +824,7 @@ class GatewayInfo(EltakoSensor):
                          dev_name=key, 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
-                            key="gateway_" + str(gateway.dev_id) + key,
+                            key=key,
                             name=key,
                             icon=icon,
                             has_entity_name= True,
