@@ -14,10 +14,10 @@ class ESP3SerialCommunicator(Communicator):
     def __init__(self, filename, log=None, callback=None, baud_rate=57600, reconnection_timeout:float=10):
         super(ESP3SerialCommunicator, self).__init__(callback)
         
-        self.filename = filename
+        self._filename = filename
         self.log = log or logging.getLogger('enocean.communicators.SerialCommunicator')
 
-        self.baud_rate = baud_rate
+        self._baud_rate = baud_rate
         self.__recon_time = reconnection_timeout
         self.is_serial_connected = threading.Event()
         self.status_changed_handler = None
