@@ -10,7 +10,7 @@ import serial
 import asyncio
 
 from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
-from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll
+from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll, prettify
 
 from eltakobus.util import AddressExpression
 
@@ -38,7 +38,7 @@ def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
     elif isinstance(message, Regular4BSMessage):
         org = RORG.BS4
 
-    data = [org] + message.data + message.address + message.status
+    data = [org] + message.data + message.address + [message.status]
 
     packet = Packet(packet_type=0x01, data=data, optional=[])
     return packet
@@ -46,13 +46,14 @@ def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
 def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
     
     org = 0x05
-    if RORG.BS1:
+    if packet.rorg == RORG.BS1:
         org = 0x06
-    elif RORG.BS4:
+    elif packet.rorg == RORG.BS4:
         org = 0x07
 
     body:bytes = [0x0b, org] + packet.data[1:]
-    return ESP2Message(body)
+
+    return prettify( ESP2Message(body) )
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
     base_id_list = []
@@ -99,7 +100,8 @@ class EnOceanGateway:
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
-        self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
+        is_esp2_protocol = GatewayDeviceType.is_esp2_gateway(self.dev_type)
+        self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id, is_esp2_protocol)
 
         self._init_bus()
 

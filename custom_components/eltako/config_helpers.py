@@ -159,10 +159,13 @@ def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
             return False
     return True
 
-def get_gateway_name(dev_name:str, dev_type:str, dev_id: int, base_id:AddressExpression) -> str:
+def get_gateway_name(dev_name:str, dev_type:str, dev_id: int, base_id:AddressExpression, esp2:bool=True) -> str:
     if not dev_name or len(dev_name) == 0:
         dev_name = GATEWAY_DEFAULT_NAME
-    return f"{dev_name} - {dev_type} (Id: {dev_id}, BaseId: {format_address(base_id)})"
+    name = f"{dev_name} - {dev_type} (Id: {dev_id}, BaseId: {format_address(base_id)})"
+    if not esp2:
+        name = name.replace('ESP2', 'ESP3')
+    return name
 
 def format_address(address: AddressExpression, separator:str='-') -> str:
     return b2a(address[0], '-').upper()
