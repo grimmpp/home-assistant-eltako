@@ -241,7 +241,7 @@ class EnOceanGateway:
 
                 # convert ESP2 message to ESP3 in case of ESP3 gateway
                 if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
-                    msg = convert_esp3_to_esp2_message(msg)
+                    msg = convert_esp2_to_esp3_message(msg)
 
                 # put message on serial bus
                 asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
