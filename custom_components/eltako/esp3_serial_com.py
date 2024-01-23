@@ -6,6 +6,7 @@ import time
 import threading
 
 from enocean.communicators.communicator import Communicator
+from enocean.protocol.packet import Packet
 
 
 class ESP3SerialCommunicator(Communicator):
@@ -41,6 +42,9 @@ class ESP3SerialCommunicator(Communicator):
         self._stop_flag.set()
         self._stop_flag.wait()
         self.start()
+
+    async def send(self, packet: Packet) -> bool:
+        return super().send(packet)
 
     def run(self):
         self.logger.info('SerialCommunicator started')
