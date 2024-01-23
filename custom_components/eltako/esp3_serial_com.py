@@ -64,21 +64,14 @@ class ESP3SerialCommunicator(Communicator):
                     packet = self._get_from_send_queue()
                     if not packet:
                         break
-                    try:
-                        self.__ser.write(bytearray(packet.build()))
-                    except serial.SerialException:
-                        self.stop()
+                    self.__ser.write(bytearray(packet.build()))
 
                 # Read chars from serial port as hex numbers
-                try:
-                    self._buffer.extend(bytearray(self.__ser.read(16)))
-                except serial.SerialException:
-                    self.logger.error('Serial port exception! (device disconnected or multiple access on port?)')
-                    self.stop()
+                self._buffer.extend(bytearray(self.__ser.read(16)))
                 self.parse()
                 time.sleep(0)
 
-            except Exception as e:
+            except (serial.SerialException, IOError) as e:
                 self._fire_status_change_handler(connected=False)
                 self.is_serial_connected.clear()
                 self.log.error(e)
