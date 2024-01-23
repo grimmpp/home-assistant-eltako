@@ -51,7 +51,7 @@ def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
     elif packet.rorg == RORG.BS4:
         org = 0x07
 
-    body:bytes = [0x0b, org] + packet.data[1:]
+    body:bytes = bytes([0x0b, org] + packet.data[1:])
 
     return prettify( ESP2Message(body) )
 
