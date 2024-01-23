@@ -30,6 +30,8 @@ from .esp3_serial_com import ESP3SerialCommunicator
 
 def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
     
+    d = message.data[0]
+
     org = 0xF6
     if isinstance(message, RPSMessage):
         org = RORG.RPS
@@ -37,8 +39,9 @@ def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
         org = RORG.BS1
     elif isinstance(message, Regular4BSMessage):
         org = RORG.BS4
-
-    data = [org] + message.data + message.address + [message.status]
+        d = message.data
+    
+    data = bytes([org]) + d + message.address + bytes([message.status])
 
     packet = Packet(packet_type=0x01, data=data, optional=[])
     return packet
