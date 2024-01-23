@@ -100,8 +100,11 @@ class EnOceanGateway:
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
-        is_esp2_protocol = GatewayDeviceType.is_esp2_gateway(self.dev_type)
-        self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id, is_esp2_protocol)
+        if GatewayDeviceType.is_esp2_gateway(self.dev_type):
+            self.native_protocol = 'ESP2'
+        else:
+            self.native_protocol = 'ESP3'
+        self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
 
         self._init_bus()
 
