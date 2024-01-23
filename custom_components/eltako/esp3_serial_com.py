@@ -78,7 +78,7 @@ class ESP3SerialCommunicator(Communicator):
                 self.parse()
                 time.sleep(0)
 
-            except (serial.SerialException, IOError) as e:
+            except Exception as e:
                 self._fire_status_change_handler(connected=False)
                 self.is_serial_connected.clear()
                 self.log.error(e)
