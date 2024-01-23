@@ -49,7 +49,7 @@ class ESP3SerialCommunicator(Communicator):
             try:
                 # Initialize serial port
                 if self.__ser is None:
-                    self.__ser = serial.Serial(self.filename, self.baud_rate, timeout=0.1)
+                    self.__ser = serial.Serial(self._filename, self._baud_rate, timeout=0.1)
                     self.log.info("Established serial connection to %s - baudrate: %d", self._filename, self._baud_rate)
                     self.is_serial_connected.set()
                     self._fire_status_change_handler(connected=True)
