@@ -136,6 +136,7 @@ class EnOceanGateway:
 
     def _init_bus(self):
         self._received_message_count = 0
+        self._fire_received_message_count_event()
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:

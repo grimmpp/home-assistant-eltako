@@ -21,6 +21,7 @@ class ESP3SerialCommunicator(Communicator):
         self.__recon_time = reconnection_timeout
         self.is_serial_connected = threading.Event()
         self.status_changed_handler = None
+        self.__ser = None
 
     def is_active(self) -> bool:
         return not self._stop_flag.is_set() and self.is_serial_connected.is_set()     

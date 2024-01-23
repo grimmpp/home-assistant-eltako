@@ -354,9 +354,9 @@ async def async_setup_entry(
                 LOGGER.critical(e, exc_info=True)
 
     # add gateway information
-    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
-    entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
-    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+    entities.append(GatewayInfoField(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
+    entities.append(GatewayInfoField(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
+    entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
@@ -815,14 +815,14 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
         self.schedule_update_ha_state()
 
 
-class GatewayInfo(EltakoSensor):
+class StaticInfoField(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
         super().__init__(platform, gateway,
-                         dev_id=gateway.base_id, 
-                         dev_name=key, 
-                         dev_eep=None,
+                         dev_id=dev_id, 
+                         dev_name=dev_name, 
+                         dev_eep=dev_eep,
                          description=EltakoSensorEntityDescription(
                             key=key,
                             name=key,
@@ -848,3 +848,17 @@ class GatewayInfo(EltakoSensor):
     
     def value_changed(self, value) -> None:
         pass
+
+class GatewayInfoField(StaticInfoField):
+    """Key value fields for gateway information"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
+        super().__init__(platform, 
+                         gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name=key, 
+                         dev_eep=None,
+                         key=key,
+                         value=value,
+                         icon=icon
+                         )
