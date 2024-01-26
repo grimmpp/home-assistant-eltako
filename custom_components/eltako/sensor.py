@@ -909,5 +909,5 @@ class EventListenerInfoField(EltakoSensor):
     
     def value_changed(self, event) -> None:
         LOGGER.debug(f"Received event: {json.dumps(event)}")
-        if isinstance(event, dict) and 'pressed_buttons' in event:
+        if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
             self.native_value = config_helpers.button_abbreviation_to_str(event['pressed_buttons'])
