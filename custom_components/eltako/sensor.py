@@ -11,6 +11,8 @@ from eltakobus.message import ESP2Message, Regular4BSMessage
 from decimal import Decimal, InvalidOperation as DecimalInvalidOperation
 from . import config_helpers
 
+import json
+
 from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
     SensorDeviceClass,
@@ -906,6 +908,6 @@ class EventListenerInfoField(EltakoSensor):
 
     
     def value_changed(self, event) -> None:
-        LOGGER.debug(f"Received event: {event}")
+        LOGGER.debug(f"Received event: {json.dumps(event)}")
         if isinstance(event, dict) and 'pressed_buttons' in event:
             self.native_value = config_helpers.button_abbreviation_to_str(event['pressed_buttons'])
