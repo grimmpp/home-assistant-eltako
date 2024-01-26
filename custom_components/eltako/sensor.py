@@ -373,14 +373,15 @@ async def async_setup_entry(
                 LOGGER.critical(e, exc_info=True)
 
     for pl in PLATFORMS:
-        for entity_config in config[pl]:
-            try:
-                dev_conf = DeviceConf(entity_config)
-                entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
-            
-            except Exception as e:
-                LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
-                LOGGER.critical(e, exc_info=True)
+        if pl in config:
+            for entity_config in config[pl]:
+                try:
+                    dev_conf = DeviceConf(entity_config)
+                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
+                
+                except Exception as e:
+                    LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
+                    LOGGER.critical(e, exc_info=True)
 
 
     # add gateway information
