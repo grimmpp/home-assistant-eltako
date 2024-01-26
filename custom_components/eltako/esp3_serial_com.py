@@ -67,14 +67,27 @@ class ESP3SerialCommunicator(Communicator):
 
         data = bytes([org, 0x02, 0x01, 0x01, 0x09]) + d + message.address + bytes([message.status])
 
-        packet = Packet(packet_type=0x01, data=data, optional=[])
+# RadioPacket.create(rorg=RORG.BS4, rorg_func=0x20, rorg_type=0x01,
+#                               sender=transmitter_id,
+#                               CV=50,
+#                               TMP=21.5,
+#                               ES='true')
+
+        # packet = Packet(packet_type=0x01, data=data, optional=[])
+        packet = RadioPacket.create(rorg=org, 
+                                    rorg_func=org, 
+                                    rorg_type=0x01,
+                                    sender=bytes([0xFF,0xD6,0x30,0x01]),
+                                    command=bytes([0x01, 0x00, 0x00, 0x09])
+                                    )
         return packet
 
     @classmethod
     def convert_esp3_to_esp2_message(cls, packet: RadioPacket) -> ESP2Message:
         
-        org = 0x05
-        if packet.rorg == RORG.BS1:
+        if packet.rorg == RORG.RPS:
+            org = 0x05
+        elif packet.rorg == RORG.BS1:
             org = 0x06
         elif packet.rorg == RORG.BS4:
             org = 0x07
@@ -84,6 +97,7 @@ class ESP3SerialCommunicator(Communicator):
         if org == 0x07:
             body:bytes = bytes([0x0b, org] + packet.data[1:])
         else:
+            # data = ['0xf6', '0x50', '0xff', '0xa2', '0x24', '0x1', '0x30']
             body:bytes = bytes([0x0b, org] + packet.data[1:2] + [0,0,0] + packet.data[2:])
 
         return prettify( ESP2Message(body) )
@@ -154,3 +168,10 @@ class ESP3SerialCommunicator(Communicator):
         self.__ser.close()
         self._fire_status_change_handler(connected=False)
         self.logger.info('SerialCommunicator stopped')
+
+if __name__ == '__main__':
+
+    data = [0xf6, 0x50, 0xff, 0xa2, 0x24, 0x1, 0x30]
+    body:bytes = bytes([0x0b, 0x05] + data[1:2] + [0,0,0] + data[2:])
+    msg =  prettify( ESP2Message(body) )
+    print( msg )
