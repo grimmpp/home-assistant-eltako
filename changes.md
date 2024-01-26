@@ -1,5 +1,9 @@
 # Changes and Feature List
 
+## Version 1.3.5
+* Added Info Fields for wall-mounted switch
+* Fixes for ESP3 to ESP2 messages converter (Still not stable)
+
 ## Version 1.3.4 Improved FTS14EM and Gateway Support
 *  &#x1F41E; ESP3 Serial Communicator bug fix  &#x1F41E; 
 *  Support for FTS14EM sending switches (EEP: F6-02-01, F6-02-02) and contacts (EEP: D5-00-01) telegram. (There are different FTS14EM versions sending different message types. Depending on that you need to choose the correct EEP)

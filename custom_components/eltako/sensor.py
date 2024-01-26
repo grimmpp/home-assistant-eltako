@@ -361,7 +361,7 @@ async def async_setup_entry(
                 dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
                 if dev_conf.eep in [F6_02_01, F6_02_02]:
                     event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, dev_conf.id)
-                    entities.append(GatewayInfoField(platform, gateway, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
+                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
                     entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", "mdi:gesture-tap-button"))
             
             except Exception as e:
