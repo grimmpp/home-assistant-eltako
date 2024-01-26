@@ -60,9 +60,14 @@ class ESP3SerialCommunicator(Communicator):
         else:
             return None
         
-        data = bytes([org]) + d + message.address + bytes([message.status])
+        # command = [0xA5, 0x02, bval, 0x01, 0x09]
+        # command.extend(self._sender_id)
+        # command.extend([0x00])
+        # self.send_command(data=command, optional=[], packet_type=0x01)
 
-        packet = RadioPacket(packet_type=0x01, data=data, optional=[])
+        data = bytes([org, 0x02, 0x01, 0x01, 0x09]) + d + message.address + bytes([message.status])
+
+        packet = Packet(packet_type=0x01, data=data, optional=[])
         return packet
 
     @classmethod
