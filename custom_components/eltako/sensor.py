@@ -362,6 +362,7 @@ async def async_setup_entry(
                 dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
                 if dev_conf.eep in [F6_02_01, F6_02_02]:
                     def convert_event(event):
+                        LOGGER.debug("test")
                         # if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
                         return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
 
@@ -914,10 +915,10 @@ class EventListenerInfoField(EltakoSensor):
     def value_changed(self, event) -> None:
         LOGGER.debug(f"Received event: {event}")
         value = self.convert_event_function(event)
-
+        LOGGER.debug(f"Value: {value}")
         if value and len(value) > 0:
             self.native_value = value
-            LOGGER.debug(f"Value: {value}")
+            
 
         self.schedule_update_ha_state()
             
