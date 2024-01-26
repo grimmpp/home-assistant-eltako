@@ -913,6 +913,8 @@ class EventListenerInfoField(EltakoSensor):
     
     def value_changed(self, event) -> None:
         LOGGER.debug(f"Received event: {event}")
-        self.native_value = self.convert_event_function(event)
+        value = self.convert_event_function(event)
+        if value and len(value) > 0:
+            self.native_value = value
         self.schedule_update_ha_state()
             
