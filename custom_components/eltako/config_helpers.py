@@ -199,3 +199,19 @@ def convert_button_pos_from_hex_to_str(pos: int) -> str:
     if pos == 0x50:
         return "RB"
     return None
+
+def convert_button_abbreviation(buttons:[str]) -> [str]:
+    result = []
+    for b in buttons:
+        if b.lower() == "LB":
+            result.append("Left Bottom")
+        elif b.lower() == "LT":
+            result.append("Left Top")
+        elif b.lower() == "RB":
+            result.append("Right Bottom")
+        elif b.lower() == "RT":
+            result.append("Right Top")
+    return result
+
+def button_abbreviation_to_str(buttons:[str]) -> [str]:
+    return ', '.join(convert_button_abbreviation(buttons))
