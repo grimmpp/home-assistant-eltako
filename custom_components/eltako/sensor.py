@@ -361,7 +361,7 @@ async def async_setup_entry(
                 dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
                 if dev_conf.eep in [F6_02_01, F6_02_02]:
                     event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, dev_conf.id)
-                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons"))
+                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", "mdi:gesture-tap-button"))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
@@ -901,17 +901,7 @@ class EventListenerInfoField(EltakoSensor):
         self.listen_to_addresses.clear()
 
         self.gateway.hass.bus.async_listen(event_id, self.value_changed)
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.gateway.serial_path)},
-            name= self.gateway.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.gateway.model,
-            via_device=(DOMAIN, self.gateway.serial_path)
-        )
+        
     
     def value_changed(self, event) -> None:
         if isinstance(event, dict) and 'pressed_buttons' in event:
