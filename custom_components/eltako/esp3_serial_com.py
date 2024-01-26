@@ -135,7 +135,7 @@ class ESP3SerialCommunicator(Communicator):
                     packet = self._get_from_send_queue()
                     if not packet:
                         break
-                    print("send msg")
+                    self.log.debug("send msg: %s", packet)
                     self.__ser.write(bytearray(packet.build()))
 
                 # Read chars from serial port as hex numbers
