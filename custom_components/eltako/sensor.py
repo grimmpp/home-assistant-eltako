@@ -901,9 +901,11 @@ class EventListenerInfoField(EltakoSensor):
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.listen_to_addresses.clear()
 
+        LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")
         self.gateway.hass.bus.async_listen(event_id, self.value_changed)
 
     
     def value_changed(self, event) -> None:
+        LOGGER.debug(f"Received event: {event}")
         if isinstance(event, dict) and 'pressed_buttons' in event:
             self.native_value = config_helpers.button_abbreviation_to_str(event['pressed_buttons'])
