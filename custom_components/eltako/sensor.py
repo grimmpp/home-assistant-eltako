@@ -362,8 +362,8 @@ async def async_setup_entry(
                 dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
                 if dev_conf.eep in [F6_02_01, F6_02_02]:
                     def convert_event(event):
-                        if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
-                            return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
+                        # if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
+                        return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
 
                     event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, dev_conf.id)
                     entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
