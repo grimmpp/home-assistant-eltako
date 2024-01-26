@@ -5,15 +5,21 @@ import serial
 import time
 import threading
 
-from enocean.communicators.communicator import Communicator
-from enocean.protocol.packet import Packet
+import queue
 
+from enocean.communicators.communicator import Communicator
+from enocean.protocol.packet import Packet, RadioPacket, RORG, PACKET
+from enocean.protocol.constants import PACKET, PARSE_RESULT, RETURN_CODE
+
+from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage,  Regular4BSMessage, prettify
 
 class ESP3SerialCommunicator(Communicator):
     ''' Serial port communicator class for EnOcean radio '''
 
-    def __init__(self, filename, log=None, callback=None, baud_rate=57600, reconnection_timeout:float=10):
-        super(ESP3SerialCommunicator, self).__init__(callback)
+    def __init__(self, filename, log=None, callback=None, baud_rate=57600, reconnection_timeout:float=10, esp2_translation_enabled:bool=False):
+        self.esp2_translation_enabled = esp2_translation_enabled
+        self._outside_callback = callback
+        super(ESP3SerialCommunicator, self).__init__(self.__callback_wrapper)
         
         self._filename = filename
         self.log = log or logging.getLogger('enocean.communicators.SerialCommunicator')
@@ -38,13 +44,73 @@ class ESP3SerialCommunicator(Communicator):
         except Exception as e:
             pass
 
+    @classmethod
+    def convert_esp2_to_esp3_message(cls, message: ESP2Message) -> RadioPacket:
+    
+        d = message.data[0]
+
+        org = 0xF6
+        if isinstance(message, RPSMessage):
+            org = RORG.RPS
+        elif isinstance(message, Regular1BSMessage):
+            org = RORG.BS1
+        elif isinstance(message, Regular4BSMessage):
+            org = RORG.BS4
+            d = message.data
+        else:
+            return None
+        
+        data = bytes([org]) + d + message.address + bytes([message.status])
+
+        packet = RadioPacket(packet_type=0x01, data=data, optional=[])
+        return packet
+
+    @classmethod
+    def convert_esp3_to_esp2_message(cls, packet: RadioPacket) -> ESP2Message:
+        
+        org = 0x05
+        if packet.rorg == RORG.BS1:
+            org = 0x06
+        elif packet.rorg == RORG.BS4:
+            org = 0x07
+        else:
+            return None
+
+        if org == 0x07:
+            body:bytes = bytes([0x0b, org] + packet.data[1:])
+        else:
+            body:bytes = bytes([0x0b, org] + packet.data[1:2] + [0,0,0] + packet.data[2:])
+
+        return prettify( ESP2Message(body) )
+    
+
+    def __callback_wrapper(self, msg):
+        if self._outside_callback:
+            if self.esp2_translation_enabled:
+                esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
+                
+                if esp2_msg is None:
+                    self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
+                else:
+                    self._outside_callback(esp2_msg)
+
+            else:
+                self._outside_callback(msg)
+
     def reconnect(self):
         self._stop_flag.set()
         self._stop_flag.wait()
         self.start()
 
-    async def send(self, packet: Packet) -> bool:
-        return super().send(packet)
+    async def send(self, packet) -> bool:
+        if self.esp2_translation_enabled:
+            esp3_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(packet)
+            if esp3_msg is None:
+                self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp3 message (%s).", packet)
+            else:
+                return super.send(esp3_msg)
+        else:
+            return super().send(packet)
 
     def run(self):
         self.logger.info('SerialCommunicator started')
@@ -64,6 +130,7 @@ class ESP3SerialCommunicator(Communicator):
                     packet = self._get_from_send_queue()
                     if not packet:
                         break
+                    print("send msg")
                     self.__ser.write(bytearray(packet.build()))
 
                 # Read chars from serial port as hex numbers
