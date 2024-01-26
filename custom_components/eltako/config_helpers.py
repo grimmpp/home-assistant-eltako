@@ -203,13 +203,13 @@ def convert_button_pos_from_hex_to_str(pos: int) -> str:
 def convert_button_abbreviation(buttons:[str]) -> [str]:
     result = []
     for b in buttons:
-        if b.lower() == "LB":
+        if b.upper() == "LB":
             result.append("Left Bottom")
-        elif b.lower() == "LT":
+        elif b.upper() == "LT":
             result.append("Left Top")
-        elif b.lower() == "RB":
+        elif b.upper() == "RB":
             result.append("Right Bottom")
-        elif b.lower() == "RT":
+        elif b.upper() == "RT":
             result.append("Right Top")
     return result
 
