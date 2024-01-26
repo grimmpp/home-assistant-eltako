@@ -361,9 +361,13 @@ async def async_setup_entry(
             try:
                 dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
                 if dev_conf.eep in [F6_02_01, F6_02_02]:
+                    def convert_event(event):
+                        if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
+                            return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
+
                     event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, dev_conf.id)
                     entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
-                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", "mdi:gesture-tap-button"))
+                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
@@ -884,7 +888,7 @@ class GatewayInfoField(StaticInfoField):
 class EventListenerInfoField(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, event_id: str, key:str, icon:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, event_id: str, key:str, convert_event_function, icon:str=None):
         super().__init__(platform, gateway,
                          dev_id=dev_id, 
                          dev_name=dev_name, 
@@ -896,6 +900,7 @@ class EventListenerInfoField(EltakoSensor):
                             has_entity_name= True,
                         )
         )
+        self.convert_event_function = convert_event_function
         self.has_entity_name = True
         self._attr_name = key
         self._attr_native_value = ''
@@ -903,10 +908,11 @@ class EventListenerInfoField(EltakoSensor):
         self.listen_to_addresses.clear()
 
         LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")
-        self.gateway.hass.bus.async_listen(event_id, self.value_changed)
+        self.hass.bus.async_listen(event_id, self.value_changed)
 
     
     def value_changed(self, event) -> None:
         LOGGER.debug(f"Received event: {event}")
-        if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
-            self.native_value = config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
+        self.native_value = self.convert_event_function(event)
+        self.schedule_update_ha_state()
+            
