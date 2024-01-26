@@ -49,13 +49,18 @@ class ESP3SerialCommunicator(Communicator):
     
         d = message.data[0]
 
-        org = 0xF6
         if isinstance(message, RPSMessage):
             org = RORG.RPS
+            org_func = 0x02
+            org_type = 0x02
         elif isinstance(message, Regular1BSMessage):
             org = RORG.BS1
+            org_func = 0x02
+            org_type = 0x02
         elif isinstance(message, Regular4BSMessage):
             org = RORG.BS4
+            org_func = 0x01
+            org_type = 0x01
             d = message.data
         else:
             return None
@@ -65,21 +70,22 @@ class ESP3SerialCommunicator(Communicator):
         # command.extend([0x00])
         # self.send_command(data=command, optional=[], packet_type=0x01)
 
-        data = bytes([org, 0x02, 0x01, 0x01, 0x09]) + d + message.address + bytes([message.status])
+        # data = bytes([org, 0x02, 0x01, 0x01, 0x09]) + d + message.address + bytes([message.status])
 
 # RadioPacket.create(rorg=RORG.BS4, rorg_func=0x20, rorg_type=0x01,
 #                               sender=transmitter_id,
 #                               CV=50,
 #                               TMP=21.5,
 #                               ES='true')
+        sender = [x for x in message.address]
 
         # packet = Packet(packet_type=0x01, data=data, optional=[])
         packet = RadioPacket.create(rorg=org, 
-                                    rorg_func=org, 
-                                    rorg_type=0x01,
-                                    sender=bytes([0xFF,0xD6,0x30,0x01]),
-                                    command=bytes([0x01, 0x00, 0x00, 0x09])
-                                    )
+                                rorg_func=org_func, 
+                                rorg_type=org_type,
+                                sender=sender,
+                                command=[0x01, 0x00, 0x00, 0x09]
+                                )
         return packet
 
     @classmethod
@@ -175,3 +181,20 @@ if __name__ == '__main__':
     body:bytes = bytes([0x0b, 0x05] + data[1:2] + [0,0,0] + data[2:])
     msg =  prettify( ESP2Message(body) )
     print( msg )
+
+    # command = [0xA5, 0x02, 0x01, 0x01, 0x09] # data
+    # command.extend([0xFF, 0xD6, 0x30, 0x01]) # address
+    # command.extend([0x00])  #status
+    # packet = RadioPacket(0x01, command, [])
+    # print(packet)
+
+    packet = RadioPacket.create(rorg=RORG.RPS, 
+                                rorg_func=0x02, 
+                                rorg_type=0x02,
+                                sender=[0xFF,0xD6,0x30,0x01],
+                                command=[0x01, 0x00, 0x00, 0x09]
+                                )
+    print(packet)
+
+    packet = ESP3SerialCommunicator.convert_esp2_to_esp3_message(msg)
+    print(packet)
