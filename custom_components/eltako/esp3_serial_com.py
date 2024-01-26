@@ -113,7 +113,7 @@ class ESP3SerialCommunicator(Communicator):
             if esp3_msg is None:
                 self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp3 message (%s).", packet)
             else:
-                return super.send(esp3_msg)
+                return super().send(esp3_msg)
         else:
             return super().send(packet)
 
