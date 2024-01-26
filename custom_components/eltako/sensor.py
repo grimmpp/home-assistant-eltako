@@ -852,17 +852,6 @@ class StaticInfoField(EltakoSensor):
         self._attr_native_value = value
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.gateway.serial_path)},
-            name= self.gateway.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.gateway.model,
-            via_device=(DOMAIN, self.gateway.serial_path)
-        )
-    
     def value_changed(self, value) -> None:
         pass
 
@@ -879,6 +868,17 @@ class GatewayInfoField(StaticInfoField):
                          value=value,
                          icon=icon
                          )
+        
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
         
 class EventListenerInfoField(EltakoSensor):
     """Key value fields for gateway information"""
