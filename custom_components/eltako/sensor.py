@@ -359,15 +359,24 @@ async def async_setup_entry(
     if Platform.BINARY_SENSOR in config:
         for entity_config in config[Platform.BINARY_SENSOR]:
             try:
-                dev_conf = DeviceConf(entity_config, [CONF_METER_TARIFFS])
+                dev_conf = DeviceConf(entity_config)
                 if dev_conf.eep in [F6_02_01, F6_02_02]:
                     def convert_event(event):
                         # if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
                         return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
 
                     event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, dev_conf.id)
-                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
                     entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
+            
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
+                LOGGER.critical(e, exc_info=True)
+
+    for pl in PLATFORMS:
+        for entity_config in config[pl]:
+            try:
+                dev_conf = DeviceConf(entity_config)
+                entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
