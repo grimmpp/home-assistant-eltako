@@ -372,6 +372,7 @@ async def async_setup_entry(
                 LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
                 LOGGER.critical(e, exc_info=True)
 
+    # add id field for every device
     for pl in PLATFORMS:
         if pl in config:
             for entity_config in config[pl]:
