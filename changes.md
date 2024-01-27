@@ -1,11 +1,10 @@
 # Changes and Feature List
 
-## Version 1.3.5
+## Version 1.3.5 Prevent Message overflow for FGW14-USB
 * Added info field for which button of a wall-mounted switch was pushed down
 * Added static info filed for device id 
 * Fixes for ESP3 to ESP2 messages converter (Still not stable)
 * Message delay added to eltako14bus so that buffer overflow in FGW14-USB gets prevented. (When sending many messages, messages get lot.)
-* 
 
 ## Version 1.3.4 Improved FTS14EM and Gateway Support
 *  &#x1F41E; ESP3 Serial Communicator bug fix  &#x1F41E; 
