@@ -92,7 +92,7 @@ eltako:
           eep: A5-38-08
 ```
 
-3. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
+3. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet just select the detected USB gateway. Manual paths can be added in the gateway configuration section under serial_path and will be displayed additionally in the installation sheet.
 4. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
 There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
 
