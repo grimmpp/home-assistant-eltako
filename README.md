@@ -72,9 +72,28 @@ While this is not integrated into home assistant's repositories. You need to ins
    *Alternative1:* Simply enter the URL of this repo. It will then be listed in HACS and also shows when new updates are available. [Detailed Docs in HACS Custom Repositories](https://hacs.xyz/docs/faq/custom_repositories/)
 
    *Alternative 2:* Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
-   For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``. 
-4. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet either select the detected USB gateway or enter the path manually.
-5. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
+   For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``.
+
+2. Before you add the integration you have to add at least one dummy entry in the "configuration.yaml". It must have at least 1 dummy device. Example:
+
+```
+eltako:
+  gateway:
+  - id: 1
+    base_id: FF-AA-80-00
+    device_type: fgw14usb # Supported gateways: gam14, fgw14usb
+    devices: 
+      light:
+      - id: 00-00-00-01
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: 00-00-B0-01
+          eep: A5-38-08
+```
+
+3. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet just select the detected USB gateway. Manual paths can be added in the gateway configuration section under serial_path and will be displayed additionally in the installation sheet.
+4. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
 There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
 
 # Testing
