@@ -23,7 +23,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * F6-02-01 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md), FTS14EM)
   * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
   * F6-10-00 (Window handle, FTS14EM)
-  * D5-00-01 (Contact sensor, FTS14EM) incl. signal inverter
+  * D5-00-01 ([Contact sensor](https://github.com/grimmpp/home-assistant-eltako/tree/main//docs/window_sensor_setup_FTS14EM.md), FTS14EM) incl. signal inverter
   * A5-08-01 (Occupancy sensor, FTS14EM)
 * Sensor
   * A5-04-02 (Temperature and Humidity Sensor, FLGTF, FLT58)
@@ -136,6 +136,18 @@ python -m unittest discover tests -v
 * [Eltako Technical Specification of Devices](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) contains as well mapping of EEPs to devices
 * [OpenHAB Binding for EnOcean/Binding](https://github.com/fruggy83/openocean)
 
+# Contribution and Support to this Project
+I'm really happy to provide a more and more growing Home Assistant Eltako Integration by this project. The size of this integration is getting much bigger than the use cases I've realized at home, the variety of supported devices is increasing and the stability of the integraiton is getting to a professional level. On the other side it is getting hard to keep this level of development speed and operational quality. I want to going in building up a professional development and testing environment for which I need support in devices and/or money. 
+
+In general, you can contribute to this project by:
+* Support users in the Home Assistant Community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging))
+* Reporting [Issues]([/issue](https://github.com/grimmpp/home-assistant-eltako/issues))
+* Creating [Pull Requests](https://github.com/grimmpp/home-assistant-eltako/pulls)
+* Providing [Documentation](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs)
+* Supporting a proper development and test environment by sending devices and/or money. [![Generic badge](https://img.shields.io/badge/SUPPORT_THIS_PROJECT-PayPal.me-27ae60.svg)](https://paypal.me/grimmpp)
+
 # Credits
-Credits for this code goes to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who initiated and made this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)). Because of many many changes to the original repository the fork was decoupled. <br/>
-Big thanks as well to [Cedric Van Labeke](https://github.com/cvanlabe) who provides a very good [documentation](https://github.com/cvanlabe/Eltako-home-automation/tree/main) and helped me to make my first steps into this world.
+Thanks to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker) who initiated and made the first version of this code publicly available on their Gitlab repos, and shared it in the Home Assistant community ([Eltako “Baureihe 14 – RS485” (Enocean) Debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging)). <br />
+This fork was decoupled because of many many fundamental changes to the original repository. <br/>
+Big thanks as well to [Cedric Van Labeke](https://github.com/cvanlabe) who provides a very good [documentation](https://github.com/cvanlabe/Eltako-home-automation/tree/main) and helped me to make my first steps into this world. <br />
+Thanks to [LHBL2003](https://github.com/LHBL2003) who is eagerly testing and pushing things to a good quality by creating Pull Requests and Issues. 
