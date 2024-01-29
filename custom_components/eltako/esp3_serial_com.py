@@ -5,22 +5,30 @@ import serial
 import time
 import threading
 
-from enocean.communicators.communicator import Communicator
+import queue
 
+from enocean.communicators.communicator import Communicator
+from enocean.protocol.packet import Packet, RadioPacket, RORG, PACKET
+from enocean.protocol.constants import PACKET, PARSE_RESULT, RETURN_CODE
+
+from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage,  Regular4BSMessage, prettify
 
 class ESP3SerialCommunicator(Communicator):
     ''' Serial port communicator class for EnOcean radio '''
 
-    def __init__(self, filename, log=None, callback=None, baud_rate=57600, reconnection_timeout:float=10):
-        super(ESP3SerialCommunicator, self).__init__(callback)
+    def __init__(self, filename, log=None, callback=None, baud_rate=57600, reconnection_timeout:float=10, esp2_translation_enabled:bool=False):
+        self.esp2_translation_enabled = esp2_translation_enabled
+        self._outside_callback = callback
+        super(ESP3SerialCommunicator, self).__init__(self.__callback_wrapper)
         
-        self.filename = filename
+        self._filename = filename
         self.log = log or logging.getLogger('enocean.communicators.SerialCommunicator')
 
-        self.baud_rate = baud_rate
+        self._baud_rate = baud_rate
         self.__recon_time = reconnection_timeout
         self.is_serial_connected = threading.Event()
         self.status_changed_handler = None
+        self.__ser = None
 
     def is_active(self) -> bool:
         return not self._stop_flag.is_set() and self.is_serial_connected.is_set()     
@@ -36,10 +44,98 @@ class ESP3SerialCommunicator(Communicator):
         except Exception as e:
             pass
 
+    @classmethod
+    def convert_esp2_to_esp3_message(cls, message: ESP2Message) -> RadioPacket:
+    
+        d = message.data[0]
+
+        if isinstance(message, RPSMessage):
+            org = RORG.RPS
+            org_func = 0x02
+            org_type = 0x02
+        elif isinstance(message, Regular1BSMessage):
+            org = RORG.BS1
+            org_func = 0x02
+            org_type = 0x02
+        elif isinstance(message, Regular4BSMessage):
+            org = RORG.BS4
+            org_func = 0x01
+            org_type = 0x01
+            d = message.data
+        else:
+            return None
+        
+        # command = [0xA5, 0x02, bval, 0x01, 0x09]
+        # command.extend(self._sender_id)
+        # command.extend([0x00])
+        # self.send_command(data=command, optional=[], packet_type=0x01)
+
+        # data = bytes([org, 0x02, 0x01, 0x01, 0x09]) + d + message.address + bytes([message.status])
+
+# RadioPacket.create(rorg=RORG.BS4, rorg_func=0x20, rorg_type=0x01,
+#                               sender=transmitter_id,
+#                               CV=50,
+#                               TMP=21.5,
+#                               ES='true')
+        sender = [x for x in message.address]
+
+        # packet = Packet(packet_type=0x01, data=data, optional=[])
+        packet = RadioPacket.create(rorg=org, 
+                                rorg_func=org_func, 
+                                rorg_type=org_type,
+                                sender=sender,
+                                command=[0x01, 0x00, 0x00, 0x09]
+                                )
+        return packet
+
+    @classmethod
+    def convert_esp3_to_esp2_message(cls, packet: RadioPacket) -> ESP2Message:
+        
+        if packet.rorg == RORG.RPS:
+            org = 0x05
+        elif packet.rorg == RORG.BS1:
+            org = 0x06
+        elif packet.rorg == RORG.BS4:
+            org = 0x07
+        else:
+            return None
+
+        if org == 0x07:
+            body:bytes = bytes([0x0b, org] + packet.data[1:])
+        else:
+            # data = ['0xf6', '0x50', '0xff', '0xa2', '0x24', '0x1', '0x30']
+            body:bytes = bytes([0x0b, org] + packet.data[1:2] + [0,0,0] + packet.data[2:])
+
+        return prettify( ESP2Message(body) )
+    
+
+    def __callback_wrapper(self, msg):
+        if self._outside_callback:
+            if self.esp2_translation_enabled:
+                esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
+                
+                if esp2_msg is None:
+                    self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
+                else:
+                    self._outside_callback(esp2_msg)
+
+            else:
+                self._outside_callback(msg)
+
     def reconnect(self):
         self._stop_flag.set()
         self._stop_flag.wait()
         self.start()
+
+    async def send(self, packet) -> bool:
+        if self.esp2_translation_enabled:
+            esp3_msg = ESP3SerialCommunicator.convert_esp2_to_esp3_message(packet)
+            if esp3_msg is None:
+                self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp3 message (%s).", packet)
+            else:
+                return super().send(esp3_msg)
+        else:
+            return super().send(packet)
 
     def run(self):
         self.logger.info('SerialCommunicator started')
@@ -48,7 +144,7 @@ class ESP3SerialCommunicator(Communicator):
             try:
                 # Initialize serial port
                 if self.__ser is None:
-                    self.__ser = serial.Serial(self.filename, self.baud_rate, timeout=0.1)
+                    self.__ser = serial.Serial(self._filename, self._baud_rate, timeout=0.1)
                     self.log.info("Established serial connection to %s - baudrate: %d", self._filename, self._baud_rate)
                     self.is_serial_connected.set()
                     self._fire_status_change_handler(connected=True)
@@ -59,17 +155,11 @@ class ESP3SerialCommunicator(Communicator):
                     packet = self._get_from_send_queue()
                     if not packet:
                         break
-                    try:
-                        self.__ser.write(bytearray(packet.build()))
-                    except serial.SerialException:
-                        self.stop()
+                    self.log.debug("send msg: %s", packet)
+                    self.__ser.write(bytearray(packet.build()))
 
                 # Read chars from serial port as hex numbers
-                try:
-                    self._buffer.extend(bytearray(self.__ser.read(16)))
-                except serial.SerialException:
-                    self.logger.error('Serial port exception! (device disconnected or multiple access on port?)')
-                    self.stop()
+                self._buffer.extend(bytearray(self.__ser.read(16)))
                 self.parse()
                 time.sleep(0)
 
@@ -84,3 +174,27 @@ class ESP3SerialCommunicator(Communicator):
         self.__ser.close()
         self._fire_status_change_handler(connected=False)
         self.logger.info('SerialCommunicator stopped')
+
+if __name__ == '__main__':
+
+    data = [0xf6, 0x50, 0xff, 0xa2, 0x24, 0x1, 0x30]
+    body:bytes = bytes([0x0b, 0x05] + data[1:2] + [0,0,0] + data[2:])
+    msg =  prettify( ESP2Message(body) )
+    print( msg )
+
+    # command = [0xA5, 0x02, 0x01, 0x01, 0x09] # data
+    # command.extend([0xFF, 0xD6, 0x30, 0x01]) # address
+    # command.extend([0x00])  #status
+    # packet = RadioPacket(0x01, command, [])
+    # print(packet)
+
+    packet = RadioPacket.create(rorg=RORG.RPS, 
+                                rorg_func=0x02, 
+                                rorg_type=0x02,
+                                sender=[0xFF,0xD6,0x30,0x01],
+                                command=[0x01, 0x00, 0x00, 0x09]
+                                )
+    print(packet)
+
+    packet = ESP3SerialCommunicator.convert_esp2_to_esp3_message(msg)
+    print(packet)

@@ -9,6 +9,8 @@ from eltakobus.eep import *
 from eltakobus.message import ESP2Message, Regular4BSMessage
 
 from decimal import Decimal, InvalidOperation as DecimalInvalidOperation
+from . import config_helpers
+
 
 from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
@@ -353,10 +355,41 @@ async def async_setup_entry(
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
 
+    # add labels for buttons
+    if Platform.BINARY_SENSOR in config:
+        for entity_config in config[Platform.BINARY_SENSOR]:
+            try:
+                dev_conf = DeviceConf(entity_config)
+                if dev_conf.eep in [F6_02_01, F6_02_02]:
+                    def convert_event(event):
+                        # if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
+                        return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
+
+                    event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, dev_conf.id)
+                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
+            
+            except Exception as e:
+                LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
+                LOGGER.critical(e, exc_info=True)
+
+    # add id field for every device
+    for pl in PLATFORMS:
+        if pl in config:
+            for entity_config in config[pl]:
+                try:
+                    dev_conf = DeviceConf(entity_config)
+                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
+                
+                except Exception as e:
+                    LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
+                    LOGGER.critical(e, exc_info=True)
+
+
     # add gateway information
-    entities.append(GatewayInfo(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
-    entities.append(GatewayInfo(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
-    entities.append(GatewayInfo(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+    entities.append(GatewayInfoField(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
+    entities.append(GatewayInfoField(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
+    entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+    entities.append(GatewayInfoField(platform, gateway, "USB Protocol", gateway.native_protocol, "mdi:usb"))
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
@@ -815,14 +848,14 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
         self.schedule_update_ha_state()
 
 
-class GatewayInfo(EltakoSensor):
+class StaticInfoField(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
         super().__init__(platform, gateway,
-                         dev_id=gateway.base_id, 
-                         dev_name=key, 
-                         dev_eep=None,
+                         dev_id=dev_id, 
+                         dev_name=dev_name, 
+                         dev_eep=dev_eep,
                          description=EltakoSensorEntityDescription(
                             key=key,
                             name=key,
@@ -835,6 +868,23 @@ class GatewayInfo(EltakoSensor):
         self._attr_native_value = value
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
 
+    def value_changed(self, value) -> None:
+        pass
+
+class GatewayInfoField(StaticInfoField):
+    """Key value fields for gateway information"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
+        super().__init__(platform, 
+                         gateway,
+                         dev_id=gateway.base_id, 
+                         dev_name=key, 
+                         dev_eep=None,
+                         key=key,
+                         value=value,
+                         icon=icon
+                         )
+        
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
@@ -845,6 +895,36 @@ class GatewayInfo(EltakoSensor):
             model=self.gateway.model,
             via_device=(DOMAIN, self.gateway.serial_path)
         )
+        
+class EventListenerInfoField(EltakoSensor):
+    """Key value fields for gateway information"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, event_id: str, key:str, convert_event_function, icon:str=None):
+        super().__init__(platform, gateway,
+                         dev_id=dev_id, 
+                         dev_name=dev_name, 
+                         dev_eep=dev_eep,
+                         description=EltakoSensorEntityDescription(
+                            key=key,
+                            name=key,
+                            icon=icon,
+                            has_entity_name= True,
+                        )
+        )
+        self.convert_event_function = convert_event_function
+        self.has_entity_name = True
+        self._attr_name = key
+        self._attr_native_value = ''
+        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self.listen_to_addresses.clear()
+
+        LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")
+        self.hass.bus.async_listen(event_id, self.value_changed)
+
     
-    def value_changed(self, value) -> None:
-        pass
+    def value_changed(self, event) -> None:
+        LOGGER.debug(f"Received event: {event}")
+        self.native_value = self.convert_event_function(event)
+
+        self.schedule_update_ha_state()
+            

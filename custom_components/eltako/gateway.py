@@ -10,7 +10,7 @@ import serial
 import asyncio
 
 from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
-from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll
+from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll, prettify
 
 from eltakobus.util import AddressExpression
 
@@ -28,31 +28,6 @@ from .const import *
 from . import config_helpers
 from .esp3_serial_com import ESP3SerialCommunicator
 
-def convert_esp2_to_esp3_message(message: ESP2Message) -> RadioPacket:
-    
-    org = 0xF6
-    if isinstance(message, RPSMessage):
-        org = RORG.RPS
-    elif isinstance(message, Regular1BSMessage):
-        org = RORG.BS1
-    elif isinstance(message, Regular4BSMessage):
-        org = RORG.BS4
-
-    data = [org] + message.data + message.address + message.status
-
-    packet = Packet(packet_type=0x01, data=data, optional=[])
-    return packet
-
-def convert_esp3_to_esp2_message(packet: RadioPacket) -> ESP2Message:
-    
-    org = 0x05
-    if RORG.BS1:
-        org = 0x06
-    elif RORG.BS4:
-        org = 0x07
-
-    body:bytes = [0x0b, org] + packet.data[1:]
-    return ESP2Message(body)
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> [str]:
     base_id_list = []
@@ -99,6 +74,10 @@ class EnOceanGateway:
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
+        if GatewayDeviceType.is_esp2_gateway(self.dev_type):
+            self.native_protocol = 'ESP2'
+        else:
+            self.native_protocol = 'ESP3'
         self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
 
         self._init_bus()
@@ -136,10 +115,11 @@ class EnOceanGateway:
 
     def _init_bus(self):
         self._received_message_count = 0
+        self._fire_received_message_count_event()
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:
-            self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus)
+            self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
@@ -209,7 +189,8 @@ class EnOceanGateway:
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
         self._bus.start()
-        
+        LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
+
         # receive messages from HA event bus
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
@@ -221,6 +202,7 @@ class EnOceanGateway:
         if self.dispatcher_disconnect_handle:
             self._bus.stop()
             self._bus.join()
+            LOGGER.debug("[Gateway] [Id: %d] Was stopped.", self.dev_id)
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
@@ -229,10 +211,6 @@ class EnOceanGateway:
         if self._bus.is_active():
             if isinstance(msg, ESP2Message):
                 LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
-
-                # convert ESP2 message to ESP3 in case of ESP3 gateway
-                if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
-                    msg = convert_esp3_to_esp2_message(msg)
 
                 # put message on serial bus
                 asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
@@ -246,10 +224,6 @@ class EnOceanGateway:
         This is the callback function called by python-enocan whenever there
         is an incoming message.
         """
-
-        # convert ESP3 message to ESP2 message for ESP3 gateway types
-        if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
-            message = convert_esp3_to_esp2_message(message)
 
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
