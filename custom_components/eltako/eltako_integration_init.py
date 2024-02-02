@@ -9,6 +9,7 @@ from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
 
+LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
@@ -25,6 +26,15 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
+def migrate_old_gateway_keys(hass: HomeAssistant):
+    LOGGER.debug(f"[{LOG_PREFIX}] Migrate Gateway keys if necessary.")
+    for key in hass.data[DATA_ELTAKO].keys():
+        if OLD_GATEWAY_DEFAULT_NAME in key:
+            new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
+            LOGGER.info(f"[{LOG_PREFIX}] Migrate gatewy from old description '{key}' to new description '{new_key}'")
+            hass.data[DATA_ELTAKO][new_key] = hass.data[DATA_ELTAKO][key]
+            del hass.data[DATA_ELTAKO][key]
+
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnOceanGateway:
     return hass.data[DATA_ELTAKO][config_entry.data[CONF_GATEWAY_DESCRIPTION]]
 
@@ -33,8 +43,6 @@ def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: EnOceanGateway) -> N
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: EnOceanGateway) -> ConfigType:
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
-
-LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
@@ -52,6 +60,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # Check if gateway ids are unique
     if not config_helpers.config_check_gateway(config):
         raise Exception("Gateway Ids are not unique.")
+
+
+    # Migrage existing gateway configs / ESP2 was removed in the name
+    migrate_old_gateway_keys(hass)
 
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
