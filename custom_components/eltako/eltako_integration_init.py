@@ -118,6 +118,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
+
+    # Migrage existing gateway configs / ESP2 was removed in the name
+    migrate_old_gateway_keys(hass)
+
     gateway = get_gateway_from_hass(hass, config_entry)
 
     LOGGER.info("Unload %s and all its supported devices!", gateway.dev_name)
