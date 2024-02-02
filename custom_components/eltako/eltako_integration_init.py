@@ -27,10 +27,10 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
-    LOGGER.debug(f"[{LOG_PREFIX}] Migrate Gateway keys if necessary.")
+    LOGGER.debug(f"[{LOG_PREFIX}] Provide new and old gateway descriptions/id for smooth version upgrades.")
     migration_dict:dict = {}
     for key in hass.data[DATA_ELTAKO].keys():
-        LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
+        # LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
         if GATEWAY_DEFAULT_NAME in key:
             old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
             LOGGER.info(f"[{LOG_PREFIX}] Support downwards compatibility => from new gatewy description '{key}' to old description '{old_key}'")
