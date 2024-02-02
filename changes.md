@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.6 Dependencies fixed for 1.3.5
+* &#x1F41E; Wrong dependency in manifest &#x1F41E; 
+
 ## Version 1.3.5 Prevent Message overflow for FGW14-USB
 * Added info field for which button of a wall-mounted switch was pushed down
 * Added static info filed for device id 
