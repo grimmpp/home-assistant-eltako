@@ -26,6 +26,7 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
+# relevant for higher than v.1.3.4: removed 'ESP2' from GATEWAY_DEFAULT_NAME which is still in OLD_GATEWAY_DEFAULT_NAME
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
     LOGGER.debug(f"[{LOG_PREFIX}] Provide new and old gateway descriptions/id for smooth version upgrades.")
     migration_dict:dict = {}
