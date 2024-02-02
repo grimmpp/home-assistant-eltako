@@ -28,17 +28,21 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
 
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
     LOGGER.debug(f"[{LOG_PREFIX}] Migrate Gateway keys if necessary.")
+    migration_dict:dict = {}
     for key in hass.data[DATA_ELTAKO].keys():
         LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
         if GATEWAY_DEFAULT_NAME in key:
             old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
             LOGGER.info(f"[{LOG_PREFIX}] Support downwards compatibility => from new gatewy description '{key}' to old description '{old_key}'")
-            hass.data[DATA_ELTAKO][old_key] = hass.data[DATA_ELTAKO][key]
+            migration_dict[old_key] = hass.data[DATA_ELTAKO][key]
             # del hass.data[DATA_ELTAKO][key]
         if OLD_GATEWAY_DEFAULT_NAME in key:
             new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
             LOGGER.info(f"[{LOG_PREFIX}] Migrate gatewy from old description '{key}' to new description '{new_key}'")
-            hass.data[DATA_ELTAKO][new_key] = hass.data[DATA_ELTAKO][key]
+            migration_dict[new_key] = hass.data[DATA_ELTAKO][key]
+    # prvide either new or old key in parallel
+    for key in migration_dict:
+        hass.data[DATA_ELTAKO][key] = migration_dict[key]
 
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnOceanGateway:
 
