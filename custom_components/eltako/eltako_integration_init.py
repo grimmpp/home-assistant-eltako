@@ -33,7 +33,7 @@ def migrate_old_gateway_descriptions(hass: HomeAssistant):
         if GATEWAY_DEFAULT_NAME in key:
             old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
             LOGGER.info(f"[{LOG_PREFIX}] Support downwards compatibility => from new gatewy description '{key}' to old description '{old_key}'")
-            hass.data[DATA_ELTAKO][new_key] = hass.data[DATA_ELTAKO][key]
+            hass.data[DATA_ELTAKO][old_key] = hass.data[DATA_ELTAKO][key]
             # del hass.data[DATA_ELTAKO][key]
         if OLD_GATEWAY_DEFAULT_NAME in key:
             new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
