@@ -26,19 +26,27 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
-def migrate_old_gateway_keys(hass: HomeAssistant):
+def migrate_old_gateway_descriptions(hass: HomeAssistant):
     LOGGER.debug(f"[{LOG_PREFIX}] Migrate Gateway keys if necessary.")
     for key in hass.data[DATA_ELTAKO].keys():
         if OLD_GATEWAY_DEFAULT_NAME in key:
             new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
             LOGGER.info(f"[{LOG_PREFIX}] Migrate gatewy from old description '{key}' to new description '{new_key}'")
             hass.data[DATA_ELTAKO][new_key] = hass.data[DATA_ELTAKO][key]
-            del hass.data[DATA_ELTAKO][key]
+            # del hass.data[DATA_ELTAKO][key]
 
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnOceanGateway:
+
+    # Migrage existing gateway configs / ESP2 was removed in the name
+    migrate_old_gateway_descriptions(hass)
+
     return hass.data[DATA_ELTAKO][config_entry.data[CONF_GATEWAY_DESCRIPTION]]
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: EnOceanGateway) -> None:
+
+    # Migrage existing gateway configs / ESP2 was removed in the name
+    migrate_old_gateway_descriptions(hass)
+    
     hass.data[DATA_ELTAKO][gateway_enity.dev_name] = gateway_enity
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: EnOceanGateway) -> ConfigType:
@@ -69,7 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"config: {config}\n")
 
     # Migrage existing gateway configs / ESP2 was removed in the name
-    migrate_old_gateway_keys(hass)
+    migrate_old_gateway_descriptions(hass)
 
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
     # Initialise the gateway
@@ -118,9 +126,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
-
-    # Migrage existing gateway configs / ESP2 was removed in the name
-    migrate_old_gateway_keys(hass)
 
     gateway = get_gateway_from_hass(hass, config_entry)
 
