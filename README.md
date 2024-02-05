@@ -39,7 +39,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-38-08 (Central command - gateway, FUD14)
   * M5-38-08 (Eltako relay, FSR14)
 * Switch
-  * M5-38-08 (Eltako relay, FSR14)
+  * M5-38-08 (Eltako relay, FSR14, FSR14_4x, FSR14SSR)
 * Cover
   * G5-3F-7F (Eltako cover, FSB14)
 
@@ -48,6 +48,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-38-08 (Central command - gateway, FUD14)
 * [Switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
   * F6-02-01 (Rocker switch)
+  * A5-38-08 (FSR14_4x, FSR14SSR)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
 * [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** - Not properly test. Interaction and synchronization of temperature controllers may change.)
