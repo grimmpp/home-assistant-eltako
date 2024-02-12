@@ -235,11 +235,12 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway, gateway.base_id, "Connected" )
 
-        self._attr_unique_id = f"{self.identifier}_Last Received Message - Gateway "+str(gateway.dev_id)
+        self._attr_unique_id = f"{self.identifier}_Gateway_Connection_State"
+        self._attr_has_entity_name = True
+        self._attr_icon = "mdi:connection"
+        self._attr_name = "Connected"
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
-        self.icon = "mdi:connection"
-        self.name = "Connected"
-        self.has_entity_name = True
+        
 
     @property
     def device_info(self) -> DeviceInfo:
