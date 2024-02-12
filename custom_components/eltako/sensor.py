@@ -771,6 +771,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
         self._attr_name = "Last Message Received"
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.async_value_changed)
+        LOGGER.debug(f"====>>> native_value: {self.native_value}")
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -792,7 +793,8 @@ class GatewayLastReceivedMessage(EltakoSensor):
 
     def value_changed(self, value: datetime) -> None:
         """Update the current value."""
-        # LOGGER.debug("[%s] Last message received", Platform.SENSOR)
+        LOGGER.debug("[%s] Last message received", Platform.SENSOR)
+        LOGGER.debug(f"====>>> value: {value}")
 
         if isinstance(value, datetime):
             self.native_value = value
