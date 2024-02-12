@@ -7,6 +7,7 @@ import yaml
 
 # mock update of Home Assistant
 EnOceanGateway._register_device = mock.Mock(return_value=None)
+EnOceanGateway._init_bus = mock.Mock(return_value=None)
 RS485SerialInterface.__init__ = mock.Mock(return_value=None)
 asyncio.get_event_loop = mock.Mock(return_value=None)
 
@@ -31,7 +32,7 @@ class TestGateway(TestCase):
         
         self.assertEquals(gw.identifier, basename(normpath('serial_path')))
         self.assertEquals(gw.general_settings, DEFAULT_GENERAL_SETTINGS)
-        self.assertEquals(gw.model, "EnOcean ESP2 Gateway - FAM14")
+        self.assertEquals(gw.model, "EnOcean Gateway - FAM14")
         self.assertEquals(gw.dev_id, 123)
         self.assertEquals(gw.dev_type, sub_type)
         self.assertEquals(gw.dev_name, 'GW - fam14 (Id: 123, BaseId: FF-AA-00-00)')
