@@ -430,6 +430,8 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
             # self._attr_native_value = new_state.state
             LOGGER.debug(f"[{Platform.SENSOR}] load initial state: {latest_state.state} ")
             LOGGER.debug(f"[{Platform.SENSOR}] load initial state attributes: {latest_state.attributes} ")
+            LOGGER.debug(f"[{Platform.SENSOR}] load initial state context: {latest_state.context} ")
+            LOGGER.debug(f"[{Platform.SENSOR}] load initial state state_info: {latest_state.state_info} ")
             self.load_value_initially(latest_state)
 
     def value_changed(self, msg):
