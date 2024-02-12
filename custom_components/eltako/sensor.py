@@ -425,8 +425,12 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         if self._attr_native_value is not None:
             return
 
-        if (state := await self.async_get_last_state()) is not None:
-            self._attr_native_value = state.state
+        # load value initially
+        if (latest_state := await self.async_get_last_state()) is not None:
+            # self._attr_native_value = new_state.state
+            LOGGER.debug(f"[{Platform.SENSOR}] load initial state: {latest_state.state} ")
+            LOGGER.debug(f"[{Platform.SENSOR}] load initial state attributes: {latest_state.attributes} ")
+            self.load_value_initially(latest_state)
 
     def value_changed(self, msg):
         """Update the internal state of the sensor."""
@@ -773,9 +777,6 @@ class GatewayLastReceivedMessage(EltakoSensor):
         self.gateway.set_last_message_received_handler(self.async_value_changed)
         LOGGER.debug(f"====>>> native_value: {self.native_value}")
 
-    async def async_added_to_hass(self) -> None:
-        pass
-
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
@@ -796,8 +797,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
 
     def value_changed(self, value: datetime) -> None:
         """Update the current value."""
-        LOGGER.debug("[%s] Last message received", Platform.SENSOR)
-        LOGGER.debug(f"====>>> value: {value}")
+        # LOGGER.debug("[%s] Last message received", Platform.SENSOR)
 
         if isinstance(value, datetime):
             self.native_value = value

@@ -4,7 +4,7 @@ from eltakobus.error import ParseError
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.const import Platform
@@ -53,6 +53,9 @@ class EltakoEntity(Entity):
             model=self.dev_eep.eep_string,
             via_device=(DOMAIN, self.gateway.serial_path),
         )
+    
+    def load_value_initially(self, state:State):
+        pass
 
     def validate_dev_id(self) -> bool:
         return self.gateway.validate_dev_id(self.dev_id, self.dev_name)
