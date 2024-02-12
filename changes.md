@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.7 Import Cleanup
+* Trial to remove import warnings (Reported Issue: https://github.com/grimmpp/home-assistant-eltako/issues/61)
+
 ## Version 1.3.6 Dependencies fixed for 1.3.5
 * &#x1F41E; Wrong dependency in manifest &#x1F41E; 
 
