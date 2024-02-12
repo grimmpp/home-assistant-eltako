@@ -23,6 +23,7 @@ class EltakoEntity(Entity):
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
+        self._attr_should_poll = False
         self._attr_gateway = gateway
         self.hass = self.gateway.hass
         self.general_settings = self.gateway.general_settings

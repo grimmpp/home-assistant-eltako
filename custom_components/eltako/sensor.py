@@ -819,9 +819,8 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             icon="mdi:chart-line",
                         )
         )
-        self.has_entity_name = True
-        self._attr_name="Received Messages per Session",
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self._attr_name="Received Messages per Session",
         self.gateway.set_received_message_count_handler(self.async_value_changed)
 
     @property
