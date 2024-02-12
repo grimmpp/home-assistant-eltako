@@ -236,6 +236,7 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
         super().__init__(platform, gateway, gateway.base_id, "Connected" )
 
         self._attr_unique_id = f"{self.identifier}_Gateway_Connection_State"
+        self.entity_id = f"{platform}.{self.unique_id}"
         self._attr_icon = "mdi:connection"
         self._attr_name = "Connected"
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
