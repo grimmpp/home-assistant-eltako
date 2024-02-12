@@ -773,6 +773,9 @@ class GatewayLastReceivedMessage(EltakoSensor):
         self.gateway.set_last_message_received_handler(self.async_value_changed)
         LOGGER.debug(f"====>>> native_value: {self.native_value}")
 
+    async def async_added_to_hass(self) -> None:
+        pass
+
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
