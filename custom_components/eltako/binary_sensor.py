@@ -6,7 +6,7 @@ from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant import config_entries
-from homeassistant.const import *
+from homeassistant.const import CONF_DEVICE_CLASS
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo

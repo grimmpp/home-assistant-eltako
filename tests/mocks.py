@@ -28,6 +28,7 @@ class HassMock():
 class GatewayMock():
 
     def __init__(self, general_settings:dict=DEFAULT_GENERAL_SETTINGS, dev_id: int=123, base_id:AddressExpression=AddressExpression.parse('FF-AA-80-00')):
+        self.hass = HassMock()
         self.general_settings = general_settings
         self.base_id = base_id
         self.dev_id = dev_id
