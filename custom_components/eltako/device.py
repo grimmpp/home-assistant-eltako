@@ -99,7 +99,13 @@ class EltakoEntity(Entity):
         LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
         try:
-            if attributs.get('state_class', None) == 'measurement':
+            if 'unknown' == latest_state.state:
+                if hasattr(self, '_attr_is_on'):
+                    self._attr_is_on = None
+                else:
+                    self._attr_native_value = None
+
+            elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
                     self._attr_native_value = float(latest_state.state)
                 else:
@@ -113,7 +119,10 @@ class EltakoEntity(Entity):
                 self._attr_native_value = datetime.strptime(latest_state.state, '%Y-%m-%dT%H:%M:%S%z:%f')
             
         except Exception as e:
-            self._attr_native_value = None
+            if hasattr(self, '_attr_is_on'):
+                self._attr_is_on = None
+            else:
+                self._attr_native_value = None
             raise e
 
         self.schedule_update_ha_state()
