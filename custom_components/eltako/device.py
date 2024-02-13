@@ -22,7 +22,7 @@ from . import config_helpers
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
-    _attr_should_poll = False
+    _attr_should_poll = True
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
