@@ -55,7 +55,7 @@ async def async_setup_entry(
     async_add_entities(entities)
     
 
-class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
+class EltakoBinarySensor(BinarySensorEntity, EltakoEntity, RestoreEntity):
     """Representation of Eltako binary sensors such as wall switches.
 
     Supported EEPs (EnOcean Equipment Profiles):
