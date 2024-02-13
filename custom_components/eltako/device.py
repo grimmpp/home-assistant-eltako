@@ -134,7 +134,7 @@ class EltakoEntity(Entity):
         except Exception as e:
             if hasattr(self, '_attr_is_on'):
                 self._attr_is_on = None
-            else:
+            elif hasattr(self, '_attr_native_value'):
                 self._attr_native_value = None
             raise e
 
