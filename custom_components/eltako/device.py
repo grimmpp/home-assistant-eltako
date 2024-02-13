@@ -86,7 +86,14 @@ class EltakoEntity(Entity):
         )
 
         # load initial value
-        if self._attr_native_value is None:
+
+        # check if value is not set
+        is_value_available = getattr(self, '_attr_native_value', None)
+        if is_value_available is None:
+            is_value_available = getattr(self, '_attr_is_on', None)
+
+        # update values
+        if is_value_available is None:
             latest_state:State = await self.async_get_last_state()
             if latest_state is not None:
                 self.load_value_initially(latest_state)
