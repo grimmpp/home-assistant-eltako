@@ -25,6 +25,7 @@ class EltakoEntity(Entity):
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
         self._attr_should_poll = False
+        self._attr_ha_platform = platform
         self._attr_gateway = gateway
         self.hass = self.gateway.hass
         self.general_settings = self.gateway.general_settings
@@ -33,14 +34,25 @@ class EltakoEntity(Entity):
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
-        self._attr_identifier = self._get_identifier(self.gateway, self.dev_id)
-        self._attr_unique_id = self.identifier
-        self._attr_ha_platform = platform
-
+        self.description_key = None
+        if self.entity_description is not None and self.description_key is None:
+            self.description_key = self.entity_description.key
+        self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id)
+        self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
+        self.entity_id = self.identifier
 
     @classmethod
-    def _get_identifier(cls, gateway: EnOceanGateway, dev_id: AddressExpression) -> str:
+    def _get_unique_id(cls, gateway: EnOceanGateway, dev_id: AddressExpression, description_key:str=None) -> str:
         return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}"
+
+    @classmethod
+    def _get_identifier(cls, gateway: EnOceanGateway, dev_id: AddressExpression, description_key:str=None) -> str:
+        if description_key is None:
+            description_key = ''
+        else:
+            description_key = '_'+description_key
+
+        return f"{EltakoEntity._get_unique_id(gateway, dev_id)}{description_key}"
 
 
     @property
@@ -138,20 +150,14 @@ class EltakoEntity(Entity):
         return self._attr_dev_id
 
     @property
-    def entity_id(self) -> str:
-        return f"{self._attr_ha_platform}.{self.unique_id}"
-    
-    @entity_id.setter
-    def entity_id(self, value):
-        pass
-
-    @property
     def identifier(self) -> str:
         """Return the identifier of device."""
-        description_key = ""
-        if hasattr(self, 'entity_description') and hasattr(self.entity_description, 'key'):
-            description_key = f"_{self.entity_description.key}"
-        return self._attr_identifier + description_key
+        return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
+    
+    @property
+    def unique_id(self) -> str:
+        """Return the unique id of device"""
+        return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
 
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""

@@ -753,7 +753,6 @@ class GatewayLastReceivedMessage(EltakoSensor):
                         )
         )
         self._attr_name = "Last Message Received"
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.async_value_changed)
 
     @property
