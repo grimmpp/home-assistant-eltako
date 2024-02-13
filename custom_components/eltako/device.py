@@ -116,6 +116,7 @@ class EltakoEntity(Entity):
 
             elif hasattr(self, '_attr_is_on'):
                 self._attr_is_on = 'on' == latest_state.state
+                LOGGER.debug(f"[device] latest state - set on")
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
