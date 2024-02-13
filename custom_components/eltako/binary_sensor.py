@@ -1,12 +1,13 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
+from typing import Literal, final
 
 from eltakobus.util import AddressExpression, b2a, b2s
 from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant import config_entries
-from homeassistant.const import CONF_DEVICE_CLASS
+from homeassistant.const import CONF_DEVICE_CLASS, STATE_ON, STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
@@ -69,6 +70,14 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
+    
+    @final
+    @property
+    def state(self) -> Literal["on", "off"] | None:
+        """Return the state of the binary sensor."""
+        if (is_on := self.is_on) is None:
+            return None
+        return STATE_ON if is_on else STATE_OFF
 
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
