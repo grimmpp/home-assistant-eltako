@@ -147,8 +147,8 @@ class EltakoEntity(Entity):
         elif hasattr(self, '_attr_native_value'):
             LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
 
+        LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
         LOGGER.debug(f"[device] latest state - state {self.state}")
-        LOGGER.debug(f"[device] latest state - platform {self.platform}")
 
         self.schedule_update_ha_state()
 
