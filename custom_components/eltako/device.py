@@ -77,6 +77,7 @@ class EltakoEntity(Entity):
     def load_value_initially(self, latest_state:State):
         # cast state:str to actual value
         attributs = latest_state.attributes
+        LOGGER.debug(f"[device] eneity identifier: {self.identifier}")
         LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
         try:
