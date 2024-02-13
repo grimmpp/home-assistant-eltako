@@ -74,6 +74,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
     @property
     def state(self) -> Literal["on", "off"] | None:
         """Return the state of the binary sensor."""
+        print("entered state in eltako_binary_sensor")
         if (is_on := self.is_on) is None:
             return None
         return STATE_ON if is_on else STATE_OFF
