@@ -76,7 +76,6 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = "temperature-controller-teach-in-button"
-        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep)
         self.entity_description = ButtonEntityDescription(
             key="teach_in_button",
             name="Send teach-in telegram from "+sender_id.plain_address().hex(),
@@ -84,8 +83,9 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
         )
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.sender_id = sender_id
+        
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep)
 
     async def async_press(self) -> None:
         """
@@ -101,7 +101,6 @@ class GatewayReconnectButton(EltakoEntity, ButtonEntity):
     """Button for reconnecting serial bus"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
         self.entity_description = ButtonEntityDescription(
             key="gateway_" + str(gateway.dev_id) + "Serial Reconnection",
             name="Reconnect Gateway "+str(gateway.dev_id),
@@ -109,7 +108,8 @@ class GatewayReconnectButton(EltakoEntity, ButtonEntity):
             device_class=ButtonDeviceClass.UPDATE,
             has_entity_name= True,
         )
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
 
     @property
     def device_info(self) -> DeviceInfo:

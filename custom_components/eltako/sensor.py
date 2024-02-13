@@ -801,7 +801,6 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                         )
         )
         self._attr_name="Received Messages per Session"
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_received_message_count_handler(self.async_value_changed)
 
     @property
@@ -845,10 +844,8 @@ class StaticInfoField(EltakoSensor):
                             has_entity_name= True,
                         )
         )
-        self.has_entity_name = True
         self._attr_name = key
         self._attr_native_value = value
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
 
     def value_changed(self, value) -> None:
         pass
@@ -894,10 +891,8 @@ class EventListenerInfoField(EltakoSensor):
                         )
         )
         self.convert_event_function = convert_event_function
-        self.has_entity_name = True
         self._attr_name = key
         self._attr_native_value = ''
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.listen_to_addresses.clear()
 
         LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")

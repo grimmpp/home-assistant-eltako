@@ -237,12 +237,13 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, "Connected" )
+        self.description_key = "Gateway_Connection_State"
 
-        self._attr_unique_id = f"{self.identifier}_Gateway_Connection_State"
         self._attr_icon = "mdi:connection"
         self._attr_name = "Connected"
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
+
+        super().__init__(platform, gateway, gateway.base_id, "Connected")
 
     def load_value_initially(self, state: str):
         self.value_changed( state.lower() == "true" )

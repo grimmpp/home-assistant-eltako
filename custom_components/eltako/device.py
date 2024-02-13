@@ -21,10 +21,10 @@ from . import config_helpers
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     _attr_has_entity_name = True
+    _attr_should_poll = False
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
-        self._attr_should_poll = False
         self._attr_ha_platform = platform
         self._attr_gateway = gateway
         self.hass = self.gateway.hass
@@ -35,9 +35,9 @@ class EltakoEntity(Entity):
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
         self.description_key = None
-        self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id)
-        self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
-        self.entity_id = self.identifier
+        self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
+        # self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
+        self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
 
     @classmethod
     def _get_unique_id(cls, gateway: EnOceanGateway, dev_id: AddressExpression, description_key:str=None) -> str:
@@ -50,7 +50,7 @@ class EltakoEntity(Entity):
         else:
             description_key = '_'+description_key
 
-        return f"{EltakoEntity._get_unique_id(gateway, dev_id)}{description_key}"
+        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}{description_key}"
 
     def _get_description_key(self):
         if self.description_key is not None:
@@ -95,12 +95,15 @@ class EltakoEntity(Entity):
     def load_value_initially(self, latest_state:State):
         # cast state:str to actual value
         attributs = latest_state.attributes
-        LOGGER.debug(f"[device] eneity identifier: {self.identifier}")
+        LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
         LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
         try:
             if attributs.get('state_class', None) == 'measurement':
-                self._attr_native_value = float(latest_state.state)
+                if '.' in  latest_state.state:
+                    self._attr_native_value = float(latest_state.state)
+                else:
+                    self._attr_native_value = int(latest_state.state)
 
             elif attributs.get('state_class', None) == 'total_increasing':
                 self._attr_native_value = int(latest_state.state)
@@ -155,10 +158,10 @@ class EltakoEntity(Entity):
         """Return the id of device."""
         return self._attr_dev_id
 
-    @property
-    def identifier(self) -> str:
-        """Return the identifier of device."""
-        return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
+    # @property
+    # def identifier(self) -> str:
+    #     """Return the identifier of device."""
+    #     return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
     
     @property
     def unique_id(self) -> str:

@@ -51,7 +51,6 @@ class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
         self.entity_description = EntityDescription(
             key="Last Message Received",
             name="Last Message Received",
@@ -59,8 +58,9 @@ class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
             device_class=SensorDeviceClass.DATE,
             has_entity_name= True,
         )
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.set_value)
+        
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
 
     @property
     def device_info(self) -> DeviceInfo:
