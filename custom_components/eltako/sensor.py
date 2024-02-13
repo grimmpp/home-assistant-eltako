@@ -794,8 +794,8 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             name="Received Messages per Session",
                             state_class=SensorStateClass.TOTAL_INCREASING,
                             device_class=SensorDeviceClass.VOLUME,
-                            native_unit_of_measurement="Messages",
-                            unit_of_measurement="",
+                            # native_unit_of_measurement="Messages", # => raises error message
+                            unit_of_measurement="Messages",
                             has_entity_name= True,
                             icon="mdi:chart-line",
                         )

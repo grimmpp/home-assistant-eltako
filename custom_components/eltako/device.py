@@ -145,6 +145,7 @@ class EltakoEntity(Entity):
             LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
 
         self.schedule_update_ha_state(force_refresh=True)
+        self.async_update_ha_state
 
 
     def validate_dev_id(self) -> bool:
