@@ -43,6 +43,6 @@ class TestCover(unittest.TestCase):
         ee = EltakoEntity(pl, gw, address, name, F6_02_01)
         ee._attr_is_on = None
 
-        ee.load_value_initially(LatestStateMock("true", {}))
+        ee.async_load_value_initially(LatestStateMock("true", {}))
 
         # self.assertTrue(ee._attr_is_on)

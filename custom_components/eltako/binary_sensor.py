@@ -70,16 +70,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
 
-    @property
-    def last_received_signal(self):
-        """Return timestamp of last received signal."""
-        return self._attr_last_received_signal
-    
-    @property
-    def data(self):
-        """Return telegram data for rocker switch."""
-        return self._attr_data
-
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
 
@@ -240,10 +230,6 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
         
         super().__init__(platform, gateway, gateway.base_id, "Connected")
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
-
-    def load_value_initially(self, state: str):
-        self.value_changed( state.lower() == "true" )
-        self.schedule_update_ha_state()        
 
     @property
     def device_info(self) -> DeviceInfo:
