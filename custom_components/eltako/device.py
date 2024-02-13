@@ -13,6 +13,7 @@ from homeassistant.const import Platform
 
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
+from homeassistant.components.binary_sensor import BinarySensorEntity
 
 from .const import *
 from .gateway import EnOceanGateway
@@ -111,8 +112,11 @@ class EltakoEntity(Entity):
             if 'unknown' == latest_state.state:
                 if hasattr(self, '_attr_is_on'):
                     self._attr_is_on = None
-                else:
+                elif hasattr(self, '_attr_native_value'):
                     self._attr_native_value = None
+
+            elif isinstance(self, BinarySensorEntity):
+                self._attr_is_on = 'on' == latest_state.state
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
