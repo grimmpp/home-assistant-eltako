@@ -120,7 +120,6 @@ class EltakoEntity(Entity):
 
             elif hasattr(self, '_attr_is_on'):
                 self._attr_is_on = 'on' == latest_state.state
-                self._attr_state = latest_state.state
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
@@ -146,6 +145,8 @@ class EltakoEntity(Entity):
             LOGGER.debug(f"[device] latest state - set {self._attr_is_on}")
         elif hasattr(self, '_attr_native_value'):
             LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
+
+        LOGGER.debug(f"[device] latest state - state {self.state}")
 
         self.schedule_update_ha_state()
 
