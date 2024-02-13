@@ -70,10 +70,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
 
-    def load_value_initially(self, state: str):
-        self._attr_is_on = state.lower() == "true"
-        self.schedule_update_ha_state()
-
     @property
     def last_received_signal(self):
         """Return timestamp of last received signal."""
