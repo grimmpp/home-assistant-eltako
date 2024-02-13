@@ -35,10 +35,8 @@ class EltakoEntity(Entity):
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
         self.description_key = None
-        if self.entity_description is not None and self.description_key is None:
-            self.description_key = self.entity_description.key
         self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id)
-        self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
+        self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         self.entity_id = self.identifier
 
     @classmethod
@@ -54,6 +52,14 @@ class EltakoEntity(Entity):
 
         return f"{EltakoEntity._get_unique_id(gateway, dev_id)}{description_key}"
 
+    def _get_description_key(self):
+        if self.description_key is not None:
+            return self.description_key
+
+        if hasattr(self, 'entity_description') and self.entity_description is not None:
+            if self.description_key is None:
+                self.description_key = self.entity_description.key
+        return self.description_key
 
     @property
     def device_info(self) -> DeviceInfo:
