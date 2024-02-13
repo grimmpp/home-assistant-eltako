@@ -78,6 +78,8 @@ class EltakoEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
+        await super().async_added_to_hass()
+        
         # Register callbacks.
         event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
         self.async_on_remove(
@@ -116,7 +118,6 @@ class EltakoEntity(Entity):
 
             elif hasattr(self, '_attr_is_on'):
                 self._attr_is_on = 'on' == latest_state.state
-                LOGGER.debug(f"[device] latest state - set on")
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
@@ -137,6 +138,11 @@ class EltakoEntity(Entity):
             elif hasattr(self, '_attr_native_value'):
                 self._attr_native_value = None
             raise e
+        
+        if hasattr(self, '_attr_is_on'):
+            LOGGER.debug(f"[device] latest state - set {self._attr_is_on}")
+        elif hasattr(self, '_attr_native_value'):
+            LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
 
         self.schedule_update_ha_state(force_refresh=True)
 
