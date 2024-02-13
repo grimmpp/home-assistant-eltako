@@ -21,11 +21,13 @@ from . import config_helpers
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
-    _attr_has_entity_name = True
-    _attr_should_poll = True
-
+    
+    
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
+        self._attr_has_entity_name = True
+        self._attr_should_poll = True
+
         self._attr_ha_platform = platform
         self._attr_gateway = gateway
         self.hass = self.gateway.hass
@@ -144,8 +146,7 @@ class EltakoEntity(Entity):
         elif hasattr(self, '_attr_native_value'):
             LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
 
-        self.schedule_update_ha_state(force_refresh=True)
-        self.async_update_ha_state
+        self.schedule_update_ha_state()
 
 
     def validate_dev_id(self) -> bool:
