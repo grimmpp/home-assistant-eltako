@@ -6,6 +6,7 @@ from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.const import Platform
@@ -86,18 +87,19 @@ class EltakoEntity(Entity):
         )
 
         # load initial value
+        if isinstance(self, RestoreEntity):
 
-        # check if value is not set
-        is_value_available = getattr(self, '_attr_native_value', None)
-        if is_value_available is None:
-            is_value_available = getattr(self, '_attr_is_on', None)
+            # check if value is not set
+            is_value_available = getattr(self, '_attr_native_value', None)
+            if is_value_available is None:
+                is_value_available = getattr(self, '_attr_is_on', None)
 
-        # update values
-        if is_value_available is None:
-            latest_state:State = await self.async_get_last_state()
-            if latest_state is not None:
-                self.load_value_initially(latest_state)
-            
+            # update values
+            if is_value_available is None:
+                latest_state:State = await self.async_get_last_state()
+                if latest_state is not None:
+                    self.load_value_initially(latest_state)
+
 
     def load_value_initially(self, latest_state:State):
         # cast state:str to actual value
