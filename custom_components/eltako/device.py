@@ -140,6 +140,10 @@ class EltakoEntity(Entity):
     @property
     def entity_id(self) -> str:
         return f"{self._attr_ha_platform}.{self.unique_id}"
+    
+    @entity_id.setter
+    def entity_id(self, value):
+        pass
 
     @property
     def identifier(self) -> str:
