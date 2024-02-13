@@ -100,10 +100,10 @@ class EltakoEntity(Entity):
             if is_value_available is None:
                 latest_state:State = await self.async_get_last_state()
                 if latest_state is not None:
-                    await self.async_load_value_initially(latest_state)
+                    self.load_value_initially(latest_state)
 
 
-    async def async_load_value_initially(self, latest_state:State):
+    def load_value_initially(self, latest_state:State):
         # cast state:str to actual value
         attributs = latest_state.attributes
         LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
@@ -144,7 +144,7 @@ class EltakoEntity(Entity):
         elif hasattr(self, '_attr_native_value'):
             LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
 
-        await self.async_schedule_update_ha_state(force_refresh=True)
+        self.schedule_update_ha_state(force_refresh=True)
 
 
     def validate_dev_id(self) -> bool:
