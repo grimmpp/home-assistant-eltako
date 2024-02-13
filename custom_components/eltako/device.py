@@ -150,6 +150,8 @@ class EltakoEntity(Entity):
         LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
         LOGGER.debug(f"[device] latest state - state {self.state}")
 
+        LOGGER.debug(f"properties: {self.__dict__.keys()}")
+
         self.schedule_update_ha_state()
 
 

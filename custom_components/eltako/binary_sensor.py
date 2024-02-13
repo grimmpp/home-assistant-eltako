@@ -70,11 +70,7 @@ class EltakoBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
-    
-    @property
-    def state(self) -> str:
-        print("entered state in eltako_binary_sensor")
-        return STATE_ON if self._attr_is_on else STATE_OFF
+        
 
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
