@@ -52,7 +52,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class EltakoSwitch(EltakoEntity, SwitchEntity):
+class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
     """Representation of an Eltako switch device."""
 
     def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):

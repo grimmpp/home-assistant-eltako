@@ -88,7 +88,7 @@ def validate_ids_of_climate(entities:[EltakoEntity]):
         e.validate_sender_id()
         if hasattr(e, "cooling_sender_id"):
             e.validate_sender_id(e.cooling_sender_id)
-class ClimateController(EltakoEntity, ClimateEntity):
+class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     _update_frequency = 55 # sec

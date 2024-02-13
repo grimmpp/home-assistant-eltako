@@ -81,10 +81,9 @@ class TemperatureControllerTeachInButton(EltakoEntity, ButtonEntity):
             name="Send teach-in telegram from "+sender_id.plain_address().hex(),
             icon="mdi:button-cursor",
             device_class=ButtonDeviceClass.UPDATE,
-            has_entity_name= True,
         )
         self.sender_id = sender_id
-        
+
         super().__init__(platform, gateway, dev_id, _dev_name, dev_eep)
 
     async def async_press(self) -> None:
@@ -106,7 +105,6 @@ class GatewayReconnectButton(EltakoEntity, ButtonEntity):
             name="Reconnect Gateway "+str(gateway.dev_id),
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
-            has_entity_name= True,
         )
 
         super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)

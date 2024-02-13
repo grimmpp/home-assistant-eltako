@@ -56,10 +56,9 @@ class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
             name="Last Message Received",
             icon="mdi:button-cursor",
             device_class=SensorDeviceClass.DATE,
-            has_entity_name= True,
         )
         self.gateway.set_last_message_received_handler(self.set_value)
-        
+
         super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
 
     @property
