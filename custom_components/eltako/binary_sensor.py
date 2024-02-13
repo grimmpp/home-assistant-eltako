@@ -71,7 +71,6 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
     
-    @final
     @property
     def state(self) -> Literal["on", "off"] | None:
         """Return the state of the binary sensor."""
