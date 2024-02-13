@@ -138,7 +138,7 @@ class EltakoEntity(Entity):
                 self._attr_native_value = None
             raise e
 
-        self.schedule_update_ha_state()
+        self.schedule_update_ha_state(force_refresh=True)
 
 
     def validate_dev_id(self) -> bool:
