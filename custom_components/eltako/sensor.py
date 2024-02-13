@@ -410,32 +410,12 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         #self._attr_unique_id = f"{self.identifier}_{description.key}"
-        # self.entity_id = f"{platform}.{self.unique_id}_{description.key}"
         self._attr_native_value = None
         
     @property
     def name(self):
         """Return the default name for the sensor."""
         return self.entity_description.name
-        
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        # If not None, we got an initial value.
-        await super().async_added_to_hass()
-        if self._attr_native_value is not None:
-            return
-
-        # load value initially
-        if (latest_state := await self.async_get_last_state()) is not None:
-            # self._attr_native_value = new_state.state
-            LOGGER.debug(f"[{Platform.SENSOR}] load initial state: {latest_state.state} ")
-            LOGGER.debug(f"[{Platform.SENSOR}] load initial state attributes: {latest_state.attributes} ")
-            LOGGER.debug(f"[{Platform.SENSOR}] load initial state context: {latest_state.context} ")
-            LOGGER.debug(f"[{Platform.SENSOR}] load initial state state_info: {latest_state.state_info} ")
-            self.load_value_initially(latest_state)
-
-    def value_changed(self, msg):
-        """Update the internal state of the sensor."""
 
 
 class EltakoPirSensor(EltakoSensor):
@@ -642,7 +622,6 @@ class EltakoTemperatureSensor(EltakoSensor):
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
         super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
 
-    
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
@@ -773,11 +752,9 @@ class GatewayLastReceivedMessage(EltakoSensor):
                             has_entity_name= True,
                         )
         )
-        self.has_entity_name = True
         self._attr_name = "Last Message Received"
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.async_value_changed)
-        LOGGER.debug(f"====>>> native_value: {self.native_value}")
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -824,8 +801,8 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             icon="mdi:chart-line",
                         )
         )
+        self._attr_name="Received Messages per Session"
         self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
-        self._attr_name="Received Messages per Session",
         self.gateway.set_received_message_count_handler(self.async_value_changed)
 
     @property

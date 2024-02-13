@@ -19,9 +19,8 @@ class EventDataMock():
     def __init__(self,d):
         self.data = d
 
-def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=None):
-    gw = GatewayMock()
-    gw.dev_id = 12345
+def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=None):    
+    gw = GatewayMock(dev_id=12345)
     dev_id = AddressExpression.parse("00-00-00-01") # heating cooling actuator
     dev_name = "Room 1"
     dev_eep = A5_10_06

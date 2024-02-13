@@ -70,6 +70,10 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
 
+    def load_value_initially(self, state: str):
+        self._attr_is_on = state.lower() == "true"
+        self.schedule_update_ha_state()
+
     @property
     def last_received_signal(self):
         """Return timestamp of last received signal."""
@@ -236,11 +240,13 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
         super().__init__(platform, gateway, gateway.base_id, "Connected" )
 
         self._attr_unique_id = f"{self.identifier}_Gateway_Connection_State"
-        self.entity_id = f"{platform}.{self.unique_id}"
         self._attr_icon = "mdi:connection"
         self._attr_name = "Connected"
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
-        
+
+    def load_value_initially(self, state: str):
+        self.value_changed( state.lower() == "true" )
+        self.schedule_update_ha_state()        
 
     @property
     def device_info(self) -> DeviceInfo:
