@@ -72,12 +72,9 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity, RestoreEntity):
         self._attr_device_class = device_class
     
     @property
-    def state(self) -> Literal["on", "off"] | None:
-        """Return the state of the binary sensor."""
+    def state(self) -> str:
         print("entered state in eltako_binary_sensor")
-        if (is_on := self.is_on) is None:
-            return None
-        return STATE_ON if is_on else STATE_OFF
+        return STATE_ON if self._attr_is_on else STATE_OFF
 
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
