@@ -241,9 +241,9 @@ class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
 
         self._attr_icon = "mdi:connection"
         self._attr_name = "Connected"
-        self.gateway.set_connection_state_changed_handler(self.async_value_changed)
-
+        
         super().__init__(platform, gateway, gateway.base_id, "Connected")
+        self.gateway.set_connection_state_changed_handler(self.async_value_changed)
 
     def load_value_initially(self, state: str):
         self.value_changed( state.lower() == "true" )
