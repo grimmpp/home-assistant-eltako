@@ -1,5 +1,3 @@
-<meta name="google-site-verification" content="4ueteL-VOasr9B8F5fkaVn5J-OQIdqxjOl6eS8Cqzck" />
-
 [![Generic badge](https://img.shields.io/badge/HACS-Custom-3498db.svg)](https://github.com/hacs/integration)
 [![Generic badge](https://img.shields.io/github/commit-activity/y/grimmpp/home-assistant-eltako.svg?style=flat&color=3498db)](https://github.com/grimmpp/home-assistant-eltako/commits/main)
 [![Generic badge](https://img.shields.io/badge/Community-Forum-3498db.svg)](https://community.home-assistant.io/)
