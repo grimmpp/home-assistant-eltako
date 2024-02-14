@@ -94,16 +94,17 @@ class EltakoDimmableLight(AbstractLightEntity):
     
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
-        self._attr_brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
+        brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         
         address, _ = self._sender_id
         
         if self._sender_eep == A5_38_08:
-            dimming = CentralCommandDimming(int(self.brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
+            dimming = CentralCommandDimming(int(brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+            self._attr_brightness = brightness
             self._attr_is_on = True
             self.schedule_update_ha_state()
 
@@ -131,7 +132,7 @@ class EltakoDimmableLight(AbstractLightEntity):
         """
         try:
             if msg.org == 0x07:
-                decoded = self.dev_eep.decode_message(msg)
+                decoded:A5_38_08 = self.dev_eep.decode_message(msg)
             elif msg.org == 0x05:
                 LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
                 return
