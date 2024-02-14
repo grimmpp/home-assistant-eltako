@@ -121,7 +121,8 @@ class EltakoEntity(Entity):
 
             elif hasattr(self, '_attr_is_on'):
                 self._attr_is_on = 'on' == latest_state.state
-                self._attr_state = latest_state.state
+                super(self,BinarySensorEntity).self._attr_state = latest_state.state
+                super(self,Entity).self._attr_state = latest_state.state
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
@@ -152,7 +153,7 @@ class EltakoEntity(Entity):
         LOGGER.debug(f"[device] latest state - state {self.state}")
         LOGGER.debug(f"[device] latest state - super().state {super().state}")
         if isinstance(self, BinarySensorEntity):
-            LOGGER.debug(f"[device] latest state - super().state {super(BinarySensorEntity,self).state}")
+            LOGGER.debug(f"[device] latest state - super(BinarySensorEntity).state {super(BinarySensorEntity,self).state}")
 
         LOGGER.debug(f"properties: {self.__dict__.keys()}")
 
