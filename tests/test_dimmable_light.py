@@ -118,6 +118,7 @@ class TestDimmableLight(unittest.TestCase):
             self.last_sent_command.body,
             b"k\x07\x02'\x00\t\x00\x00\xb0\x01\x00")
 
+
     def test_initial_loading_on(self):
         sl = self.create_switchable_light()
         sl._attr_is_on = None
@@ -125,6 +126,27 @@ class TestDimmableLight(unittest.TestCase):
         sl.load_value_initially(LatestStateMock('on'))
         self.assertTrue(sl._attr_is_on)
         self.assertTrue(sl.is_on)
+        self.assertEqual(sl.brightness, None)
+        self.assertEqual(sl.state, 'on')
+
+    def test_initial_loading_on_with_brightness(self):
+        sl = self.create_switchable_light()
+        sl._attr_is_on = None
+
+        sl.load_value_initially(LatestStateMock('on', {'brightness': 100}))
+        self.assertTrue(sl._attr_is_on)
+        self.assertTrue(sl.is_on)
+        self.assertEqual(sl.brightness, 100)
+        self.assertEqual(sl.state, 'on')
+
+    def test_initial_loading_dimmed(self):
+        sl = self.create_switchable_light()
+        sl._attr_is_on = None
+
+        sl.load_value_initially(LatestStateMock('on', {'brightness': 100}))
+        self.assertTrue(sl._attr_is_on)
+        self.assertTrue(sl.is_on)
+        self.assertEqual(sl.brightness, 100)
         self.assertEquals(sl.state, 'on')
 
     def test_initial_loading_off(self):
@@ -134,6 +156,17 @@ class TestDimmableLight(unittest.TestCase):
         sl.load_value_initially(LatestStateMock('off'))
         self.assertFalse(sl._attr_is_on)
         self.assertFalse(sl.is_on)
+        self.assertEqual(sl.brightness, None)
+        self.assertEquals(sl.state, 'off')
+
+    def test_initial_loading_off_with_brightness(self):
+        sl = self.create_switchable_light()
+        sl._attr_is_on = None
+
+        sl.load_value_initially(LatestStateMock('off', {'brightness': 0}))
+        self.assertFalse(sl._attr_is_on)
+        self.assertFalse(sl.is_on)
+        self.assertEqual(sl.brightness, 0)
         self.assertEquals(sl.state, 'off')
 
     def test_initial_loading_None(self):
@@ -143,4 +176,5 @@ class TestDimmableLight(unittest.TestCase):
         sl.load_value_initially(LatestStateMock('bla'))
         self.assertIsNone(sl._attr_is_on)
         self.assertIsNone(sl.is_on)
+        self.assertIsNone(sl.brightness)
         self.assertIsNone(sl.state)

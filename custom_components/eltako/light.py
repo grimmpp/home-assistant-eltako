@@ -72,6 +72,8 @@ class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
                     self._attr_is_on = 'on' == latest_state.state
                 else:
                     self._attr_is_on = None
+
+                self._attr_brightness = latest_state.attributes.get('brightness', None)
                 
         except Exception as e:
             self._attr_is_on = None
