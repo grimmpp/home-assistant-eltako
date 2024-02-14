@@ -109,9 +109,9 @@ class EltakoEntity(Entity):
     def load_value_initially(self, latest_state:State):
         # cast state:str to actual value
         attributs = latest_state.attributes
-        LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
-        LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
-        LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
+        # LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
+        # LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
+        # LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
         try:
             if 'unknown' == latest_state.state:
                 if hasattr(self, '_attr_is_on'):
@@ -142,15 +142,15 @@ class EltakoEntity(Entity):
                 self._attr_native_value = None
             raise e
         
-        if hasattr(self, '_attr_is_on'):
-            LOGGER.debug(f"[device] latest state - set {self._attr_is_on}")
-        elif hasattr(self, '_attr_native_value'):
-            LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
+        # if hasattr(self, '_attr_is_on'):
+        #     LOGGER.debug(f"[device] latest state - set {self._attr_is_on}")
+        # elif hasattr(self, '_attr_native_value'):
+        #     LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
 
-        LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
-        LOGGER.debug(f"[device] latest state - state {self.state}")
+        # LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
+        # LOGGER.debug(f"[device] latest state - state {self.state}")
 
-        LOGGER.debug(f"properties: {self.__dict__.keys()}")
+        # LOGGER.debug(f"properties: {self.__dict__.keys()}")
 
         self.schedule_update_ha_state()
 
