@@ -60,12 +60,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._sender_id = sender_id
         self._sender_eep = sender_eep
-        self._on_state = False
         
-    @property
-    def is_on(self):
-        """Return whether the switch is on or off."""
-        return self._on_state
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
@@ -91,7 +86,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             self.send_message(msg)
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
-            self._on_state = True
+            self._attr_is_on = True
             self.schedule_update_ha_state()
 
 
@@ -119,7 +114,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             self.send_message(msg)
 
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
-            self._on_state = False
+            self._attr_is_on = False
             self.schedule_update_ha_state()
 
 
@@ -132,7 +127,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             return
 
         if self.dev_eep in [M5_38_08]:
-            self._on_state = decoded.state
+            self._attr_is_on = decoded.state
             self.schedule_update_ha_state()
 
         elif self.dev_eep in [F6_02_01, F6_02_02]:
@@ -143,5 +138,5 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             button_filter |= self.dev_id[1] is not None and self.dev_id[1] == 'right' and decoded.rocker_first_action == 3
             
             if button_filter and decoded.energy_bow:
-                self._on_state = not self._on_state
+                self._attr_is_on = not self._attr_is_on
                 self.schedule_update_ha_state()
