@@ -151,7 +151,8 @@ class EltakoEntity(Entity):
         LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
         LOGGER.debug(f"[device] latest state - state {self.state}")
         LOGGER.debug(f"[device] latest state - super().state {super().state}")
-        LOGGER.debug(f"[device] latest state - super().state {super(BinarySensorEntity,self).state}")
+        if isinstance(self, BinarySensorEntity):
+            LOGGER.debug(f"[device] latest state - super().state {super(BinarySensorEntity,self).state}")
 
         LOGGER.debug(f"properties: {self.__dict__.keys()}")
 
