@@ -12,6 +12,7 @@ from eltakobus import *
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
+ClimateController.schedule_update_ha_state = mock.Mock(return_value=None)
 EltakoEntity.send_message = mock.Mock(return_value=None)
 # EltakoBinarySensor.hass.bus.fire is mocked by class HassMock
 
@@ -144,3 +145,22 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         await cc.async_handle_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
         self.assertEquals(cc.hvac_mode, HVACMode.COOL)
 
+# class TestClimateInitialLoading(unittest.TestCase):
+
+    # def test_initial_loading(self):
+    #     cc = create_climate_entity()
+    #     cc._attr_native_value = None
+
+    #     cc.load_value_initially(LatestStateMock('25.5'))
+    #     self.assertEquals(cc._attr_native_value, 25.5)
+    #     self.assertEquals(cc.native_value, 25.5)
+    #     self.assertEquals(cc.state, '25.5')
+
+
+    # def test_initial_loading_None(self):
+        # cc = create_climate_entity()
+        # cc._attr_native_value = 25.5
+
+        # cc.load_value_initially(LatestStateMock('unknown'))
+        # self.assertIsNone(cc._attr_native_value)
+        # self.assertIsNone(cc.state)

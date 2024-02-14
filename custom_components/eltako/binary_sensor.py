@@ -54,8 +54,27 @@ async def async_setup_entry(
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
     
+class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
+    
+    def load_value_initially(self, latest_state:State):
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_is_on = None
+            else:
+                if latest_state.state in ['on', 'off']:
+                    self._attr_is_on = 'on' == latest_state.state
+                else:
+                    self._attr_is_on = None
+                
+        except Exception as e:
+            self._attr_is_on = None
+            raise e
+        
+        self.schedule_update_ha_state()
 
-class EltakoBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
+        LOGGER.debug(f"[binary_sensor {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
+
+class EltakoBinarySensor(AbstractBinarySensor):
     """Representation of Eltako binary sensors such as wall switches.
 
     Supported EEPs (EnOcean Equipment Profiles):
@@ -221,7 +240,7 @@ class EltakoBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
                 },
             )
 
-class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
+class GatewayConnectionState(AbstractBinarySensor):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):

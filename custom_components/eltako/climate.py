@@ -82,7 +82,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-def validate_ids_of_climate(entities:[EltakoEntity]):
+def validate_ids_of_climate(entities:list[EltakoEntity]):
     for e in entities:
         e.validate_dev_id()
         e.validate_sender_id()
@@ -143,6 +143,14 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         self._loop = asyncio.get_event_loop()
         self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
+
+
+    def load_value_initially(self, latest_state:State):
+        # cast state:str to actual value
+        LOGGER.warn(f"[climate {self.dev_id}] Load value initially not yet implemented!!!")
+        LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
+        LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
 
 
     async def _wrapped_update(self, *args) -> None:

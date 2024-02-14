@@ -61,6 +61,23 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
         self._sender_id = sender_id
         self._sender_eep = sender_eep
         
+    def load_value_initially(self, latest_state:State):
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_is_on = None
+            else:
+                if latest_state.state in ['on', 'off']:
+                    self._attr_is_on = 'on' == latest_state.state
+                else:
+                    self._attr_is_on = None
+                
+        except Exception as e:
+            self._attr_is_on = None
+            raise e
+        
+        self.schedule_update_ha_state()
+
+        LOGGER.debug(f"[switch {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""

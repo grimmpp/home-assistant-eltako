@@ -8,7 +8,7 @@ from eltakobus.eep import *
 
 from homeassistant import config_entries
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature, ATTR_POSITION
-from homeassistant.const import CONF_DEVICE_CLASS, Platform
+from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -66,8 +66,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self._attr_device_class = device_class
         self._attr_is_opening = False
         self._attr_is_closing = False
-        self._attr_is_closed = False
-        self._attr_current_cover_position = 100
+        self._attr_is_closed = None # means undefined state
+        self._attr_current_cover_position = None
         self._time_closes = time_closes
         self._time_opens = time_opens
         
@@ -75,6 +75,43 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         
         if time_closes is not None and time_opens is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
+
+
+    def load_value_initially(self, latest_state:State):
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_current_cover_position = None
+            else:
+                self._attr_current_cover_position = latest_state.attributes['current_position']
+                
+                if latest_state.state == STATE_OPEN:
+                    self._attr_is_opening = False
+                    self._attr_is_closing = False
+                    self._attr_is_closed = False
+                    self._attr_current_cover_position = 100
+                elif latest_state.state == STATE_CLOSED:
+                    self._attr_is_opening = False
+                    self._attr_is_closing = False
+                    self._attr_is_closed = True
+                    self._attr_current_cover_position = 0
+                elif latest_state.state == STATE_CLOSING:
+                    self._attr_is_opening = False
+                    self._attr_is_closing = True
+                    self._attr_is_closed = False
+                elif latest_state.state == STATE_OPENING:
+                    self._attr_is_opening = True
+                    self._attr_is_closing = False
+                    self._attr_is_closed = False
+            
+        except Exception as e:
+            self._attr_current_cover_position = None
+            self._attr_is_opening = False
+            self._attr_is_closing = False
+            self._attr_is_closed = None # means undefined state
+            raise e
+        
+        self.schedule_update_ha_state()
+        LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [is_opening: {self.is_opening}, is_closing: {self.is_closing}, is_closed: {self.is_closed}, current_possition: {self.current_cover_position}, state: {self.state}]")
 
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""

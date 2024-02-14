@@ -11,7 +11,7 @@ from custom_components.eltako.light import EltakoSwitchableLight
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 # EltakoEntity.send_message = mock.Mock(return_value=None)
 
-class TestLight(unittest.TestCase):
+class TestSwitchableLight(unittest.TestCase):
 
     def mock_send_message(self, msg: ESP2Message):
         self.last_sent_command = msg
@@ -33,7 +33,9 @@ class TestLight(unittest.TestCase):
 
     def test_switchable_light_value_changed(self):
         light = self.create_switchable_light()
-        light._on_state = False
+        light._attr_is_on = None
+        self.assertEquals(light.is_on, None)
+        self.assertIsNone(light.state)
 
         # status update message from relay
         #8b 05 70 00 00 00 00 00 00 01 30
@@ -42,19 +44,29 @@ class TestLight(unittest.TestCase):
         off_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x50', outgoing=False)
 
         light.value_changed(on_msg)
-        self.assertEqual(light._on_state, True)
+        self.assertEquals(light.is_on, True)
+        self.assertEquals(light.state, 'on')
 
         light.value_changed(on_msg)
-        self.assertEqual(light._on_state, True)
+        self.assertEquals(light.is_on, True)
+        self.assertEquals(light.state, 'on')
         
         light.value_changed(off_msg)
-        self.assertEqual(light._on_state, False)
+        self.assertEquals(light.is_on, False)
+        self.assertEquals(light.state, 'off')
 
         light.value_changed(off_msg)
-        self.assertEqual(light._on_state, False)
+        self.assertEquals(light.is_on, False)
+        self.assertEquals(light.state, 'off')
 
         light.value_changed(on_msg)
-        self.assertEqual(light._on_state, True)
+        self.assertEquals(light.is_on, True)
+        self.assertEquals(light.state, 'on')
+
+        light._attr_is_on = None
+        self.assertEquals(light.is_on, None)
+        self.assertIsNone(light.state)
+
 
 
     def test_switchable_light_trun_on(self):
@@ -76,3 +88,30 @@ class TestLight(unittest.TestCase):
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x01\x00\x00\x08\x00\x00\xb0\x01\x00')
+
+    def test_initial_loading_on(self):
+        sl = self.create_switchable_light()
+        sl._attr_is_on = None
+
+        sl.load_value_initially(LatestStateMock('on'))
+        self.assertTrue(sl._attr_is_on)
+        self.assertTrue(sl.is_on)
+        self.assertEquals(sl.state, 'on')
+
+    def test_initial_loading_off(self):
+        sl = self.create_switchable_light()
+        sl._attr_is_on = None
+
+        sl.load_value_initially(LatestStateMock('off'))
+        self.assertFalse(sl._attr_is_on)
+        self.assertFalse(sl.is_on)
+        self.assertEquals(sl.state, 'off')
+
+    def test_initial_loading_None(self):
+        sl = self.create_switchable_light()
+        sl._attr_is_on = True
+
+        sl.load_value_initially(LatestStateMock('bla'))
+        self.assertIsNone(sl._attr_is_on)
+        self.assertIsNone(sl.is_on)
+        self.assertIsNone(sl.state)

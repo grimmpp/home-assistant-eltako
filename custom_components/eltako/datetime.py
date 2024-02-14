@@ -47,6 +47,8 @@ async def async_setup_entry(
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
+
+
 class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
     """Protocols last time when message received"""
 
@@ -60,6 +62,21 @@ class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
         self.gateway.set_last_message_received_handler(self.set_value)
 
         super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
+
+    def load_value_initially(self, latest_state:State):
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_native_value = None
+            else:
+                # e.g.: 2024-02-12T23:32:44+00:00
+                self._attr_native_value = datetime.strptime(latest_state.state, '%Y-%m-%dT%H:%M:%S%z:%f')
+            
+        except Exception as e:
+            self._attr_native_value = None
+            raise e
+        
+        self.schedule_update_ha_state()
+        LOGGER.debug(f"[datetime {self.dev_id}] value initially loaded: [native_value: {self.native_value}, state: {self.state}]")
 
     @property
     def device_info(self) -> DeviceInfo:

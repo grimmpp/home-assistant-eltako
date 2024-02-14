@@ -34,15 +34,15 @@ class TestCover(unittest.TestCase):
         self.assertEquals(ee.unique_id, 'eltako_gw123_FE-34-21-01')
         self.assertEquals(ee.entity_id, 'binary_sensor.eltako_gw123_FE-34-21-01')
 
-    def test_load_initial_values(self):
-        pl = Platform.BINARY_SENSOR
-        gw = GatewayMock()
-        address = AddressExpression.parse('FE-34-21-01')
-        name = "Switch"
+    # def test_load_initial_values(self):
+    #     pl = Platform.BINARY_SENSOR
+    #     gw = GatewayMock()
+    #     address = AddressExpression.parse('FE-34-21-01')
+    #     name = "Switch"
 
-        ee = EltakoEntity(pl, gw, address, name, F6_02_01)
-        ee._attr_is_on = None
+    #     ee = EltakoEntity(pl, gw, address, name, F6_02_01)
+    #     ee._attr_is_on = None
 
-        ee.async_load_value_initially(LatestStateMock("true", {}))
+    #     ee.async_load_value_initially(LatestStateMock("true", {}))
 
-        # self.assertTrue(ee._attr_is_on)
+    #     # self.assertTrue(ee._attr_is_on)

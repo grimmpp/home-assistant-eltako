@@ -1,7 +1,6 @@
 """Representation of an Eltako device."""
 from datetime import datetime
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
 from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
@@ -10,10 +9,9 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.const import Platform
-
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
+from homeassistant.const import Platform
 
 from .const import *
 from .gateway import EnOceanGateway
@@ -107,52 +105,12 @@ class EltakoEntity(Entity):
 
 
     def load_value_initially(self, latest_state:State):
-        # cast state:str to actual value
-        attributs = latest_state.attributes
-        # LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
-        # LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
-        # LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
-        try:
-            if 'unknown' == latest_state.state:
-                if hasattr(self, '_attr_is_on'):
-                    self._attr_is_on = None
-                elif hasattr(self, '_attr_native_value'):
-                    self._attr_native_value = None
-
-            elif hasattr(self, '_attr_is_on'):
-                self._attr_is_on = 'on' == latest_state.state
-                
-            elif attributs.get('state_class', None) == 'measurement':
-                if '.' in  latest_state.state:
-                    self._attr_native_value = float(latest_state.state)
-                else:
-                    self._attr_native_value = int(latest_state.state)
-
-            elif attributs.get('state_class', None) == 'total_increasing':
-                self._attr_native_value = int(latest_state.state)
-
-            elif attributs.get('device_class', None) == 'device_class':
-                # e.g.: 2024-02-12T23:32:44+00:00
-                self._attr_native_value = datetime.strptime(latest_state.state, '%Y-%m-%dT%H:%M:%S%z:%f')
-            
-        except Exception as e:
-            if hasattr(self, '_attr_is_on'):
-                self._attr_is_on = None
-            elif hasattr(self, '_attr_native_value'):
-                self._attr_native_value = None
-            raise e
+        """This function is implemented in the concrete devices classes"""
+        LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
+        LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
         
-        # if hasattr(self, '_attr_is_on'):
-        #     LOGGER.debug(f"[device] latest state - set {self._attr_is_on}")
-        # elif hasattr(self, '_attr_native_value'):
-        #     LOGGER.debug(f"[device] latest state - set {self._attr_native_value}")
-
-        # LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
-        # LOGGER.debug(f"[device] latest state - state {self.state}")
-
-        # LOGGER.debug(f"properties: {self.__dict__.keys()}")
-
-        self.schedule_update_ha_state()
+        LOGGER.warn(f"[device {self.dev_id}] DOES NOT HAVE AN IMPLEMENTATION FOR: load_value_initially()")
 
 
     def validate_dev_id(self) -> bool:
@@ -223,13 +181,13 @@ class EltakoEntity(Entity):
         dispatcher_send(self.hass, event_id, msg)
         
 
-def validate_actuators_dev_and_sender_id(entities:[EltakoEntity]):
+def validate_actuators_dev_and_sender_id(entities:list[EltakoEntity]):
     """Only call it for actuators."""
     for e in entities:
         e.validate_dev_id()
         e.validate_sender_id()
 
-def log_entities_to_be_added(entities:[EltakoEntity], platform:Platform) -> None:
+def log_entities_to_be_added(entities:list[EltakoEntity], platform:Platform) -> None:
     for e in entities:
         temp_eep = ""
         if e.dev_eep:
