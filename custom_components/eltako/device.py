@@ -121,6 +121,9 @@ class EltakoEntity(Entity):
             elif hasattr(self, '_attr_is_on'):
                 self._attr_is_on = 'on' == latest_state.state
                 self._attr_state = latest_state.state
+                def my_state():
+                    return 'on' if self._attr_is_on else 'off'
+                self.state = my_state
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
