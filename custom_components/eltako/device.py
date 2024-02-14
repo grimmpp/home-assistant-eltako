@@ -1,6 +1,7 @@
 """Representation of an Eltako device."""
 from datetime import datetime
 
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
@@ -121,9 +122,6 @@ class EltakoEntity(Entity):
             elif hasattr(self, '_attr_is_on'):
                 self._attr_is_on = 'on' == latest_state.state
                 self._attr_state = latest_state.state
-                def my_state():
-                    return 'on' if self._attr_is_on else 'off'
-                self.state = my_state
 
             elif attributs.get('state_class', None) == 'measurement':
                 if '.' in  latest_state.state:
@@ -152,6 +150,8 @@ class EltakoEntity(Entity):
 
         LOGGER.debug(f"[device] latest state - _attr_state {self._attr_state}")
         LOGGER.debug(f"[device] latest state - state {self.state}")
+        LOGGER.debug(f"[device] latest state - super().state {super().state}")
+        LOGGER.debug(f"[device] latest state - super().state {super(BinarySensorEntity,self).state}")
 
         LOGGER.debug(f"properties: {self.__dict__.keys()}")
 
