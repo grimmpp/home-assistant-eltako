@@ -244,12 +244,12 @@ class GatewayConnectionState(AbstractBinarySensor):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        self.description_key = "Gateway_Connection_State"
+        description_key = "Gateway_Connection_State"
 
         self._attr_icon = "mdi:connection"
         self._attr_name = "Connected"
         
-        super().__init__(platform, gateway, gateway.base_id, "Connected")
+        super().__init__(platform, gateway, gateway.base_id, dev_name="Connected", description_key=description_key)
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
 
     @property
