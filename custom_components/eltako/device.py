@@ -36,8 +36,8 @@ class EltakoEntity(Entity):
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
-        self.description_key = self._get_description_key(description_key)
-        self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
+        self.description_key = description_key
+        self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         # self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
 
