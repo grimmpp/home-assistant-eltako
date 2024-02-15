@@ -260,13 +260,13 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
                     self._attr_is_opening = True
                     self._attr_is_closing = False
-                    self._attr_is_closed = False
+                    self._attr_is_closed = None
                     
                 else: # down
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
                     self._attr_is_opening = False
                     self._attr_is_closing = True
-                    self._attr_is_closed = False
+                    self._attr_is_closed = None
                     
                 if self._attr_current_cover_position == 0:
                     self._attr_is_closed = True
@@ -276,6 +276,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_closed = False
                     self._attr_is_opening = False
                     self._attr_is_closing = False
+
             
             LOGGER.debug(f"[cover {self.dev_id}] state: {self.state}, opening: {self.is_opening}, closing: {self.is_closing}, closed: {self.is_closed}, position: {self.current_cover_position}")
 
