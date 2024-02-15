@@ -233,25 +233,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         
         if self.dev_eep in [G5_3F_7F]:
             LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded.__dict__}")
-            if decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
-
-                time_in_seconds = decoded.time / 10.0
-                
-                if decoded.direction == 0x01: # up
-                    self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
-                    
-                else: # down
-                    self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
-                    
-                if self._attr_current_cover_position == 0:
-                    self._attr_is_closed = True
-                elif self._attr_current_cover_position == 100:
-                    self._attr_is_closed = False
-                else:
-                    self._attr_is_closed = None
-
-                self._attr_is_closing = False
-                self._attr_is_opening = False
 
             if decoded.state == 0x02: # down
                 self._attr_is_closing = True
@@ -269,7 +250,32 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             elif decoded.state == 0x70: # open
                 self._attr_is_opening = False
                 self._attr_is_closing = False
-                self._attr_is_closed = False
+                self._attr_is_closed = None
                 self._attr_current_cover_position = 100
+            elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
+
+                time_in_seconds = decoded.time / 10.0
+                
+                if decoded.direction == 0x01: # up
+                    self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
+                    self._attr_is_opening = True
+                    self._attr_is_closing = False
+                    self._attr_is_closed = False
+                    
+                else: # down
+                    self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
+                    self._attr_is_opening = False
+                    self._attr_is_closing = True
+                    self._attr_is_closed = False
+                    
+                if self._attr_current_cover_position == 0:
+                    self._attr_is_closed = True
+                    self._attr_is_opening = False
+                    self._attr_is_closing = False
+                elif self._attr_current_cover_position == 100:
+                    self._attr_is_closed = False
+                    self._attr_is_opening = False
+                    self._attr_is_closing = False
+                
 
             self.schedule_update_ha_state()
