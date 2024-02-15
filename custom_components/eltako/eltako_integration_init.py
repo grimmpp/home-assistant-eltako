@@ -85,7 +85,7 @@ def cleanup_unavailable_entities(hass: HomeAssistant):
     for e in hass.config_entries.async_entries():
         LOGGER.debug(f"CONFIG ENTRIES: entry_id {e.entry_id}, unique_id: {e.unique_id}, title: {e.title}, domain: {e.domain}")
         for key, d in e.data.items():
-            LOGGER.debug(f"CONF ENTR DATA: key: {key} => {d.__dict__}")
+            LOGGER.debug(f"CONF ENTR DATA: key: {key} => {d}")
 
 
     dr.async_cleanup(hass, device_reg, entity_registry)
