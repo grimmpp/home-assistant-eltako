@@ -53,6 +53,10 @@ async def async_setup_entry(
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
+
+async def async_remove_entry(hass: HomeAssistant, entry) -> None:
+    LOGGER.debug(f"REMOVE: {entry}")
+    """Handle removal of an entry."""
     
 class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
     
