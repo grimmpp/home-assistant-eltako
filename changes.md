@@ -3,7 +3,7 @@
 ## Version 1.3.7 Import Cleanup
 * Trial to remove import warnings (Reported Issue: https://github.com/grimmpp/home-assistant-eltako/issues/61)
 * &#x1F41E; Removed entity_id bug from GatewayConnectionState &#x1F41E; => Requires removing and adding gateway again ❗
-* Added state cache. When restarting HA entities will show previouse state after start up.
+* Added state cache of device entities. When restarting HA entities like temperature sensors will show previouse state/value after restart.
 
 ## Version 1.3.6 Dependencies fixed for 1.3.5
 * &#x1F41E; Wrong dependency in manifest &#x1F41E; 

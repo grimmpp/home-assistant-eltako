@@ -67,30 +67,6 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
 
 
-async def cleanup_unavailable_entities(hass: HomeAssistant, config_entry: ConfigEntry):
-    # for p in pl.async_get_platforms(hass, DOMAIN):
-    # cur_pl = pl.async_get_current_platform()
-    # for e in cur_pl.entities:
-    #     LOGGER.debug(f"ENTITY {e} IN PLATFORM {cur_pl.platform_name} {cur_pl.}")
-
-    device_reg = dr.async_get(hass)
-    for key, d in device_reg.devices.items():
-        LOGGER.debug(f"DEVICE ===>>> key: {key}, id: {d.id}, name: {d.name}, area id: {d.area_id} domain: {d.identifiers}")
-
-    entity_registry = er.async_get(hass)
-    for key, e in entity_registry.entities.items():
-        if DOMAIN == e.platform:
-            LOGGER.debug(f"ENTITY ===>>> key: {key}, id: {e.entity_id}, name: {e.name}, platform: {e.platform}, domain: {e.domain}")
-
-
-    for e in hass.config_entries.async_entries():
-        LOGGER.debug(f"CONFIG ENTRIES: entry_id {e.entry_id}, unique_id: {e.unique_id}, title: {e.title}, domain: {e.domain}")
-        for key, d in e.data.items():
-            LOGGER.debug(f"CONF ENTR DATA: key: {key} => {d}")
-
-    await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
-
-
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
     LOGGER.info(f"[{LOG_PREFIX}] Start gateway setup.")
@@ -160,8 +136,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
-
-    await cleanup_unavailable_entities(hass, config_entry)
 
     return True
 
