@@ -85,7 +85,7 @@ def cleanup_unavailable_entities(hass: HomeAssistant):
     for e in hass.config_entries.async_entries():
         LOGGER.debug(f"CONFIG ENTRIES: entry_id {e.entry_id}, unique_id: {e.unique_id}")
 
-    # dr.async_cleanup(hass, device_reg, entity_registry)
+    dr.async_cleanup(hass, device_reg, entity_registry)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -152,13 +152,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await usb_gateway.async_setup()
     set_gateway_to_hass(hass, usb_gateway)
 
-    cleanup_unavailable_entities(hass)
-    
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
+
+    cleanup_unavailable_entities(hass)
 
     return True
 
