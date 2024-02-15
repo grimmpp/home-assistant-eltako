@@ -276,6 +276,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_closed = False
                     self._attr_is_opening = False
                     self._attr_is_closing = False
+                else:
+                    self._attr_is_closed = False
+                    self._attr_is_opening = True
+                    self._attr_is_closing = True
 
             
             LOGGER.debug(f"[cover {self.dev_id}] state: {self.state}, opening: {self.is_opening}, closing: {self.is_closing}, closed: {self.is_closed}, position: {self.current_cover_position}")
