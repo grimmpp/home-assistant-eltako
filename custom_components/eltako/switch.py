@@ -7,13 +7,11 @@ from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
 from homeassistant import config_entries
-from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
-from homeassistant.const import CONF_ID, CONF_NAME, Platform
+from homeassistant.components.switch import SwitchEntity
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 from .config_helpers import DeviceConf

@@ -78,8 +78,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
 
     def load_value_initially(self, latest_state:State):
-        LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
-        LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
+        # LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
+        # LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
         try:
             if 'unknown' == latest_state.state:
                 self._attr_current_cover_position = None

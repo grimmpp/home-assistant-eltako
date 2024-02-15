@@ -410,9 +410,9 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         return self.entity_description.name
 
     def load_value_initially(self, latest_state:State):
-        LOGGER.debug(f"[device] eneity unique_id: {self.unique_id}")
-        LOGGER.debug(f"[device] latest state - state: {latest_state.state}")
-        LOGGER.debug(f"[device] latest state - attributes: {latest_state.attributes}")
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] eneity unique_id: {self.unique_id}")
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
         try:
             if 'unknown' == latest_state.state:
                 self._attr_is_on = None
@@ -441,7 +441,7 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         
         self.schedule_update_ha_state()
 
-        LOGGER.debug(f"[sensor {self.dev_id} ({type(self).__name__})] value initially loaded: [native_value: {self.native_value}, state: {self.state}]")        
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id} ({type(self).__name__})] value initially loaded: [native_value: {self.native_value}, state: {self.state}]")        
 
 class EltakoPirSensor(EltakoSensor):
     """Occupancy Sensor"""

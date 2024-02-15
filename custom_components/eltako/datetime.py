@@ -1,15 +1,7 @@
 import datetime
-from homeassistant.components.datetime import (
-    DateTimeEntity
-)
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
+from homeassistant.components.datetime import DateTimeEntity
+from homeassistant.components.sensor import SensorDeviceClass
 
 from homeassistant.const import Platform
 from homeassistant import config_entries
