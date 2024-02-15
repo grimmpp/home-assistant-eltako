@@ -22,7 +22,7 @@ class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
     
     
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None, description_key:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None):
         """Initialize the device."""
         self._attr_has_entity_name = True
         self._attr_should_poll = True
@@ -36,7 +36,7 @@ class EltakoEntity(Entity):
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
-        self.description_key = self._get_description_key(description_key)
+        self.description_key = self._get_description_key()
         self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
         # self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
@@ -62,6 +62,7 @@ class EltakoEntity(Entity):
         if hasattr(self, 'entity_description') and self.entity_description is not None:
             if self.description_key is None:
                 self.description_key = self.entity_description.key
+
         return self.description_key
 
     @property
