@@ -152,11 +152,11 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
 
         try:
-            self.hvac_modes = []
-            for m_str in latest_state.attributes.get('hvac_modes', []):
-                for m_enum in HVACMode:
-                    if m_str == m_enum.value:
-                        self.hvac_modes.append(m_enum)
+            # self.hvac_modes = []
+            # for m_str in latest_state.attributes.get('hvac_modes', []):
+            #     for m_enum in HVACMode:
+            #         if m_str == m_enum.value:
+            #             self.hvac_modes.append(m_enum)
 
             self._attr_current_temperature = float(latest_state.attributes.get('current_temperature', None) )
             self._attr_target_temperature = float(latest_state.attributes.get('temperature', None) )
