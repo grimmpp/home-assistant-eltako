@@ -74,8 +74,8 @@ def cleanup_unavailable_entities(hass: HomeAssistant):
 
     entity_registry = er.async_get(hass)
     for key, e in entity_registry.entities.items():
-        if DOMAIN == e.platform:
-            LOGGER.debug(f"ENTITY ===>>> key: {key}, id: {e.entity_id}, name: {e.name}, platform: {e.platform}, domain: {e.domain}")
+        # if DOMAIN == e.platform:
+        LOGGER.debug(f"ENTITY ===>>> key: {key}, id: {e.entity_id}, name: {e.name}, platform: {e.platform}, domain: {e.domain}")
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
