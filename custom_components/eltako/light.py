@@ -81,7 +81,7 @@ class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
         
         self.schedule_update_ha_state()
 
-        LOGGER.debug(f"[light {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
+        LOGGER.debug(f"[light {self.dev_id}] value initially loaded: [is_on: {self.is_on}, brightness: {self.brightness}, state: {self.state}]")
 
 class EltakoDimmableLight(AbstractLightEntity):
     """Representation of an Eltako light source."""
