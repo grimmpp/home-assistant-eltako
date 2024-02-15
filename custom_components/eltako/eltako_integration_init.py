@@ -68,8 +68,9 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
 
 def cleanup_unavailable_entities(hass: HomeAssistant):
     # for p in pl.async_get_platforms(hass, DOMAIN):
-    for e in pl.async_get_current_platform().entities:
-        LOGGER.debug(f"ENTITY {e} IN PLATFORM {p.platform_name}")
+    # cur_pl = pl.async_get_current_platform()
+    # for e in cur_pl.entities:
+    #     LOGGER.debug(f"ENTITY {e} IN PLATFORM {cur_pl.platform_name} {cur_pl.}")
 
     entity_registry = er.async_get(hass)
     for key, e in entity_registry.entities.items():
