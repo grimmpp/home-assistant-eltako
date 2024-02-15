@@ -165,7 +165,7 @@ def get_gateway_name(dev_name:str, dev_type:str, dev_id: int, base_id:AddressExp
     return f"{dev_name} - {dev_type} (Id: {dev_id}, BaseId: {format_address(base_id)})"
 
 def format_address(address: AddressExpression, separator:str='-') -> str:
-    return b2a(address[0], '-').upper()
+    return b2a(address[0], separator).upper()
 
 def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: dict) -> str:
     if general_config[CONF_SHOW_DEV_ID_IN_DEV_NAME]:

@@ -41,17 +41,13 @@ class EltakoEntity(Entity):
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
 
     @classmethod
-    def _get_unique_id(cls, gateway: EnOceanGateway, dev_id: AddressExpression) -> str:
-        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}"
-
-    @classmethod
     def _get_identifier(cls, gateway: EnOceanGateway, dev_id: AddressExpression, description_key:str=None) -> str:
         if description_key is None:
             description_key = ''
         else:
             description_key = '_'+description_key
 
-        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}{description_key}"
+        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id, '_')}{description_key}"
 
     def _get_description_key(self, description_key:str=None):
         if description_key is not None:
