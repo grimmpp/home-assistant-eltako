@@ -222,6 +222,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             return
         
         if self.dev_eep in [G5_3F_7F]:
+            LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded}")
             if decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
                 time_in_seconds = decoded.time / 10.0
                 
