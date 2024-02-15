@@ -67,7 +67,7 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
 
 
-def cleanup_unavailable_entities(hass: HomeAssistant, config_entry: ConfigEntry):
+async def cleanup_unavailable_entities(hass: HomeAssistant, config_entry: ConfigEntry):
     # for p in pl.async_get_platforms(hass, DOMAIN):
     # cur_pl = pl.async_get_current_platform()
     # for e in cur_pl.entities:
@@ -88,7 +88,7 @@ def cleanup_unavailable_entities(hass: HomeAssistant, config_entry: ConfigEntry)
         for key, d in e.data.items():
             LOGGER.debug(f"CONF ENTR DATA: key: {key} => {d}")
 
-    async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
+    await async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -161,7 +161,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    cleanup_unavailable_entities(hass, config_entry)
+    await cleanup_unavailable_entities(hass, config_entry)
 
     return True
 
