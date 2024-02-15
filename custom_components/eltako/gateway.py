@@ -123,10 +123,6 @@ class EnOceanGateway:
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
-    # def get_device_info(self) -> DeviceInfo:
-    #     """Return the device info."""
-    #     device_registry = dr.async_get(self.hass)
-    #     return device_registry.async_get(self.config_entry_id)
 
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)

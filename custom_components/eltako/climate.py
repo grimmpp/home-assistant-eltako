@@ -145,12 +145,37 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
 
 
-    # def load_value_initially(self, latest_state:State):
-    #     # cast state:str to actual value
-    #     LOGGER.warn(f"[climate {self.dev_id}] Load value initially not yet implemented!!!")
-    #     LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
-    #     LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
-    #     LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+    def load_value_initially(self, latest_state:State):
+        LOGGER.warn(f"[climate {self.dev_id}] Load value initially not yet implemented!!!")
+        LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
+        LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+
+        try:
+            self.hvac_modes = []
+            for m_str in latest_state.attributes.get('hvac_modes', []):
+                for m_enum in HVACMode:
+                    if m_str == m_enum.value:
+                        self.hvac_modes.append(m_enum)
+
+            self._attr_current_temperature = float(latest_state.attributes.get('current_temperature', None) )
+            self._attr_target_temperature = float(latest_state.attributes.get('temperature', None) )
+
+            if 'unknown' == latest_state.state:
+                self._attr_hvac_mode = None
+            else:
+                for m_enum in HVACMode:
+                    if latest_state.state == m_enum.value:
+                        self._attr_hvac_mode = m_enum
+                        break
+                
+        except Exception as e:
+            self._attr_hvac_mode = None
+            raise e
+        
+        self.schedule_update_ha_state()
+
+        LOGGER.debug(f"[climate {self.dev_id}] value initially loaded: [state: {self.state}, modes: [{self.hvac_modes}], current temp: {self.current_temperature}, target temp: {self.target_temperature}]")
 
 
     async def _wrapped_update(self, *args) -> None:
