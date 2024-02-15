@@ -74,7 +74,7 @@ def cleanup_unavailable_entities(hass: HomeAssistant):
 
     device_reg = dr.async_get(hass)
     for key, d in device_reg.devices.items():
-        LOGGER.debug(f"DEVICE ===>>> key: {key}, id: {d.id}, name: {d.name}, area id: {d.area_id} domain: {d.identifiers[0][0]}")
+        LOGGER.debug(f"DEVICE ===>>> key: {key}, id: {d.id}, name: {d.name}, area id: {d.area_id} domain: {d.identifiers}")
 
     entity_registry = er.async_get(hass)
     for key, e in entity_registry.entities.items():
