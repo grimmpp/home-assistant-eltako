@@ -161,7 +161,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    cleanup_unavailable_entities(hass)
+    cleanup_unavailable_entities(hass, config_entry)
 
     return True
 
