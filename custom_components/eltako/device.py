@@ -38,11 +38,10 @@ class EltakoEntity(Entity):
         self.listen_to_addresses.append(self.dev_id[0])
         self.description_key = description_key
         self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
-        # self._attr_identifier = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
 
     @classmethod
-    def _get_unique_id(cls, gateway: EnOceanGateway, dev_id: AddressExpression, description_key:str=None) -> str:
+    def _get_unique_id(cls, gateway: EnOceanGateway, dev_id: AddressExpression) -> str:
         return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}"
 
     @classmethod
