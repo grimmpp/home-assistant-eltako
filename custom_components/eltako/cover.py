@@ -78,6 +78,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
 
     def load_value_initially(self, latest_state:State):
+        LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
+        LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
         try:
             if 'unknown' == latest_state.state:
                 self._attr_current_cover_position = None
@@ -97,16 +99,16 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 elif latest_state.state == STATE_CLOSING:
                     self._attr_is_opening = False
                     self._attr_is_closing = True
-                    self._attr_is_closed = None
+                    self._attr_is_closed = False
                 elif latest_state.state == STATE_OPENING:
                     self._attr_is_opening = True
                     self._attr_is_closing = False
-                    self._attr_is_closed = None
+                    self._attr_is_closed = False
             
         except Exception as e:
             self._attr_current_cover_position = None
-            self._attr_is_opening = False
-            self._attr_is_closing = False
+            self._attr_is_opening = None
+            self._attr_is_closing = None
             self._attr_is_closed = None # means undefined state
             raise e
         
@@ -133,7 +135,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_opening = True
             self._attr_is_closing = False
-            self._attr_is_closed = None
+            self._attr_is_closed = False
 
             self.schedule_update_ha_state()
 
@@ -157,7 +159,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_closing = True
             self._attr_is_opening = False
-            self._attr_is_closed = None
+            self._attr_is_closed = False
 
             self.schedule_update_ha_state()
 
@@ -276,10 +278,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_closed = False
                     self._attr_is_opening = False
                     self._attr_is_closing = False
-                else:
-                    self._attr_is_closed = False
-                    self._attr_is_opening = True
-                    self._attr_is_closing = True
 
             
             LOGGER.debug(f"[cover {self.dev_id}] state: {self.state}, opening: {self.is_opening}, closing: {self.is_closing}, closed: {self.is_closed}, position: {self.current_cover_position}")

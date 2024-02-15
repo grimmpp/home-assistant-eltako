@@ -19,7 +19,9 @@ class TestCover(unittest.TestCase):
         self.last_sent_command = msg
 
     def create_cover(self) -> EltakoCover:
-        gateway = GatewayMock()
+        settings = DEFAULT_GENERAL_SETTINGS
+        settings[CONF_FAST_STATUS_CHANGE] = True
+        gateway = GatewayMock(settings)
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         device_class = "shutter"

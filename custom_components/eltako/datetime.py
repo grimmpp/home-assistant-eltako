@@ -80,7 +80,7 @@ class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return the device info."""
+        """Return the device info."""   
         return DeviceInfo(
             identifiers={(DOMAIN, self.gateway.serial_path)},
             name= self.gateway.dev_name,
