@@ -113,6 +113,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self.schedule_update_ha_state()
         LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [is_opening: {self.is_opening}, is_closing: {self.is_closing}, is_closed: {self.is_closed}, current_possition: {self.current_cover_position}, state: {self.state}]")
 
+
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
         if self._time_opens is not None:
@@ -128,11 +129,14 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
-        self._attr_is_opening = True
-        self._attr_is_closing = False
-
+        
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+            self._attr_is_opening = True
+            self._attr_is_closing = False
+            self._attr_is_closed = None
+
             self.schedule_update_ha_state()
+
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
@@ -149,11 +153,14 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
-        self._attr_is_closing = True
-        self._attr_is_opening = False
 
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+            self._attr_is_closing = True
+            self._attr_is_opening = False
+            self._attr_is_closed = None
+
             self.schedule_update_ha_state()
+
 
     def set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
@@ -187,14 +194,16 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             msg = H5_3F_7F(time, command, 1).encode_message(address)
             self.send_message(msg)
         
-        if direction == "up":
-            self._attr_is_opening = True
-            self._attr_is_closing = False
-        elif direction == "down":
-            self._attr_is_closing = True
-            self._attr_is_opening = False
-
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+            if direction == "up":
+                self._attr_is_opening = True
+                self._attr_is_closing = False
+                self._attr_is_closed = None
+            elif direction == "down":
+                self._attr_is_closing = True
+                self._attr_is_opening = False
+                self._attr_is_closed = None
+                
             self.schedule_update_ha_state()
 
 
@@ -206,10 +215,11 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
             self.send_message(msg)
         
-        self._attr_is_closing = False
-        self._attr_is_opening = False
-
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+            self._attr_is_closing = False
+            self._attr_is_opening = False
+            self._attr_is_closed = None
+
             self.schedule_update_ha_state()
 
 
@@ -224,6 +234,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self.dev_eep in [G5_3F_7F]:
             LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded.__dict__}")
             if decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
+
                 time_in_seconds = decoded.time / 10.0
                 
                 if decoded.direction == 0x01: # up
