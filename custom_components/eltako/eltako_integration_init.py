@@ -3,7 +3,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, device_registry as dr
+from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
 
 from .const import *
 from .schema import CONFIG_SCHEMA
@@ -67,6 +67,10 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
 
 
 def cleanup_unavailable_entities(hass: HomeAssistant):
+    for p in pl.async_get_platforms(hass, DOMAIN):
+        for e in p.entities:
+            LOGGER.debug(f"ENTITY {e} IN PLATFORM {p.platform_name}")
+
     entity_registry = er.async_get(hass)
     for key, e in entity_registry.entities.items():
         if DOMAIN == e.platform:
