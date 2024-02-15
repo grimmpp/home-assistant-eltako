@@ -2,6 +2,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.reload import async_reload_integration_platforms
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
 
@@ -66,7 +67,7 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
 
 
-def cleanup_unavailable_entities(hass: HomeAssistant):
+def cleanup_unavailable_entities(hass: HomeAssistant, config_entry: ConfigEntry):
     # for p in pl.async_get_platforms(hass, DOMAIN):
     # cur_pl = pl.async_get_current_platform()
     # for e in cur_pl.entities:
@@ -87,8 +88,7 @@ def cleanup_unavailable_entities(hass: HomeAssistant):
         for key, d in e.data.items():
             LOGGER.debug(f"CONF ENTR DATA: key: {key} => {d}")
 
-
-    dr.async_cleanup(hass, device_reg, entity_registry)
+    async_reload_integration_platforms(hass, DOMAIN, PLATFORMS)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
