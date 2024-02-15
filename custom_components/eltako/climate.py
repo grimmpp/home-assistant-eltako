@@ -146,17 +146,16 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
 
     def load_value_initially(self, latest_state:State):
-        LOGGER.warn(f"[climate {self.dev_id}] Load value initially not yet implemented!!!")
-        LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
-        LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
-        LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+        # LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
+        # LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
+        # LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
 
         try:
-            # self.hvac_modes = []
-            # for m_str in latest_state.attributes.get('hvac_modes', []):
-            #     for m_enum in HVACMode:
-            #         if m_str == m_enum.value:
-            #             self.hvac_modes.append(m_enum)
+            self.hvac_modes = []
+            for m_str in latest_state.attributes.get('hvac_modes', []):
+                for m_enum in HVACMode:
+                    if m_str == m_enum.value:
+                        self.hvac_modes.append(m_enum)
 
             self._attr_current_temperature = float(latest_state.attributes.get('current_temperature', None) )
             self._attr_target_temperature = float(latest_state.attributes.get('temperature', None) )
@@ -171,6 +170,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 
         except Exception as e:
             self._attr_hvac_mode = None
+            self._attr_current_temperature = None
+            self._attr_target_temperature = None
             raise e
         
         self.schedule_update_ha_state()
