@@ -237,7 +237,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             if decoded.state == 0x02: # down
                 self._attr_is_closing = True
                 self._attr_is_opening = False
-                self._attr_is_closed = None
+                self._attr_is_closed = False
             elif decoded.state == 0x50: # closed
                 self._attr_is_opening = False
                 self._attr_is_closing = False
@@ -246,11 +246,11 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             elif decoded.state == 0x01: # up
                 self._attr_is_opening = True
                 self._attr_is_closing = False
-                self._attr_is_closed = None
+                self._attr_is_closed = False
             elif decoded.state == 0x70: # open
                 self._attr_is_opening = False
                 self._attr_is_closing = False
-                self._attr_is_closed = None
+                self._attr_is_closed = False
                 self._attr_current_cover_position = 100
             elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
 
