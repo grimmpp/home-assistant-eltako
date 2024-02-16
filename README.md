@@ -96,6 +96,12 @@ eltako:
 4. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
 There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
 
+> [!IMPORTANT]
+> Devices that are later removed from the configuration are not deleted in HA. Although it is possible to delete the entity, it is currently not possible to delete the device via a button. The easiest and quickest way to clean up is to delete the Eltako HUB and create a new one. Don't worry, the automations, scenes, scripts, dashboard settings and historical data will not be lost. These are linked to the device ID and are reassigned after the Eltako HUB has been created.
+>
+> <img width="846" alt="image" src="https://github.com/grimmpp/home-assistant-eltako/assets/46369917/96c44c86-2407-4c80-85f1-4668975d3148">
+
+
 # Testing
 
 Testing this integration via Home Assistant development container or updating it in a Home Assistant instance is quite time consuming. Therefore I've added some basic tests to ensure quickly a base quality. 
