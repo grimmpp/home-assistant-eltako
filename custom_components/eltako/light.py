@@ -59,7 +59,31 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class EltakoDimmableLight(EltakoEntity, LightEntity):
+class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
+
+    def load_value_initially(self, latest_state:State):
+        # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
+        # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_is_on = None
+            else:
+                if latest_state.state in ['on', 'off']:
+                    self._attr_is_on = 'on' == latest_state.state
+                else:
+                    self._attr_is_on = None
+
+                self._attr_brightness = latest_state.attributes.get('brightness', None)
+                
+        except Exception as e:
+            self._attr_is_on = None
+            raise e
+        
+        self.schedule_update_ha_state()
+
+        LOGGER.debug(f"[light {self.dev_id}] value initially loaded: [is_on: {self.is_on}, brightness: {self.brightness}, state: {self.state}]")
+
+class EltakoDimmableLight(AbstractLightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.BRIGHTNESS
@@ -68,29 +92,24 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
     def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
-        self._on_state = False
-        self._attr_brightness = 50
         self._sender_id = sender_id
         self._sender_eep = sender_eep
 
-    @property
-    def is_on(self):
-        """If light is on."""
-        return self._on_state
     
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
-        self._attr_brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
+        brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         
         address, _ = self._sender_id
         
         if self._sender_eep == A5_38_08:
-            dimming = CentralCommandDimming(int(self.brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
+            dimming = CentralCommandDimming(int(brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
-            self._on_state = True
+            self._attr_brightness = brightness
+            self._attr_is_on = True
             self.schedule_update_ha_state()
 
 
@@ -105,7 +124,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
             
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_brightness = 0
-            self._on_state = False
+            self._attr_is_on = False
             self.schedule_update_ha_state()
 
 
@@ -117,7 +136,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
         """
         try:
             if msg.org == 0x07:
-                decoded = self.dev_eep.decode_message(msg)
+                decoded:A5_38_08 = self.dev_eep.decode_message(msg)
             elif msg.org == 0x05:
                 LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
                 return
@@ -131,7 +150,7 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                 if decoded.switching.learn_button != 1:
                     return
                     
-                self._on_state = decoded.switching.switching_command
+                self._attr_is_on = decoded.switching.switching_command
             elif decoded.command == 0x02:
                 if decoded.dimming.learn_button != 1:
                     return
@@ -141,14 +160,14 @@ class EltakoDimmableLight(EltakoEntity, LightEntity):
                 elif decoded.dimming.dimming_range == 1:
                     self._attr_brightness = decoded.dimming.dimming_value
 
-                self._on_state = decoded.dimming.switching_command
+                self._attr_is_on = decoded.dimming.switching_command
             else:
                 return
 
             self.schedule_update_ha_state()
 
 
-class EltakoSwitchableLight(EltakoEntity, LightEntity):
+class EltakoSwitchableLight(AbstractLightEntity):
     """Representation of an Eltako light source."""
 
     _attr_color_mode = ColorMode.ONOFF
@@ -157,14 +176,9 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         """Initialize the Eltako light source."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
-        self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
 
-    @property
-    def is_on(self):
-        """If light is on."""
-        return self._on_state
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
@@ -176,7 +190,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             self.send_message(msg)
 
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
-            self._on_state = True
+            self._attr_is_on = True
             self.schedule_update_ha_state()
         
 
@@ -190,7 +204,7 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             self.send_message(msg)
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
-            self._on_state = False
+            self._attr_is_on = False
             self.schedule_update_ha_state()
 
 
@@ -203,5 +217,5 @@ class EltakoSwitchableLight(EltakoEntity, LightEntity):
             return
 
         if self.dev_eep in [M5_38_08]:
-            self._on_state = decoded.state
+            self._attr_is_on = decoded.state == True
             self.schedule_update_ha_state()

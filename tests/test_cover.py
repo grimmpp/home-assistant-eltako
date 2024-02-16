@@ -19,7 +19,9 @@ class TestCover(unittest.TestCase):
         self.last_sent_command = msg
 
     def create_cover(self) -> EltakoCover:
-        gateway = GatewayMock()
+        settings = DEFAULT_GENERAL_SETTINGS
+        settings[CONF_FAST_STATUS_CHANGE] = True
+        gateway = GatewayMock(settings)
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         device_class = "shutter"
@@ -36,15 +38,10 @@ class TestCover(unittest.TestCase):
         ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens)
         ec.send_message = self.mock_send_message
 
-        ec._attr_is_closing = False
-        ec._attr_is_opening = False
-        self._attr_is_closed = False
-        self._attr_current_cover_position = 100
-
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, False)
-        self.assertEqual(ec._attr_is_closed, False)
-        self.assertEqual(ec._attr_current_cover_position, 100)
+        self.assertEqual(ec._attr_is_closed, None)
+        self.assertEqual(ec._attr_current_cover_position, None)
 
         return ec
 
@@ -149,3 +146,57 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=100)
         self.assertEqual(self.last_sent_command, None)
         self.last_sent_command = None
+
+
+
+    def test_initial_loading_opening(self):
+        ec = self.create_cover()
+        ec._attr_is_closed = None
+        self.assertEqual(ec.is_closed, None)
+        self.assertEqual(ec.state, None)
+        
+        ec.load_value_initially(LatestStateMock('opening', {'current_position': 55}))
+        self.assertEqual(ec.is_closed, False)
+        self.assertEqual(ec.is_opening, True)
+        self.assertEqual(ec.is_closing, False)
+        self.assertEqual(ec.state, 'opening')
+        self.assertEqual(ec.current_cover_position, 55)
+
+    def test_initial_loading_closing(self):
+        ec = self.create_cover()
+        ec._attr_is_closed = None
+        self.assertEqual(ec.is_closed, None)
+        self.assertEqual(ec.state, None)
+        
+        ec.load_value_initially(LatestStateMock('closing', {'current_position': 33}))
+        self.assertEqual(ec.is_closed, False)
+        self.assertEqual(ec.is_opening, False)
+        self.assertEqual(ec.is_closing, True)
+        self.assertEqual(ec.state, 'closing')
+        self.assertEqual(ec.current_cover_position, 33)
+
+    def test_initial_loading_open(self):
+        ec = self.create_cover()
+        ec._attr_is_closed = None
+        self.assertEqual(ec.is_closed, None)
+        self.assertEqual(ec.state, None)
+        
+        ec.load_value_initially(LatestStateMock('open', {'current_position': 100}))
+        self.assertEqual(ec.is_closed, False)
+        self.assertEqual(ec.is_opening, False)
+        self.assertEqual(ec.is_closing, False)
+        self.assertEqual(ec.state, 'open')
+        self.assertEqual(ec.current_cover_position, 100)
+
+    def test_initial_loading_closed(self):
+        ec = self.create_cover()
+        ec._attr_is_closed = None
+        self.assertEqual(ec.is_closed, None)
+        self.assertEqual(ec.state, None)
+        
+        ec.load_value_initially(LatestStateMock('closed', {'current_position': 0}))
+        self.assertEqual(ec.is_closed, True)
+        self.assertEqual(ec.is_opening, False)
+        self.assertEqual(ec.is_closing, False)
+        self.assertEqual(ec.state, 'closed')
+        self.assertEqual(ec.current_cover_position, 0)

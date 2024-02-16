@@ -34,7 +34,10 @@ class TestSwitch(unittest.TestCase):
     def test_switch_value_changed_with_sender_epp_A5_38_08(self):
         switch = self.create_switch('A5-38-08')
         switch.send_message = self.mock_send_message
-        switch._on_state = False
+        switch._attr_is_on = None
+        self.assertEqual(switch._attr_is_on, None)
+        self.assertEqual(switch.is_on, None)
+        self.assertEqual(switch.state, None)
 
         # status update message from relay
         #8b 05 70 00 00 00 00 00 00 01 30
@@ -43,19 +46,24 @@ class TestSwitch(unittest.TestCase):
         off_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x50', outgoing=False)
 
         switch.value_changed(on_msg)
-        self.assertEqual(switch._on_state, True)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
 
         switch.value_changed(on_msg)
-        self.assertEqual(switch._on_state, True)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
         
         switch.value_changed(off_msg)
-        self.assertEqual(switch._on_state, False)
+        self.assertEqual(switch.is_on, False)
+        self.assertEqual(switch.state, 'off')
 
         switch.value_changed(off_msg)
-        self.assertEqual(switch._on_state, False)
+        self.assertEqual(switch.is_on, False)
+        self.assertEqual(switch.state, 'off')
 
         switch.value_changed(on_msg)
-        self.assertEqual(switch._on_state, True)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
 
         switch.turn_on()
         self.assertEqual(len(self.last_sent_command), 1)
@@ -81,19 +89,24 @@ class TestSwitch(unittest.TestCase):
         off_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x50', outgoing=False)
 
         switch.value_changed(on_msg)
-        self.assertEqual(switch._on_state, True)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
 
         switch.value_changed(on_msg)
-        self.assertEqual(switch._on_state, True)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
         
         switch.value_changed(off_msg)
-        self.assertEqual(switch._on_state, False)
+        self.assertEqual(switch.is_on, False)
+        self.assertEqual(switch.state, 'off')
 
         switch.value_changed(off_msg)
-        self.assertEqual(switch._on_state, False)
+        self.assertEqual(switch.is_on, False)
+        self.assertEqual(switch.state, 'off')
 
         switch.value_changed(on_msg)
-        self.assertEqual(switch._on_state, True)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
 
         self.last_sent_command = []
         switch.turn_on()
@@ -113,3 +126,30 @@ class TestSwitch(unittest.TestCase):
         self.assertEqual(self.last_sent_command[1].status, 0x30)
         self.assertEqual(self.last_sent_command[1].data[0], 0x20)
         self.last_sent_command = []
+
+    def test_initial_loading_on(self):
+        switch = self.create_switch('F6-02-01')
+        switch._attr_is_on = None
+
+        switch.load_value_initially(LatestStateMock('on'))
+        self.assertTrue(switch._attr_is_on)
+        self.assertTrue(switch.is_on)
+        self.assertEquals(switch.state, 'on')
+
+    def test_initial_loading_off(self):
+        switch = self.create_switch('F6-02-01')
+        switch._attr_is_on = None
+
+        switch.load_value_initially(LatestStateMock('off'))
+        self.assertFalse(switch._attr_is_on)
+        self.assertFalse(switch.is_on)
+        self.assertEquals(switch.state, 'off')
+
+    def test_initial_loading_None(self):
+        switch = self.create_switch('F6-02-01')
+        switch._attr_is_on = True
+
+        switch.load_value_initially(LatestStateMock('bla'))
+        self.assertIsNone(switch._attr_is_on)
+        self.assertIsNone(switch.is_on)
+        self.assertIsNone(switch.state)

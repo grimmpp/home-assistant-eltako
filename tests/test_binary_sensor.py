@@ -122,3 +122,30 @@ class TestBinarySensor(unittest.TestCase):
         msg.data = b'\x00\x96\x0A\x09'
         bs.value_changed(msg)
         self.assertEqual(bs._attr_is_on, False)
+
+    def test_initial_loading_on(self):
+        bs = self.create_binary_sensor()
+        bs._attr_is_on = None
+
+        bs.load_value_initially(LatestStateMock('on'))
+        self.assertTrue(bs._attr_is_on)
+        self.assertTrue(bs.is_on)
+        self.assertEquals(bs.state, 'on')
+
+    def test_initial_loading_off(self):
+        bs = self.create_binary_sensor()
+        bs._attr_is_on = None
+
+        bs.load_value_initially(LatestStateMock('off'))
+        self.assertFalse(bs._attr_is_on)
+        self.assertFalse(bs.is_on)
+        self.assertEquals(bs.state, 'off')
+
+    def test_initial_loading_None(self):
+        bs = self.create_binary_sensor()
+        bs._attr_is_on = True
+
+        bs.load_value_initially(LatestStateMock('bla'))
+        self.assertIsNone(bs._attr_is_on)
+        self.assertIsNone(bs.is_on)
+        self.assertIsNone(bs.state)

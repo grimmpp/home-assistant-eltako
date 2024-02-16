@@ -1,15 +1,7 @@
 import datetime
-from homeassistant.components.datetime import (
-    DateTimeEntity
-)
 
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
+from homeassistant.components.datetime import DateTimeEntity
+from homeassistant.components.sensor import SensorDeviceClass
 
 from homeassistant.const import Platform
 from homeassistant import config_entries
@@ -47,24 +39,40 @@ async def async_setup_entry(
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
+
+
 class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
         self.entity_description = EntityDescription(
             key="Last Message Received",
             name="Last Message Received",
             icon="mdi:button-cursor",
             device_class=SensorDeviceClass.DATE,
-            has_entity_name= True,
         )
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.set_value)
+
+        super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
+
+    def load_value_initially(self, latest_state:State):
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_native_value = None
+            else:
+                # e.g.: 2024-02-12T23:32:44+00:00
+                self._attr_native_value = datetime.strptime(latest_state.state, '%Y-%m-%dT%H:%M:%S%z:%f')
+            
+        except Exception as e:
+            self._attr_native_value = None
+            raise e
+        
+        self.schedule_update_ha_state()
+        LOGGER.debug(f"[datetime {self.dev_id}] value initially loaded: [native_value: {self.native_value}, state: {self.state}]")
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return the device info."""
+        """Return the device info."""   
         return DeviceInfo(
             identifiers={(DOMAIN, self.gateway.serial_path)},
             name= self.gateway.dev_name,

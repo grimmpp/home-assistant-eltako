@@ -12,6 +12,7 @@ from eltakobus import *
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
+ClimateController.schedule_update_ha_state = mock.Mock(return_value=None)
 EltakoEntity.send_message = mock.Mock(return_value=None)
 # EltakoBinarySensor.hass.bus.fire is mocked by class HassMock
 
@@ -19,9 +20,8 @@ class EventDataMock():
     def __init__(self,d):
         self.data = d
 
-def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=None):
-    gw = GatewayMock()
-    gw.dev_id = 12345
+def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=None):    
+    gw = GatewayMock(dev_id=12345)
     dev_id = AddressExpression.parse("00-00-00-01") # heating cooling actuator
     dev_name = "Room 1"
     dev_eep = A5_10_06
@@ -38,8 +38,8 @@ class TestClimate(unittest.TestCase):
 
     def test_climate_temp_actuator(self):
         cc = create_climate_entity()
-        self.assertEquals(cc.identifier, 'eltako_gw12345_00-00-00-01')
-        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00-00-00-01')
+        self.assertEquals(cc.unique_id, 'eltako_gw12345_00_00_00_01')
+        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
         self.assertEquals(cc.dev_name, 'Room 1')
         self.assertEquals(cc.temperature_unit, '°C')
         self.assertEquals(cc.cooling_sender, None)
@@ -66,8 +66,8 @@ class TestClimate(unittest.TestCase):
             CONF_EEP: 'A5-10-06',
         })
         cc = create_climate_entity(thermostat)
-        self.assertEquals(cc.identifier, 'eltako_gw12345_00-00-00-01')
-        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00-00-00-01')
+        self.assertEquals(cc.unique_id, 'eltako_gw12345_00_00_00_01')
+        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
         self.assertEquals(cc.dev_name, 'Room 1')
         self.assertEquals(cc.temperature_unit, '°C')
         self.assertEquals(cc.cooling_sender, None)
@@ -96,8 +96,8 @@ class TestClimate(unittest.TestCase):
             CONF_EEP: 'A5-10-06',
         })
         cc = create_climate_entity(cooling_switch=cooling_switch)
-        self.assertEquals(cc.identifier, 'eltako_gw12345_00-00-00-01')
-        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00-00-00-01')
+        self.assertEquals(cc.unique_id, 'eltako_gw12345_00_00_00_01')
+        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
         self.assertEquals(cc.dev_name, 'Room 1')
         self.assertEquals(cc.temperature_unit, '°C')
         self.assertEquals(cc.cooling_sender, None)
@@ -116,6 +116,31 @@ class TestClimate(unittest.TestCase):
         # self.assertEquals(cc._actuator_mode, A5_10_06.Heater_Mode.NORMAL);
         # self.assertEquals( round(cc.current_temperature), current_temperature)
         # self.assertEquals( round(cc.target_temperature), target_temp)
+
+
+    def test_initial_loading(self):
+        cc = create_climate_entity()
+
+        cc.load_value_initially(LatestStateMock('heat', 
+                                                attributes={'hvac_modes': ['heat', 'off'], 
+                                                            'min_temp': 17, 
+                                                            'max_temp': 25, 
+                                                            'current_temperature': 19.8, 
+                                                            'temperature': 22.5, 
+                                                            'friendly_name': 'Bad Room', 
+                                                            'supported_features': 385}))
+        self.assertEqual(cc.current_temperature, 19.8)
+        self.assertEqual(cc.target_temperature, 22.5)
+        self.assertEqual(cc.state, 'heat')
+
+
+    def test_initial_loading_None(self):
+        cc = create_climate_entity()
+
+        cc.load_value_initially(LatestStateMock(None))
+        self.assertEqual(cc.current_temperature, None)
+        self.assertEqual(cc.target_temperature, None)
+        self.assertEqual(cc.state, None)
     
 class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
 
@@ -126,8 +151,8 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
             CONF_SWITCH_BUTTON: 0x50
         })
         cc = create_climate_entity(cooling_switch=cooling_switch)
-        self.assertEquals(cc.identifier, 'eltako_gw12345_00-00-00-01')
-        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00-00-00-01')
+        self.assertEquals(cc.unique_id, 'eltako_gw12345_00_00_00_01')
+        self.assertEquals(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
         self.assertEquals(cc.dev_name, 'Room 1')
         self.assertEquals(cc.temperature_unit, '°C')
         self.assertEquals(cc.cooling_sender, None)
@@ -144,4 +169,3 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         # cc.value_changed(msg)
         await cc.async_handle_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
         self.assertEquals(cc.hvac_mode, HVACMode.COOL)
-

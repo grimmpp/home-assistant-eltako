@@ -6,23 +6,18 @@ from datetime import datetime
 
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
-from eltakobus.message import ESP2Message, Regular4BSMessage
+from eltakobus.message import ESP2Message
 
-from decimal import Decimal, InvalidOperation as DecimalInvalidOperation
 from . import config_helpers
 
 
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.const import (
-    CONF_DEVICE_CLASS,
-    CONF_ID,
-    CONF_NAME,
     PERCENTAGE,
     STATE_CLOSED,
     STATE_OPEN,
@@ -35,8 +30,6 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
     Platform,
     PERCENTAGE,
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    CONCENTRATION_PARTS_PER_BILLION,
     CONF_LANGUAGE,
     UnitOfElectricPotential,
 )
@@ -409,28 +402,46 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         self._attr_state_class = description.state_class
         
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
-        #self._attr_unique_id = f"{self.identifier}_{description.key}"
-        # self.entity_id = f"{platform}.{self.unique_id}_{description.key}"
         self._attr_native_value = None
         
     @property
     def name(self):
         """Return the default name for the sensor."""
         return self.entity_description.name
+
+    def load_value_initially(self, latest_state:State):
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] eneity unique_id: {self.unique_id}")
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_is_on = None
+            else:
+                if latest_state.attributes.get('state_class', None) == 'measurement':
+                    if latest_state.state.count('.') + latest_state.state.count(',') == 1:
+                        self._attr_native_value = float(latest_state.state)
+                    elif latest_state.state.count('.') == 0 and latest_state.state.count(',') == 0:
+                        self._attr_native_value = int(latest_state.state)
+                    else:
+                        self._attr_native_value = None
+
+                elif latest_state.attributes.get('state_class', None) == 'total_increasing':
+                    self._attr_native_value = int(latest_state.state)
+
+                elif latest_state.attributes.get('device_class', None) == 'device_class':
+                    # e.g.: 2024-02-12T23:32:44+00:00
+                    self._attr_native_value = datetime.strptime(latest_state.state, '%Y-%m-%dT%H:%M:%S%z:%f')
+            
+        except Exception as e:
+            if hasattr(self, '_attr_is_on'):
+                self._attr_is_on = None
+            elif hasattr(self, '_attr_native_value'):
+                self._attr_native_value = None
+            raise e
         
-    async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
-        # If not None, we got an initial value.
-        await super().async_added_to_hass()
-        if self._attr_native_value is not None:
-            return
+        self.schedule_update_ha_state()
 
-        if (state := await self.async_get_last_state()) is not None:
-            self._attr_native_value = state.state
-
-    def value_changed(self, msg):
-        """Update the internal state of the sensor."""
-
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id} ({type(self).__name__})] value initially loaded: [native_value: {self.native_value}, state: {self.state}]")        
 
 class EltakoPirSensor(EltakoSensor):
     """Occupancy Sensor"""
@@ -636,7 +647,6 @@ class EltakoTemperatureSensor(EltakoSensor):
             _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
         super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
 
-    
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
         try:
@@ -767,9 +777,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
                             has_entity_name= True,
                         )
         )
-        self.has_entity_name = True
         self._attr_name = "Last Message Received"
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.gateway.set_last_message_received_handler(self.async_value_changed)
 
     @property
@@ -810,16 +818,14 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             key="Received Messages per Session",
                             name="Received Messages per Session",
                             state_class=SensorStateClass.TOTAL_INCREASING,
-                            device_class=SensorDeviceClass.VOLUME,
-                            native_unit_of_measurement="Messages",
-                            unit_of_measurement="",
-                            has_entity_name= True,
+                            # device_class=SensorDeviceClass.VOLUME,
+                            # native_unit_of_measurement="Messages", # => raises error message
+                            unit_of_measurement="Messages",
+                            suggested_unit_of_measurement="Messages",
                             icon="mdi:chart-line",
                         )
         )
-        self.has_entity_name = True
-        self._attr_name="Received Messages per Session",
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
+        self._attr_name="Received Messages per Session"
         self.gateway.set_received_message_count_handler(self.async_value_changed)
 
     @property
@@ -863,10 +869,8 @@ class StaticInfoField(EltakoSensor):
                             has_entity_name= True,
                         )
         )
-        self.has_entity_name = True
         self._attr_name = key
         self._attr_native_value = value
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
 
     def value_changed(self, value) -> None:
         pass
@@ -912,10 +916,8 @@ class EventListenerInfoField(EltakoSensor):
                         )
         )
         self.convert_event_function = convert_event_function
-        self.has_entity_name = True
         self._attr_name = key
         self._attr_native_value = ''
-        self._attr_unique_id = f"{self.identifier}_{self.entity_description.key}"
         self.listen_to_addresses.clear()
 
         LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")

@@ -2,7 +2,9 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.reload import async_reload_integration_platforms
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
 
 from .const import *
 from .schema import CONFIG_SCHEMA
@@ -45,12 +47,14 @@ def migrate_old_gateway_descriptions(hass: HomeAssistant):
     for key in migration_dict:
         hass.data[DATA_ELTAKO][key] = migration_dict[key]
 
+
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnOceanGateway:
 
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
 
     return hass.data[DATA_ELTAKO][config_entry.data[CONF_GATEWAY_DESCRIPTION]]
+
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: EnOceanGateway) -> None:
 
@@ -61,6 +65,7 @@ def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: EnOceanGateway) -> N
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: EnOceanGateway) -> ConfigType:
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
+
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
@@ -125,7 +130,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     await usb_gateway.async_setup()
     set_gateway_to_hass(hass, usb_gateway)
-    
+
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     for platform in PLATFORMS:
         hass.async_create_task(

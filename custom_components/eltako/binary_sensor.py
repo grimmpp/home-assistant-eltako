@@ -1,12 +1,13 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
+from typing import Literal, final
 
 from eltakobus.util import AddressExpression, b2a, b2s
 from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant import config_entries
-from homeassistant.const import CONF_DEVICE_CLASS
+from homeassistant.const import CONF_DEVICE_CLASS, STATE_ON, STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
@@ -33,13 +34,13 @@ async def async_setup_entry(
     
     platform = Platform.BINARY_SENSOR
 
-    for platform in [Platform.BINARY_SENSOR, Platform.SENSOR]:
-        if platform in config:
-            for entity_config in config[platform]:
+    for platform_id in [Platform.BINARY_SENSOR, Platform.SENSOR]:
+        if platform_id in config:
+            for entity_config in config[platform_id]:
                 try:
                     dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
                     if dev_conf.eep.eep_string in CONF_EEP_SUPPORTED_BINARY_SENSOR:
-                        entities.append(EltakoBinarySensor(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                        entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                                         dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
                 except Exception as e:
@@ -52,9 +53,29 @@ async def async_setup_entry(
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
-    
 
-class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
+    
+class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
+    
+    def load_value_initially(self, latest_state:State):
+        try:
+            if 'unknown' == latest_state.state:
+                self._attr_is_on = None
+            else:
+                if latest_state.state in ['on', 'off']:
+                    self._attr_is_on = 'on' == latest_state.state
+                else:
+                    self._attr_is_on = None
+                
+        except Exception as e:
+            self._attr_is_on = None
+            raise e
+        
+        self.schedule_update_ha_state()
+
+        LOGGER.debug(f"[binary_sensor {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
+
+class EltakoBinarySensor(AbstractBinarySensor):
     """Representation of Eltako binary sensors such as wall switches.
 
     Supported EEPs (EnOcean Equipment Profiles):
@@ -69,16 +90,7 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
-
-    @property
-    def last_received_signal(self):
-        """Return timestamp of last received signal."""
-        return self._attr_last_received_signal
-    
-    @property
-    def data(self):
-        """Return telegram data for rocker switch."""
-        return self._attr_data
+        
 
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
@@ -229,17 +241,17 @@ class EltakoBinarySensor(EltakoEntity, BinarySensorEntity):
                 },
             )
 
-class GatewayConnectionState(EltakoEntity, BinarySensorEntity):
+class GatewayConnectionState(AbstractBinarySensor):
     """Protocols last time when message received"""
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
-        super().__init__(platform, gateway, gateway.base_id, "Connected" )
+        key = "Gateway_Connection_State"
 
-        self._attr_unique_id = f"{self.identifier}_Last Received Message - Gateway "+str(gateway.dev_id)
+        self._attr_icon = "mdi:connection"
+        self._attr_name = "Connected"
+        
+        super().__init__(platform, gateway, gateway.base_id, dev_name="Connected", description_key=key)
         self.gateway.set_connection_state_changed_handler(self.async_value_changed)
-        self.icon = "mdi:connection"
-        self.name = "Connected"
-        self.has_entity_name = True
 
     @property
     def device_info(self) -> DeviceInfo:
