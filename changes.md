@@ -1,6 +1,6 @@
 # Changes and Feature List
 
-## Version 1.3.7 Import Cleanup
+## Version 1.3.7 Restore Device States after HA Restart
 * Trial to remove import warnings (Reported Issue: https://github.com/grimmpp/home-assistant-eltako/issues/61)
 * &#x1F41E; Removed entity_id bug from GatewayConnectionState &#x1F41E; => Requires removing and adding gateway again ❗
 * Added state cache of device entities. When restarting HA entities like temperature sensors will show previouse state/value after restart.
