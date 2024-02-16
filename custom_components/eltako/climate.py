@@ -157,16 +157,14 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                     if m_str == m_enum.value:
                         self.hvac_modes.append(m_enum)
 
-            self._attr_current_temperature = float(latest_state.attributes.get('current_temperature', None) )
-            self._attr_target_temperature = float(latest_state.attributes.get('temperature', None) )
+            self._attr_current_temperature = latest_state.attributes.get('current_temperature', None)
+            self._attr_target_temperature = latest_state.attributes.get('temperature', None)
 
-            if 'unknown' == latest_state.state:
-                self._attr_hvac_mode = None
-            else:
-                for m_enum in HVACMode:
-                    if latest_state.state == m_enum.value:
-                        self._attr_hvac_mode = m_enum
-                        break
+            self._attr_hvac_mode = None
+            for m_enum in HVACMode:
+                if latest_state.state == m_enum.value:
+                    self._attr_hvac_mode = m_enum
+                    break
                 
         except Exception as e:
             self._attr_hvac_mode = None

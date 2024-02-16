@@ -116,6 +116,31 @@ class TestClimate(unittest.TestCase):
         # self.assertEquals(cc._actuator_mode, A5_10_06.Heater_Mode.NORMAL);
         # self.assertEquals( round(cc.current_temperature), current_temperature)
         # self.assertEquals( round(cc.target_temperature), target_temp)
+
+
+    def test_initial_loading(self):
+        cc = create_climate_entity()
+
+        cc.load_value_initially(LatestStateMock('heat', 
+                                                attributes={'hvac_modes': ['heat', 'off'], 
+                                                            'min_temp': 17, 
+                                                            'max_temp': 25, 
+                                                            'current_temperature': 19.8, 
+                                                            'temperature': 22.5, 
+                                                            'friendly_name': 'Bad Room', 
+                                                            'supported_features': 385}))
+        self.assertEqual(cc.current_temperature, 19.8)
+        self.assertEqual(cc.target_temperature, 22.5)
+        self.assertEqual(cc.state, 'heat')
+
+
+    def test_initial_loading_None(self):
+        cc = create_climate_entity()
+
+        cc.load_value_initially(LatestStateMock(None))
+        self.assertEqual(cc.current_temperature, None)
+        self.assertEqual(cc.target_temperature, None)
+        self.assertEqual(cc.state, None)
     
 class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
 
@@ -144,23 +169,3 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         # cc.value_changed(msg)
         await cc.async_handle_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
         self.assertEquals(cc.hvac_mode, HVACMode.COOL)
-
-# class TestClimateInitialLoading(unittest.TestCase):
-
-    # def test_initial_loading(self):
-    #     cc = create_climate_entity()
-    #     cc._attr_native_value = None
-
-    #     cc.load_value_initially(LatestStateMock('25.5'))
-    #     self.assertEquals(cc._attr_native_value, 25.5)
-    #     self.assertEquals(cc.native_value, 25.5)
-    #     self.assertEquals(cc.state, '25.5')
-
-
-    # def test_initial_loading_None(self):
-        # cc = create_climate_entity()
-        # cc._attr_native_value = 25.5
-
-        # cc.load_value_initially(LatestStateMock('unknown'))
-        # self.assertIsNone(cc._attr_native_value)
-        # self.assertIsNone(cc.state)
