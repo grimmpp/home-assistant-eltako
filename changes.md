@@ -1,5 +1,9 @@
 # Changes and Feature List
 
+## Version 1.3.8
+* fixed window handle F6-10-00 in binary sensor
+* Added better tests for binary sensors
+
 ## Version 1.3.7 Restore Device States after HA Restart
 * Trial to remove import warnings 
   Reported Issue: https://github.com/grimmpp/home-assistant-eltako/issues/61

@@ -1,7 +1,7 @@
 {
   "domain": "eltako",
   "name": "Eltako",
-  "codeowners": ["@bdurrer", "@grimmpp"],
+  "codeowners": ["@grimmpp"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/grimmpp/home-assistant-eltako",
@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/grimmpp/home-assistant-eltako/issues",
   "loggers": ["eltako"],
   "requirements": ["eltako14bus==0.0.45","enocean==0.60.1", "StrEnum"],
-  "version": "1.3.7" 
+  "version": "1.3.8" 
 }
