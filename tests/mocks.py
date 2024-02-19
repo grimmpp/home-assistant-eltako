@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from custom_components.eltako.config_helpers import *
@@ -25,11 +26,22 @@ class HassMock():
         
     def __init__(self) -> None:
         self.bus = BusMock()
+
+    # def async_create_task(self, async_call):
+    #     asyncio.run( async_call )
         
 class ConfigEntryMock():
 
     def __init__(self):
         self.entry_id = "entity_id"
+
+class EltakoBusMock():
+
+    def __init__(self):
+        self._is_active = True
+
+    def is_active(self):
+        return self._is_active
 
 class GatewayMock(EnOceanGateway):
 
@@ -39,8 +51,11 @@ class GatewayMock(EnOceanGateway):
 
         super().__init__(general_settings, hass, dev_id, gw_type, 'SERIAL_PATH', 56700, base_id, "MyFAM14", ConfigEntryMock())
 
+        self._bus = EltakoBusMock()
+
     def set_status_changed_handler(self):
         pass
+
 
 class LatestStateMock():
     def __init__(self, state:str=None, attributes:dict[str:str]={}):

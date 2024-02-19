@@ -271,7 +271,7 @@ class EnOceanGateway:
     
 
 
-def detect() -> [str]:
+def detect() -> list[str]:
     """Return a list of candidate paths for USB Eltako gateways.
 
     This method is currently a bit simplistic, it may need to be
