@@ -24,9 +24,12 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
   * F6-10-00 (Window handle, FTS14EM)
   * D5-00-01 ([Contact sensor](https://github.com/grimmpp/home-assistant-eltako/tree/main//docs/window_sensor_setup_FTS14EM.md), FTS14EM) incl. signal inverter
-  * A5-08-01 (Occupancy sensor, FTS14EM)
+  * A5-08-01 (Occupancy sensor)
+  * A5-07-01 (Occupancy sensor)
 * Sensor
+  * A5-04-01 (Temperature and Humidity Sensor)
   * A5-04-02 (Temperature and Humidity Sensor, FLGTF, FLT58)
+  * A5-07-01 (Occupancy sensor)
   * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))
   * A5-10-06 (Temperature Sensor and Controller e.g. FUTH)
   * A5-10-12 (Temperature Sensor and Controller and Humidity Sensor e.g. FUTH)

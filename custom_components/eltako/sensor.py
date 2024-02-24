@@ -55,6 +55,7 @@ DEFAULT_DEVICE_NAME_HYGROSTAT = "Hygrostat"
 DEFAULT_DEVICE_NAME_THERMOMETER = "Thermometer"
 DEFAULT_DEVICE_NAME_AIR_QUAILTY_SENSOR = "Air Quality Sensor"
 
+SENSOR_TYPE_BATTERY_VOLTAGE = "electricity_voltage"
 SENSOR_TYPE_ELECTRICITY_CUMULATIVE = "electricity_cumulative"
 SENSOR_TYPE_ELECTRICITY_CURRENT = "electricity_current"
 SENSOR_TYPE_GAS_CUMULATIVE = "gas_cumulative"
@@ -74,12 +75,21 @@ SENSOR_TYPE_WEATHER_STATION_RAIN = "weather_station_rain"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST = "weather_station_illuminance_west"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL = "weather_station_illuminance_central"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST = "weather_station_illuminance_east"
+SENSOR_TYPE_ILLUMINANCE = "illuminance"
 
 
 @dataclass
 class EltakoSensorEntityDescription(SensorEntityDescription):
     """Describes Eltako sensor entity."""
 
+SENSOR_DESC_BATTERY_VOLTAGE = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_BATTERY_VOLTAGE,
+    name="Battery Voltage",
+    native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+    icon="mdi:lightning-bolt",
+    device_class=SensorDeviceClass.BATTERY,
+    state_class=SensorStateClass.MEASUREMENT,
+)
 
 SENSOR_DESC_ELECTRICITY_CUMULATIVE = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_ELECTRICITY_CUMULATIVE,
@@ -208,6 +218,16 @@ SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST = EltakoSensorEntityDescription(
     name="Illuminance (east)",
     native_unit_of_measurement=LIGHT_LUX,
     icon="mdi:weather-sunny",
+    device_class=SensorDeviceClass.ILLUMINANCE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
+)
+
+SENSOR_DESC_ILLUMINATION = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_ILLUMINANCE,
+    name="Illuminance",
+    native_unit_of_measurement=LIGHT_LUX,
+    icon="mdi:sun-wireless-outline",
     device_class=SensorDeviceClass.ILLUMINANCE,
     state_class=SensorStateClass.MEASUREMENT,
     suggested_display_precision=0,
@@ -343,6 +363,13 @@ async def async_setup_entry(
                 elif dev_conf.eep in [A5_07_01]:
                     entities.append(EltakoPirSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoVoltageSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
+                elif dev_conf.eep in [A5_08_01]:
+                    entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoIlluminationSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoBatteryVoltageSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    # _pir_status => as binary sensor
+
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -656,6 +683,51 @@ class EltakoTemperatureSensor(EltakoSensor):
             return
         
         self._attr_native_value = decoded.current_temperature
+
+        self.schedule_update_ha_state()
+
+class EltakoIlluminationSensor(EltakoSensor):
+    """Brightness sensor"""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_ILLUMINATION) -> None:
+        """Initialize the Eltako temperature sensor."""
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = DEFAULT_DEVICE_NAME_THERMOMETER
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
+
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.illumination
+
+        self.schedule_update_ha_state()
+
+
+class EltakoBatteryVoltageSensor(EltakoSensor):
+    """Representation of an Eltako battery sensor."""
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_TYPE_BATTERY_VOLTAGE) -> None:
+        """Initialize the Eltako temperature sensor."""
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = "Battery Sensor"
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
+
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            return
+        
+        self._attr_native_value = decoded.supply_voltage
 
         self.schedule_update_ha_state()
 
