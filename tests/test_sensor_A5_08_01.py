@@ -45,19 +45,19 @@ class TestSensor_A5_08_01(unittest.TestCase):
         s_vlt = self.create_battery_voltage_sensor()
 
         s_vlt.value_changed(self.msg1)
-        self.assertEquals(s_vlt.native_value, 3.3999999999999995)
+        self.assertEqual(s_vlt.native_value, 3.3999999999999995)
 
     def test_temperature_sensor(self):
         s_temp = self.create_temperature_sensor()
 
         s_temp.value_changed(self.msg1)
-        self.assertEquals(s_temp.native_value, 23.6)
+        self.assertEqual(s_temp.native_value, 23.6)
 
     def test_illumincation_sensor(self):
         s_ill = self.create_illumination_sensor()
 
         s_ill.value_changed(self.msg1)
-        self.assertEquals(s_ill.native_value, 256.0)
+        self.assertEqual(s_ill.native_value, 256.0)
 
 
         

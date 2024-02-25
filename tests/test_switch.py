@@ -134,7 +134,7 @@ class TestSwitch(unittest.TestCase):
         switch.load_value_initially(LatestStateMock('on'))
         self.assertTrue(switch._attr_is_on)
         self.assertTrue(switch.is_on)
-        self.assertEquals(switch.state, 'on')
+        self.assertEqual(switch.state, 'on')
 
     def test_initial_loading_off(self):
         switch = self.create_switch('F6-02-01')
@@ -143,7 +143,7 @@ class TestSwitch(unittest.TestCase):
         switch.load_value_initially(LatestStateMock('off'))
         self.assertFalse(switch._attr_is_on)
         self.assertFalse(switch.is_on)
-        self.assertEquals(switch.state, 'off')
+        self.assertEqual(switch.state, 'off')
 
     def test_initial_loading_None(self):
         switch = self.create_switch('F6-02-01')

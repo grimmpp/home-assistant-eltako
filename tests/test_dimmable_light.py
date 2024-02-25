@@ -39,7 +39,7 @@ class TestDimmableLight(unittest.TestCase):
     def test_switchable_light_value_changed(self):
         light = self.create_switchable_light()
         light._attr_is_on = None
-        self.assertEquals(light.is_on, None)
+        self.assertEqual(light.is_on, None)
         self.assertIsNone(light.state)
 
         # status update message from relay
@@ -51,37 +51,37 @@ class TestDimmableLight(unittest.TestCase):
         dimmed_msg = Regular4BSMessage(address=b'\x00\x00\x00\x01', status=b'\x00', data=b'\x02\x2d\x00\x09')
 
         light.value_changed(on_msg)
-        self.assertEquals(light.is_on, True)
-        self.assertEquals(light.brightness, 255)
-        self.assertEquals(light.state, 'on')
+        self.assertEqual(light.is_on, True)
+        self.assertEqual(light.brightness, 255)
+        self.assertEqual(light.state, 'on')
 
         light.value_changed(on_msg)
-        self.assertEquals(light.is_on, True)
-        self.assertEquals(light.brightness, 255)
-        self.assertEquals(light.state, 'on')
+        self.assertEqual(light.is_on, True)
+        self.assertEqual(light.brightness, 255)
+        self.assertEqual(light.state, 'on')
         
         light.value_changed(off_msg)
-        self.assertEquals(light.is_on, False)
-        self.assertEquals(light.brightness, 0)
-        self.assertEquals(light.state, 'off')
+        self.assertEqual(light.is_on, False)
+        self.assertEqual(light.brightness, 0)
+        self.assertEqual(light.state, 'off')
 
         light.value_changed(off_msg)
-        self.assertEquals(light.is_on, False)
-        self.assertEquals(light.brightness, 0)
-        self.assertEquals(light.state, 'off')
+        self.assertEqual(light.is_on, False)
+        self.assertEqual(light.brightness, 0)
+        self.assertEqual(light.state, 'off')
 
         light.value_changed(on_msg)
-        self.assertEquals(light.is_on, True)
-        self.assertEquals(light.brightness, 255)
-        self.assertEquals(light.state, 'on')
+        self.assertEqual(light.is_on, True)
+        self.assertEqual(light.brightness, 255)
+        self.assertEqual(light.state, 'on')
 
         light.value_changed(dimmed_msg)
-        self.assertEquals(light.is_on, True)
-        self.assertEquals(light.brightness, 114)
-        self.assertEquals(light.state, 'on')
+        self.assertEqual(light.is_on, True)
+        self.assertEqual(light.brightness, 114)
+        self.assertEqual(light.state, 'on')
 
         light._attr_is_on = None
-        self.assertEquals(light.is_on, None)
+        self.assertEqual(light.is_on, None)
         self.assertIsNone(light.state)
 
 
@@ -147,7 +147,7 @@ class TestDimmableLight(unittest.TestCase):
         self.assertTrue(sl._attr_is_on)
         self.assertTrue(sl.is_on)
         self.assertEqual(sl.brightness, 100)
-        self.assertEquals(sl.state, 'on')
+        self.assertEqual(sl.state, 'on')
 
     def test_initial_loading_off(self):
         sl = self.create_switchable_light()
@@ -157,7 +157,7 @@ class TestDimmableLight(unittest.TestCase):
         self.assertFalse(sl._attr_is_on)
         self.assertFalse(sl.is_on)
         self.assertEqual(sl.brightness, None)
-        self.assertEquals(sl.state, 'off')
+        self.assertEqual(sl.state, 'off')
 
     def test_initial_loading_off_with_brightness(self):
         sl = self.create_switchable_light()
@@ -167,7 +167,7 @@ class TestDimmableLight(unittest.TestCase):
         self.assertFalse(sl._attr_is_on)
         self.assertFalse(sl.is_on)
         self.assertEqual(sl.brightness, 0)
-        self.assertEquals(sl.state, 'off')
+        self.assertEqual(sl.state, 'off')
 
     def test_initial_loading_None(self):
         sl = self.create_switchable_light()

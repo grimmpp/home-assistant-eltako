@@ -30,12 +30,12 @@ class TestGateway(TestCase):
                               dev_id=123, dev_type=sub_type, serial_path="serial_path",  baud_rate=baud_rate, base_id=AddressExpression.parse('FF-AA-00-00'), dev_name="GW", 
                               config_entry=conf)
         
-        self.assertEquals(gw.identifier, basename(normpath('serial_path')))
-        self.assertEquals(gw.general_settings, DEFAULT_GENERAL_SETTINGS)
-        self.assertEquals(gw.model, "EnOcean Gateway - FAM14")
-        self.assertEquals(gw.dev_id, 123)
-        self.assertEquals(gw.dev_type, sub_type)
-        self.assertEquals(gw.dev_name, 'GW - fam14 (Id: 123, BaseId: FF-AA-00-00)')
+        self.assertEqual(gw.identifier, basename(normpath('serial_path')))
+        self.assertEqual(gw.general_settings, DEFAULT_GENERAL_SETTINGS)
+        self.assertEqual(gw.model, "EnOcean Gateway - FAM14")
+        self.assertEqual(gw.dev_id, 123)
+        self.assertEqual(gw.dev_type, sub_type)
+        self.assertEqual(gw.dev_name, 'GW - fam14 (Id: 123, BaseId: FF-AA-00-00)')
 
     config_str = """
 general_settings:
@@ -75,16 +75,16 @@ gateway:
         self.assertEqual(list(g_list.values())[1] ,'GW2 - fam-usb (Id: 2, BaseId: FF-BB-00-00)')
 
     def test_get_id_from_name(self):
-      self.assertEquals(1, config_helpers.get_id_from_name('GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)'))
-      self.assertEquals(87126, config_helpers.get_id_from_name('GW1 - fgw14usb (Id: 87126, BaseId: FF-AA-00-00)'))
+      self.assertEqual(1, config_helpers.get_id_from_name('GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)'))
+      self.assertEqual(87126, config_helpers.get_id_from_name('GW1 - fgw14usb (Id: 87126, BaseId: FF-AA-00-00)'))
 
     def test_get_gateway_from_config(self):
         config = yaml.safe_load(self.config_str)
 
         g_id = 99
         g_config = config_helpers.find_gateway_config_by_id(config, g_id)
-        self.assertEquals(g_config, None)
+        self.assertEqual(g_config, None)
 
         for i in range(1,3):
           g_config = config_helpers.find_gateway_config_by_id(config, i)
-          self.assertEquals(g_config[CONF_ID], i)
+          self.assertEqual(g_config[CONF_ID], i)

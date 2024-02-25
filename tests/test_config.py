@@ -79,12 +79,12 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(hasattr(dev_config, k), f"{k} is expected to be an attribute in config.")
             self.assertIsNotNone(dev_config.get(k), "{f} is not expected to be None.")
 
-        self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
-        self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
-        self.assertEquals(CONFIG[CONF_NAME], dev_config.name)
-        self.assertEquals(CONFIG[CONF_GATEWAY_ID], dev_config.gateway_id)
-        self.assertEquals(CONFIG[CONF_MAX_TARGET_TEMPERATURE], dev_config.max_target_temperature)
-        self.assertEquals(CONFIG[CONF_MIN_TARGET_TEMPERATURE], dev_config.min_target_temperature)
+        self.assertEqual(CONFIG[CONF_ID], str(dev_config.id).upper())
+        self.assertEqual(CONFIG[CONF_EEP], dev_config.eep.eep_string)
+        self.assertEqual(CONFIG[CONF_NAME], dev_config.name)
+        self.assertEqual(CONFIG[CONF_GATEWAY_ID], dev_config.gateway_id)
+        self.assertEqual(CONFIG[CONF_MAX_TARGET_TEMPERATURE], dev_config.max_target_temperature)
+        self.assertEqual(CONFIG[CONF_MIN_TARGET_TEMPERATURE], dev_config.min_target_temperature)
 
     def test_device_config1_2(self):
         CONFIG = self.CONFIG1
@@ -102,13 +102,13 @@ class TestDeviceConfig(TestCase):
         self.assertFalse(hasattr(dev_config, CONF_MAX_TARGET_TEMPERATURE))
         self.assertFalse(hasattr(dev_config, CONF_MIN_TARGET_TEMPERATURE))
 
-        self.assertEquals(CONFIG[CONF_MAX_TARGET_TEMPERATURE], dev_config[CONF_MAX_TARGET_TEMPERATURE])
-        self.assertEquals(CONFIG[CONF_MIN_TARGET_TEMPERATURE], dev_config[CONF_MIN_TARGET_TEMPERATURE])
+        self.assertEqual(CONFIG[CONF_MAX_TARGET_TEMPERATURE], dev_config[CONF_MAX_TARGET_TEMPERATURE])
+        self.assertEqual(CONFIG[CONF_MIN_TARGET_TEMPERATURE], dev_config[CONF_MIN_TARGET_TEMPERATURE])
 
-        self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
-        self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
-        self.assertEquals(CONFIG[CONF_NAME], dev_config.name)
-        self.assertEquals(CONFIG[CONF_GATEWAY_ID], dev_config.gateway_id)
+        self.assertEqual(CONFIG[CONF_ID], str(dev_config.id).upper())
+        self.assertEqual(CONFIG[CONF_EEP], dev_config.eep.eep_string)
+        self.assertEqual(CONFIG[CONF_NAME], dev_config.name)
+        self.assertEqual(CONFIG[CONF_GATEWAY_ID], dev_config.gateway_id)
 
     def test_device_config2_1(self):
         CONFIG = self.CONFIG2
@@ -130,8 +130,8 @@ class TestDeviceConfig(TestCase):
             self.assertFalse(k in dev_config, f"{k} is not expected to be in config.")
             self.assertIsNone(dev_config.get(k), f"{k} is expected to be None.")
 
-        self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
-        self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
+        self.assertEqual(CONFIG[CONF_ID], str(dev_config.id).upper())
+        self.assertEqual(CONFIG[CONF_EEP], dev_config.eep.eep_string)
 
     def test_device_configGW(self):
         CONFIG = self.CONFIG_GW
@@ -153,9 +153,9 @@ class TestDeviceConfig(TestCase):
             self.assertFalse(k in dev_config, f"{k} is not expected to be in config.")
             self.assertIsNone(dev_config.get(k), f"{k} is expected to be None.")
 
-        self.assertEquals(CONFIG[CONF_ID], dev_config.id)
-        self.assertEquals(CONFIG[CONF_BASE_ID], str(dev_config.base_id).upper())
-        self.assertEquals(CONFIG[CONF_DEVICE_TYPE], dev_config.device_type)
+        self.assertEqual(CONFIG[CONF_ID], dev_config.id)
+        self.assertEqual(CONFIG[CONF_BASE_ID], str(dev_config.base_id).upper())
+        self.assertEqual(CONFIG[CONF_DEVICE_TYPE], dev_config.device_type)
 
     def test_device_config3_1(self):
         CONFIG = self.CONFIG3
@@ -175,12 +175,12 @@ class TestDeviceConfig(TestCase):
 
         for k in [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertTrue(k in dev_config)
-            self.assertEquals(CONFIG[k], dev_config[k])
+            self.assertEqual(CONFIG[k], dev_config[k])
             self.assertTrue(hasattr(dev_config, k))
-            self.assertEquals(CONFIG[k], dev_config.get(k))
+            self.assertEqual(CONFIG[k], dev_config.get(k))
 
-        self.assertEquals(CONFIG[CONF_ID], str(dev_config.id).upper())
-        self.assertEquals(CONFIG[CONF_EEP], dev_config.eep.eep_string)
+        self.assertEqual(CONFIG[CONF_ID], str(dev_config.id).upper())
+        self.assertEqual(CONFIG[CONF_EEP], dev_config.eep.eep_string)
 
     config_str = """
 general_settings:
