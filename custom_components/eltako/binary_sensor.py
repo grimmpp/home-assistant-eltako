@@ -5,7 +5,7 @@ from typing import Literal, final
 from eltakobus.util import AddressExpression, b2a, b2s
 from eltakobus.eep import *
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE_CLASS, STATE_ON, STATE_OFF
 from homeassistant.core import HomeAssistant
@@ -56,7 +56,7 @@ async def async_setup_entry(
 
     
 class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
-    
+
     def load_value_initially(self, latest_state:State):
         try:
             if 'unknown' == latest_state.state:
@@ -90,7 +90,16 @@ class EltakoBinarySensor(AbstractBinarySensor):
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
-        
+
+        if device_class is None or device_class == '':
+            if dev_eep in [A5_07_01, A5_08_01]:
+                self._attr_device_class = BinarySensorDeviceClass.OCCUPANCY
+                self._attr_icon = 'mdi:motion-sensor'
+            if dev_eep in [D5_00_01]:
+                self._attr_device_class = BinarySensorDeviceClass.WINDOW
+            if dev_eep in [F6_10_00]:
+                self._attr_device_class = BinarySensorDeviceClass.WINDOW
+            
 
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
