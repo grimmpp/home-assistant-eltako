@@ -67,3 +67,16 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
             'rocker_second_action': 0
         }
         self.assertEqual(fired_event_0['event_data'], exprected_data)
+
+    def test_binary_sensor_rocker_switch_button_test(self):
+        bs = TestBinarySensor().create_binary_sensor()
+        
+        switch_address = b'\xfe\xdb\xb6\x40'
+
+        for test_data in [(b'\x70', ['RT']), (b'\x50', ['RB']), (b'\x30', ['LT']), (b'\x10', ['LB'])]:
+            msg:Regular1BSMessage = RPSMessage(switch_address, status=b'\x30', data=test_data[0])
+            bs.value_changed(msg)
+
+            last_el = len(bs.hass.bus.fired_events)-1
+            pressed_buttons = bs.hass.bus.fired_events[last_el]['event_data']['pressed_buttons']
+            self.assertEquals(pressed_buttons, test_data[1])

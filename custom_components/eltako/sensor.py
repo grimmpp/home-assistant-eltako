@@ -712,7 +712,7 @@ class EltakoIlluminationSensor(EltakoSensor):
 class EltakoBatteryVoltageSensor(EltakoSensor):
     """Representation of an Eltako battery sensor."""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_TYPE_BATTERY_VOLTAGE) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_BATTERY_VOLTAGE) -> None:
         """Initialize the Eltako temperature sensor."""
         _dev_name = dev_name
         if _dev_name == "":
