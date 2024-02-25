@@ -18,3 +18,16 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 class TestBinarySensor_A5_08_01(unittest.TestCase):
     """Test missing"""
 
+    def test_occupancy_sensor(self):
+        bs = TestBinarySensor().create_binary_sensor(eep_string="A5-08-01")
+
+        self.assertEqual(bs._attr_is_on, None)
+
+        msg = Regular4BSMessage (address=b'\xFF\xFF\x00\x80', data=b'\xaa\x80\x76\x0f', status=0x00)
+
+        bs.value_changed(msg)
+        self.assertEqual(bs._attr_is_on, True)
+
+        msg.data = b'\xaa\x80\x76\x0d'
+        bs.value_changed(msg)
+        self.assertEqual(bs._attr_is_on, False)

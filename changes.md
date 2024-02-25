@@ -3,6 +3,9 @@
 ## Version 1.3.8
 * fixed window handle F6-10-00 in binary sensor
 * Added better tests for binary sensors
+* fixed covers which behaved differently after introducing recovery state feature.
+* Added additional values (battery voltage, illumination, temperature) for A5-08-01 as sensor
+* Occupancy Sensor of A5-08-01 added as binary sensor
 
 ## Version 1.3.7 Restore Device States after HA Restart
 * Trial to remove import warnings 
