@@ -19,16 +19,16 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
 
     def test_parse_switch_config(self):
         dev_id = AddressExpression.parse("00-00-00-01 left")
-        self.assertEquals(dev_id[0], b'\x00\x00\x00\x01')
-        self.assertEquals(dev_id[1], "left")
+        self.assertEqual(dev_id[0], b'\x00\x00\x00\x01')
+        self.assertEqual(dev_id[1], "left")
 
         dev_id = AddressExpression.parse("FF-00-00-01 LB")
-        self.assertEquals(dev_id[0], b'\xFF\x00\x00\x01')
-        self.assertEquals(dev_id[1], "LB")
+        self.assertEqual(dev_id[0], b'\xFF\x00\x00\x01')
+        self.assertEqual(dev_id[1], "LB")
 
         dev_id = AddressExpression.parse("FF-00-00-01 LT RB")
-        self.assertEquals(dev_id[0], b'\xFF\x00\x00\x01')
-        self.assertEquals(dev_id[1], "LT RB")
+        self.assertEqual(dev_id[0], b'\xFF\x00\x00\x01')
+        self.assertEqual(dev_id[1], "LT RB")
 
     def test_binary_sensor_rocker_switch(self):
         bs = TestBinarySensor().create_binary_sensor()
@@ -79,4 +79,4 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
 
             last_el = len(bs.hass.bus.fired_events)-1
             pressed_buttons = bs.hass.bus.fired_events[last_el]['event_data']['pressed_buttons']
-            self.assertEquals(pressed_buttons, test_data[1])
+            self.assertEqual(pressed_buttons, test_data[1])

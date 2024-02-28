@@ -37,7 +37,7 @@ class TestBinarySensor(unittest.TestCase):
         bs.load_value_initially(LatestStateMock('on'))
         self.assertTrue(bs._attr_is_on)
         self.assertTrue(bs.is_on)
-        self.assertEquals(bs.state, 'on')
+        self.assertEqual(bs.state, 'on')
 
     def test_initial_loading_off(self):
         bs = self.create_binary_sensor()
@@ -46,7 +46,7 @@ class TestBinarySensor(unittest.TestCase):
         bs.load_value_initially(LatestStateMock('off'))
         self.assertFalse(bs._attr_is_on)
         self.assertFalse(bs.is_on)
-        self.assertEquals(bs.state, 'off')
+        self.assertEqual(bs.state, 'off')
 
     def test_initial_loading_None(self):
         bs = self.create_binary_sensor()

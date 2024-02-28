@@ -37,10 +37,10 @@ class TestSensor_A5_04_02(unittest.TestCase):
         s_temp = self.create_temperature_sensor()
 
         s_temp.value_changed(self.msg1)
-        self.assertEquals(s_temp.native_value, 0.0)
+        self.assertEqual(s_temp.native_value, 0.0)
 
     def test_humidity_sensor_A5_04_02(self):
         s_hum = self.create_humidity_sensor()
 
         s_hum.value_changed(self.msg1)
-        self.assertEquals(s_hum.native_value, 0.0)
+        self.assertEqual(s_hum.native_value, 0.0)

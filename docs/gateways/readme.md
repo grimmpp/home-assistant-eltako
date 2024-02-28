@@ -8,7 +8,10 @@ What gateway is preferred for what?
 ### FAM-USB
 * Is a good match for controlling actuators mounted on a RS485 bus with FAM14 and especially for decentralized actuators in Home Assistant.
 * It also allows to send teach-in telegrams so that you can teach-in actuators by using the Eltako Integration in Home Assistant.
+* It receives status update telegrams repatedly about each minute of every device on the bus.
 * It cannot receive RS485 bus internal commands. E.g. FTS14EM (wired rocker switches, window contacts, ...) telegrams cannot be received. Those telegrams must be consumed on the bus although status responses of the actuators will be sent into wireless network so that FAM-USB can see the result of the changes.
+* Easy installation (USB-Stick)
+* Reception quality depends on how close is it to all the devices and repeaters. (Wireless connection could be instable.)
 
 ### FGW14-USB
 * Has good performance because it filters out polling messages from FAM14 what makes Home Assistant faster.
@@ -16,22 +19,27 @@ What gateway is preferred for what?
 * Has better physical USB connector than FAM14.
 * Cannot read memory of actuators thus it has better security measurements.
 * Cannot control and send telegrams to decentralized actuators. Only to the RS485 bus on which it is mounted.
+* Installation means change to the existing bus in the electric cabinet. (Little electirc knowledge required)
+* Good connection quality.
 
 ### FAM14 
-* Can read memory of actuators. You can use it to [auto-generate configuration for Home Assistant](../../eltakodevice_discovery/readme.md).
+* Similar to FGW14-USB
+* Can read memory of actuators. You can use it to [auto-generate configuration for Home Assistant](https://github.com/grimmpp/enocean-device-manager).
 * Quite a lot of unnecessary telegrams are sent to Home Assistant. Home Assistant could become slower.
 * In operation it does the same like FGW14-USB.
-* Like FGW14-USB, it can transfer states of actuators mounted on the same RS485 bus to Home Assistant. It can also send telegrams to the actuators to change their states.
+* Like FGW14-USB, it can transfer states of actuators mounted on the same RS485 bus to Home Assistant. It can also send telegrams to the actuators to change their states, excluded decentral actuators.
+* Installation: Most probably already mounted on the bus.
+* Good connection quality.
 
 ### Conclusion
 * Use FAM-USB for operations with Home Assistant. FAM-USB is a must for decentralized actuators. If your setup only have actuators mounted on the RS485 bus FGW14-USB is a good choice. <br />
-* Use FAM14 to [generate Home Assistant configuration](../../eltakodevice_discovery/readme.md).
+* Use FAM14 to [generate Home Assistant configuration](https://github.com/grimmpp/enocean-device-manager).
 
 ### Limitations
-Currently all gateways are limited to control 128 devices. It is wished to support more than one gateway in parallel and then you could operate as many devices as you like. 
+Currently all gateways are limited to control up to 128 devices but you can operate more than one in parallel.
 
 ### Recoomendation
-Use both FGW14-USB to managed bus internal commands and FAM-USB to managed decentralized actuators. Eltako Integration is about to be prepased so that you can bring both areas together in Home Assistant.
+With FAM-USB most use cases can be covered and FGW14-USB has the better connection quality but does not support sending command to decentralized devices but you can use both in parallel. 
 
 
 ## Types of gateways
@@ -64,9 +72,11 @@ You can use its usb port to connect it to Home Assistant.
 #### FAM14 BaseId
 FAM14 is setting its baseId automatically and sends telegrams out into the wireless network but only for status telegrams of the actuators.
 This is only relevant for out going communication to devices in wireless network like decentralized actuators. 
-You can find the baseId of FAM14 in PCT14 (Configuration Software).
+You can find the baseId of FAM14 in PCT14 (Configuration Software) or in [EnOcean Device Manager (eo-man)](https://github.com/grimmpp/enocean-device-manager).
 
-#### Configuration 
+#### Configuration (New Way)
+Use [EnOcean Device Manager (eo-man)](https://github.com/grimmpp/enocean-device-manager) to autogenerate the Home Assistant configuration.
+#### Configuration (Old Way)
 1. Specify the type of gateway in the configuration (/homeassistant/configuration.yaml) in Home Assistant.
 2. Enter your devices. I recommend to use a baseId and add the device id so that you don't get confused with all the addresses. 
 
@@ -123,7 +133,7 @@ Same like for FAM14.
 
 ### [**Eltako FAM-USB**](https://www.eltako.com/en/product/professional-standard-en/three-phase-energy-meters-and-one-phase-energy-meters/fam-usb/)
 
-FAM-USB is a usb device which can receive and send ESP2 telegrams. You can use it as gateway in Home Assistant to receive information and to control your actuators. It is connected to the decentralized actuators and to the actuators mounted on a RS485 bus via wireless network.
+FAM-USB is a usb device which can receive and send EnOcean telegrams via ESP2 protocol. You can use it as gateway in Home Assistant to receive information and to control your actuators. It is connected to the decentralized actuators and to the actuators mounted on a RS485 bus via wireless network.
 
 <img src="FAM-USB.jpg" height=100>
 
@@ -137,13 +147,16 @@ FAM-USB is a usb device which can receive and send ESP2 telegrams. You can use i
 
 #### Pro
 * Less traffic overhead than FAM14.
-* Can receive status telegrams from all actuators.
+* Can receive status telegrams from all actuators each minute.
 * Can send telegrams to all actuators incl. teach-in telegrams.
 
 #### Con
-* Cannot receives internal command on the RS485 bu. E.g. telegrams from rocker switches conncted via wires to FTS14EM.
+* Cannot receives internal command on the RS485 bus. E.g. telegrams from rocker switches conncted via wires to FTS14EM.
+* Connection quality could be bad over long distances.
 
-#### Configuration 
+#### Configuration (New Way)
+Use [EnOcean Device Manager (eo-man)](https://github.com/grimmpp/enocean-device-manager) to autogenerate the Home Assistant configuration.
+#### Configuration (Old Way)
 1. Specify the type of gateway in the configuration (/homeassistant/configuration.yaml) in Home Assistant.
 2. Find out  baseId of FAM-USB (start address for sender addresses). Use [DolphinStudio](https://www.enocean.com/de/produkt/dolphinstudio/?ts=1701468463) to read meta data from the chip.
    In this example we use FF-80-80-00 as start address.
@@ -174,10 +187,12 @@ eltako:
 
 ### [**EnOcean GmbH USB300**](https://www.enocean.com/en/product/usb-300/)
 
-FAM-USB is a usb device which can receive and send **ESP3** telegrams. Bahvaior is most probably comparible to FAM-USB.
+USB300 is a usb device which can receive and send EnOcean telegrams via **ESP3** protocol. 
 
-**CURRENTLY NOT SUPPORTED AS HOME ASSISTANT GATEWAY!!!**
-
-If you want to use it anyway check out the [EnOcean Integration](https://www.home-assistant.io/integrations/enocean/).
+**CURRENTLY NOT FULLY SUPPORTED AS HOME ASSISTANT GATEWAY!!!** It can receive messages experimentally but sending messages is currently not supported.
 
 <img src="./USB300.jpg" height=100>
+
+
+### 'FTD14 - RS485 bus telegram duplicator'
+Other possible gateway 

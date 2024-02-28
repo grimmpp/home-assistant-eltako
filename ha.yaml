@@ -27,6 +27,9 @@ eltako:
       - id: ff-66-dd-80
         eep: A5-09-0C
         name: "Air Quality Sensor - FLGTF55"
+      - id: ff-66-dd-81
+        eep: A5-08-01
+        name: Brighness and motion detection
       light:
       - id: 00-00-00-01
         eep: M5-38-08
@@ -70,6 +73,12 @@ eltako:
           name: window 8
           device_class: window  # is displayed as window contact
           invert_signal: True   # value is inverted and shows closed contact as open.
+        - id: ff-bb-da-05
+          eep: F6-10-00
+          name: Window Handle
+        - id: ff-bb-da-06
+          eep: A5-08-01
+          name: Occupancy Sensor
       cover:
       - id: 00-00-00-06
         eep: G5-3F-7F
