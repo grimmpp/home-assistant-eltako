@@ -192,3 +192,7 @@ USB300 is a usb device which can receive and send EnOcean telegrams via **ESP3**
 **CURRENTLY NOT FULLY SUPPORTED AS HOME ASSISTANT GATEWAY!!!** It can receive messages experimentally but sending messages is currently not supported.
 
 <img src="./USB300.jpg" height=100>
+
+
+### 'FTD14 - RS485 bus telegram duplicator'
+Other possible gateway 
