@@ -53,11 +53,7 @@ async def async_setup_entry(
 
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
     log_entities_to_be_added(entities, platform)
-    try:
-        async_add_entities(entities)
-    except ValueError as e:
-        if str(e) != "Config entry has already been setup!":
-            raise e
+    async_add_entities(entities)
 
     
 class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):

@@ -217,25 +217,3 @@ def convert_button_abbreviation(buttons:list[str]) -> list[str]:
 
 def button_abbreviation_to_str(buttons:list[str]) -> list[str]:
     return ', '.join(convert_button_abbreviation(buttons))
-
-def filter_for_new_entities(registry: EntityRegistry, entities: list[Entity]) -> list[Entity]:
-    new_entities = []
-    for e in entities:
-        LOGGER.info(f"[config_helper] check if entity exists e_id: {e.entity_id}, e.unique_id: {e.unique_id}")
-        re1:RegistryEntry = registry.async_get(e.entity_id)
-        if re1 is not None:
-            LOGGER.info(f"[config_helper] e_id: {e.entity_id} alread exists")
-        else:
-            LOGGER.info(f"[config_helper] found e_id: {e.entity_id}")
-
-        re2:RegistryEntry = registry.async_get(e.unique_id)
-        if re2 is not None:
-            LOGGER.info(f"[config_helper] e_unique_id: {e.unique_id} alread exists")
-        else:
-            LOGGER.info(f"[config_helper] found e_unique_id: {e.unique_id}")
-
-        if re1 is None and re2 is None:
-            LOGGER.info(f"[config_helper] nothing found for e_id: {e.entity_id} and e_unique_id: {e.unique_id}")
-            new_entities.append(e)
-
-    return new_entities

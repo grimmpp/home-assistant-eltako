@@ -53,11 +53,7 @@ async def async_setup_entry(
         
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
-    try:
-        async_add_entities(entities)
-    except ValueError as e:
-        if str(e) != "Config entry has already been setup!":
-            raise e
+    async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
     """Representation of an Eltako cover device."""
