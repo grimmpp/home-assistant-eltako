@@ -221,7 +221,7 @@ def button_abbreviation_to_str(buttons:list[str]) -> list[str]:
 async def async_filter_for_new_entities(registry: EntityRegistry, entities: list[Entity]) -> list[Entity]:
     new_entities = []
     for e in entities:
-        re:RegistryEntry = await registry.async_get(e.unique_id)
+        re:RegistryEntry = await registry.async_get(e.entity_id)
         if re is not None:
             new_entities.append(e)
     return new_entities
