@@ -47,7 +47,7 @@ class EltakoEntity(Entity):
         else:
             description_key = '_'+description_key
 
-        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}{description_key}".replace('-', '_').lower()
+        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}{description_key}".replace(' ', "_").replace('-', '_').lower()
 
     def _get_description_key(self, description_key:str=None):
         if description_key is not None:
