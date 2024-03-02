@@ -2,6 +2,8 @@ from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_ID
+from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
+from homeassistant.helpers.entity import Entity
 
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import EEP
@@ -17,7 +19,7 @@ DEFAULT_GENERAL_SETTINGS = {
 
 class DeviceConf(dict):
     """Object representation of config."""
-    def __init__(self, config: ConfigType, extra_keys:[str]=[]):
+    def __init__(self, config: ConfigType, extra_keys:list[str]=[]):
         # merge everything into dict
         self.update(config)
         
@@ -54,10 +56,10 @@ class DeviceConf(dict):
     def get(self, key: str):
         return super().get(key, None)
 
-def get_device_conf(config: ConfigType, key: str, extra_keys:[str]=[]) -> DeviceConf:
+def get_device_conf(config: ConfigType, key: str, extra_keys:list[str]=[]) -> DeviceConf:
     if config is not None:
         if key in config.keys():
-            return DeviceConf(config.get(key))
+            return DeviceConf(config.get(key), extra_keys)
     return None
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
@@ -125,7 +127,7 @@ async def async_get_list_of_gateway_descriptions(hass: HomeAssistant, CONFIG_SCH
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     return get_list_of_gateway_descriptions(config, filter_out)
 
-def get_list_of_gateway_descriptions(config: dict, filter_out: [str]=[]) -> dict:
+def get_list_of_gateway_descriptions(config: dict, filter_out: list[str]=[]) -> dict:
     """Compiles a list of all gateways in config."""
     result = {}
     if CONF_GATEWAY in config:
@@ -200,7 +202,7 @@ def convert_button_pos_from_hex_to_str(pos: int) -> str:
         return "RB"
     return None
 
-def convert_button_abbreviation(buttons:[str]) -> [str]:
+def convert_button_abbreviation(buttons:list[str]) -> list[str]:
     result = []
     for b in buttons:
         if b.upper() == "LB":
@@ -213,5 +215,13 @@ def convert_button_abbreviation(buttons:[str]) -> [str]:
             result.append("Right Top")
     return result
 
-def button_abbreviation_to_str(buttons:[str]) -> [str]:
+def button_abbreviation_to_str(buttons:list[str]) -> list[str]:
     return ', '.join(convert_button_abbreviation(buttons))
+
+async def async_filter_for_new_entities(registry: EntityRegistry, entities: list[Entity]) -> list[Entity]:
+    new_entities = []
+    for e in entities:
+        re:RegistryEntry = await registry.async_get(e.unique_id)
+        if re is not None:
+            new_entities.append(e)
+    return new_entities

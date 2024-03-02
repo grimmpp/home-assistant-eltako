@@ -6,6 +6,7 @@
 * fixed covers which behaved differently after introducing recovery state feature.
 * Added additional values (battery voltage, illumination, temperature) for A5-08-01 as sensor
 * Occupancy Sensor of A5-08-01 added as binary sensor
+* Cleanup: When reloading gateway check before adding entities to avaid HA printing error: 'Config entry has already been setup!' (No entry updated are done only new entries will be added.)
 
 ## Version 1.3.7 Restore Device States after HA Restart
 * Trial to remove import warnings 

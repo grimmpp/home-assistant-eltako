@@ -12,6 +12,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import entity_registry as er
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 from .config_helpers import DeviceConf
@@ -46,8 +47,9 @@ async def async_setup_entry(
                 
     
     validate_actuators_dev_and_sender_id(entities)
-    log_entities_to_be_added(entities, Platform.SWITCH)
-    async_add_entities(entities)
+    new_entities = await config_helpers.async_filter_for_new_entities(er.async_get(hass), entities)
+    log_entities_to_be_added(new_entities, platform)
+    async_add_entities(new_entities)
 
 
 class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):

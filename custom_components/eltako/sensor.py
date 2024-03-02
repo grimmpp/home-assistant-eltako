@@ -36,9 +36,10 @@ from homeassistant.const import (
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo, EntityDescription
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import entity_registry as er
 
 from .device import *
 from .config_helpers import *
@@ -414,8 +415,9 @@ async def async_setup_entry(
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
     validate_actuators_dev_and_sender_id(entities)
-    log_entities_to_be_added(entities, platform)
-    async_add_entities(entities)
+    new_entities = await config_helpers.async_filter_for_new_entities(er.async_get(hass), entities)
+    log_entities_to_be_added(new_entities, platform)
+    async_add_entities(new_entities)
 
 
 class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
