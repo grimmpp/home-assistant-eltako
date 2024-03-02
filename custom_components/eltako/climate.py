@@ -79,9 +79,12 @@ async def async_setup_entry(
                 continue
 
     validate_actuators_dev_and_sender_id(entities)
-    new_entities = config_helpers.filter_for_new_entities(er.async_get(hass), entities)
-    log_entities_to_be_added(new_entities, platform)
-    async_add_entities(new_entities)
+    log_entities_to_be_added(entities, platform)
+    try:
+        async_add_entities(entities)
+    except ValueError as e:
+        if str(e) != "Config entry has already been setup!":
+            raise e
 
 
 def validate_ids_of_climate(entities:list[EltakoEntity]):

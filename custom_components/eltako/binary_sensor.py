@@ -52,9 +52,12 @@ async def async_setup_entry(
     entities.append(GatewayConnectionState(platform, gateway))
 
     # dev_id validation not possible because there can be bus sensors as well as decentralized sensors.
-    new_entities = config_helpers.filter_for_new_entities(er.async_get(hass), entities)
-    log_entities_to_be_added(new_entities, platform)
-    async_add_entities(new_entities)
+    log_entities_to_be_added(entities, platform)
+    try:
+        async_add_entities(entities)
+    except ValueError as e:
+        if str(e) != "Config entry has already been setup!":
+            raise e
 
     
 class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
