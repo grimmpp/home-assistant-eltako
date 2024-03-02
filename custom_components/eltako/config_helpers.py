@@ -222,11 +222,11 @@ async def async_filter_for_new_entities(registry: EntityRegistry, entities: list
     new_entities = []
     for e in entities:
         LOGGER.info(f"[config_helper] check if entity exists e_id: {e.entity_id}, e.unique_id: {e.unique_id}")
-        re1:RegistryEntry = await registry.async_get(e.entity_id)
+        re1:RegistryEntry = registry.async_get(e.entity_id)
         if re1 is not None:
             new_entities.append(e)
             LOGGER.info(f"[config_helper] e_id: {e.entity_id} alread exists")
-        re2:RegistryEntry = await registry.async_get(e.unique_id)
+        re2:RegistryEntry = registry.async_get(e.unique_id)
         if re2 is not None:
             new_entities.append(e)
             LOGGER.info(f"[config_helper] e_unique_id: {e.unique_id} alread exists")
