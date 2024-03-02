@@ -218,7 +218,7 @@ def convert_button_abbreviation(buttons:list[str]) -> list[str]:
 def button_abbreviation_to_str(buttons:list[str]) -> list[str]:
     return ', '.join(convert_button_abbreviation(buttons))
 
-async def async_filter_for_new_entities(registry: EntityRegistry, entities: list[Entity]) -> list[Entity]:
+def filter_for_new_entities(registry: EntityRegistry, entities: list[Entity]) -> list[Entity]:
     new_entities = []
     for e in entities:
         LOGGER.info(f"[config_helper] check if entity exists e_id: {e.entity_id}, e.unique_id: {e.unique_id}")

@@ -13,10 +13,10 @@ from homeassistant.components.light import (
     LightEntity,
 )
 from homeassistant import config_entries
-from homeassistant.const import CONF_ID, CONF_NAME, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
@@ -54,7 +54,7 @@ async def async_setup_entry(
                 LOGGER.critical(e, exc_info=True)
         
     validate_actuators_dev_and_sender_id(entities)
-    new_entities = await config_helpers.async_filter_for_new_entities(er.async_get(hass), entities)
+    new_entities = config_helpers.filter_for_new_entities(er.async_get(hass), entities)
     log_entities_to_be_added(new_entities, platform)
     async_add_entities(new_entities)
 
