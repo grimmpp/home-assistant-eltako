@@ -1,11 +1,12 @@
 # Changes and Feature List
 
 ## Version 1.3.8
-* fixed window handle F6-10-00 in binary sensor
+* Fixed window handle F6-10-00 in binary sensor
 * Added better tests for binary sensors
-* fixed covers which behaved differently after introducing recovery state feature.
+* Fixed covers which behaved differently after introducing recovery state feature.
 * Added additional values (battery voltage, illumination, temperature) for A5-08-01 as sensor
 * Occupancy Sensor of A5-08-01 added as binary sensor
+* Improved ESP3 adapter for USB300 support. Sending telegrams works now but actuators are not accepting commands for e.g. lights - EEP: A5-38-08
 
 ## Version 1.3.7 Restore Device States after HA Restart
 * Trial to remove import warnings 

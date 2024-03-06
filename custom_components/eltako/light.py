@@ -13,12 +13,11 @@ from homeassistant.components.light import (
     LightEntity,
 )
 from homeassistant import config_entries
-from homeassistant.const import CONF_ID, CONF_NAME, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import entity_registry as er
 
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 from .config_helpers import DeviceConf

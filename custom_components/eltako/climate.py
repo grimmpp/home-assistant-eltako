@@ -21,6 +21,7 @@ from homeassistant.const import Platform, CONF_TEMPERATURE_UNIT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import entity_registry as er
 
 from .gateway import EnOceanGateway
 from .device import *
