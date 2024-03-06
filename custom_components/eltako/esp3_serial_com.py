@@ -67,7 +67,6 @@ class ESP3SerialCommunicator(Communicator):
 
     @classmethod
     def convert_esp2_to_esp3_message(cls, message: ESP2Message) -> RadioPacket:
-
         optional = []
         if isinstance(message, RPSMessage):
             rorg = RORG.RPS
@@ -123,15 +122,21 @@ class ESP3SerialCommunicator(Communicator):
         return prettify( ESP2Message(body) )
     
 
-    def __callback_wrapper(self, msg):
+    def __callback_wrapper(self, msg: Packet):
+        if msg.packet_type == PACKET.RESPONSE and msg.data[0] != RETURN_CODE.OK:
+            self.log.error(f"Received ESP3 response with with return code {RETURN_CODE(msg.data[0]).name} ({msg.data[0]}) - {str(msg)} ")
+            return
+
         if self._outside_callback:
             if self.esp2_translation_enabled:
-                esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
-                
-                if esp2_msg is None:
-                    self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
-                else:
-                    self._outside_callback(esp2_msg)
+                # only when message is radio telegram
+                if msg.packet_type == PACKET.RADIO:
+                    esp2_msg = ESP3SerialCommunicator.convert_esp3_to_esp2_message(msg)
+                    
+                    if esp2_msg is None:
+                        self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp2 message (%s).", msg)
+                    else:
+                        self._outside_callback(esp2_msg)
 
             else:
                 self._outside_callback(msg)
@@ -144,11 +149,14 @@ class ESP3SerialCommunicator(Communicator):
     async def send(self, packet) -> bool:
         if self.esp2_translation_enabled:
             esp3_msg = ESP3SerialCommunicator.convert_esp2_to_esp3_message(packet)
+            self.log.debug(f"Converted esp2 ({str(packet)} - {b2s(packet.serialize())}) message to esp3 ({str(esp3_msg)})")
             if esp3_msg is None:
                 self.log.warn("[ESP3SerialCommunicator] Cannot convert to esp3 message (%s).", packet)
             else:
+                self.log.debug(f"Send ESP3 message {str(esp3_msg)}")
                 return super().send(esp3_msg)
         else:
+            self.log.debug(f"Send ESP3 message {str(packet)}")
             return super().send(packet)
 
     def run(self):
@@ -194,6 +202,7 @@ class ESP3SerialCommunicator(Communicator):
         self.is_serial_connected.clear()
         self._fire_status_change_handler(connected=False)
         self.logger.info('SerialCommunicator stopped')
+
 
     def parse(self):
         ''' Parses messages and puts them to receive queue '''
