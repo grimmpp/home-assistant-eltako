@@ -59,8 +59,8 @@ async def async_setup_entry(
                             dev_config = config_helpers.DeviceConf(entity_config)
                             sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                            if dev_config.eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
-                                entities.append(TeachInButton(platform, gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id))
+                            if sender_config.eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
+                                entities.append(TeachInButton(platform, gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
                         except Exception as e:
                             LOGGER.warning("[%s] Could not load configuration", platform)
                             LOGGER.critical(e, exc_info=True)
@@ -82,17 +82,18 @@ class AbstractButton(EltakoEntity, ButtonEntity):
 class TeachInButton(AbstractButton):
     """Button which sends teach-in telegram."""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
         _dev_name = dev_name
         if _dev_name == "":
             _dev_name = "teach-in-button"
         self.entity_description = ButtonEntityDescription(
             key="teach_in_button",
             name="Send teach-in telegram from "+sender_id.plain_address().hex(),
-            icon="mdi:button-cursor",
+            icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
         )
         self.sender_id = sender_id
+        self.sender_eep = sender_eep
 
         super().__init__(platform, gateway, dev_id, _dev_name, dev_eep)
 
@@ -101,8 +102,9 @@ class TeachInButton(AbstractButton):
         Handle the button press.
         Send teach-in command
         """
+
         controller_address, _ = self.sender_id
-        msg = Regular4BSMessage(address=controller_address, data=EEP_WITH_TEACH_IN_BUTTONS[self.dev_eep], outgoing=True, status=0x80)
+        msg = Regular4BSMessage(address=controller_address, data=EEP_WITH_TEACH_IN_BUTTONS[self.sender_eep], outgoing=True, status=0x80)
         self.send_message(msg)
 
 class GatewayReconnectButton(AbstractButton):
