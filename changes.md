@@ -7,6 +7,7 @@
 * Added additional values (battery voltage, illumination, temperature) for A5-08-01 as sensor
 * Occupancy Sensor of A5-08-01 added as binary sensor
 * Improved ESP3 adapter for USB300 support. Sending telegrams works now but actuators are not accepting commands for e.g. lights - EEP: A5-38-08
+* Teach-In buttons for lights, covers, and climate are available.
 
 ## Version 1.3.7 Restore Device States after HA Restart
 * Trial to remove import warnings 
