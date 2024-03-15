@@ -5,20 +5,10 @@ This example is about how to trigger complex automations in home assistant by wa
 <img src="./rocker_switch_automation_config.png" height="300px">
 <img src="./Eltako-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
 
-First of all you need to register your switch in the Home assistant Configuration ``/config/configuration.yaml``. Those switches are declared as binary sensors and their eep is "F6-02-01". You can find the identifiers of your switches on a sticker at the back.
+## Register switch and check incomging telegrams and events in logs
 
-<div style="border: 2px dotted darkgrey; padding: 12px; margin-top:20px; margin-bottom: 20px; ">
-📝 <b>Note:</b> <br />
-You can <b>enable debug logs</b> to easily test which switch was pressed. Therefore I've installed the addon <a href="https://github.com/hassio-addons/addon-log-viewer">log-viewer</a> and extended the home assistant config with:
-<code><pre>
-logger:
-  default: info
-  logs:
-    eltako: debug
-</pre></code>
-<b>To modify the Home Assistant configuration</b> I use <a href="https://github.com/home-assistant/addons/tree/master/configurator">File Editor</a>. After doing changes don't forget to restart Home Assistant what you can easily do in the menu of File Editor.
-
-</div>
+First of all you need to register your switch in the Home assistant Configuration ``/config/configuration.yaml``. Those switches are declared as `binary_sensor` and their EEP is `F6-02-01`. For more details about how to define the Home Assistant Eltako Integration configuration check out the [documentation how to write the configuration](../update_home_assistant_configuration.md) or if you are interested in auto-generating your configuration check out [enocean-device-manager](https://github.com/grimmpp/enocean-device-manager). 
+The the declaration in the configuration you need to know the id or enocean address of your switch. You can find the address of your switches on a sticker at the back or you can just push a button and check the incoming telegrams in the logs. ([Here](../logging/readme.md) you can find how to use logging. debugging must be enabled for eltako to see the incoming telegram: `etlako: debug`)
 
 See example snipped to declare your switch:
 ```
@@ -29,12 +19,25 @@ See example snipped to declare your switch:
       eep: "F6-02-01"
 ```
 
-After you have registered the switch in Home Assistant configuration and after you have restarted Home Assistant you can see messages in the logger view.
+After you have registered the switch in Home Assistant configuration and after you have restarted Home Assistant you can see messages in the logger view. (Debugging must be enabled.)
 
-To create an automation go in Home Assistant to ``Settings > Automation & Scenes > Create Automation``.
+<img src="screenshot_logging.png" alt="Exemplary screenshot about logging." height="300" />
+
+## Create automatin listening on switch events
+
+To create an automation which reacts on switch events go in Home Assistant to ``Settings > Automation & Scenes > Create Automation``.
 As trigger choose ``Manual Event`` and enter ``eltako.gw_[GATEWAY_BASE_ID].func_button_pressed.sid_[SWITCH_ID].d_[BUTTONS]`` as event id. Replace brackets `[GATEWAY_BASE_ID]` by the base_id of your gateway, `[SWITCH_ID]` by the switch id, and `[BUTTONS]` by the button positions. Gateway base id and switch id can be found in your configuration. Ids must be entered in the following format and in upper letters: `FF-AA-80-00`. Valid values for button positions are LT, LB, RT, RB (L = left, r = richt, T = top, B = bottom). Combinations are also possible. It always starts with left and then right. Valid values are: `LT-RT`, `LT-RB`, `LB-RT`, `LB-RB`.
 
-Choose your action you would like to trigger in the action section. In the following examples I change the state of light (toggle mode).
+You can find the button independent event id of the switch on the entity page as well. You can copy this event id and if you want to distinguish between different buttons pushed you need to add `.d_[BUTTONS]` like described above.
+
+<img src="screenshot_switch_page.png" alt="" height="300" />
+
+If you push two buttons at the same time it looks like the following:
+
+<img src="screenshot_switch_page_2buttons_pushed.png" alt="" height="300" />
+
+
+Choose your action you would like to trigger in the action section. In the screenshot at the beginning I change the state of light (toggle mode).
 
 
 ## Advanced usage
