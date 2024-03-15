@@ -32,6 +32,9 @@ You can find the button independent event id of the switch on the entity page as
 
 <img src="screenshot_switch_page.png" alt="" height="300" />
 
+If you push two buttons at the same time it looks like the following:
+<img src="screenshot_switch_page_2buttons_pushed.png" alt="" height="300" />
+
 
 Choose your action you would like to trigger in the action section. In the following examples I change the state of light (toggle mode).
 
