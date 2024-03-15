@@ -37,7 +37,7 @@ If you push two buttons at the same time it looks like the following:
 <img src="screenshot_switch_page_2buttons_pushed.png" alt="" height="300" />
 
 
-Choose your action you would like to trigger in the action section. In the following examples I change the state of light (toggle mode).
+Choose your action you would like to trigger in the action section. In the screenshot at the beginning I change the state of light (toggle mode).
 
 
 ## Advanced usage
