@@ -1,14 +1,17 @@
 # Changes and Feature List
 
-## Version 1.3.8
+## Version 1.3.9 
+* Docs about gateway usage added.
+
+## Version 1.3.8 Fixes and Smaller Imrovements
 * Fixed window handle F6-10-00 in binary sensor
 * Added better tests for binary sensors
 * Fixed covers which behaved differently after introducing recovery state feature.
 * Added additional values (battery voltage, illumination, temperature) for A5-08-01 as sensor
 * Occupancy Sensor of A5-08-01 added as binary sensor
-* Improved ESP3 adapter for USB300 support. Sending telegrams works now but actuators are not accepting commands for e.g. lights - EEP: A5-38-08
+* Improved ESP3 adapter for USB300 support. Sending telegrams works now but actuators are not accepting commands for e.g. lights - EEP: A5-38-08 😥
 * Teach-In buttons for lights, covers, and climate are available.
-* Static 'Event Id' of switches (EEP: F6-02-01 and F6-02-02) added.
+* Static 'Event Id' of switches (EEP: F6-02-01 and F6-02-02) is displayed on entity page.
 * Docs about how to use logging added.
 * Updated docs about how to trigger automations with wall-mounted switches.
 
