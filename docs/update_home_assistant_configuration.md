@@ -1,9 +1,10 @@
 # Update Home Assistant Configuration
 
 Before you can start and see your devices and sensors in Home Assistant you need to enter them unfortunately manually into the Home Assistant Configuration ``/config/configuration.yaml``. 
-You can edit the configuration file e.g. with the add-on [File Editor](https://github.com/home-assistant/addons/tree/master/configurator). In this repository the is also a script which can read all devices mounted on the eltako bus.
+You can edit the configuration file e.g. with the add-on [File Editor](https://github.com/home-assistant/addons/tree/master/configurator). 
+In order to get supported by creating the configuration and managing your devices you can use [Enocean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager).
 
-After you have finished the configuration changes **don't forget to restart Home Assistant so that the changes will be applied.** You can trigger the restart in the menu of File Editor.
+After you have finished the configuration changes **don't forget to restart Home Assistant so that the changes will be applied.** Hint: You can trigger the restart in the menu of File Editor.
 
 ## Schema of the configuration file:
 If the documentation might be outdated and not complete you can always find the truth in [schema.py](../custom_components/eltako/schema.py).

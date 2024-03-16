@@ -53,14 +53,14 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * F6-02-01 (Rocker switch)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
-* [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** - Not properly test. Interaction and synchronization of temperature controllers may change.)
+* [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** Feedback is welcome.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
  
-[**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
+[**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [how to use gateways](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateway_usage/readme.md) and [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **Eltako FAM-USB** (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
-  * **EnOcean USB300** (**NOT YET IMPLEMENTED**) (based on ESP3 and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
-    * Library is integrated and USB300 can be configured. Message conversion from ESP3 to ESp2 and back is not yet implemented. This means this dongle is not yet working.
+  * **EnOcean USB300** (**experimental**) (based on ESP3 and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
+    * ESP3 is not yet fully supported.
 
 
 # Installation and Configuration

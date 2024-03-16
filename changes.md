@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.3.9 
+* Docs about gateway usage added.
+
 ## Version 1.3.8 Fixes and Smaller Imrovements
 * Fixed window handle F6-10-00 in binary sensor
 * Added better tests for binary sensors
