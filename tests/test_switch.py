@@ -17,14 +17,12 @@ class TestSwitch(unittest.TestCase):
     def mock_send_message(self, msg: ESP2Message):
         self.last_sent_command.append( msg )
 
-    def create_switch(self, sender_eep_string:str) -> EltakoSwitch:
+    def create_switch(self, sender_eep_string:str, sender_id:AddressExpression = AddressExpression.parse('00-00-B0-01')) -> EltakoSwitch:
         gateway = GatewayMock()
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'M5-38-08'
         
-        sender_id = AddressExpression.parse('00-00-B0-01')
-
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
@@ -77,15 +75,70 @@ class TestSwitch(unittest.TestCase):
         self.assertEqual(self.last_sent_command[0].data[3], 8)
         self.last_sent_command = []
 
-    def test_switch_value_changed_with_sender_epp_F6_02_01(self):
-        switch = self.create_switch('F6-02-01')
+    def test_switch_value_changed_with_sender_epp_F6_02_01_left(self):
+        switch = self.create_switch('F6-02-01', AddressExpression.parse('00-00-B0-01 left'))
         switch.send_message = self.mock_send_message
         switch._on_state = False
 
         # status update message from relay
         #8b 05 70 00 00 00 00 00 00 01 30
+        # data = 0x30
+        on_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x30', outgoing=False)
+        # 8b 05 50 00 00 00 00 00 00 01 30
+        # data = 0x10
+        off_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x10', outgoing=False)
+
+        switch.value_changed(on_msg)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
+
+        switch.value_changed(on_msg)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
+        
+        switch.value_changed(off_msg)
+        self.assertEqual(switch.is_on, False)
+        self.assertEqual(switch.state, 'off')
+
+        switch.value_changed(off_msg)
+        self.assertEqual(switch.is_on, False)
+        self.assertEqual(switch.state, 'off')
+
+        switch.value_changed(on_msg)
+        self.assertEqual(switch.is_on, True)
+        self.assertEqual(switch.state, 'on')
+
+        self.last_sent_command = []
+        switch.turn_on()
+        self.assertEqual(len(self.last_sent_command), 2)
+        self.assertEqual(type(self.last_sent_command[0]), RPSMessage)
+        self.assertEqual(self.last_sent_command[0].status, 0x30)
+        self.assertEqual(self.last_sent_command[0].data[0], 0x30)   # on
+        self.assertEqual(self.last_sent_command[1].status, 0x30)
+        self.assertEqual(self.last_sent_command[1].data[0], 0x20)
+
+        self.last_sent_command = []
+        switch.turn_off()
+        self.assertEqual(len(self.last_sent_command), 2)
+        self.assertEqual(type(self.last_sent_command[0]), RPSMessage)
+        self.assertEqual(self.last_sent_command[0].status, 0x30)
+        self.assertEqual(self.last_sent_command[0].data[0], 0x10)   #off
+        self.assertEqual(self.last_sent_command[1].status, 0x30)
+        self.assertEqual(self.last_sent_command[1].data[0], 0x00)
+        self.last_sent_command = []
+
+
+    def test_switch_value_changed_with_sender_epp_F6_02_01_right(self):
+        switch = self.create_switch('F6-02-01', AddressExpression.parse('00-00-B0-01 right'))
+        switch.send_message = self.mock_send_message
+        switch._on_state = False
+
+        # status update message from relay
+        #8b 05 70 00 00 00 00 00 00 01 30
+        # data = 0x70
         on_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x70', outgoing=False)
         # 8b 05 50 00 00 00 00 00 00 01 30
+        # data = 0x50
         off_msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x50', outgoing=False)
 
         switch.value_changed(on_msg)
@@ -113,19 +166,20 @@ class TestSwitch(unittest.TestCase):
         self.assertEqual(len(self.last_sent_command), 2)
         self.assertEqual(type(self.last_sent_command[0]), RPSMessage)
         self.assertEqual(self.last_sent_command[0].status, 0x30)
-        self.assertEqual(self.last_sent_command[0].data[0], 0x10)   # on
+        self.assertEqual(self.last_sent_command[0].data[0], 0x70)   # on
         self.assertEqual(self.last_sent_command[1].status, 0x30)
-        self.assertEqual(self.last_sent_command[1].data[0], 0x00)
+        self.assertEqual(self.last_sent_command[1].data[0], 0x60)
 
         self.last_sent_command = []
         switch.turn_off()
         self.assertEqual(len(self.last_sent_command), 2)
         self.assertEqual(type(self.last_sent_command[0]), RPSMessage)
         self.assertEqual(self.last_sent_command[0].status, 0x30)
-        self.assertEqual(self.last_sent_command[0].data[0], 0x30)   #off
+        self.assertEqual(self.last_sent_command[0].data[0], 0x50)   #off
         self.assertEqual(self.last_sent_command[1].status, 0x30)
-        self.assertEqual(self.last_sent_command[1].data[0], 0x20)
+        self.assertEqual(self.last_sent_command[1].data[0], 0x40)
         self.last_sent_command = []
+
 
     def test_initial_loading_on(self):
         switch = self.create_switch('F6-02-01')
