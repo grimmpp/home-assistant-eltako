@@ -188,6 +188,22 @@ class EltakoSwitchableLight(AbstractLightEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
+        elif self._sender_eep in [F6_02_01, F6_02_02]:
+            address, discriminator = self._sender_id
+            # in PCT14 function 02 'direct  pushbutton top on' needs to be configured
+            if discriminator == "left":
+                action = 1  # 0x30
+            elif discriminator == "right":
+                action = 3  # 0x70
+            else:
+                action = 1
+                
+            pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(pressed_msg)
+            
+            released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
+            self.send_message(released_msg)
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = True
             self.schedule_update_ha_state()
@@ -201,6 +217,22 @@ class EltakoSwitchableLight(AbstractLightEntity):
             switching = CentralCommandSwitching(0, 1, 0, 0, 0)
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
+
+        elif self._sender_eep in [F6_02_01, F6_02_02]:
+            address, discriminator = self._sender_id
+            # in PCT14 function 02 'direct  pushbutton top on' needs to be configured
+            if discriminator == "left":
+                action = 0  # 0x10
+            elif discriminator == "right":
+                action = 2  # 0x50
+            else:
+                action = 0
+                
+            pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(pressed_msg)
+            
+            released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
+            self.send_message(released_msg)
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = False
