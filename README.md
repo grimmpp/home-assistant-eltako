@@ -48,9 +48,11 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 
 **Supported sender EEPs**
 * Light
-  * A5-38-08 (Central command - gateway, FUD14)
+  * A5-38-08 (Central command - gateway, FUD14) PREFERRED!!!
+  * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left) / (only as switch not for dimmable lights.)
 * [Switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
-  * F6-02-01 (Rocker switch)
+  * A5-38-08 (Central command) PREFERRED!!!
+  * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
 * [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** Feedback is welcome.)

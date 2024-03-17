@@ -190,12 +190,13 @@ class EltakoSwitchableLight(AbstractLightEntity):
 
         elif self._sender_eep in [F6_02_01, F6_02_02]:
             address, discriminator = self._sender_id
+            # in PCT14 function 02 'direct  pushbutton top on' needs to be configured
             if discriminator == "left":
-                action = 0
+                action = 1  # 0x30
             elif discriminator == "right":
-                action = 2
+                action = 3  # 0x70
             else:
-                action = 0
+                action = 1
                 
             pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
             self.send_message(pressed_msg)
@@ -219,12 +220,13 @@ class EltakoSwitchableLight(AbstractLightEntity):
 
         elif self._sender_eep in [F6_02_01, F6_02_02]:
             address, discriminator = self._sender_id
+            # in PCT14 function 02 'direct  pushbutton top on' needs to be configured
             if discriminator == "left":
-                action = 1
+                action = 0  # 0x10
             elif discriminator == "right":
-                action = 3
+                action = 2  # 0x50
             else:
-                action = 1
+                action = 0
                 
             pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
             self.send_message(pressed_msg)
