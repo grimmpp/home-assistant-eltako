@@ -108,7 +108,7 @@ class LightSchema(EltakoPlatformSchema):
     PLATFORM = Platform.LIGHT
 
     CONF_EEP_SUPPORTED = [A5_38_08.eep_string, M5_38_08.eep_string]
-    CONF_SENDER_EEP_SUPPORTED = [A5_38_08.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [A5_38_08.eep_string, F6_02_01.eep_string, F6_02_02.eep_string]
 
     DEFAULT_NAME = "Light"
 

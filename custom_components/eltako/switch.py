@@ -82,7 +82,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
         """Turn on the switch."""
         address, discriminator = self._sender_id
         
-        if self._sender_eep == F6_02_01:
+        if self._sender_eep in [F6_02_01, F6_02_02]:
             if discriminator == "left":
                 action = 0
             elif discriminator == "right":
@@ -110,7 +110,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
         """Turn off the switch."""
         address, discriminator = self._sender_id
         
-        if self._sender_eep == F6_02_01:
+        if self._sender_eep in [F6_02_01, F6_02_02]:
             if discriminator == "left":
                 action = 1
             elif discriminator == "right":

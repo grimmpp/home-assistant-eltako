@@ -2,6 +2,7 @@
 
 ## Version 1.3.9 
 * Docs about gateway usage added.
+* Added EEPs F6-02-01 and F6-02-02 as sender EEP for lights so that regular switch commands can be sent from Home Assistant.
 
 ## Version 1.3.8 Fixes and Smaller Imrovements
 * Fixed window handle F6-10-00 in binary sensor
@@ -106,6 +107,3 @@
 
 ## Version 1.0.0 Baseline
 
-## Backlog
-* Docs for Configuration Schema
-* Extend device discovery for heating and cooling actuators
