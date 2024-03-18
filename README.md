@@ -39,10 +39,11 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-13-01 (Weather station, FWG14)
   * F6-10-00 (Window handle, FTS14EM)
 * Light
-  * A5-38-08 (Central command - gateway, FUD14)
-  * M5-38-08 (Eltako relay, FSR14)
+  * A5-38-08 (Dimmable Light: Central command - gateway, FUD14)
+  * M5-38-08 (Switchable Light: Eltako relay, FSR14)
 * Switch
   * M5-38-08 (Eltako relay, FSR14)
+  * F6-02-01 and F6-02-02
 * Cover
   * G5-3F-7F (Eltako cover, FSB14)
 

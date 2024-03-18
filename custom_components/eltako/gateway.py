@@ -84,9 +84,11 @@ class EnOceanGateway:
 
         self._register_device()
 
+
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
         self._fire_connection_state_changed_event(self._bus and self._bus.is_active())
+
 
     def _fire_connection_state_changed_event(self, connected:bool):
         if self._connection_state_handler:
@@ -94,8 +96,10 @@ class EnOceanGateway:
                 self._connection_state_handler( connected )
             )
 
+
     def set_last_message_received_handler(self, handler):
         self._last_message_received_handler = handler
+
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
@@ -103,8 +107,10 @@ class EnOceanGateway:
                 self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
             )
 
+
     def set_received_message_count_handler(self, handler):
         self._received_message_count_handler = handler
+
 
     def _fire_received_message_count_event(self):
         self._received_message_count += 1
@@ -112,6 +118,7 @@ class EnOceanGateway:
             self.hass.async_create_task(
                 self._received_message_count_handler( self._received_message_count )
             )
+
 
     def _init_bus(self):
         self._received_message_count = 0
@@ -144,12 +151,14 @@ class EnOceanGateway:
             return self.sender_id_validation_by_bus_gateway(sender_id, device_name)
         return False
     
+
     def sender_id_validation_by_transmitter(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         result = config_helpers.compare_enocean_ids(self.base_id[0], sender_id[0])
         if not result:
             LOGGER.warn(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
         return result
     
+
     def sender_id_validation_by_bus_gateway(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
     
@@ -161,12 +170,14 @@ class EnOceanGateway:
             return self.dev_id_validation_by_bus_gateway(dev_id, device_name)
         return False
 
+
     def dev_id_validation_by_transmitter(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = 0xFF == dev_id[0][0]
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
     
+
     def dev_id_validation_by_bus_gateway(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
         if not result:
@@ -182,6 +193,7 @@ class EnOceanGateway:
         self._init_bus()
         self._bus.start()
 
+
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
         self._bus.start()
@@ -193,6 +205,7 @@ class EnOceanGateway:
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
 
+
     def unload(self):
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
@@ -201,6 +214,7 @@ class EnOceanGateway:
             LOGGER.debug("[Gateway] [Id: %d] Was stopped.", self.dev_id)
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
+
 
     def _callback_send_message_to_serial_bus(self, msg):
         """Callback method call from HA when receiving events from serial bus."""
@@ -234,16 +248,19 @@ class EnOceanGateway:
         """Return the unique id of the gateway."""
         return self.serial_path
     
+
     @property
     def serial_path(self) -> str:
         """Return the serial path of the gateway."""
         return self._attr_serial_path
     
+
     @property
     def dev_name(self) -> str:
         """Return the device name of the gateway."""
         return self._attr_dev_name
     
+
     @property
     def dev_id(self) -> int:
         """Return the device id of the gateway."""
@@ -254,15 +271,18 @@ class EnOceanGateway:
         """Return the device type of the gateway."""
         return self._attr_dev_type
     
+
     @property
     def base_id(self) -> AddressExpression:
         """Return the base id of the gateway."""
         return self._attr_base_id
     
+
     @property
     def model(self) -> str:
         """Return the model of the gateway."""
         return self._attr_model
+    
     
     @property
     def identifier(self) -> str:

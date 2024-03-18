@@ -45,8 +45,8 @@ async def async_setup_entry(
                                                         dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
                 except Exception as e:
-                            LOGGER.warning("[%s] Could not load configuration", platform)
-                            LOGGER.critical(e, exc_info=True)
+                    LOGGER.warning("[%s] Could not load configuration for platform_id %s", platform, platform_id)
+                    LOGGER.critical(e, exc_info=True)
 
     # is connection active sensor for gateway (serial connection)
     entities.append(GatewayConnectionState(platform, gateway))
@@ -74,7 +74,7 @@ class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
         
         self.schedule_update_ha_state()
 
-        LOGGER.debug(f"[binary_sensor {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
+        LOGGER.debug(f"[{Platform.BINARY_SENSOR} {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
 
 class EltakoBinarySensor(AbstractBinarySensor):
     """Representation of Eltako binary sensors such as wall switches.
@@ -120,8 +120,8 @@ class EltakoBinarySensor(AbstractBinarySensor):
             LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
-            LOGGER.warning("[Binary Sensor][%s] Could not decode message for eep %s does not fit to message type %s (org %s)", 
-                           b2s(self.dev_id[0]), self.dev_eep.eep_string, type(msg).__name__, str(msg.org) )
+            LOGGER.warning("[%s %s] Could not decode message for eep %s does not fit to message type %s (org %s)", 
+                            Platform.BINARY_SENSOR, str(self.dev_id), self.dev_eep.eep_string, type(msg).__name__, str(msg.org) )
             return
 
         if self.dev_eep in [F6_02_01, F6_02_02]:
@@ -171,7 +171,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "rocker_second_action": decoded.rocker_second_action,
                 }
             
-            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
+            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
             # fire second event for a specific buttons pushed on the swtich
@@ -186,7 +186,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
                 }
-            LOGGER.debug("[Binary Sensor] Send event: %s, pressed_buttons: '%s'", event_id, json.dumps(pressed_buttons))
+            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
             # Show status change in HA. It will only for the moment when the button is pushed down.
@@ -238,7 +238,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                 self._attr_is_on = not self._attr_is_on
 
         else:
-            LOGGER.warn("[Binary Sensor][] eep %s not found for data processing.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
+            LOGGER.warn("[%s %s] EEP %s not found for data processing.", Platform.BINARY_SENSOR, str(self.dev_id), self.dev_eep.eep_string)
             return
         
         self.schedule_update_ha_state()
