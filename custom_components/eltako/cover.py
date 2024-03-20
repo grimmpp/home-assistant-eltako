@@ -129,6 +129,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self._sender_eep == H5_3F_7F:
             msg = H5_3F_7F(time, 0x01, 1).encode_message(address)
             self.send_message(msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
+            return
         
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
@@ -151,6 +155,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self._sender_eep == H5_3F_7F:
             msg = H5_3F_7F(time, 0x02, 1).encode_message(address)
             self.send_message(msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
+            return
         
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
@@ -191,6 +199,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             
             msg = H5_3F_7F(time, command, 1).encode_message(address)
             self.send_message(msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
+            return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             if direction == "up":

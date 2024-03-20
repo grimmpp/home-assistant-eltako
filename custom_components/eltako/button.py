@@ -88,7 +88,7 @@ class TeachInButton(AbstractButton):
             _dev_name = "teach-in-button"
         self.entity_description = ButtonEntityDescription(
             key="teach_in_button",
-            name="Send teach-in telegram from "+sender_id.plain_address().hex(),
+            name="Teach-In Button",
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
         )

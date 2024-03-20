@@ -52,7 +52,7 @@ gateway:
         eep: M5-38-08
         name: "FSR14_4x - 1"
         sender:
-          id: 00-00-B1-01
+          id: 00-00-B0-01
           eep: A5-38-08
 
   - id: 2

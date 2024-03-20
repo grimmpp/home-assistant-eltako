@@ -50,7 +50,7 @@ async def async_setup_entry(
                     entities.append(EltakoSwitchableLight(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
             
             except Exception as e:
-                LOGGER.warning("[%s] Could not load configuration", platform)
+                LOGGER.warning("[%s %s] Could not load configuration", platform, str(dev_conf.id))
                 LOGGER.critical(e, exc_info=True)
         
     validate_actuators_dev_and_sender_id(entities)
@@ -80,7 +80,7 @@ class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
         
         self.schedule_update_ha_state()
 
-        LOGGER.debug(f"[light {self.dev_id}] value initially loaded: [is_on: {self.is_on}, brightness: {self.brightness}, state: {self.state}]")
+        LOGGER.debug(f"[{Platform.LIGHT} {self.dev_id}] value initially loaded: [is_on: {self.is_on}, brightness: {self.brightness}, state: {self.state}]")
 
 class EltakoDimmableLight(AbstractLightEntity):
     """Representation of an Eltako light source."""
@@ -105,6 +105,26 @@ class EltakoDimmableLight(AbstractLightEntity):
             dimming = CentralCommandDimming(int(brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
+
+        elif self._sender_eep in [F6_02_01, F6_02_02]:
+            address, discriminator = self._sender_id
+            # in PCT14 function 02 'direct  pushbutton top on' needs to be configured
+            if discriminator == "left":
+                action = 1  # 0x30
+            elif discriminator == "right":
+                action = 3  # 0x70
+            else:
+                action = 1
+                
+            pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(pressed_msg)
+            
+            released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
+            self.send_message(released_msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_brightness = brightness
@@ -120,6 +140,26 @@ class EltakoDimmableLight(AbstractLightEntity):
             dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
             self.send_message(msg)
+
+        elif self._sender_eep in [F6_02_01, F6_02_02]:
+            address, discriminator = self._sender_id
+            # in PCT14 function 02 'direct  pushbutton top on' needs to be configured
+            if discriminator == "left":
+                action = 0  # 0x10
+            elif discriminator == "right":
+                action = 2  # 0x50
+            else:
+                action = 0
+                
+            pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
+            self.send_message(pressed_msg)
+            
+            released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
+            self.send_message(released_msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            return
             
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_brightness = 0
@@ -165,6 +205,9 @@ class EltakoDimmableLight(AbstractLightEntity):
 
             self.schedule_update_ha_state()
 
+        else:
+            LOGGER.warn("[%s %s] Device EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self.dev_eep.eep_string)
+
 
 class EltakoSwitchableLight(AbstractLightEntity):
     """Representation of an Eltako light source."""
@@ -204,6 +247,10 @@ class EltakoSwitchableLight(AbstractLightEntity):
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
 
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            return
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = True
             self.schedule_update_ha_state()
@@ -233,6 +280,10 @@ class EltakoSwitchableLight(AbstractLightEntity):
             
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = False
@@ -244,9 +295,12 @@ class EltakoSwitchableLight(AbstractLightEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Light] Could not decode message: %s", str(e))
+            LOGGER.warning("[%s %s] Could not decode message: %s", Platform.LIGHT, str(self.dev_id), str(e))
             return
 
         if self.dev_eep in [M5_38_08]:
             self._attr_is_on = decoded.state == True
             self.schedule_update_ha_state()
+
+        else:
+            LOGGER.warn("[%s %s] Device EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self.dev_eep.eep_string)

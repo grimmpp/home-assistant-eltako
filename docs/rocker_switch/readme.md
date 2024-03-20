@@ -128,7 +128,7 @@ eltako:
         name: "Relay Test"
         eep: "M5-38-08"
         sender:
-          id: "00-00-B1-01"
+          id: "00-00-B0-01"
           eep: "A5-38-08"
       binary_sensor:
       - id: "FE-DB-DA-04"  # taster 1
@@ -142,7 +142,7 @@ logger:
     eltako: debug
 ```
 
-In this example the sender id ``00-00-B1-01`` for the light must be registered in the corresponding relay e.g. via [Eltako Software PCT14](https://www.eltako.com/en/software-pct14/). Don't forget to choose function type ``51`` for software controlled command.
+In this example the sender id ``00-00-B0-01`` for the light must be registered in the corresponding relay e.g. via [Eltako Software PCT14](https://www.eltako.com/en/software-pct14/). Don't forget to choose function type ``51`` for software controlled command.
 
 Code for detecting the switch and firing the event can be found in function ``value_changed`` in [binary_sensor.py](/eltako/binary_sensor.py).
 

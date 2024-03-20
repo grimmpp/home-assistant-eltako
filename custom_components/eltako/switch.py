@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
 
 from homeassistant import config_entries
@@ -76,7 +76,8 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
         
         self.schedule_update_ha_state()
 
-        LOGGER.debug(f"[switch {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
+        LOGGER.debug(f"[{Platform.SWITCH} {str(self.dev_id)}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
+
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
@@ -101,6 +102,10 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             switching = CentralCommandSwitching(0, 1, 0, 0, 1)
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
+
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
+            return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = True
@@ -131,6 +136,10 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
+        else:
+            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
+            return
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = False
             self.schedule_update_ha_state()
@@ -141,7 +150,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Switch] Could not decode message: %s", str(e))
+            LOGGER.warning("[%s %s] Could not decode message: %s", Platform.SWITCH, str(self.dev_id), str(e))
             return
 
         if self.dev_eep in [M5_38_08]:
@@ -158,3 +167,6 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             if button_filter and decoded.energy_bow:
                 self._attr_is_on = not self._attr_is_on
                 self.schedule_update_ha_state()
+
+        else:
+            LOGGER.warn("[%s %s] Device EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self.dev_eep.eep_string)

@@ -5,3 +5,4 @@ enocean
 homeassistant
 termcolor
 StrEnum
+esp2-gateway-adapter

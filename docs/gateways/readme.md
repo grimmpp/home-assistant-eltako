@@ -187,12 +187,38 @@ eltako:
 
 ### [**EnOcean GmbH USB300**](https://www.enocean.com/en/product/usb-300/)
 
-USB300 is a usb device which can receive and send EnOcean telegrams via **ESP3** protocol. 
-
-**CURRENTLY NOT FULLY SUPPORTED AS HOME ASSISTANT GATEWAY!!!** It can receive messages experimentally but sending messages is currently not supported.
+USB300 is a usb device which can receive and send EnOcean telegrams via **ESP3** protocol. ESP3 is made compatible on the feature set of ESP2 by [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter). 
 
 <img src="./USB300.jpg" height=100>
 
+| Specialty | Description |
+| ----- | ----- |
+| Chip Set | [TCM 310](https://www.enocean.com/en/product/tcm-310/?frequency=868&ts=1710856253) |
+| Docs | [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/usb-400j/data-sheet-pdf/USB_300_USB_400J_USB_500U_Data_Sheet.pdf), [User Manual](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/usb-400j/user-manual-pdf/USB_300_USB_400J__USB_500U_User_Manual_06042022.pdf) |
+| Protocol | ESP3 |
+| Baud rate | 57600 |
+| Sender Address Range | TCM310 has 128 address in the range of 0xFF80_0000 to 0xFFFF_FFFE starting at a base address (BaseId).  |
+
+#### Configuration
+Use [EnOcean Device Manager (eo-man)](https://github.com/grimmpp/enocean-device-manager) to autogenerate the Home Assistant configuration.
+
+
+Example Configuration:
+```
+eltako:
+  gateway:
+  - id: 1
+    device_type: enocean-usb300
+    base_id: FF-80-80-00        # baseId of USB300 gateway
+    devices:
+      light:
+      - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: FF-80-80-01       # baseId of USB300 (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
+          eep: A5-38-08
+```
 
 ### 'FTD14 - RS485 bus telegram duplicator'
 Other possible gateway 

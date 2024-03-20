@@ -186,7 +186,7 @@ def log_entities_to_be_added(entities:list[EltakoEntity], platform:Platform) -> 
         temp_eep = ""
         if e.dev_eep:
              temp_eep = f"eep: {e.dev_eep.eep_string}),"
-        LOGGER.debug(f"[{platform}] Add entity {e.dev_name} (id: {e.dev_id},{temp_eep} gw: {e.gateway.dev_name}) to Home Assistant.")
+        LOGGER.debug(f"[{platform} {e.dev_id}] Add entity {e.dev_name} (id: {e.dev_id},{temp_eep} gw: {e.gateway.dev_name}) to Home Assistant.")
 
 def get_entity_from_hass(hass: HomeAssistant, domain:Platform, dev_id: AddressExpression) -> bool:
     entity_platforms = hass.data[DATA_ENTITY_PLATFORM][DOMAIN]

@@ -485,7 +485,7 @@ class EltakoPirSensor(EltakoSensor):
         try:
             decoded:A5_07_01 = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Motion Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_native_value = decoded.pir_status
@@ -505,7 +505,7 @@ class EltakoVoltageSensor(EltakoSensor):
         try:
             decoded:A5_07_01 = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Voltage Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_native_value = decoded.support_voltage
@@ -539,7 +539,7 @@ class EltakoMeterSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Meter Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         if decoded.learn_button != 1:
@@ -584,7 +584,7 @@ class EltakoWindowHandle(EltakoSensor):
         try:
             decoded:F6_10_00 = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Window Handle Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Window Handle Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         if decoded.handle_position == WindowHandlePosition.CLOSED:
@@ -615,7 +615,7 @@ class EltakoWeatherStation(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Weather Station %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         if decoded.learn_button != 1:
@@ -682,7 +682,7 @@ class EltakoTemperatureSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Temperature Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_native_value = decoded.current_temperature
@@ -704,7 +704,7 @@ class EltakoIlluminationSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Illumination Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_native_value = decoded.illumination
@@ -727,7 +727,7 @@ class EltakoBatteryVoltageSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Battery Voltage Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_native_value = decoded.supply_voltage
@@ -754,7 +754,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Target Temperature Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
@@ -781,7 +781,7 @@ class EltakoHumiditySensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Humidity Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         self._attr_native_value = decoded.humidity
@@ -827,7 +827,7 @@ class EltakoAirQualitySensor(EltakoSensor):
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Sensor] Could not decode message: %s", str(e))
+            LOGGER.warning("[Air Quality Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
         if decoded.voc_type.index == self.voc_type.index:
