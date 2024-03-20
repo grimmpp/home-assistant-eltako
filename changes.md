@@ -1,6 +1,6 @@
 # Changes and Feature List
 
-## Version 1.3.9 
+## Version 1.4.0 ESP3 Support (USB300)
 * Docs about gateway usage added.
 * Added EEPs F6-02-01 and F6-02-02 as sender EEP for lights so that regular switch commands can be sent from Home Assistant.
 * Change default behavior of switches and lights to 'direct pushbutton top on' and 'left rocker' for sender EEP F6-02-01/-02

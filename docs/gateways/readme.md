@@ -218,7 +218,7 @@ eltako:
         sender:
           id: FF-80-80-01       # baseId of USB300 (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
           eep: A5-38-08
-
+```
 
 ### 'FTD14 - RS485 bus telegram duplicator'
 Other possible gateway 

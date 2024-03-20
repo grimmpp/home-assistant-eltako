@@ -38,7 +38,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-12-03 (Automated meter reading - water, F3Z14D)
   * A5-13-01 (Weather station, FWG14)
   * F6-10-00 (Window handle, FTS14EM)
-* Light
+* [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
   * A5-38-08 (Dimmable Light: Central command - gateway, FUD14)
   * M5-38-08 (Switchable Light: Eltako relay, FSR14)
 * Switch
@@ -48,16 +48,17 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * G5-3F-7F (Eltako cover, FSB14)
 
 **Supported sender EEPs**
-* Light
+* [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
   * A5-38-08 (Central command - gateway, FUD14) PREFERRED!!!
   * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left) / (only as switch not for dimmable lights.)
-* [Switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
+* Switch
   * A5-38-08 (Central command) PREFERRED!!!
   * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
 * [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** Feedback is welcome.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
+* [Teach-In Buttons](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/docs/teach_in_buttons/readme.md)
  
 [**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [how to use gateways](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateway_usage/readme.md) and [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 

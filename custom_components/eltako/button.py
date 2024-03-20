@@ -88,7 +88,7 @@ class TeachInButton(AbstractButton):
             _dev_name = "teach-in-button"
         self.entity_description = ButtonEntityDescription(
             key="teach_in_button",
-            name="Teach-In Button"+sender_id.plain_address().hex(),
+            name="Teach-In Button",
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
         )
