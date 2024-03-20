@@ -203,5 +203,22 @@ USB300 is a usb device which can receive and send EnOcean telegrams via **ESP3**
 Use [EnOcean Device Manager (eo-man)](https://github.com/grimmpp/enocean-device-manager) to autogenerate the Home Assistant configuration.
 
 
+Example Configuration:
+```
+eltako:
+  gateway:
+  - id: 1
+    device_type: enocean-usb300
+    base_id: FF-80-80-00        # baseId of USB300 gateway
+    devices:
+      light:
+      - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: FF-80-80-01       # baseId of USB300 (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
+          eep: A5-38-08
+
+
 ### 'FTD14 - RS485 bus telegram duplicator'
 Other possible gateway 
