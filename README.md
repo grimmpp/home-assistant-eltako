@@ -62,8 +62,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 [**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [how to use gateways](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateway_usage/readme.md) and [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **Eltako FAM-USB** (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
-  * **EnOcean USB300** (**experimental**) (based on ESP3 and baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean))
-    * ESP3 is not yet fully supported.
+  * **EnOcean USB300** (based on ESP3 but only ESP2 feature set supported, baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
 
 
 # Installation and Configuration
@@ -125,6 +124,7 @@ python -m unittest discover tests -v
 * [Home Assistant Community Store](https://hacs.xyz/) is needed to be able to install this repository. It allows you to install custom_components.
 * [Eltako14Bus Python Library](https://github.com/grimmpp/eltako14bus) is used by Home Assistant Eltako Integration for serial communication for device Eltako FAM14 and FGW14-USB.
 * [Python EnOcean](https://github.com/kipe/enocean) is used by Home Assistant Eltako Integration for serial communication for device USB300.
+* [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter) is an adapter so that ESP3 can be made compatible to the rest of the integration which works on ESP2.
 
 
 # Useful Home Assistant Addons

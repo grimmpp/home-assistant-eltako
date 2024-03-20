@@ -5,6 +5,7 @@
 * Added EEPs F6-02-01 and F6-02-02 as sender EEP for lights so that regular switch commands can be sent from Home Assistant.
 * Change default behavior of switches and lights to 'direct pushbutton top on' and 'left rocker' for sender EEP F6-02-01/-02
 * Logging prettified.
+* Added library for ESP3 (USB300 Support) => [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter)
 
 ## Version 1.3.8 Fixes and Smaller Imrovements
 * Fixed window handle F6-10-00 in binary sensor

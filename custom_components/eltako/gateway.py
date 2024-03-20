@@ -26,7 +26,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from .esp3_serial_com import ESP3SerialCommunicator
+from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -283,7 +283,7 @@ class EnOceanGateway:
         """Return the model of the gateway."""
         return self._attr_model
     
-    
+
     @property
     def identifier(self) -> str:
         """Return the identifier of the gateway."""
