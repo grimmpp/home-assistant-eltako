@@ -13,6 +13,7 @@ from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusIn
 from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll, prettify
 
 from eltakobus.util import AddressExpression
+from eltakobus.eep import EEP
 
 from enocean.communicators import SerialCommunicator
 from enocean.protocol.packet import RadioPacket, RORG, Packet
@@ -204,6 +205,72 @@ class EnOceanGateway:
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
+
+        # Register home assistant service for sending arbitrary telegrams.
+        #
+        # The service will be registered for each gateway, as the user
+        # might have different gateways that cause the eltako relays
+        # only to react on them.
+        service_name = f"gateway_{self._attr_dev_id}_send_message"
+        self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
+
+
+    # Command Section
+    async def async_service_send_message(self, event) -> None:
+        """Send an arbitrary message with the provided eep."""
+        try:
+            sender_id_str = event.data.get("id", None)
+            sender_id:AddressExpression = AddressExpression.parse(sender_id_str)
+        except:
+            LOGGER.error(f"[Service: Send Message] No valid sender id defined. (Given sender id: {sender_id_str})")
+            return
+
+        try:
+            sender_eep_str = event.data.get("eep", None)
+            sender_eep:EEP = EEP.find(sender_eep_str)
+        except:
+            LOGGER.error(f"[Service: Send Message] No valid sender id defined. (Given sender id: {sender_id_str})")
+            return
+        
+        eep:EEP = sender_eep()
+        for k in eep.__dict__.keys():
+            if k in event.data.keys():
+                setattr(eep, k, event.data.get(k[1:])) # key k starts always with '_' because it is a private attribute
+            else:
+                LOGGER.warn(f"[Service: Send Message] Argument {k} is not provided for sending {eep.eep_string} message. Set default value: {k}=0")
+                setattr(eep, k, 0)
+
+        try:
+            message = eep.encode_message(sender_id)
+            self.send_message(message)
+        except:
+            LOGGER.error(f"[Service: Send Message] Cannot send message.")
+
+
+        # if sender_id and sender_eep is not None:
+        #     sender_address = AddressExpression((0xFF, 0x82, 0x3E, 0x04))
+        #     message = None
+
+        #     if (A5_38_08.eep_string == sender_eep):
+        #         command = event.data.get("command")
+        #         if command is not None:
+        #             switching = CentralCommandSwitching(0, 1, 0, 0, command)
+        #             message = A5_38_08(command=0x01, switching=switching).encode_message(sender_address)
+
+        #     if (A5_10_06.eep_string == sender_eep):
+        #         target_temperature = event.data.get("target_temperature")
+        #         current_temperature = event.data.get("current_temperature")
+        #         if target_temperature and current_temperature is not None:
+        #             message = A5_10_06(A5_10_06.Heater_Mode.NORMAL, target_temperature, current_temperature, False).encode_message(sender_address)
+
+        #     if message is not None:
+        #         self.send_message(message)
+
+
+    def send_message(self, msg: ESP2Message):
+        """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
+        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
+        dispatcher_send(self.hass, event_id, msg)
 
 
     def unload(self):
