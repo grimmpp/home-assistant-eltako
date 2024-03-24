@@ -218,12 +218,8 @@ class EnOceanGateway:
     # Command Section
     async def async_service_send_message(self, event) -> None:
         """Send an arbitrary message with the provided eep."""
-        LOGGER.debug(f"[Service: Send Message] Received event data: {event.data}")
+        LOGGER.debug(f"[Service: Send Message {event.service}] Received event data: {event.data}")
         
-        # for k in event.__dir__.keys():
-        LOGGER.debug(f"{event.__dir__}")        
-
-
         try:
             sender_id_str = event.data.get("id", None)
             sender_id:AddressExpression = AddressExpression.parse(sender_id_str)
