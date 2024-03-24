@@ -242,10 +242,14 @@ class EnOceanGateway:
         import inspect
         sig = inspect.signature(sender_eep.__init__)
         eep_init_args = [param.name for param in sig.parameters.values() if param.kind == param.POSITIONAL_OR_KEYWORD]
-        filtered_data = {filter_key:event.data[filter_key] for filter_key in eep_init_args if filter_key in event.data}
-        filtered_data.update({filter_key:0 for filter_key in eep_init_args if filter_key not in event.data})
+        knargs = {filter_key:event.data[filter_key] for filter_key in eep_init_args if filter_key in event.data}
+        LOGGER.debug(f"[Service: Send Message] Provided EEP ({sender_eep.__name__}) args: {knargs})")
+        uknargs = {filter_key:0 for filter_key in eep_init_args if filter_key not in event.data}
+        LOGGER.debug(f"[Service: Send Message] Missing EEP ({sender_eep.__name__}) args: {uknargs})")
+        eep_args = knargs
+        eep_args.update(uknargs)
             
-        eep:EEP = sender_eep(**filtered_data)
+        eep:EEP = sender_eep(**eep_args)
         # for k in eep.__dict__.keys():
         #     if k in event.data.keys():
         #         setattr(eep, k, event.data.get(k[1:])) # key k starts always with '_' because it is a private attribute
