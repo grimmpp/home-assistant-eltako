@@ -221,7 +221,7 @@ class EnOceanGateway:
         LOGGER.debug(f"[Service: Send Message] Received event data: {event.data}")
         
         # for k in event.__dir__.keys():
-        #     LOGGER.debug(f"{k}: {event.__dir__[k]}")        
+        LOGGER.debug(f"{event.__dir__}")        
 
 
         try:
@@ -250,12 +250,6 @@ class EnOceanGateway:
         eep_args.update(uknargs)
             
         eep:EEP = sender_eep(**eep_args)
-        # for k in eep.__dict__.keys():
-        #     if k in event.data.keys():
-        #         setattr(eep, k, event.data.get(k[1:])) # key k starts always with '_' because it is a private attribute
-        #     else:
-        #         LOGGER.warn(f"[Service: Send Message] Argument {k} is not provided for sending {eep.eep_string} message. Set default value: {k}=0")
-        #         setattr(eep, k, 0)
 
         try:
             # create message
@@ -267,25 +261,6 @@ class EnOceanGateway:
         except:
             LOGGER.error(f"[Service: Send Message] Cannot send message.", exc_info=True, stack_info=True)
 
-
-        # if sender_id and sender_eep is not None:
-        #     sender_address = AddressExpression((0xFF, 0x82, 0x3E, 0x04))
-        #     message = None
-
-        #     if (A5_38_08.eep_string == sender_eep):
-        #         command = event.data.get("command")
-        #         if command is not None:
-        #             switching = CentralCommandSwitching(0, 1, 0, 0, command)
-        #             message = A5_38_08(command=0x01, switching=switching).encode_message(sender_address)
-
-        #     if (A5_10_06.eep_string == sender_eep):
-        #         target_temperature = event.data.get("target_temperature")
-        #         current_temperature = event.data.get("current_temperature")
-        #         if target_temperature and current_temperature is not None:
-                    # message = A5_10_06(A5_10_06.Heater_Mode.NORMAL, target_temperature, current_temperature, False).encode_message(sender_address)
-
-        #     if message is not None:
-        #         self.send_message(message)
 
 
     def send_message(self, msg: ESP2Message):
