@@ -2,6 +2,8 @@
 
 ## Version 1.4.1 Support for sending arbritrary messages
 * Added Service for sending arbritrary ESP2 messages
+* 🐞 Fix for TargetTemperatureSensor (EEP: A5-10-06 and A5-10-12)
+* 🐞 Fix for unknow cover positions.
 
 ## Version 1.4.0 ESP3 Support (USB300)
 * Docs about gateway usage added.
