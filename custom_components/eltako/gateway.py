@@ -250,7 +250,7 @@ class EnOceanGateway:
         try:
             # create message
             msg = eep.encode_message(sender_id[0])
-            LOGGER.debug("[Service Send Message: {event.service}] Generated message: %s Serialized: %s", msg, msg.serialize().hex())
+            LOGGER.debug(f"[Service Send Message: {event.service}] Generated message: {msg} Serialized: {msg.serialize().hex()}")
             # send message
             event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
             dispatcher_send(self.hass, event_id, msg)
