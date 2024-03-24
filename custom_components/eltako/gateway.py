@@ -238,7 +238,15 @@ class EnOceanGateway:
             LOGGER.error(f"[Service: Send Message] No valid sender id defined. (Given sender id: {sender_id_str})")
             return
         
-        eep:EEP = sender_eep(**event.data)
+        def filter_event_data(data: dict, eep_kwargs):
+            import inspect
+            sig = inspect.signature(eep_kwargs)
+            filter_keys = [param.name for param in sig.parameters.values() if param.kind == param.POSITIONAL_OR_KEYWORD]
+            filtered_dict = {filter_key:data[filter_key] for filter_key in filter_keys if filter_key in data}
+            filtered_dict.update({filter_key:0 for filter_key in filter_keys if filter_key not in data})
+            return filtered_dict
+        
+        eep:EEP = sender_eep(**filter_event_data(event.data))
         for k in eep.__dict__.keys():
             if k in event.data.keys():
                 setattr(eep, k, event.data.get(k[1:])) # key k starts always with '_' because it is a private attribute
