@@ -218,20 +218,20 @@ class EnOceanGateway:
     # Command Section
     async def async_service_send_message(self, event) -> None:
         """Send an arbitrary message with the provided eep."""
-        LOGGER.debug(f"[Service: Send Message {event.service}] Received event data: {event.data}")
+        LOGGER.debug(f"[Service Send Message: {event.service}] Received event data: {event.data}")
         
         try:
             sender_id_str = event.data.get("id", None)
             sender_id:AddressExpression = AddressExpression.parse(sender_id_str)
         except:
-            LOGGER.error(f"[Service: Send Message] No valid sender id defined. (Given sender id: {sender_id_str})")
+            LOGGER.error(f"[Service Send Message: {event.service}] No valid sender id defined. (Given sender id: {sender_id_str})")
             return
 
         try:
             sender_eep_str = event.data.get("eep", None)
             sender_eep:EEP = EEP.find(sender_eep_str)
         except:
-            LOGGER.error(f"[Service: Send Message] No valid sender id defined. (Given sender id: {sender_id_str})")
+            LOGGER.error(f"[Service Send Message: {event.service}] No valid sender id defined. (Given sender id: {sender_id_str})")
             return
         
         # prepare all arguements for eep constructor
@@ -239,9 +239,9 @@ class EnOceanGateway:
         sig = inspect.signature(sender_eep.__init__)
         eep_init_args = [param.name for param in sig.parameters.values() if param.kind == param.POSITIONAL_OR_KEYWORD]
         knargs = {filter_key:event.data[filter_key] for filter_key in eep_init_args if filter_key in event.data and filter_key != 'self'}
-        LOGGER.debug(f"[Service: Send Message] Provided EEP ({sender_eep.__name__}) args: {knargs})")
+        LOGGER.debug(f"[Service Send Message: {event.service}] Provided EEP ({sender_eep.__name__}) args: {knargs})")
         uknargs = {filter_key:0 for filter_key in eep_init_args if filter_key not in event.data and filter_key != 'self'}
-        LOGGER.debug(f"[Service: Send Message] Missing EEP ({sender_eep.__name__}) args: {uknargs})")
+        LOGGER.debug(f"[Service Send Message: {event.service}] Missing EEP ({sender_eep.__name__}) args: {uknargs})")
         eep_args = knargs
         eep_args.update(uknargs)
             
@@ -250,12 +250,12 @@ class EnOceanGateway:
         try:
             # create message
             msg = eep.encode_message(sender_id[0])
-            LOGGER.debug("[Service: Send Message] Generated message: %s Serialized: %s", msg, msg.serialize().hex())
+            LOGGER.debug("[Service Send Message: {event.service}] Generated message: %s Serialized: %s", msg, msg.serialize().hex())
             # send message
             event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
             dispatcher_send(self.hass, event_id, msg)
         except:
-            LOGGER.error(f"[Service: Send Message] Cannot send message.", exc_info=True, stack_info=True)
+            LOGGER.error(f"[Service Send Message: {event.service}] Cannot send message.", exc_info=True, stack_info=True)
 
 
 
