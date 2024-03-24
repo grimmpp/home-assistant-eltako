@@ -265,7 +265,7 @@ class EnOceanGateway:
             event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
             dispatcher_send(self.hass, event_id, msg)
         except:
-            LOGGER.error(f"[Service: Send Message] Cannot send message.")
+            LOGGER.error(f"[Service: Send Message] Cannot send message.", exc_info=True)
 
 
         # if sender_id and sender_eep is not None:
