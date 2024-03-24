@@ -218,7 +218,10 @@ class EnOceanGateway:
     # Command Section
     async def async_service_send_message(self, event) -> None:
         """Send an arbitrary message with the provided eep."""
-        LOGGER.debug(f"[Service: Send Message] Received event: {event.data}")
+        LOGGER.debug(f"[Service: Send Message] Received event data: {event.data}")
+        for k in event.__dict__.keys():
+            LOGGER.debug(f"{k}: {event.__dict__[k]}")        
+
 
         try:
             sender_id_str = event.data.get("id", None)
@@ -234,7 +237,7 @@ class EnOceanGateway:
             LOGGER.error(f"[Service: Send Message] No valid sender id defined. (Given sender id: {sender_id_str})")
             return
         
-        eep:EEP = sender_eep.__new__()
+        eep:EEP = sender_eep(**event.data)
         for k in eep.__dict__.keys():
             if k in event.data.keys():
                 setattr(eep, k, event.data.get(k[1:])) # key k starts always with '_' because it is a private attribute
