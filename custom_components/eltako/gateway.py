@@ -242,9 +242,9 @@ class EnOceanGateway:
         import inspect
         sig = inspect.signature(sender_eep.__init__)
         eep_init_args = [param.name for param in sig.parameters.values() if param.kind == param.POSITIONAL_OR_KEYWORD]
-        knargs = {filter_key:event.data[filter_key] for filter_key in eep_init_args if filter_key in event.data}
+        knargs = {filter_key:event.data[filter_key] for filter_key in eep_init_args if filter_key in event.data and filter_key != 'self'}
         LOGGER.debug(f"[Service: Send Message] Provided EEP ({sender_eep.__name__}) args: {knargs})")
-        uknargs = {filter_key:0 for filter_key in eep_init_args if filter_key not in event.data}
+        uknargs = {filter_key:0 for filter_key in eep_init_args if filter_key not in event.data and filter_key != 'self'}
         LOGGER.debug(f"[Service: Send Message] Missing EEP ({sender_eep.__name__}) args: {uknargs})")
         eep_args = knargs
         eep_args.update(uknargs)
