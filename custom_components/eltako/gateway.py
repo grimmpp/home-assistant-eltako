@@ -219,8 +219,9 @@ class EnOceanGateway:
     async def async_service_send_message(self, event) -> None:
         """Send an arbitrary message with the provided eep."""
         LOGGER.debug(f"[Service: Send Message] Received event data: {event.data}")
-        for k in event.__dict__.keys():
-            LOGGER.debug(f"{k}: {event.__dict__[k]}")        
+        
+        # for k in event.__dir__.keys():
+        #     LOGGER.debug(f"{k}: {event.__dir__[k]}")        
 
 
         try:
