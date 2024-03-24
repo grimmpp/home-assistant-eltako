@@ -309,19 +309,31 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
 
                 time_in_seconds = decoded.time / 10.0
-                
-                if decoded.direction == 0x01: # up
+
+                if decoded.direction == 0x01:  # up
+                    # If the latest state is unknown, the cover position
+                    # will be set to None, therefore we have to guess
+                    # the initial position.
+                    if self._attr_current_cover_position is None:
+                        self._attr_current_cover_position = 0
+
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
                     self._attr_is_opening = True
                     self._attr_is_closing = False
                     self._attr_is_closed = None
-                    
-                else: # down
+
+                else:  # down
+                    # If the latest state is unknown, the cover position
+                    # will be set to None, therefore we have to guess
+                    # the initial position.
+                    if self._attr_current_cover_position is None:
+                        self._attr_current_cover_position = 100
+
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
                     self._attr_is_opening = False
                     self._attr_is_closing = True
                     self._attr_is_closed = None
-                    
+
                 if self._attr_current_cover_position == 0:
                     self._attr_is_closed = True
                     self._attr_is_opening = False
