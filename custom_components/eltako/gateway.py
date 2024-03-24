@@ -246,7 +246,7 @@ class EnOceanGateway:
             filtered_dict.update({filter_key:0 for filter_key in filter_keys if filter_key not in data})
             return filtered_dict
         
-        eep:EEP = sender_eep(**filter_event_data(event.data))
+        eep:EEP = sender_eep(**filter_event_data(event.data), sender_eep.__init__)
         for k in eep.__dict__.keys():
             if k in event.data.keys():
                 setattr(eep, k, event.data.get(k[1:])) # key k starts always with '_' because it is a private attribute
