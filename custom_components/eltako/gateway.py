@@ -258,8 +258,12 @@ class EnOceanGateway:
         #         setattr(eep, k, 0)
 
         try:
-            message = eep.encode_message(sender_id)
-            self.send_message(message)
+            # create message
+            msg = eep.encode_message(sender_id)
+            LOGGER.debug("[Service: Send Message] Generated message: %s Serialized: %s", msg, msg.serialize().hex())
+            # send message
+            event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
+            dispatcher_send(self.hass, event_id, msg)
         except:
             LOGGER.error(f"[Service: Send Message] Cannot send message.")
 
