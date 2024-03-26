@@ -26,6 +26,7 @@ from . import get_gateway_from_hass, get_device_config_for_gateway
 
 EEP_WITH_TEACH_IN_BUTTONS = {
     A5_10_06: b'\x40\x30\x0D\x85',  # climate
+    A5_10_12: b'\x40\x90\x0D\x80',  # climate
     A5_38_08: b'\xE0\x40\x0D\x80',  # light
     H5_3F_7F: b'\xFF\xF8\x0D\x80',  # cover
     # F6_02_01  # What button to take?
