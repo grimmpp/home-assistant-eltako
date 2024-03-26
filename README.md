@@ -60,6 +60,9 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** Feedback is welcome.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
 * [Teach-In Buttons](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/teach_in_buttons/readme.md)
+  * A5-10-06 (climate/thermostats)
+  * A5-38-08 (light and switch)
+  * H5-3F-7F (cover)
 * [Send Message Service](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/service-send-message/readme.md) Sends any EnOcean Message. Can be used for automatinos in Home Assistant so that none-EnOcean and EnOcean deviecs can be combined. 
  
 [**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [how to use gateways](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateway_usage/readme.md) and [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
