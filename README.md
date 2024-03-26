@@ -22,12 +22,13 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * Binary sensor
   * F6-02-01 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md), FTS14EM)
   * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
-  * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE)
+  * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE, supported states: open, closed)
   * D5-00-01 ([Contact sensor](https://github.com/grimmpp/home-assistant-eltako/tree/main//docs/window_sensor_setup_FTS14EM.md), FTS14EM) incl. signal inverter
   * A5-07-01 (Occupancy sensor)
 * Sensor
   * A5-04-01 (Temperature and Humidity Sensor)
-  * A5-04-02 (Temperature and Humidity Sensor e.g.: FLGTF, FLT58)
+  * A5-04-02 (Temperature and Humidity Sensor e.g.: FLGTF, FLT58, FFT60)
+  * A5-04-03 **Coming soon!** (Temperature and Humidity Sensor e.g.: FFT60)
   * A5-07-01 (Occupancy sensor)
   * A5-08-01 (Light-, Temperature-, Occupancy Sensor e.g.: FABH65S, FBH65, FBH65S, FBH65TF)
   * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))
@@ -37,7 +38,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-12-02 (Automated meter reading - gas, F3Z14D)
   * A5-12-03 (Automated meter reading - water, F3Z14D)
   * A5-13-01 (Weather station, FWG14)
-  * F6-10-00 (Window handle, FTS14EM)
+  * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE, supported states: open, closed, tilt)
 * [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
   * A5-38-08 (Dimmable Light: Central command - gateway, FUD14)
   * M5-38-08 (Switchable Light: Eltako relay, FSR14)
