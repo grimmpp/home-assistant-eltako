@@ -4,6 +4,7 @@
 * Added Service for sending arbritrary ESP2 messages
 * 🐞 Fix for TargetTemperatureSensor (EEP: A5-10-06 and A5-10-12)
 * 🐞 Fix for unknow cover positions.
+* Unit-Tests added and improved for EEP A5-04-01, A5-04-02, A5-10-06, A5-10-12, A5-13-01, and F6-10-00.
 
 ## Version 1.4.0 ESP3 Support (USB300)
 * Docs about gateway usage added.

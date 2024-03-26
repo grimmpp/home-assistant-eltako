@@ -1,5 +1,7 @@
 # Eltako Device and Sensor Discovery
 
+# DEPRECATED: Check out [EnOnocean Device Manager](https://github.com/grimmpp/enocean-device-manager)
+
 Main purpose of this tool is to programmatically prepare the Home Assistance configuration as good as possible.
 
 ## Limitation

@@ -22,7 +22,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * Binary sensor
   * F6-02-01 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md), FTS14EM)
   * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
-  * F6-10-00 (Window handle, FTS14EM)
+  * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE)
   * D5-00-01 ([Contact sensor](https://github.com/grimmpp/home-assistant-eltako/tree/main//docs/window_sensor_setup_FTS14EM.md), FTS14EM) incl. signal inverter
   * A5-07-01 (Occupancy sensor)
 * Sensor
