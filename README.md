@@ -22,12 +22,14 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * Binary sensor
   * F6-02-01 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md), FTS14EM)
   * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
-  * F6-10-00 (Window handle, FTS14EM)
+  * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE, supported states: open, closed)
   * D5-00-01 ([Contact sensor](https://github.com/grimmpp/home-assistant-eltako/tree/main//docs/window_sensor_setup_FTS14EM.md), FTS14EM) incl. signal inverter
   * A5-07-01 (Occupancy sensor)
 * Sensor
   * A5-04-01 (Temperature and Humidity Sensor)
-  * A5-04-02 (Temperature and Humidity Sensor e.g.: FLGTF, FLT58)
+  * A5-04-02 (Temperature and Humidity Sensor e.g.: FLGTF, FLT58, FFT60)
+  * A5-04-03 (Temperature and Humidity Sensor e.g.: FFT60)
+  * A5-06-01 (Light - Twilight and Illumination)
   * A5-07-01 (Occupancy sensor)
   * A5-08-01 (Light-, Temperature-, Occupancy Sensor e.g.: FABH65S, FBH65, FBH65S, FBH65TF)
   * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))
@@ -37,7 +39,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-12-02 (Automated meter reading - gas, F3Z14D)
   * A5-12-03 (Automated meter reading - water, F3Z14D)
   * A5-13-01 (Weather station, FWG14)
-  * F6-10-00 (Window handle, FTS14EM)
+  * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE, supported states: open, closed, tilt)
 * [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
   * A5-38-08 (Dimmable Light: Central command - gateway, FUD14)
   * M5-38-08 (Switchable Light: Eltako relay, FSR14)
@@ -59,6 +61,10 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** Feedback is welcome.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
 * [Teach-In Buttons](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/teach_in_buttons/readme.md)
+  * A5-10-06, A5-10-12 (climate/thermostats)
+  * A5-38-08 (light and switch)
+  * H5-3F-7F (cover)
+* [Send Message Service](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/service-send-message/readme.md) Sends any EnOcean Message. Can be used for [automatinos in Home Assistant](https://www.home-assistant.io/getting-started/automation/) so that none-EnOcean and EnOcean deviecs can be combined. 
  
 [**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [how to use gateways](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateway_usage/readme.md) and [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 

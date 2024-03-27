@@ -24,14 +24,6 @@ class TestSensor(unittest.TestCase):
 
         return ews
     
-    def create_window_handle_sensor(self) -> EltakoWindowHandle:
-        gateway = GatewayMock()
-        dev_id = AddressExpression.parse("51-E8-00-01")
-        dev_name = "dev name"
-        dev_eep = EEP.find("F6-10-00")
-        ews = EltakoWindowHandle(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep, SENSOR_DESC_WINDOWHANDLE)
-
-        return ews
 
     def test_weatherstation_sensor(self):
         ews = self.create_weatherstation_sensor(SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN)
@@ -75,25 +67,3 @@ class TestSensor(unittest.TestCase):
         ews.value_changed(msg)
         self.assertEqual(ews.native_value, 588.2352941176471)
 
-
-    def test_window_handle(self):
-        whs = self.create_window_handle_sensor()
-
-        whs.entity_description = SENSOR_DESC_WINDOWHANDLE
-        whs._attr_native_value = -1
-
-        msg = RPSMessage(address=b'\x05\x1e\x83\x15', status=b'\x20', data=b'\xF0', outgoing=False)
-        whs.value_changed(msg)
-        self.assertEqual(whs._attr_native_value, STATE_CLOSED)
-
-        msg = RPSMessage(address=b'\x05\x1e\x83\x15', status=b'\x20', data=b'\xC0', outgoing=False)
-        whs.value_changed(msg)
-        self.assertEqual(whs._attr_native_value, STATE_OPEN)
-
-        msg = RPSMessage(address=b'\x05\x1e\x83\x15', status=b'\x20', data=b'\xE0', outgoing=False)
-        whs.value_changed(msg)
-        self.assertEqual(whs._attr_native_value, STATE_OPEN)
-
-        msg = RPSMessage(address=b'\x05\x1e\x83\x15', status=b'\x20', data=b'\xD0', outgoing=False)
-        whs.value_changed(msg)
-        self.assertEqual(whs._attr_native_value, 'tilt')

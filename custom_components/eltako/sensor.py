@@ -344,7 +344,7 @@ async def async_setup_entry(
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CUMULATIVE, tariff=(tariff - 1)))
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_WATER_CURRENT, tariff=(tariff - 1)))
 
-                elif dev_conf.eep in [A5_04_02, A5_10_12, A5_04_01]:
+                elif dev_conf.eep in [A5_04_01, A5_04_02, A5_04_03, A5_10_12]:
                     
                     entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoHumiditySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
@@ -371,6 +371,11 @@ async def async_setup_entry(
                     entities.append(EltakoBatteryVoltageSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     # _pir_status => as binary sensor
 
+                elif dev_conf.eep in [A5_06_01]:
+                    entities.append(EltakoIlluminationSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    #TODO: add twilight
+                    #TODO: add daylight
+                    # both are currently combined in illumination
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -757,7 +762,7 @@ class EltakoTargetTemperatureSensor(EltakoSensor):
             LOGGER.warning("[Target Temperature Sensor %s] Could not decode message: %s", self.dev_id, str(e))
             return
         
-        self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
+        self._attr_native_value = round(2 * decoded.target_temperature, 0) / 2
 
         self.schedule_update_ha_state()
 
