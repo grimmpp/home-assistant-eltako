@@ -241,7 +241,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self.dev_eep in [G5_3F_7F]:
             LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded.__dict__}")
 
-            ## is received as response when button pushed
+            ## is received as response when button pushed (command was sent) 
+            ## this message is received directly when the cover starts to move
+            ## when the cover results in completely open or close one of the following messages (open or closed) will appear
             if decoded.state == 0x02: # down
                 self._attr_is_closing = True
                 self._attr_is_opening = False
@@ -261,7 +263,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 self._attr_is_closed = False
                 self._attr_current_cover_position = 100
 
-            ## is received when cover stops at a position
+            ## is received when cover stops at the desired intermediate position
+            ## if not close state is always open (close state should be reported with closed message above)
             elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
 
                 time_in_seconds = decoded.time / 10.0
@@ -288,10 +291,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_closed = True
                     self._attr_is_opening = False
                     self._attr_is_closing = False
-                # elif self._attr_current_cover_position == 100:
-                #     self._attr_is_closed = False
-                #     self._attr_is_opening = False
-                #     self._attr_is_closing = False
                 else:
                     self._attr_is_closed = False
                     self._attr_is_opening = False
