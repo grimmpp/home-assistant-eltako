@@ -15,13 +15,13 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestSensor_A5_04_02(unittest.TestCase):
 
-    msg1 = Regular4BSMessage (address=b'\xFF\xFF\x00\x80', data=b'\x00\x7C\x86\x0F', status=0x00)
+    msg1 = Regular4BSMessage (address=b'\xFF\xFF\x00\x80', data=b'\x99\x02\x12\x09', status=0x00)
     
     def create_temperature_sensor(self) -> EltakoTemperatureSensor:
         gateway = GatewayMock()
         dev_id = AddressExpression.parse("FF-FF-00-80")
         dev_name = "device name"
-        dev_eep = EEP.find("A5-04-02")
+        dev_eep = EEP.find("A5-04-03")
         s = EltakoTemperatureSensor(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep)
         return s
     
@@ -29,7 +29,7 @@ class TestSensor_A5_04_02(unittest.TestCase):
         gateway = GatewayMock()
         dev_id = AddressExpression.parse("FF-FF-00-80")
         dev_name = "device name"
-        dev_eep = EEP.find("A5-04-02")
+        dev_eep = EEP.find("A5-04-03")
         s = EltakoHumiditySensor(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep)
         return s
     
@@ -37,10 +37,10 @@ class TestSensor_A5_04_02(unittest.TestCase):
         s_temp = self.create_temperature_sensor()
 
         s_temp.value_changed(self.msg1)
-        self.assertEqual(s_temp.native_value, 22.880000000000003)
+        self.assertEqual(s_temp.native_value, 22.8125)
 
     def test_humidity_sensor_A5_04_02(self):
         s_hum = self.create_humidity_sensor()
 
         s_hum.value_changed(self.msg1)
-        self.assertEqual(s_hum.native_value, 49.6)
+        self.assertEqual(s_hum.native_value, 60.0)
