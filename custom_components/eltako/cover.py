@@ -269,8 +269,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     # the initial position.
                     if self._attr_current_cover_position is None:
                         self._attr_current_cover_position = 0
-                    else:
-                        self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
+                    
+                    self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
                     self._attr_is_opening = True
                     self._attr_is_closing = False
                     self._attr_is_closed = None
@@ -281,8 +281,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     # the initial position.
                     if self._attr_current_cover_position is None:
                         self._attr_current_cover_position = 100
-                    else:
-                        self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
+                    
+                    self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
                     self._attr_is_opening = False
                     self._attr_is_closing = True
                     self._attr_is_closed = None
