@@ -291,7 +291,11 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_closed = True
                     self._attr_is_opening = False
                     self._attr_is_closing = False
-                elif self._attr_current_cover_position == 100:
+                # elif self._attr_current_cover_position == 100:
+                #     self._attr_is_closed = False
+                #     self._attr_is_opening = False
+                #     self._attr_is_closing = False
+                else:
                     self._attr_is_closed = False
                     self._attr_is_opening = False
                     self._attr_is_closing = False
