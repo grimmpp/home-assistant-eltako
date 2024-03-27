@@ -29,7 +29,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-04-01 (Temperature and Humidity Sensor)
   * A5-04-02 (Temperature and Humidity Sensor e.g.: FLGTF, FLT58, FFT60)
   * A5-04-03 (Temperature and Humidity Sensor e.g.: FFT60)
-  * A5-06-01 (Light - Twilight and Illumination)
+  * A5-06-01 (Light - Twilight and daylight in one sensor value)
   * A5-07-01 (Occupancy sensor)
   * A5-08-01 (Light-, Temperature-, Occupancy Sensor e.g.: FABH65S, FBH65, FBH65S, FBH65TF)
   * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))

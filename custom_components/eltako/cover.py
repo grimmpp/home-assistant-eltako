@@ -241,6 +241,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self.dev_eep in [G5_3F_7F]:
             LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded.__dict__}")
 
+            ## is received as response when button pushed
             if decoded.state == 0x02: # down
                 self._attr_is_closing = True
                 self._attr_is_opening = False
@@ -259,6 +260,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 self._attr_is_closing = False
                 self._attr_is_closed = False
                 self._attr_current_cover_position = 100
+
+            ## is received when cover stops at a position
             elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
 
                 time_in_seconds = decoded.time / 10.0
@@ -271,9 +274,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                         self._attr_current_cover_position = 0
                     
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
-                    self._attr_is_opening = True
-                    self._attr_is_closing = False
-                    self._attr_is_closed = None
 
                 else:  # down
                     # If the latest state is unknown, the cover position
@@ -283,15 +283,16 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                         self._attr_current_cover_position = 100
                     
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
-                    self._attr_is_opening = False
-                    self._attr_is_closing = True
-                    self._attr_is_closed = None
 
                 if self._attr_current_cover_position == 0:
                     self._attr_is_closed = True
                     self._attr_is_opening = False
                     self._attr_is_closing = False
-                elif self._attr_current_cover_position == 100:
+                # elif self._attr_current_cover_position == 100:
+                #     self._attr_is_closed = False
+                #     self._attr_is_opening = False
+                #     self._attr_is_closing = False
+                else:
                     self._attr_is_closed = False
                     self._attr_is_opening = False
                     self._attr_is_closing = False
