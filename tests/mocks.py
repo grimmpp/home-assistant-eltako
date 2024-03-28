@@ -26,6 +26,7 @@ class HassMock():
         
     def __init__(self) -> None:
         self.bus = BusMock()
+        self.loop = asyncio.get_event_loop()
 
     # def async_create_task(self, async_call):
     #     asyncio.run( async_call )
@@ -43,6 +44,10 @@ class EltakoBusMock():
     def is_active(self):
         return self._is_active
 
+class EventMock():
+    def __init__(self, service:str, data:dict) -> None:
+        self.service = service
+        self.data = data
 class GatewayMock(EnOceanGateway):
 
     def __init__(self, general_settings:dict=DEFAULT_GENERAL_SETTINGS, dev_id: int=123, base_id:AddressExpression=AddressExpression.parse('FF-AA-80-00')):

@@ -114,7 +114,7 @@ class TestCover(unittest.TestCase):
         ec.open_cover()
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x04\x01\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x0b\x01\x08\x00\x00\xb1\x06\x00')
         
     def test_close_cover(self):
         ec = self.create_cover()
@@ -122,7 +122,7 @@ class TestCover(unittest.TestCase):
         ec.close_cover()
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x04\x02\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x0b\x02\x08\x00\x00\xb1\x06\x00')
         
     def test_stop_cover(self):
         ec = self.create_cover()
@@ -139,7 +139,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=50)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x01\x02\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x05\x02\x08\x00\x00\xb1\x06\x00')
         self.assertEqual(ec._attr_is_closing, True)
         self.assertEqual(ec._attr_is_opening, False)
         self.last_sent_command = None
@@ -148,7 +148,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=50)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x01\x01\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x05\x01\x08\x00\x00\xb1\x06\x00')
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, True)
         self.last_sent_command = None
@@ -157,7 +157,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=0)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x04\x02\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x0b\x02\x08\x00\x00\xb1\x06\x00')
         self.assertEqual(ec._attr_is_closing, True)
         self.assertEqual(ec._attr_is_opening, False)
         self.last_sent_command = None
@@ -166,7 +166,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=100)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x04\x01\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x0b\x01\x08\x00\x00\xb1\x06\x00')
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, True)
         self.last_sent_command = None

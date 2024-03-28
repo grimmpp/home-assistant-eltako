@@ -216,7 +216,7 @@ class EnOceanGateway:
 
 
     # Command Section
-    async def async_service_send_message(self, event) -> None:
+    async def async_service_send_message(self, event, raise_exception=False) -> None:
         """Send an arbitrary message with the provided eep."""
         LOGGER.debug(f"[Service Send Message: {event.service}] Received event data: {event.data}")
         
@@ -252,10 +252,11 @@ class EnOceanGateway:
             msg = eep.encode_message(sender_id[0])
             LOGGER.debug(f"[Service Send Message: {event.service}] Generated message: {msg} Serialized: {msg.serialize().hex()}")
             # send message
-            event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
-            dispatcher_send(self.hass, event_id, msg)
-        except:
+            self.send_message(msg)
+        except Exception as e:
             LOGGER.error(f"[Service Send Message: {event.service}] Cannot send message.", exc_info=True, stack_info=True)
+            if raise_exception:
+                raise e
 
 
 

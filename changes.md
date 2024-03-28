@@ -7,6 +7,7 @@
 * Unit-Tests added and improved for EEP A5-04-01, A5-04-02, A5-10-06, A5-10-12, A5-13-01, and F6-10-00.
 * EEP A5-04-03 added for Eltako FFT60 (temperature and humiditry)
 * EEP A5-06-01 added for light sensor (currently twilight and daylight are combinded in one illumination sensor/entity)
+* Bug fixes in EEPs (in [eltako14bus library](https://github.com/grimmpp/eltako14bus))
 
 ## Version 1.4.0 ESP3 Support (USB300)
 * Docs about gateway usage added.
