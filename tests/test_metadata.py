@@ -32,6 +32,9 @@ class MetadataTest(unittest.TestCase):
                 return r.split('==')[1].strip()
         return None
     
+    def get_version_of_eltako_integration(self):
+        return self.get_manifest()['version']
+    
     def test_check_all_installed_dependencies(self):
         manifest = self.get_manifest()
 
@@ -54,3 +57,10 @@ class MetadataTest(unittest.TestCase):
         self.assertIsNotNone(installed)
         self.assertIsNotNone(required)
         self.assertEqual(installed, required)
+
+    def test_if_changes_are_documented(self):
+        changes_filename = os.path.join(os.getcwd(), 'changes.md')
+        with open(changes_filename, 'r', encoding="utf-8") as f:
+            changes_text = f.read()
+        
+        self.assertTrue( f'## Version {self.get_version_of_eltako_integration()}' in changes_text )
