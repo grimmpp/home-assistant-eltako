@@ -2,11 +2,17 @@ import os
 import sys
 import unittest
 import json
+import site
 
 class MetadataTest(unittest.TestCase):
 
+    def get_site_package_folder(self):
+          for f in site.getsitepackages():
+            if 'site-packages' in f:
+                return f
+
     def get_installed_lib_version(self, lib_name:str):
-        dirs = [f for f in os.listdir(os.path.join(sys.exec_prefix, 'Lib', 'site-packages')) if f.startswith(lib_name.replace('-', '_')+'-')]
+        dirs = [f for f in os.listdir(self.get_site_package_folder()) if f.startswith(lib_name.replace('-', '_')+'-')]
         if len(dirs) == 1:
             metadata_file = os.path.join(sys.exec_prefix, 'Lib', 'site-packages', dirs[0], 'METADATA')
             with open(metadata_file, 'r') as f:
