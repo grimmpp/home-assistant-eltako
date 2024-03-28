@@ -14,16 +14,16 @@ class MetadataTest(unittest.TestCase):
     def find_lib_folder(self, lib_name:str):
         dirs = [f for f in os.listdir(self.get_site_package_folder()) if f.startswith(lib_name.replace('-', '_')+'-')]
         if len(dirs) == 1:
-            for f in os.listdir(os.join(self.get_site_package_folder(),dirs[0])):
+            for f in os.listdir(os.path.join(self.get_site_package_folder(),dirs[0])):
                 print(f"file in dir: {f}")
-            return dirs[0]
+            return os.path.join(self.get_site_package_folder(), dirs[0])
         return None
 
     def get_installed_lib_version(self, lib_name:str):
         
         dir_name = self.find_lib_folder(lib_name)
         if dir_name:
-            metadata_file = os.path.join(sys.exec_prefix, 'Lib', 'site-packages', dir_name, 'METADATA')
+            metadata_file = os.path.join(dir_name, 'METADATA')
             with open(metadata_file, 'r') as f:
                 for l in f.readlines():
                     if l.startswith('Version: '):
