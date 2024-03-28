@@ -14,7 +14,7 @@ class MetadataTest(unittest.TestCase):
     def find_lib_folder(self, lib_name:str):
         dirs = [f for f in os.listdir(self.get_site_package_folder()) if f.startswith(lib_name.replace('-', '_')+'-')]
         if len(dirs) == 1:
-            for f in os.listdir(self.get_site_package_folder()):
+            for f in os.listdir(os.join(self.get_site_package_folder(),dirs[0])):
                 print(f"file in dir: {f}")
             return dirs[0]
         return None
