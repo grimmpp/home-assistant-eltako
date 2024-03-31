@@ -47,7 +47,7 @@ class MetadataTest(unittest.TestCase):
     
     def get_version_of_eltako_integration(self):
         return self.get_manifest()['version']
-    
+
     def test_check_all_installed_dependencies(self):
         manifest = self.get_manifest()
 
@@ -60,8 +60,17 @@ class MetadataTest(unittest.TestCase):
                 # if this test fails install specified libraries in manifest.json
                 self.assertEqual(required_version, installed_version)
 
+    
+    def test_check_manifest_and_requirements_match(self):
+        manifest = self.get_manifest()
 
-        return None
+        requirements_txt_fn = os.path.join(os.getcwd(), 'requirements.txt')
+        with open(requirements_txt_fn, 'r', encoding="utf-8") as f:
+            requirements_txt = f.read()
+
+        for r in manifest['requirements']:
+            self.assertTrue(r in requirements_txt)
+
 
     def test_eltako14bus_required_and_installed_is_the_same(self):
         installed = self.get_version_of_installed_eltako14bus()

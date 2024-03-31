@@ -1,8 +1,8 @@
 aiocoap
 pyserial-asyncio
-eltako14bus
-enocean
+eltako14bus==0.0.49
+enocean==0.60.1
 homeassistant
 termcolor
 StrEnum
-esp2-gateway-adapter
+esp2-gateway-adapter==0.1
