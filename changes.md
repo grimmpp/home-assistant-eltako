@@ -1,12 +1,12 @@
 # Changes and Feature List
 
-## Version 1.4.1 Support for sending arbritrary messages
-* Added Service for sending arbritrary EnOcean (ESP2) messages. Intended to be used in conjunction with [Home Assistant Automations](https://www.home-assistant.io/getting-started/automation/).
+## Version 1.4.1 Support for sending arbitrary messages
+* Added Service for sending arbitrary EnOcean (ESP2) messages. Intended to be used in conjunction with [Home Assistant Automations](https://www.home-assistant.io/getting-started/automation/).
 * 🐞 Fix for TargetTemperatureSensor (EEP: A5-10-06 and A5-10-12)
 * 🐞 Fix for unknow cover positions and intermediate state + unit-tests added.
 * Unit-Tests added and improved for EEP A5-04-01, A5-04-02, A5-10-06, A5-10-12, A5-13-01, and F6-10-00.
-* EEP A5-04-03 added for Eltako FFT60 (temperature and humiditry)
-* EEP A5-06-01 added for light sensor (currently twilight and daylight are combinded in one illumination sensor/entity)
+* EEP A5-04-03 added for Eltako FFT60 (temperature and humidity)
+* EEP A5-06-01 added for light sensor (currently twilight and daylight are combined in one illumination sensor/entity)
 * Bug fixes in EEPs (in [eltako14bus library](https://github.com/grimmpp/eltako14bus))
 
 ## Version 1.4.0 ESP3 Support (USB300)
