@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.4.2 Added EEPs A5-30-01 and A5-30-03
+* Added EEPs for digital input with is used in water sensor (FSM60B)
+
 ## Version 1.4.1 Support for sending arbitrary messages
 * Added Service for sending arbitrary EnOcean (ESP2) messages. Intended to be used in conjunction with [Home Assistant Automations](https://www.home-assistant.io/getting-started/automation/).
 * 🐞 Fix for TargetTemperatureSensor (EEP: A5-10-06 and A5-10-12)

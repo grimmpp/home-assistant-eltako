@@ -41,8 +41,31 @@ async def async_setup_entry(
                 try:
                     dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
                     if dev_conf.eep.eep_string in CONF_EEP_SUPPORTED_BINARY_SENSOR:
-                        entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
-                                                        dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
+                        if dev_conf.eep == A5_30_03:
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                description_key="0"))
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                description_key="1"))
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                description_key="2"))
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                description_key="3"))
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                description_key="wake"))
+                        elif dev_conf.eep == A5_30_01:
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                description_key="low_battery"))
+                        else:
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
                 except Exception as e:
                     LOGGER.warning("[%s] Could not load configuration for platform_id %s", platform, platform_id)
@@ -86,11 +109,12 @@ class EltakoBinarySensor(AbstractBinarySensor):
     - D5-00-01
     """
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool, description_key: str=None):
         """Initialize the Eltako binary sensor."""
-        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description_key)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
+        self._channel = description_key
 
         if device_class is None or device_class == '':
             if dev_eep in [A5_07_01, A5_08_01]:
@@ -233,6 +257,34 @@ class EltakoBinarySensor(AbstractBinarySensor):
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
 
             self._attr_is_on = decoded.pir_status_on == 1
+
+            if self.invert_signal:
+                self._attr_is_on = not self._attr_is_on
+
+        elif self.dev_eep in [A5_30_01]:
+
+            if self.description_key == "low_battery":
+                self._attr_is_on = decoded.low_battery
+            else:
+                self._attr_is_on = decoded._contact_closed
+
+            if self.invert_signal:
+                self._attr_is_on = not self._attr_is_on
+
+        elif self.dev_eep in [A5_30_03]:
+
+            if self.description_key == "0":
+                self._attr_is_on = decoded.digital_input_0
+            elif self.description_key == "1":
+                self._attr_is_on = decoded.digital_input_1
+            elif self.description_key == "2":
+                self._attr_is_on = decoded.digital_input_2
+            elif self.description_key == "3":
+                self._attr_is_on = decoded.digital_input_3
+            elif self.description_key == "wake":
+                self._attr_is_on = decoded.status_of_wake
+            else:
+                raise Exception("[%s %s] EEP %s Unknown description key for A5-30-03", Platform.BINARY_SENSOR, str(self.dev_id), A5_30_03.eep_string)
 
             if self.invert_signal:
                 self._attr_is_on = not self._attr_is_on

@@ -20,11 +20,12 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 
 **Supported sensor EEPs**
 * Binary sensor
+  * A5-07-01 (Occupancy sensor)
+  * A5-30-01, A5-30-03 (Digital Input - used for water sensor FSM60B)
   * F6-02-01 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md), FTS14EM)
   * F6-02-02 ([Rocker switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md))
   * F6-10-00 (Window handle, classic switches or contacs via FTS14EM, window and door contacts like FTKE, supported states: open, closed)
   * D5-00-01 ([Contact sensor](https://github.com/grimmpp/home-assistant-eltako/tree/main//docs/window_sensor_setup_FTS14EM.md), FTS14EM) incl. signal inverter
-  * A5-07-01 (Occupancy sensor)
 * Sensor
   * A5-04-01 (Temperature and Humidity Sensor)
   * A5-04-02 (Temperature and Humidity Sensor e.g.: FLGTF, FLT58, FFT60)
