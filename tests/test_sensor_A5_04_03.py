@@ -15,7 +15,7 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestSensor_A5_04_02(unittest.TestCase):
 
-    msg1 = Regular4BSMessage (address=b'\xFF\xFF\x00\x80', data=b'\x99\x02\x12\x09', status=0x00)
+    msg1 = Regular4BSMessage(address=b'\xFF\xFF\x00\x80', data=b'\x99\x02\x12\x09', status=0x00)
     
     def create_temperature_sensor(self) -> EltakoTemperatureSensor:
         gateway = GatewayMock()
