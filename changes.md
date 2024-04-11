@@ -1,9 +1,12 @@
 # Changes and Feature List
 
+## Version 1.4.2 Added EEPs A5-30-01 and A5-30-03
+* Added EEPs (A5-30-01 preferred) for digital input which is used in water sensor (FSM60B)
+
 ## Version 1.4.1 Support for sending arbitrary messages
 * Added Service for sending arbitrary EnOcean (ESP2) messages. Intended to be used in conjunction with [Home Assistant Automations](https://www.home-assistant.io/getting-started/automation/).
 * 🐞 Fix for TargetTemperatureSensor (EEP: A5-10-06 and A5-10-12)
-* 🐞 Fix for unknow cover positions and intermediate state + unit-tests added.
+* 🐞 Fix for unknown cover positions and intermediate state + unit-tests added.
 * Unit-Tests added and improved for EEP A5-04-01, A5-04-02, A5-10-06, A5-10-12, A5-13-01, and F6-10-00.
 * EEP A5-04-03 added for Eltako FFT60 (temperature and humidity)
 * EEP A5-06-01 added for light sensor (currently twilight and daylight are combined in one illumination sensor/entity)
@@ -17,7 +20,7 @@
 * Added library for ESP3 (USB300 Support) => [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter)
 * Better support for Teach-In Button
 
-## Version 1.3.8 Fixes and Smaller Imrovements
+## Version 1.3.8 Fixes and Smaller Improvements
 * Fixed window handle F6-10-00 in binary sensor
 * Added better tests for binary sensors
 * Fixed covers which behaved differently after introducing recovery state feature.
@@ -33,7 +36,7 @@
 * Trial to remove import warnings 
   Reported Issue: https://github.com/grimmpp/home-assistant-eltako/issues/61
 * &#x1F41E; Removed entity_id bug from GatewayConnectionState &#x1F41E; => Requires removing and adding gateway again ❗
-* Added state cache of device entities. When restarting HA entities like temperature sensors will show previouse state/value after restart. 
+* Added state cache of device entities. When restarting HA entities like temperature sensors will show previous state/value after restart. 
   Reported Feature: https://github.com/grimmpp/home-assistant-eltako/issues/63
 
 ## Version 1.3.6 Dependencies fixed for 1.3.5

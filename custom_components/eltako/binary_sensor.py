@@ -10,7 +10,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE_CLASS, STATE_ON, STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
 
@@ -41,8 +41,39 @@ async def async_setup_entry(
                 try:
                     dev_conf = config_helpers.DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_SIGNAL])
                     if dev_conf.eep.eep_string in CONF_EEP_SUPPORTED_BINARY_SENSOR:
-                        entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
-                                                        dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
+                        if dev_conf.eep == A5_30_03:
+                            name = "Digital Input 0"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="0", name=name) ))
+                            name = "Digital Input 1"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="1", name=name) ))
+                            name = "Digital Input 2"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="2", name=name) ))
+                            name = "Digital Input 3"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="3", name=name) ))
+                            name = "Status of Wake"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="wake", name=name) ))
+                        elif dev_conf.eep == A5_30_01:
+                            name = "Digital Input"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="0", name=name) ))
+                            name = "Low Battery"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="low_battery", name=name) ))
+                        else:
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
                 except Exception as e:
                     LOGGER.warning("[%s] Could not load configuration for platform_id %s", platform, platform_id)
@@ -86,9 +117,19 @@ class EltakoBinarySensor(AbstractBinarySensor):
     - D5-00-01
     """
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, 
+                 device_class: str, invert_signal: bool, description: EntityDescription=None):
         """Initialize the Eltako binary sensor."""
-        super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
+        if description:
+            self.entity_description = EntityDescription(
+                key=description.key,
+                name=description.name
+                )
+            self._channel = description.key
+        else:
+            self._channel = None
+
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, self._channel)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
 
@@ -233,6 +274,34 @@ class EltakoBinarySensor(AbstractBinarySensor):
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
 
             self._attr_is_on = decoded.pir_status_on == 1
+
+            if self.invert_signal:
+                self._attr_is_on = not self._attr_is_on
+
+        elif self.dev_eep in [A5_30_01]:
+
+            if self.description_key == "low_battery":
+                self._attr_is_on = decoded.low_battery
+            else:
+                self._attr_is_on = decoded._contact_closed
+
+            if self.invert_signal:
+                self._attr_is_on = not self._attr_is_on
+
+        elif self.dev_eep in [A5_30_03]:
+
+            if self.description_key == "0":
+                self._attr_is_on = decoded.digital_input_0
+            elif self.description_key == "1":
+                self._attr_is_on = decoded.digital_input_1
+            elif self.description_key == "2":
+                self._attr_is_on = decoded.digital_input_2
+            elif self.description_key == "3":
+                self._attr_is_on = decoded.digital_input_3
+            elif self.description_key == "wake":
+                self._attr_is_on = decoded.status_of_wake
+            else:
+                raise Exception("[%s %s] EEP %s Unknown description key for A5-30-03", Platform.BINARY_SENSOR, str(self.dev_id), A5_30_03.eep_string)
 
             if self.invert_signal:
                 self._attr_is_on = not self._attr_is_on
