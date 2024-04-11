@@ -10,7 +10,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE_CLASS, STATE_ON, STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
 
@@ -45,31 +45,32 @@ async def async_setup_entry(
                             name = "Digital Input 0"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
-                                                                description_key="0"))
+                                                                EntityDescription(key="0", name=name) ))
                             name = "Digital Input 1"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
-                                                                description_key="1"))
+                                                                EntityDescription(key="1", name=name) ))
                             name = "Digital Input 2"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
-                                                                description_key="2"))
+                                                                EntityDescription(key="2", name=name) ))
                             name = "Digital Input 3"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
-                                                                description_key="3"))
+                                                                EntityDescription(key="3", name=name) ))
                             name = "Status of Wake"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
-                                                                description_key="wake"))
+                                                                EntityDescription(key="wake", name=name) ))
                         elif dev_conf.eep == A5_30_01:
                             name = "Digital Input"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
-                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="0", name=name) ))
                             name = "Low Battery"
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
-                                                                description_key="low_battery"))
+                                                                EntityDescription(key="low_battery", name=name) ))
                         else:
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
@@ -116,12 +117,21 @@ class EltakoBinarySensor(AbstractBinarySensor):
     - D5-00-01
     """
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, device_class: str, invert_signal: bool, description_key: str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, 
+                 device_class: str, invert_signal: bool, description: EntityDescription=None):
         """Initialize the Eltako binary sensor."""
-        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description_key)
+        if description:
+            self.entity_description = EntityDescription(
+                key=description.key,
+                name=description.name
+                )
+            self._channel = description.key
+        else:
+            self._channel = None
+
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, self._channel)
         self.invert_signal = invert_signal
         self._attr_device_class = device_class
-        self._channel = description_key
 
         if device_class is None or device_class == '':
             if dev_eep in [A5_07_01, A5_08_01]:
