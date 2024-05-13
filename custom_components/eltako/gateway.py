@@ -95,7 +95,7 @@ class EnOceanGateway:
         LOGGER.info("Fire message connection state changed")
         # event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
         # dispatcher_send(self.hass, event_id, self._bus.is_active())
-        self.process_connection_status_signal()
+        self.process_connection_status_signal( self._bus.is_active() )
 
 
     def set_last_message_received_handler(self, handler):
@@ -128,11 +128,11 @@ class EnOceanGateway:
         self._fire_received_message_count_event()
         self._fire_last_message_received_event()
 
-    def process_connection_status_signal(self, data=None):
-        LOGGER.info(f"CHANGE CONNECTION STATUS: {self._bus.is_active()}")
+    def process_connection_status_signal(self, status=None):
+        LOGGER.info(f"CHANGE CONNECTION STATUS: {status}")
         if self._connection_state_handler:
             asyncio.ensure_future(
-                self._connection_state_handler( self._bus.is_active() ),
+                self._connection_state_handler(status),
                 loop= self._loop
             )
 
@@ -146,7 +146,7 @@ class EnOceanGateway:
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
-        self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
+        self._bus.set_status_changed_handler(self.process_connection_status_signal)
 
 
     def _register_device(self) -> None:
