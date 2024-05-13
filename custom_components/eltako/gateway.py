@@ -88,14 +88,15 @@ class EnOceanGateway:
 
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
-        self._fire_connection_state_changed_event()
+        self._fire_connection_state_changed_event(self._bus.is_active())
 
 
-    def _fire_connection_state_changed_event(self):
-        LOGGER.info("Fire message connection state changed")
-        # event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
-        # dispatcher_send(self.hass, event_id, self._bus.is_active())
-        self.process_connection_status_signal( self._bus.is_active() )
+    def _fire_connection_state_changed_event(self, status):
+        if self._connection_state_handler:
+            asyncio.ensure_future(
+                self._connection_state_handler(status),
+                loop= self._loop
+            )
 
 
     def set_last_message_received_handler(self, handler):
@@ -123,20 +124,12 @@ class EnOceanGateway:
             )
             LOGGER.info("RECEIVED MESSAGE COUNT EVENT")
 
-    def process_messages(self, data):
+    def process_messages(self, data=None):
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
         self._fire_received_message_count_event()
         self._fire_last_message_received_event()
 
-    def process_connection_status_signal(self, status=None):
-        LOGGER.info(f"CHANGE CONNECTION STATUS: {status}")
-        if self._connection_state_handler:
-            asyncio.ensure_future(
-                self._connection_state_handler(status),
-                loop= self._loop
-            )
-
-
+    
     def _init_bus(self):
         self._received_message_count = 0
         self._fire_received_message_count_event()
@@ -146,7 +139,7 @@ class EnOceanGateway:
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
-        self._bus.set_status_changed_handler(self.process_connection_status_signal)
+        self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
 
     def _register_device(self) -> None:
@@ -224,11 +217,8 @@ class EnOceanGateway:
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
 
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
-        async_dispatcher_connect(self.hass, event_id, self.process_messages)
-
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
-        async_dispatcher_connect(self.hass, event_id, self.process_connection_status_signal)
+        # event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+        # async_dispatcher_connect(self.hass, event_id, self.process_messages)
 
         # Register home assistant service for sending arbitrary telegrams.
         #
@@ -321,8 +311,8 @@ class EnOceanGateway:
 
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
-            # self._fire_last_message_received_event()
-            # self._fire_received_message_count_event()
+            self.process_messages()
+
             if isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
