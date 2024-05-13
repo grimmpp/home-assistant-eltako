@@ -120,7 +120,7 @@ class EnOceanGateway:
                 self._received_message_count_handler( self._received_message_count )
             )
 
-    def process_messages(self):
+    def process_messages(self, data):
         LOGGER.info("GATEWAY: HANDLE MESSAGES")
 
 
