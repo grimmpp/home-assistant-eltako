@@ -108,6 +108,9 @@ class EnOceanGateway:
             # self.hass.async_add_executor_job(
             #         self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
             #     )
+            asyncio.ensure_future( 
+                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
+            )
             LOGGER.info("LAST RECEIVED MESSAGE")
 
 
