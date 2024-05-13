@@ -220,7 +220,7 @@ class EnOceanGateway:
         async_dispatcher_connect(self.hass, event_id, self.process_messages)
 
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
-        async_dispatcher_connect(self.hass, event_id, self.process_connection_status)
+        async_dispatcher_connect(self.hass, event_id, self.process_connection_status_signal)
 
         # Register home assistant service for sending arbitrary telegrams.
         #
