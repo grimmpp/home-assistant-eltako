@@ -102,9 +102,10 @@ class EnOceanGateway:
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            self.hass.async_create_task(
-                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
-            )
+            # self.hass.async_create_task(
+            #     self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
+            # )
+            self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
 
 
     def set_received_message_count_handler(self, handler):
@@ -114,9 +115,10 @@ class EnOceanGateway:
     def _fire_received_message_count_event(self):
         self._received_message_count += 1
         if self._received_message_count_handler:
-            self.hass.async_create_task(
-                self._received_message_count_handler( self._received_message_count )
-            )
+            # self.hass.async_create_task(
+            #     self._received_message_count_handler( self._received_message_count )
+            # )
+            self._received_message_count_handler( self._received_message_count )
 
     def process_messages(self, data):
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
