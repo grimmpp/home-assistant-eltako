@@ -122,7 +122,6 @@ class EnOceanGateway:
                 self._received_message_count_handler( self._received_message_count ),
                 loop= self._loop
             )
-            LOGGER.info("RECEIVED MESSAGE COUNT EVENT")
 
     def process_messages(self, data=None):
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
