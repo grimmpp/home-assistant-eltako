@@ -20,7 +20,6 @@ ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE: Final = "No gateway configuration avai
 
 SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
 SIGNAL_SEND_MESSAGE: Final = "send_message"
-SIGNAL_GATEWAY_CONNECTION_STATUS: Final = "gateway_connection_status"
 EVENT_BUTTON_PRESSED: Final = "btn_pressed"
 EVENT_CONTACT_CLOSED: Final = "contact_closed"
 
