@@ -1,6 +1,6 @@
 # Changes and Feature List
 
-## Version 1.4.2 Added EEPs A5-30-01 and A5-30-03
+## Version 1.4.2 Compatibility to HA 2024.5 and EEPs A5-30-01 and A5-30-03 added
 * Added EEPs (A5-30-01 preferred) for digital input which is used in water sensor (FSM60B)
 * 🐞 Incompatibility with HA 2024.5 fixed. (Thread safety checks)
 
