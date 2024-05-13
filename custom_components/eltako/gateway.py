@@ -88,14 +88,11 @@ class EnOceanGateway:
 
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
-        self._fire_connection_state_changed_event(self._bus and self._bus.is_active())
 
 
     def _fire_connection_state_changed_event(self, connected:bool):
-        if self._connection_state_handler:
-            self.hass.async_create_task(
-                self._connection_state_handler( connected )
-            )
+        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
+        dispatcher_send(self.hass, event_id, None)
 
 
     def set_last_message_received_handler(self, handler):
@@ -121,7 +118,15 @@ class EnOceanGateway:
             )
 
     def process_messages(self, data):
-        LOGGER.info("GATEWAY: HANDLE MESSAGES")
+        """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
+        self._fire_received_message_count_event()
+        self._fire_last_message_received_event()
+
+    def process_connection_status_signal(self, data):
+        if self._connection_state_handler:
+            self.hass.async_create_task(
+                self._connection_state_handler( self._bus.is_active() )
+            )
 
 
     def _init_bus(self):
@@ -132,7 +137,7 @@ class EnOceanGateway:
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
-        # self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
+        self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
 
     def _register_device(self) -> None:
@@ -212,6 +217,9 @@ class EnOceanGateway:
 
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
         async_dispatcher_connect(self.hass, event_id, self.process_messages)
+
+        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
+        async_dispatcher_connect(self.hass, event_id, self.process_connection_status)
 
         # Register home assistant service for sending arbitrary telegrams.
         #
