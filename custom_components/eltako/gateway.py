@@ -88,11 +88,12 @@ class EnOceanGateway:
 
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
+        self._fire_connection_state_changed_event()
 
 
-    def _fire_connection_state_changed_event(self, connected:bool):
+    def _fire_connection_state_changed_event(self):
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
-        dispatcher_send(self.hass, event_id, None)
+        dispatcher_send(self.hass, event_id, self._bus.is_active())
 
 
     def set_last_message_received_handler(self, handler):
