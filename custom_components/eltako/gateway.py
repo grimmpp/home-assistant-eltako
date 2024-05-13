@@ -62,7 +62,7 @@ class EnOceanGateway:
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
-        self.hass = hass
+        self.hass: HomeAssistant = hass
         self.dispatcher_disconnect_handle = None
         self.general_settings = general_settings
         self._attr_dev_id = dev_id
@@ -105,9 +105,10 @@ class EnOceanGateway:
             # self.hass.async_create_task(
             #     self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
             # )
-            self.hass.async_add_executor_job(
-                    self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
-                )
+            # self.hass.async_add_executor_job(
+            #         self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
+            #     )
+            LOGGER.info("LAST RECEIVED MESSAGE")
 
 
     def set_received_message_count_handler(self, handler):
@@ -120,9 +121,10 @@ class EnOceanGateway:
             # self.hass.async_create_task(
             #     self._received_message_count_handler( self._received_message_count )
             # )
-            self.hass.async_add_executor_job(
-                self._received_message_count_handler( self._received_message_count )
-            )
+            # self.hass.async_add_executor_job(
+            #     self._received_message_count_handler( self._received_message_count )
+            # )
+            LOGGER.info("RECEIVED MESSAGE COUNT EVENT")
 
     def process_messages(self, data):
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
@@ -131,7 +133,8 @@ class EnOceanGateway:
 
     def process_connection_status_signal(self, data):
         if self._connection_state_handler:
-            self.hass.async_create_task(
+            # self.hass.async_create_task(
+            self.hass.async_add_executor_job(
                 self._connection_state_handler( self._bus.is_active() )
             )
 
