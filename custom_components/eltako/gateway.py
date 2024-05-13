@@ -127,6 +127,7 @@ class EnOceanGateway:
         self._fire_last_message_received_event()
 
     def process_connection_status_signal(self, data):
+        LOGGER.info(f"CHANGE CONNECTION STATUS: {self._bus.is_active()}")
         if self._connection_state_handler:
             asyncio.ensure_future(
                 self._connection_state_handler( self._bus.is_active() ),
