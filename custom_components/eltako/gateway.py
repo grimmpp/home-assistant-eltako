@@ -20,7 +20,7 @@ from enocean.protocol.packet import RadioPacket, RORG, Packet
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send, dispatcher_connect
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
@@ -145,10 +145,6 @@ class EnOceanGateway:
             name= self.dev_name,
             model=self.model,
         )
-
-        # Register callbacks.
-        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
-        dispatcher_connect(self.hass, event_id, self.process_messages)
         
 
     ### address validation functions
@@ -213,6 +209,9 @@ class EnOceanGateway:
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
+
+        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
+        async_dispatcher_connect(self.hass, event_id, self.process_messages)
 
         # Register home assistant service for sending arbitrary telegrams.
         #
