@@ -62,7 +62,7 @@ class EnOceanGateway:
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
         self._attr_identifier = basename(normpath(serial_path))
-        self.hass = hass
+        self.hass: HomeAssistant = hass
         self.dispatcher_disconnect_handle = None
         self.general_settings = general_settings
         self._attr_dev_id = dev_id
@@ -88,13 +88,14 @@ class EnOceanGateway:
 
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
-        self._fire_connection_state_changed_event(self._bus and self._bus.is_active())
+        self._fire_connection_state_changed_event(self._bus.is_active())
 
 
-    def _fire_connection_state_changed_event(self, connected:bool):
+    def _fire_connection_state_changed_event(self, status):
         if self._connection_state_handler:
-            self.hass.async_create_task(
-                self._connection_state_handler( connected )
+            asyncio.ensure_future(
+                self._connection_state_handler(status),
+                loop= self._loop
             )
 
 
@@ -104,8 +105,9 @@ class EnOceanGateway:
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            self.hass.async_create_task(
-                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) )
+            asyncio.ensure_future(
+                self._last_message_received_handler( datetime.utcnow().replace(tzinfo=pytz.utc) ),
+                loop= self._loop
             )
 
 
@@ -116,14 +118,21 @@ class EnOceanGateway:
     def _fire_received_message_count_event(self):
         self._received_message_count += 1
         if self._received_message_count_handler:
-            self.hass.async_create_task(
-                self._received_message_count_handler( self._received_message_count )
+            asyncio.ensure_future(
+                self._received_message_count_handler( self._received_message_count ),
+                loop= self._loop
             )
 
+    def process_messages(self, data=None):
+        """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
+        self._fire_received_message_count_event()
+        self._fire_last_message_received_event()
 
+    
     def _init_bus(self):
         self._received_message_count = 0
         self._fire_received_message_count_event()
+
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:
@@ -142,6 +151,7 @@ class EnOceanGateway:
             name= self.dev_name,
             model=self.model,
         )
+        
 
     ### address validation functions
 
@@ -297,8 +307,8 @@ class EnOceanGateway:
 
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
-            self._fire_last_message_received_event()
-            self._fire_received_message_count_event()
+            self.process_messages()
+
             if isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
