@@ -1,8 +1,10 @@
 # Changes and Feature List
 
-## Version 1.4.2 Compatibility to HA 2024.5 and EEPs A5-30-01 and A5-30-03 added
+## Version 1.4.3 Compatibility to HA 2024.5
+* 🐞 Incompatibility with HA 2024.5 fixed. (Cleaned up event loop synchronization)
+
+## Version 1.4.2 Added EEPs A5-30-01 and A5-30-03
 * Added EEPs (A5-30-01 preferred) for digital input which is used in water sensor (FSM60B)
-* 🐞 Incompatibility with HA 2024.5 fixed. (Thread safety checks)
 
 ## Version 1.4.1 Support for sending arbitrary messages
 * Added Service for sending arbitrary EnOcean (ESP2) messages. Intended to be used in conjunction with [Home Assistant Automations](https://www.home-assistant.io/getting-started/automation/).
