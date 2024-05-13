@@ -93,8 +93,9 @@ class EnOceanGateway:
 
     def _fire_connection_state_changed_event(self):
         LOGGER.info("Fire message connection state changed")
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
-        dispatcher_send(self.hass, event_id, self._bus.is_active())
+        # event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
+        # dispatcher_send(self.hass, event_id, self._bus.is_active())
+        self.process_connection_status_signal()
 
 
     def set_last_message_received_handler(self, handler):
@@ -127,7 +128,7 @@ class EnOceanGateway:
         self._fire_received_message_count_event()
         self._fire_last_message_received_event()
 
-    def process_connection_status_signal(self, data):
+    def process_connection_status_signal(self, data=None):
         LOGGER.info(f"CHANGE CONNECTION STATUS: {self._bus.is_active()}")
         if self._connection_state_handler:
             asyncio.ensure_future(
@@ -226,8 +227,8 @@ class EnOceanGateway:
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
         async_dispatcher_connect(self.hass, event_id, self.process_messages)
 
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
-        async_dispatcher_connect(self.hass, event_id, self.process_connection_status_signal)
+        # event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_GATEWAY_CONNECTION_STATUS)
+        # async_dispatcher_connect(self.hass, event_id, self.process_connection_status_signal)
 
         # Register home assistant service for sending arbitrary telegrams.
         #
