@@ -20,7 +20,7 @@ from enocean.protocol.packet import RadioPacket, RORG, Packet
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send, dispatcher_connect
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
@@ -120,6 +120,9 @@ class EnOceanGateway:
                 self._received_message_count_handler( self._received_message_count )
             )
 
+    def process_messages(self):
+        LOGGER.info("GATEWAY: HANDLE MESSAGES")
+
 
     def _init_bus(self):
         self._received_message_count = 0
@@ -129,7 +132,7 @@ class EnOceanGateway:
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
-        # self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
+        self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
 
     def _register_device(self) -> None:
@@ -142,6 +145,11 @@ class EnOceanGateway:
             name= self.dev_name,
             model=self.model,
         )
+
+        # Register callbacks.
+        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
+        dispatcher_connect(self.hass, event_id, self.process_messages)
+        
 
     ### address validation functions
 
