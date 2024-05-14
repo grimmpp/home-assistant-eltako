@@ -72,6 +72,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **Eltako FAM-USB** (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **EnOcean USB300** (based on ESP3 but only ESP2 feature set supported, baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
+  * **[PioTek FAM-USB 515](https://www.piotek.de/FAM-USB-515)** (based on ESP3 but only ESP2 feature set supported, baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
 
 
 # Installation and Configuration
@@ -88,30 +89,22 @@ While this is not integrated into home assistant's repositories. You need to ins
    *Alternative 2:* Copying directory ``eltako``** from this repository into your home assistant's ``/config/custom_components`` directory.
    For easy installation just clone this repository ``git clone https://github.com/grimmpp/home-assistant-eltako.git`` and execute the installation script of this repo ``./install_custom_component_eltako.sh``.
 
-2. Before you add the integration you have to add at least one dummy entry in the "configuration.yaml". It must have at least 1 dummy device. Example:
+2. Before you add the integration you have to provide a list of gateways and devices you want to use. Here is a minimum example you need to put into ``/config/configuration.yaml`` to start with. The configuration can be change and adapt at any point in time. 
 
 ```
 eltako:
   gateway:
   - id: 1
     base_id: FF-AA-80-00
-    device_type: fgw14usb # Supported gateways: gam14, fgw14usb
-    devices: 
-      light:
-      - id: 00-00-00-01
-        eep: M5-38-08
-        name: FSR14_4x - 1
-        sender:
-          id: 00-00-B0-01
-          eep: A5-38-08
+    device_type: fgw14usb
 ```
 
-3. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet just select the detected USB gateway. Manual paths can be added in the gateway configuration section under serial_path and will be displayed additionally in the installation sheet.
+3. To **enable this component**, go to your integrations, press the "add" button and select "Eltako". In the presented sheet just select the detected USB gateway. 
 4. **Update Home Assistant configuration** ``/config/configuration.yaml`` and add all devices and sensors you want to integrate. See [How to update Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/update_home_assistant_configuration.md) to see how the configuration should look like. 
-There is also a scipt which can detect devices and sensors and creates a prepared configuration because in big setups it can be a little effort doing that manually. For more details have a look into [Device and Sensor Discovery for Home Assistant Configuration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
+In order to automatically generate the configuration and managing your devices you can use [Enocean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager).
 
 > [!IMPORTANT]
-> Devices that are later removed from the configuration are not deleted in HA. Although it is possible to delete the entity, it is currently not possible to delete the device via a button. The easiest and quickest way to clean up is to delete the Eltako HUB and create a new one. Don't worry, the automations, scenes, scripts, dashboard settings and historical data will not be lost. These are linked to the device ID and are reassigned after the Eltako HUB has been created.
+> Devices that are later removed from the configuration are not deleted in HA. Although it is possible to delete the entity, it is currently not possible to delete the device via a button. The easiest and quickest way to clean up is to delete the Eltako HUB and create a new one. Don't worry, the automations, scenes, scripts, dashboard settings and historical data will not be lost. These are linked to the device ID and are reassigned after the Eltako HUB has been recreated.
 >
 > <img width="846" alt="image" src="https://github.com/grimmpp/home-assistant-eltako/assets/46369917/96c44c86-2407-4c80-85f1-4668975d3148">
 

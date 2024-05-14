@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.4.4 
+* Configuration Management cleaned up
+
 ## Version 1.4.3 Compatibility to HA 2024.5
 * 🐞 Incompatibility with HA 2024.5 fixed. (Cleaned up event loop synchronization)
 
