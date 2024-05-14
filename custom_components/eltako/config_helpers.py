@@ -120,7 +120,10 @@ def get_device_config(config: dict, id: int) -> dict:
     gateways = config[CONF_GATEWAY]
     for g in gateways:
         if g[CONF_ID] == id:
-            return g[CONF_DEVICES]
+            if CONF_DEVICES in g:
+                return g[CONF_DEVICES]
+            else:
+                return {}
     return None
 
 async def async_get_list_of_gateway_descriptions(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config, filter_out: list[str]=[]) -> dict:
