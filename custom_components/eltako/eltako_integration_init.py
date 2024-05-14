@@ -99,20 +99,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # Initialise the gateway
     # get base_id from user input
     if CONF_GATEWAY_DESCRIPTION not in config_entry.data.keys():
-        raise Exception("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
+        LOGGER.warn("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
+        return
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
     if not ('(' in gateway_description and ')' in gateway_description):
-        raise Exception("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
+        LOGGER.warn("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
+        return
     gateway_id = config_helpers.get_id_from_name(gateway_description)
     
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
-        raise Exception(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
+        LOGGER.warn(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
+        return
     
     # get serial path info
     if CONF_SERIAL_PATH not in config_entry.data.keys():
-        raise Exception("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
+        LOGGER.warn("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
+        return
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams
