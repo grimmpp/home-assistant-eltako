@@ -19,7 +19,7 @@ class TestBinarySensor(unittest.TestCase):
     def test_GatewayConnectionState(self):
         gateway=GatewayMock()
         gateway._bus._is_active = False
-        gateway.hass.async_create_task = lambda a: []
+        gateway.hass.create_task = lambda a: []
         bs = GatewayConnectionState(Platform.BINARY_SENSOR, gateway)
 
         bs.value_changed(True)
@@ -31,7 +31,7 @@ class TestBinarySensor(unittest.TestCase):
     def test_directly_online_GatewayConnectionState(self):
         gateway=GatewayMock()
         gateway._bus._is_active = True
-        gateway.hass.async_create_task = lambda a: []
+        gateway.hass.create_task = lambda a: []
         bs = GatewayConnectionState(Platform.BINARY_SENSOR, gateway)
 
         bs.value_changed(True)

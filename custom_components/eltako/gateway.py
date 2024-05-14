@@ -93,9 +93,8 @@ class EnOceanGateway:
 
     def _fire_connection_state_changed_event(self, status):
         if self._connection_state_handler:
-            asyncio.run_coroutine_threadsafe(
-                self._connection_state_handler(status),
-                loop = self._loop
+            self.hass.create_task(
+                self._connection_state_handler(status)
             )
 
 
@@ -105,9 +104,8 @@ class EnOceanGateway:
 
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            asyncio.run_coroutine_threadsafe(
-                self._last_message_received_handler( datetime.now(UTC).replace(tzinfo=pytz.UTC) ),
-                loop = self._loop
+            self.hass.create_task(
+                self._last_message_received_handler( datetime.now(UTC).replace(tzinfo=pytz.UTC) )
             )
 
 
@@ -118,9 +116,8 @@ class EnOceanGateway:
     def _fire_received_message_count_event(self):
         self._received_message_count += 1
         if self._received_message_count_handler:
-            asyncio.run_coroutine_threadsafe(
+            self.hass.create_task(
                 self._received_message_count_handler( self._received_message_count ),
-                loop = self._loop
             )
 
     def process_messages(self, data=None):
@@ -293,10 +290,8 @@ class EnOceanGateway:
                 LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
 
                 # put message on serial bus
-                # asyncio.ensure_future(self._bus.send(msg), loop=self._loop)
-                asyncio.run_coroutine_threadsafe(
-                    self._bus.send(msg), 
-                    loop = self._loop
+                self.hass.create_task(
+                    self._bus.send(msg)
                 )
         else:
             LOGGER.warn("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
