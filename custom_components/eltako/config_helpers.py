@@ -150,7 +150,7 @@ def config_check_gateway(config: dict) -> bool:
             g_ids.append(g[CONF_ID])
     
     if len(g_ids) == 0:
-        return False
+        return True
 
     return True
 
