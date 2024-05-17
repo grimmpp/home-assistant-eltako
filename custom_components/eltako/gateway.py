@@ -23,7 +23,6 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -129,6 +128,8 @@ class EnOceanGateway:
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
         else:
+            # lazy import to avoid preloading library
+            from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)

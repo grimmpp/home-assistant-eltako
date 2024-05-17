@@ -2,6 +2,7 @@
 
 ## Version 1.4.4 
 * Thread sync clean up
+* Lazy loading for ESP3 libs to prevent dependency issues
 
 ## Version 1.4.3 Compatibility to HA 2024.5
 * 🐞 Incompatibility with HA 2024.5 fixed. (Cleaned up event loop synchronization)
