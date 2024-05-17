@@ -1,12 +1,10 @@
 """Support for Eltako Temperature Control sources."""
 from __future__ import annotations
 
-from typing import Any
-
 import asyncio
 import time
 
-from eltakobus.util import AddressExpression, b2a
+from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message
 
@@ -21,7 +19,6 @@ from homeassistant.const import Platform, CONF_TEMPERATURE_UNIT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import entity_registry as er
 
 from .gateway import EnOceanGateway
 from .device import *

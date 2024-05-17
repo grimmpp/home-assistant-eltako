@@ -1,5 +1,4 @@
 """Representation of an Eltako gateway."""
-from enum import Enum
 import glob
 
 from os.path import basename, normpath
@@ -9,20 +8,17 @@ from datetime import datetime, UTC
 import serial
 import asyncio
 
-from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
-from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll, prettify
+from eltakobus.serial import RS485SerialInterfaceV2
+from eltakobus.message import ESP2Message, EltakoPoll
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
-
-from enocean.communicators import SerialCommunicator
-from enocean.protocol.packet import RadioPacket, RORG, Packet
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceRegistry, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.config_entries import ConfigEntry
 
 from .const import *

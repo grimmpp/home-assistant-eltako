@@ -10,11 +10,8 @@ from homeassistant import config_entries
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature, ATTR_POSITION
 from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import entity_registry as er
 
 from .device import *
 from . import config_helpers 

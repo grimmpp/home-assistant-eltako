@@ -13,7 +13,6 @@ from homeassistant.helpers import entity_registry as er
 from custom_components.eltako.eltako_integration_init import get_gateway_from_hass, get_device_config_for_gateway
 
 from .device import *
-from . import config_helpers
 from .gateway import EnOceanGateway
 from .const import *
 from . import get_gateway_from_hass, get_device_config_for_gateway
