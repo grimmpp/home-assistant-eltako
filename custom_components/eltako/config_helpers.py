@@ -2,8 +2,6 @@ from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_ID
-from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
-from homeassistant.helpers.entity import Entity
 
 from eltakobus.util import AddressExpression, b2a
 from eltakobus.eep import EEP

@@ -8,7 +8,6 @@ from eltakobus.eep import *
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    PLATFORM_SCHEMA,
     ColorMode,
     LightEntity,
 )

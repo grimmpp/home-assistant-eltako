@@ -16,7 +16,7 @@ class TestGateway(TestCase):
     def test_gateway_types(self):
         for t in GatewayDeviceType:
             
-            if t in [GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.GatewayEltakoFAMUSB]:
+            if t in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3]:
                 self.assertTrue(GatewayDeviceType.is_transceiver(t))
             else:
                 self.assertFalse(GatewayDeviceType.is_transceiver(t))

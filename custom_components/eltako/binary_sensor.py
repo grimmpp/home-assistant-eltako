@@ -1,18 +1,16 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
-from typing import Literal, final
 
-from eltakobus.util import AddressExpression, b2a, b2s
+from eltakobus.util import AddressExpression
 from eltakobus.eep import *
 
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant import config_entries
-from homeassistant.const import CONF_DEVICE_CLASS, STATE_ON, STATE_OFF
+from homeassistant.const import CONF_DEVICE_CLASS
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import entity_registry as er
 
 from .device import *
 from .const import *

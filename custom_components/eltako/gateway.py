@@ -1,5 +1,4 @@
 """Representation of an Eltako gateway."""
-from enum import Enum
 import glob
 
 from os.path import basename, normpath
@@ -9,25 +8,21 @@ from datetime import datetime, UTC
 import serial
 import asyncio
 
-from eltakobus.serial import RS485SerialInterface, RS485SerialInterfaceV2, BusInterface
-from eltakobus.message import ESP2Message, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoPoll, prettify
+from eltakobus.serial import RS485SerialInterfaceV2
+from eltakobus.message import ESP2Message, EltakoPoll
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP
-
-from enocean.communicators import SerialCommunicator
-from enocean.protocol.packet import RadioPacket, RORG, Packet
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceRegistry, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -132,7 +127,12 @@ class EnOceanGateway:
 
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
+        elif GatewayDeviceType.is_lan_gateway(self.dev_type):
+            from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
+            self._bus = TCP2SerialCommunicator(host=self.serial_path, port=5100, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
         else:
+            # lazy import to avoid preloading library
+            from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)

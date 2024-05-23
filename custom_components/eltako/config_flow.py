@@ -3,6 +3,8 @@
 
 import voluptuous as vol
 
+import ipaddress
+
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
@@ -74,11 +76,13 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if len(g_list) == 0:
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
 
-        # add serial paths from configuration
+        # add manually added serial paths and ip addresses from configuration
         for g_id in g_list_dict.keys():
             g_c = config_helpers.find_gateway_config_by_id(config, g_id)
             if CONF_SERIAL_PATH in g_c:
                 serial_paths.append(g_c[CONF_SERIAL_PATH])
+            if CONF_GATEWAY_ADDRESS in g_c:
+                serial_paths.append(g_c[CONF_GATEWAY_ADDRESS])
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)
@@ -117,11 +121,21 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
+        
+        # check ip address for esp3 over tcp
+        if GatewayDeviceType.LAN in gateway_selection:
+            try:
+                ip = ipaddress.ip_address(serial_path)
+                return True
+            except Exception:
+                return False
+        # check serial ports / usb
+        else:
+            path_is_valid = await self.hass.async_add_executor_job(
+                gateway.validate_path, serial_path, baud_rate
+            )
+            LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
 
-        path_is_valid = await self.hass.async_add_executor_job(
-            gateway.validate_path, serial_path, baud_rate
-        )
-        LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
         return path_is_valid
 
     def create_eltako_entry(self, user_input):
