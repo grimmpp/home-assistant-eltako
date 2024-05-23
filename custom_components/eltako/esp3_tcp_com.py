@@ -69,10 +69,11 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
             self.__ser.recv(1024)
         except socket.timeout as e:
             pass
+        self.log.debug("connection test successful")
 
     def run(self):
         timeout_count = 0
-        self.logger.info('TCP2SerialCommunicator started')
+        self.log.info('TCP2SerialCommunicator started')
         self._fire_status_change_handler(connected=False)
         while not self._stop_flag.is_set():
             try:
@@ -106,9 +107,10 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                     if data != b'IM2M':
                         self._buffer = data
                         self.parse()
-                        timeout_count = 0
+                    timeout_count = 0
 
                 except socket.timeout as e:
+                    self.log.debug("receive message timeout")
                     timeout_count += 1
                     if timeout_count > self.__recon_time:
                         timeout_count = 0
