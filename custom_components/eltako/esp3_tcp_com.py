@@ -107,9 +107,9 @@ class TCP2SerialCommunicator(ESP3SerialCommunicator):
                         self._buffer = data
                         self.parse()
                         timeout_count = 0
-                    timeout_count += 1
+
                 except socket.timeout as e:
-                    pass
+                    timeout_count += 1
                     if timeout_count > self.__recon_time:
                         timeout_count = 0
                         self._test_connection()
