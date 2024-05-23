@@ -79,6 +79,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             g_c = config_helpers.find_gateway_config_by_id(config, g_id)
             if CONF_SERIAL_PATH in g_c:
                 serial_paths.append(g_c[CONF_SERIAL_PATH])
+            if CONF_GATEWAY_ADDRESS in g_c:
+                serial_paths.append(g_c[CONF_GATEWAY_ADDRESS])
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)
