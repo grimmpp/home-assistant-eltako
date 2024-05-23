@@ -116,7 +116,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         gateway_selection: str = user_input[CONF_GATEWAY_DESCRIPTION]
 
         for gdc in gateway.GatewayDeviceType:
-            if gdc in gateway_selection:
+            if gdc in gateway_selection and gdc in gateway.BAUD_RATE_DEVICE_TYPE_MAPPING:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
 
