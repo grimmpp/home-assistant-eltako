@@ -5,4 +5,4 @@ enocean==0.60.1
 homeassistant
 termcolor
 StrEnum
-esp2-gateway-adapter==0.2.5
+esp2-gateway-adapter==0.2.6
