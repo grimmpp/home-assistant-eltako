@@ -3,6 +3,8 @@
 
 import voluptuous as vol
 
+import ipaddress
+
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
@@ -119,11 +121,21 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if gdc in gateway_selection and gdc in gateway.BAUD_RATE_DEVICE_TYPE_MAPPING:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
+        
+        # check ip address for esp3 over tcp
+        if GatewayDeviceType.LAN in gateway_selection:
+            try:
+                ip = ipaddress.ip_address(serial_path)
+                return True
+            except Exception:
+                return False
+        # check serial ports / usb
+        else:
+            path_is_valid = await self.hass.async_add_executor_job(
+                gateway.validate_path, serial_path, baud_rate
+            )
+            LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
 
-        path_is_valid = await self.hass.async_add_executor_job(
-            gateway.validate_path, serial_path, baud_rate
-        )
-        LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
         return path_is_valid
 
     def create_eltako_entry(self, user_input):
