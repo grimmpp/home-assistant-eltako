@@ -132,7 +132,7 @@ class EnOceanGateway:
             self._bus = TCP2SerialCommunicator(host=self.serial_path, port=5100, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
         else:
             # lazy import to avoid preloading library
-            from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
+            from .esp3_tcp_com import ESP3SerialCommunicator
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
