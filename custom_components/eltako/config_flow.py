@@ -76,7 +76,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if len(g_list) == 0:
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
 
-        # add serial paths from configuration
+        # add manually added serial paths and ip addresses from configuration
         for g_id in g_list_dict.keys():
             g_c = config_helpers.find_gateway_config_by_id(config, g_id)
             if CONF_SERIAL_PATH in g_c:
@@ -118,7 +118,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         gateway_selection: str = user_input[CONF_GATEWAY_DESCRIPTION]
 
         for gdc in gateway.GatewayDeviceType:
-            if gdc in gateway_selection and gdc in gateway.BAUD_RATE_DEVICE_TYPE_MAPPING:
+            if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
         

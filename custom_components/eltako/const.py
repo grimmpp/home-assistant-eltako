@@ -120,4 +120,5 @@ BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
     GatewayDeviceType.EltakoFAMUSB: 9600,
     GatewayDeviceType.USB300: 57600,
     GatewayDeviceType.ESP3: 57600,
+    GatewayDeviceType.LAN: -1,
 }
