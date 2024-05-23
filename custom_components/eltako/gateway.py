@@ -127,6 +127,9 @@ class EnOceanGateway:
 
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
+        elif GatewayDeviceType.is_lan_gateway(self.dev_type):
+            from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
+            self._bus = TCP2SerialCommunicator(host=self.serial_path, port=5100, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
         else:
             # lazy import to avoid preloading library
             from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator

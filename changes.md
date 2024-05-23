@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5 MGW LAN Support
+* Added support for [MGW Gateway](https://www.piotek.de/PioTek-MGW-POE) (ESP3 over LAN)
+
 ## Version 1.4.4 
 * Thread sync clean up
 * Lazy loading for ESP3 libs to prevent dependency issues
