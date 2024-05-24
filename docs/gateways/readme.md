@@ -5,7 +5,7 @@ A gateway is the component which builds the bridge between Home Assistant and th
 ## Summary of Supported Gateways
 What gateway is preferred for what?
 
-### FAM-USB
+### EnOcean Transceiver (USB based like Eltako FAM-USB, USB300, PioTek FAM-USB515, PioTek MGW, ...)
 * Is a good match for controlling actuators mounted on a RS485 bus with FAM14 and especially for decentralized actuators in Home Assistant.
 * It also allows to send teach-in telegrams so that you can teach-in actuators by using the Eltako Integration in Home Assistant.
 * It receives status update telegrams repatedly about each minute of every device on the bus.
@@ -13,7 +13,7 @@ What gateway is preferred for what?
 * Easy installation (USB-Stick)
 * Reception quality depends on how close is it to all the devices and repeaters. (Wireless connection could be instable.)
 
-### FGW14-USB
+### Wired Gateways (e.g. Eltako FGW14-USB)
 * Has good performance because it filters out polling messages from FAM14 what makes Home Assistant faster.
 * Like FAM14, it can transfer states of actuators mounted on the same RS485 bus to Home Assistant. It can also send telegrams to the actuators to change their states.
 * Has better physical USB connector than FAM14.
@@ -22,7 +22,7 @@ What gateway is preferred for what?
 * Installation means change to the existing bus in the electric cabinet. (Little electirc knowledge required)
 * Good connection quality.
 
-### FAM14 
+### Controller Gateway (Eltako FAM14)
 * Similar to FGW14-USB
 * Can read memory of actuators. You can use it to [auto-generate configuration for Home Assistant](https://github.com/grimmpp/enocean-device-manager).
 * Quite a lot of unnecessary telegrams are sent to Home Assistant. Home Assistant could become slower.
@@ -39,7 +39,7 @@ What gateway is preferred for what?
 Currently all gateways are limited to control up to 128 devices but you can operate more than one in parallel.
 
 ### Recoomendation
-With FAM-USB most use cases can be covered and FGW14-USB has the better connection quality but does not support sending command to decentralized devices but you can use both in parallel. 
+With FAM-USB (e.g. PioTek FAM-USB515) most use cases can be covered and FGW14-USB has the better connection quality but does not support sending command to decentralized devices but you can use both in parallel. 
 
 
 ## Types of gateways
@@ -220,5 +220,53 @@ eltako:
           eep: A5-38-08
 ```
 
-### 'FTD14 - RS485 bus telegram duplicator'
+### [PioTek EnOcean USB Gateway FAM-USB 515 ](https://www.piotek.de/FAM-USB-515)
+Successor of USB300 with better range and same protocol (ESP3).
+
+<img src="./fam-usb-515.jpg" height=100>
+
+| Specialty | Description |
+| ----- | ----- |
+| Chip Set | [TCM515]([https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf)), [User Manual]([https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/user-manual-pdf/TCM300_TCM320_UserManual_Nov2021.pdf), [Firmeware](https://www.enocean.com/en/support/software-tools-kits](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/tcm-515j/user-manual-pdf/TCM-515-User-Manual-1.pdf)) |
+| Protocol | ESP3 |
+| Baud rate | 57600 |
+| Tool | [BCS](https://www.piotek.de/mediafiles/Sonstiges/BSC-480.zip) |
+| Sender Address Range | TCM515 has 128 address in the range of 0xFF80_0000 to 0xFFFF_FFFE starting at a base address (BaseId).  |
+
+### [PioTek EnOcean Multigateway USB/LAN/Wifi](https://www.piotek.de/PioTek-MGW-POE)
+Similar to PioTek FAM-USB515. Is supports ESP3 over TCP for LAN (cable) and Wifi.
+
+<img src="./piotek-mgw-poe.jpg" height=100>
+
+| Specialty | Description |
+| ----- | ----- |
+| Chip Set | [TCM515]([https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf)), [User Manual]([https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/user-manual-pdf/TCM300_TCM320_UserManual_Nov2021.pdf), [Firmeware](https://www.enocean.com/en/support/software-tools-kits](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/tcm-515j/user-manual-pdf/TCM-515-User-Manual-1.pdf)) |
+| Protocol | ESP3 |
+| Baud rate | 57600 |
+| Tool | [BCS](https://www.piotek.de/mediafiles/Sonstiges/BSC-480.zip) |
+| Sender Address Range | TCM515 has 128 address in the range of 0xFF80_0000 to 0xFFFF_FFFE starting at a base address (BaseId).  |
+
+
+Example Configuration:
+```
+eltako:
+  gateway:
+  - id: 1
+    device_type: mgw-lan
+    base_id: FF-80-80-00        # baseId of LAN gateway
+    address: 192.168.178.15     # address is only required for LAN gateway
+    devices:
+      light:
+      - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: FF-80-80-01       # baseId of USB300 (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
+          eep: A5-38-08
+```
+
+
+### FTD14 - RS485 bus telegram duplicator
+
+
 Other possible gateway 

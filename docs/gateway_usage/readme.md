@@ -17,6 +17,8 @@ To get familiar with the Eltako Integration configuration check out [Update Home
 | `device_type` | fam14, fgw14usb, fam-usb, enocean-usb300 | The device type defines the gateway model. Base on this information other information is derived. Supported values can be found in [const.py](../../custom_components/eltako/const.py) Supported gateways are described [here](../gateways/readme.md). |
 | `base_id` | enocean address format | Gateways can obviously receive and send messages. To send messages they use a hardcoded range of 128 addresses. The base_id is the first address of this range. Base_ids are used to identify the source of a message and to validate the configuration. |
 | `devices` | configuration | Devices grouped by Home Assistant platform types. All devices which are listed here will be represented by this device. Device listed more than one in different devices will be recognized as two independent devices. |
+| `serial_path` | optional string | for serial paths which won't be auto detected. Can be also used for serial over tcp. |
+| `address` | IPv4 or IPv6 | only required for TCP/LAN gateway |
 
 
 ### Example Configuration
