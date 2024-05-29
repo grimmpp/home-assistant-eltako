@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.1 Added into HACS list
+* Added Eltako Intgration into list of HACS
+
 ## Version 1.5 MGW LAN Support
 * Added support for [MGW Gateway](https://www.piotek.de/PioTek-MGW-POE) (ESP3 over LAN)
 
