@@ -206,6 +206,7 @@ class CoverSchema(EltakoPlatformSchema):
                 vol.Optional(CONF_DEVICE_CLASS): COVER_DEVICE_CLASSES_SCHEMA,
                 vol.Optional(CONF_TIME_CLOSES): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
                 vol.Optional(CONF_TIME_OPENS): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
+                vol.Optional(CONF_TIME_TILTS): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
             }
         ),
     )
