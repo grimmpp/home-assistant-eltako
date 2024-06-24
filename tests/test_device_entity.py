@@ -1,6 +1,6 @@
 import unittest
 import os
-from mocks import *
+from tests.mocks import *
 from unittest import mock, IsolatedAsyncioTestCase, TestCase
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform

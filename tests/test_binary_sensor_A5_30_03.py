@@ -1,5 +1,5 @@
 import unittest
-from mocks import *
+from tests.mocks import *
 from unittest import mock
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.const import Platform

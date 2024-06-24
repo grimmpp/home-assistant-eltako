@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from mocks import *
+from tests.mocks import *
 from eltakobus import *
 from custom_components.eltako.gateway import *
 from custom_components.eltako import config_helpers
