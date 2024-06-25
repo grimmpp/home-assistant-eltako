@@ -124,14 +124,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if gateway_device_type is None:
         LOGGER.error(f"[{LOG_PREFIX}] USB device {gateway_config[CONF_DEVICE_TYPE]} is not supported!!!")
         return False
+    if gateway_device_type == GatewayDeviceType.LAN:
+        if gateway_config.get(CONF_GATEWAY_ADDRESS, None) is None:
+            raise Exception(f"Missing field '{CONF_GATEWAY_ADDRESS}' for LAN Gateway (id: {gateway_id})")
+
     general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = True # GatewayDeviceType.is_transceiver(gateway_device_type) # should only be disabled for decentral gateways
 
     LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
     baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
+    port = gateway_config.get(CONF_GATEWAY_PORT, 5100)
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
-    usb_gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, gateway_base_id, gateway_name, config_entry)
+    usb_gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, config_entry)
     
     await usb_gateway.async_setup()
     set_gateway_to_hass(hass, usb_gateway)

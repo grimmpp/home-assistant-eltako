@@ -1,5 +1,5 @@
 from unittest import TestCase, mock
-from mocks import *
+from tests.mocks import *
 from eltakobus import *
 from custom_components.eltako.gateway import *
 from custom_components.eltako import config_helpers
@@ -25,9 +25,9 @@ class TestGateway(TestCase):
     def test_gateway_creation(self):
         sub_type = GatewayDeviceType.GatewayEltakoFAM14
         baud_rate = BAUD_RATE_DEVICE_TYPE_MAPPING[sub_type]
-        conf = ConfigEntry(version=1, minor_version=0, domain=DOMAIN, title="gateway", data={}, source=None)
+        conf = ConfigEntry(version=1, minor_version=0, domain=DOMAIN, title="gateway", data={}, source=None, options=None, unique_id=None)
         gw = EnOceanGateway(DEFAULT_GENERAL_SETTINGS, HassMock(), 
-                              dev_id=123, dev_type=sub_type, serial_path="serial_path",  baud_rate=baud_rate, base_id=AddressExpression.parse('FF-AA-00-00'), dev_name="GW", 
+                              dev_id=123, dev_type=sub_type, serial_path="serial_path",  baud_rate=baud_rate, port=None, base_id=AddressExpression.parse('FF-AA-00-00'), dev_name="GW", 
                               config_entry=conf)
         
         self.assertEqual(gw.identifier, basename(normpath('serial_path')))

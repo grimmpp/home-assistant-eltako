@@ -1,7 +1,7 @@
 import unittest
 from custom_components.eltako.sensor import *
 from unittest import mock
-from mocks import *
+from tests.mocks import *
 from homeassistant.helpers.entity import Entity
 from eltakobus import *
 from custom_components.eltako.light import EltakoSwitchableLight

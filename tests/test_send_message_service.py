@@ -1,5 +1,5 @@
 import unittest
-from mocks import *
+from tests.mocks import *
 from unittest import mock
 from homeassistant.helpers import dispatcher
 import inspect

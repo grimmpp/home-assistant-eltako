@@ -17,6 +17,7 @@
                 "PYTHONPATH": "${workspaceRoot}",
             }
         },
+
         {
             "name": "Python: device discovery (Windows)",
             "type": "python",
@@ -30,9 +31,10 @@
                 "PYTHONPATH": "${workspaceRoot}",
             }
         },
+
         {
             "name": "Python: Debug Tests",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "purpose": ["debug-test"],
@@ -41,9 +43,10 @@
                 "PYTHONPATH": "${workspaceRoot}",
                 "PYTEST_ADDOPTS": "--no-cov",
             },
-            // "cwd": "${workspaceRoot}/custom_component/eltako",
-            "justMyCode": false
+            "justMyCode": false,
+            "cwd": "${workspaceRoot}",
           },
+
           {
               "name": "Python: Device Discovery GUI",
               "type": "python",

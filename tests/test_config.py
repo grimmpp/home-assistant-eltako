@@ -1,6 +1,6 @@
 import unittest
 import os
-from mocks import *
+from tests.mocks import *
 from unittest import mock, IsolatedAsyncioTestCase, TestCase
 from custom_components.eltako.config_helpers import async_get_home_assistant_config
 from custom_components.eltako.schema import CONFIG_SCHEMA, GatewaySchema
