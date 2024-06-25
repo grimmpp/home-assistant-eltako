@@ -19,6 +19,7 @@ To get familiar with the Eltako Integration configuration check out [Update Home
 | `devices` | configuration | Devices grouped by Home Assistant platform types. All devices which are listed here will be represented by this device. Device listed more than one in different devices will be recognized as two independent devices. |
 | `serial_path` | optional string | for serial paths which won't be auto detected. Can be also used for serial over tcp. |
 | `address` | IPv4 or IPv6 | only required for TCP/LAN gateway |
+| `port` | Number | only used for TCP/LAN gateway. If not specified: 5100 |
 
 
 ### Example Configuration

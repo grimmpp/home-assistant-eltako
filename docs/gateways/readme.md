@@ -255,6 +255,7 @@ eltako:
     device_type: mgw-lan
     base_id: FF-80-80-00        # baseId of LAN gateway
     address: 192.168.178.15     # address is only required for LAN gateway
+    port: 5100                  # optional (default value 5100). Field only valid for LAN gateway
     devices:
       light:
       - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address

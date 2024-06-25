@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.2 BugFix for LAN Gateway Connection 
+* Added argument port for LAN Gateway. Default port = 5100
+
 ## Version 1.5.1 Added into HACS list
 * Added Eltako Intgration into list of HACS
 

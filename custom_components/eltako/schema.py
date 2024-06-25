@@ -264,6 +264,7 @@ class GatewaySchema(EltakoPlatformSchema):
             vol.Optional(CONF_NAME, default=""): cv.string,
             vol.Optional(CONF_SERIAL_PATH): cv.string,
             vol.Optional(CONF_GATEWAY_ADDRESS): cv.string,
+            vol.Optional(CONF_GATEWAY_PORT, default=5100): cv.Number,
             vol.Optional(CONF_DEVICES): vol.All(vol.Schema({
                 **BinarySensorSchema.platform_node(),
                 **LightSchema.platform_node(),
