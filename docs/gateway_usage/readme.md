@@ -18,6 +18,7 @@ To get familiar with the Eltako Integration configuration check out [Update Home
 | `base_id` | enocean address format | Gateways can obviously receive and send messages. To send messages they use a hardcoded range of 128 addresses. The base_id is the first address of this range. Base_ids are used to identify the source of a message and to validate the configuration. |
 | `devices` | configuration | Devices grouped by Home Assistant platform types. All devices which are listed here will be represented by this device. Device listed more than one in different devices will be recognized as two independent devices. |
 | `serial_path` | optional string | for serial paths which won't be auto detected. Can be also used for serial over tcp. |
+| `auto_reconnect` | True / False | for disabling auto-reconnect function. If not specified: True |
 | `address` | IPv4 or IPv6 | only required for TCP/LAN gateway |
 | `port` | Number | only used for TCP/LAN gateway. If not specified: 5100 |
 

@@ -263,6 +263,7 @@ class GatewaySchema(EltakoPlatformSchema):
             vol.Required(CONF_BASE_ID): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_NAME, default=""): cv.string,
             vol.Optional(CONF_SERIAL_PATH): cv.string,
+            vol.Optional(CONF_GATEWAY_AUTO_RECONNECT, default=True): cv.boolean,
             vol.Optional(CONF_GATEWAY_ADDRESS): cv.string,
             vol.Optional(CONF_GATEWAY_PORT, default=5100): cv.Number,
             vol.Optional(CONF_DEVICES): vol.All(vol.Schema({

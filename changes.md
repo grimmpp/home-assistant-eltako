@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.3 Added auto-reconnect for GWs as config parameter
+* Added argument `auto_reconnect` to disable auto-reconnect for all Gateways
+
 ## Version 1.5.2 BugFix for LAN Gateway Connection 
 * Added argument port for LAN Gateway. Default port = 5100
 
