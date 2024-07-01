@@ -47,13 +47,14 @@ class EnOceanGateway:
     """
 
     def __init__(self, general_settings:dict, hass: HomeAssistant, 
-                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, 
+                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool,
                  config_entry: ConfigEntry):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
         self.baud_rate = baud_rate
+        self._auto_reconnect = auto_reconnect
         self.port = port
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
@@ -127,15 +128,25 @@ class EnOceanGateway:
         self._fire_received_message_count_event()
 
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
-            self._bus = RS485SerialInterfaceV2(self.serial_path, baud_rate=self.baud_rate, callback=self._callback_receive_message_from_serial_bus)
+            self._bus = RS485SerialInterfaceV2(self.serial_path, 
+                                               baud_rate=self.baud_rate, 
+                                               callback=self._callback_receive_message_from_serial_bus, 
+                                               auto_reconnect=self._auto_reconnect)
         elif GatewayDeviceType.is_lan_gateway(self.dev_type):
             # lazy import to avoid preloading library
             from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
-            self._bus = TCP2SerialCommunicator(host=self.serial_path, port=self.port, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
+            self._bus = TCP2SerialCommunicator(host=self.serial_path, 
+                                               port=self.port, 
+                                               callback=self._callback_receive_message_from_serial_bus, 
+                                               esp2_translation_enabled=True,
+                                               auto_reconnect=self._auto_reconnect)
         else:
             # lazy import to avoid preloading library
             from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
-            self._bus = ESP3SerialCommunicator(filename=self.serial_path, callback=self._callback_receive_message_from_serial_bus, esp2_translation_enabled=True)
+            self._bus = ESP3SerialCommunicator(filename=self.serial_path, 
+                                               callback=self._callback_receive_message_from_serial_bus, 
+                                               esp2_translation_enabled=True, 
+                                               auto_reconnect=self._auto_reconnect)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
