@@ -184,9 +184,11 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         elif position > self._attr_current_cover_position:
             direction = "up"
             time = max(1,min(int(((position - self._attr_current_cover_position) / 100.0) * self._time_opens), 255))
+            # try to prevent covers moving completely up or down when time = 0
         elif position < self._attr_current_cover_position:
             direction = "down"
             time = max(1,min(int(((self._attr_current_cover_position - position) / 100.0) * self._time_closes), 255))
+            # try to prevent covers moving completely up or down when time = 0
 
         if self._sender_eep == H5_3F_7F:
             if direction == "up":
