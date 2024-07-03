@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.4 Cover motion fixed
+* changed min movement time from 0 to 1 so that covers won't move completely up or down.
+
 ## Version 1.5.3 Added auto-reconnect for GWs as config parameter
 * Added argument `auto_reconnect` to disable auto-reconnect for all Gateways
 
