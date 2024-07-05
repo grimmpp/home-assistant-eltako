@@ -47,14 +47,15 @@ class EnOceanGateway:
     """
 
     def __init__(self, general_settings:dict, hass: HomeAssistant, 
-                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool,
-                 config_entry: ConfigEntry):
+                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None, 
+                 config_entry: ConfigEntry = None):
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
         self.baud_rate = baud_rate
         self._auto_reconnect = auto_reconnect
+        self._message_delay = message_delay
         self.port = port
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
@@ -131,7 +132,9 @@ class EnOceanGateway:
             self._bus = RS485SerialInterfaceV2(self.serial_path, 
                                                baud_rate=self.baud_rate, 
                                                callback=self._callback_receive_message_from_serial_bus, 
+                                               delay_message=self._message_delay,
                                                auto_reconnect=self._auto_reconnect)
+            
         elif GatewayDeviceType.is_lan_gateway(self.dev_type):
             # lazy import to avoid preloading library
             from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator

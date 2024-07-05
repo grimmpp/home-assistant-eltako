@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.5 Added message-delay for GWs as config parameter
+* Added argument `message_delay` to config distance of bulk messages being translated in the gateway so that buffer overflows can be prevented.
+
 ## Version 1.5.4 Cover motion fixed
 * changed min movement time from 0 to 1 so that covers won't move completely up or down.
 
