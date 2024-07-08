@@ -324,9 +324,11 @@ async def async_setup_entry(
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
                     
+                    LOGGER.debug(f"test {dev_conf.get(CONF_METER_TARIFFS, [])}")
                     for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-                    entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+                    _tariff_in_name = dev_conf.get(CONF_METER_TARIFFS, []) != []
+                    entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0, tariff_in_name=_tariff_in_name))
 
                 elif dev_conf.eep in [A5_12_02]:
                     if dev_name == "":
