@@ -51,8 +51,8 @@ class DeviceConf(dict):
             if ek in config:
                 setattr(self, ek, config.get(ek))
 
-    def get(self, key: str):
-        return super().get(key, None)
+    def get(self, key: str, default = None):
+        return super().get(key, default)
 
 def get_device_conf(config: ConfigType, key: str, extra_keys:list[str]=[]) -> DeviceConf:
     if config is not None:
