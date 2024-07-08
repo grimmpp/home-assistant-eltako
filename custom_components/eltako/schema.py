@@ -267,7 +267,7 @@ class GatewaySchema(EltakoPlatformSchema):
             vol.Optional(CONF_SERIAL_PATH): cv.string,
             vol.Optional(CONF_GATEWAY_AUTO_RECONNECT, default=True): cv.boolean,
             vol.Optional(CONF_GATEWAY_ADDRESS): cv.string,
-            vol.Optional(CONF_GATEWAY_MESSAGE_DELAY, default=1): Real,
+            vol.Optional(CONF_GATEWAY_MESSAGE_DELAY, default=0.01): cv.Number,
             vol.Optional(CONF_GATEWAY_PORT, default=5100): cv.Number,
             vol.Optional(CONF_DEVICES): vol.All(vol.Schema({
                 **BinarySensorSchema.platform_node(),
