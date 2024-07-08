@@ -374,6 +374,15 @@ class EnOceanGateway:
         """Return the identifier of the gateway."""
         return self._attr_identifier
     
+    @property
+    def message_delay(self) -> str:
+        """Return the message delay of single telegrams to be sent."""
+        return str(self._message_delay)
+    
+    @property
+    def is_auto_reconnect_enabled(self) -> str:
+        """Return if auto connected is enabled."""
+        return str(self._auto_reconnect)
 
 
 def detect() -> list[str]:

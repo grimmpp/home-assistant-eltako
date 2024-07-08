@@ -324,7 +324,6 @@ async def async_setup_entry(
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
                     
-                    LOGGER.debug(f"test {dev_conf.get(CONF_METER_TARIFFS, [])}")
                     for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
                     _tariff_in_name = dev_conf.get(CONF_METER_TARIFFS, []) != []
@@ -420,6 +419,8 @@ async def async_setup_entry(
     entities.append(GatewayInfoField(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
     entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
     entities.append(GatewayInfoField(platform, gateway, "USB Protocol", gateway.native_protocol, "mdi:usb"))
+    entities.append(GatewayInfoField(platform, gateway, "Message Delay", gateway.message_delay, "mdi:usb"))
+    entities.append(GatewayInfoField(platform, gateway, "Auto Connect Enabled", gateway.is_auto_reconnect_enabled, "mdi:usb"))
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
