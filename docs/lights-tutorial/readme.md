@@ -6,9 +6,9 @@ This tutorial describes how to configure a light so that its status updates will
 
 ## Configure Home Assistant (Eltako FSR14*, FUD14*, FSR61*, ...)
 
-Every Eltako devices which shall be represented in Home Assistant need to be entered into the Home Assistant configuration (`/config/configuration.yaml`). Find details about how to configure Home Assistant for this integration manually [here](../update_home_assistant_configuration.md). You can also auto-generate the confuguration by using [EnOcean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager)
+Every Eltako devices which shall be represented in Home Assistant need to be entered into the Home Assistant configuration (`/config/configuration.yaml`). Find details about how to configure Home Assistant for this integration manually [here](../update_home_assistant_configuration.md). You can also auto-generate the configuration by using [EnOcean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager)
 
-For lights you need to create an entries in the light section. You need to specify the id/address of the device so that Home Assistant knows when a status update/change comes by and needs to react on it. In addition we need to specify the address of the sender button in Home Assistant. A good pattern for the sender id/address is to use a base id + the same local id of the light. EEPs define the type of telegram. In case of light and series 14 devices I wouldn't change this behavior.
+For lights you need to create an entries in the light section. You need to specify the id/address of the device so that Home Assistant knows when a status update/change comes by and when it needs to react on it. In addition we need to specify the id/address of the sender button in Home Assistant. A good pattern for the sender id/address is to use a base id + the same local id of the light. EEPs define the type of telegram. In case of light and series 14 devices I wouldn't change this behavior.
 
 The configuration could look like the following for USB300 as a gateway.
 ```
@@ -27,7 +27,7 @@ eltako:
           eep: A5-38-08
 ```
 
-In case of being directly connected via cable the use a local address space (baseId = 00-00-00-00):
+In case of being directly connected via cable a local address space is used:
 ```
 eltako:
   gateway:

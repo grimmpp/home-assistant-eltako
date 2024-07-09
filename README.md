@@ -36,7 +36,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))
   * A5-10-06 (Temperature Sensor and Controller e.g. FUTH)
   * A5-10-12 (Temperature Sensor and Controller and Humidity Sensor e.g. FUTH)
-  * A5-12-01 (Automated meter reading - electricity, FSDG14)
+  * A5-12-01 (Automated meter reading - electricity, FSDG14, [FSR14M-2x](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/relays-and-switches/readme.md))
   * A5-12-02 (Automated meter reading - gas, F3Z14D)
   * A5-12-03 (Automated meter reading - water, F3Z14D)
   * A5-13-01 (Weather station, FWG14)
@@ -44,7 +44,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
   * A5-38-08 (Dimmable Light: Central command - gateway, FUD14)
   * M5-38-08 (Switchable Light: Eltako relay, FSR14)
-* Switch
+* [Switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/relays-and-switches/readme.md)
   * M5-38-08 (Eltako relay, FSR14)
   * F6-02-01 and F6-02-02
 * Cover
@@ -54,7 +54,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 * [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
   * A5-38-08 (Central command - gateway, FUD14) PREFERRED!!!
   * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left) / (only as switch not for dimmable lights.)
-* Switch
+* [Switch](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/relays-and-switches/readme.md)
   * A5-38-08 (Central command) PREFERRED!!!
   * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left)
 * Cover
