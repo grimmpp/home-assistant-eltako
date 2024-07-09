@@ -34,6 +34,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * A5-07-01 (Occupancy sensor)
   * A5-08-01 (Light-, Temperature-, Occupancy Sensor e.g.: FABH65S, FBH65, FBH65S, FBH65TF)
   * A5-09-0C (Air Quality / VOC⁠ (Volatile Organic Compounds) e.g. [FLGTF](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/flgtf_temp_humidity_air_quality/readme.md))
+  * A5-10-03 (Temperature Sensor and Controller e.g. FTR78S)
   * A5-10-06 (Temperature Sensor and Controller e.g. FUTH)
   * A5-10-12 (Temperature Sensor and Controller and Humidity Sensor e.g. FUTH)
   * A5-12-01 (Automated meter reading - electricity, FSDG14, [FSR14M-2x](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/relays-and-switches/readme.md))
