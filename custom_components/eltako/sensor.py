@@ -352,7 +352,7 @@ async def async_setup_entry(
                     if dev_conf.eep in [A5_10_12]:
                         entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
 
-                elif dev_conf.eep in [A5_10_06]:
+                elif dev_conf.eep in [A5_10_06, A5_10_03]:
                     entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                 

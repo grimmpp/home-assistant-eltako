@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.6 Added EEP A5-10-03 for current and target temperature
+* Only for sensors available
+
 ## Version 1.5.5 Added message-delay for GWs as config parameter
 * Added argument `message_delay` to config distance of bulk messages being translated in the gateway so that buffer overflows can be prevented.
 

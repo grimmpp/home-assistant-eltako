@@ -1,6 +1,6 @@
 aiocoap
 pyserial-asyncio
-eltako14bus==0.0.53
+eltako14bus==0.0.59
 enocean==0.60.1
 homeassistant
 termcolor
