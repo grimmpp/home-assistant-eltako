@@ -120,7 +120,13 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             raise e
         
         self.schedule_update_ha_state()
-        LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [is_opening: {self.is_opening}, is_closing: {self.is_closing}, is_closed: {self.is_closed}, current_possition: {self.current_cover_position}, current_tilt_position: {self._attr_current_cover_tilt_position}, state: {self.state}]")
+        LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [" 
+                     + f"is_opening: {self.is_opening}, "
+                     + f"is_closing: {self.is_closing}, "
+                     + f"is_closed: {self.is_closed}, "
+                     + f"current_possition: {self._attr_current_cover_position}, "
+                     + f"current_tilt_position: {self._attr_current_cover_tilt_position}, "
+                     + f"state: {self.state}]")
 
 
     def open_cover(self, **kwargs: Any) -> None:
@@ -311,13 +317,12 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_closing = False
 
             
-            LOGGER.debug(f"[cover {self.dev_id}] state: {self.state}, opening: {self.is_opening}, closing: {self.is_closing}, closed: {self.is_closed}, position: {self.current_cover_position}")
+            LOGGER.debug(f"[cover {self.dev_id}] state: {self.state}, opening: {self.is_opening}, closing: {self.is_closing}, closed: {self.is_closed}, position: {self._attr_current_cover_position}")
 
             self.schedule_update_ha_state()
 
+
     def set_cover_tilt_position(self, **kwargs: Any) -> None:
-
-
         address, _ = self._sender_id
         tilt_position = kwargs[ATTR_TILT_POSITION]
         
@@ -343,7 +348,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
             self.send_message(msg)
 
-            
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             if direction == "up":

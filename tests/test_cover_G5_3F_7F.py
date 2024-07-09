@@ -27,6 +27,7 @@ class TestCover(unittest.TestCase):
         device_class = "shutter"
         time_closes = 10
         time_opens = 10
+        time_tilts = None
         eep_string = "G5-3F-7F"
 
         sender_id = AddressExpression.parse("00-00-B1-06")
@@ -35,7 +36,7 @@ class TestCover(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, None)
+        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts)
         ec.send_message = self.mock_send_message
 
         self.assertEqual(ec._attr_is_closing, False)
@@ -54,7 +55,7 @@ class TestCover(unittest.TestCase):
         device_class = "blind"
         time_closes = 10
         time_opens = 10
-        time_tilts: 15
+        time_tilts = 15
         eep_string = "G5-3F-7F"
 
         sender_id = AddressExpression.parse("00-00-B1-07")
@@ -98,7 +99,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_opening, False)
         self.assertEqual(ec._attr_is_closed, True)
         self.assertEqual(ec._attr_current_cover_position, 0)
-        self.assertEqual(ec._attr_current_cover_tilt_position, None)
+        self.assertEqual(ec._attr_current_cover_tilt_position, 0)
 
         # device send acknowledgement for opened
         msg = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x70', outgoing=False)
@@ -107,7 +108,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_opening, False)
         self.assertEqual(ec._attr_is_closed, False)
         self.assertEqual(ec._attr_current_cover_position, 100)
-        self.assertEqual(ec._attr_current_cover_tilt_position, None)
+        self.assertEqual(ec._attr_current_cover_tilt_position, 100)
 
 
 
@@ -252,7 +253,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=50)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x05\x02\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x05\x02\x08\x00\x00\xb1\x07\x00')
         self.assertEqual(ec._attr_is_closing, True)
         self.assertEqual(ec._attr_is_opening, False)
         self.last_sent_command = None
@@ -261,7 +262,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=50)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x05\x01\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x05\x01\x08\x00\x00\xb1\x07\x00')
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, True)
         self.last_sent_command = None
@@ -270,7 +271,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=0)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x0b\x02\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x0b\x02\x08\x00\x00\xb1\x07\x00')
         self.assertEqual(ec._attr_is_closing, True)
         self.assertEqual(ec._attr_is_opening, False)
         self.last_sent_command = None
@@ -279,7 +280,7 @@ class TestCover(unittest.TestCase):
         ec.set_cover_position(position=100)
         self.assertEqual(
             self.last_sent_command.body,
-            b'k\x07\x00\x0b\x01\x08\x00\x00\xb1\x06\x00')
+            b'k\x07\x00\x0b\x01\x08\x00\x00\xb1\x07\x00')
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, True)
         self.last_sent_command = None
@@ -303,7 +304,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec.is_closing, False)
         self.assertEqual(ec.state, 'opening')
         self.assertEqual(ec.current_cover_position, 55)
-        self.assertEqual(ec.current_tilt_position, 20)
+        self.assertEqual(ec.current_cover_tilt_position, 20)
 
     def test_initial_loading_closing(self):
         ec = self.create_cover()
@@ -317,7 +318,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec.is_closing, True)
         self.assertEqual(ec.state, 'closing')
         self.assertEqual(ec.current_cover_position, 33)
-        self.assertEqual(ec.current_tilt_position, 10)
+        self.assertEqual(ec.current_cover_tilt_position, 10)
 
     def test_initial_loading_open(self):
         ec = self.create_cover()
@@ -331,7 +332,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec.is_closing, False)
         self.assertEqual(ec.state, 'open')
         self.assertEqual(ec.current_cover_position, 100)
-        self.assertEqual(ec.current_tilt_position, 100)
+        self.assertEqual(ec.current_cover_tilt_position, 100)
 
     def test_initial_loading_closed(self):
         ec = self.create_cover()
@@ -345,7 +346,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec.is_closing, False)
         self.assertEqual(ec.state, 'closed')
         self.assertEqual(ec.current_cover_position, 0)
-        self.assertEqual(ec.current_tilt_position, 0)
+        self.assertEqual(ec.current_cover_tilt_position, 0)
 
 
 

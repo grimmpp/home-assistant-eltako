@@ -54,11 +54,14 @@ class GatewayMock(EnOceanGateway):
         hass = HassMock()
         gw_type = GatewayDeviceType.GatewayEltakoFAM14
 
-        super().__init__(general_settings, hass, dev_id, gw_type, 'SERIAL_PATH', 56700, 5100, base_id, "MyFAM14", auto_reconnect=True, config_entry=ConfigEntryMock())
+        super().__init__(general_settings, hass, dev_id, gw_type, 'SERIAL_PATH', 56700, 5100, base_id, "MyFAM14", auto_reconnect=True, message_delay=0.01, config_entry=ConfigEntryMock())
 
         self._bus = EltakoBusMock()
 
     def set_status_changed_handler(self):
+        pass
+
+    def _register_device(self) -> None:
         pass
 
 
