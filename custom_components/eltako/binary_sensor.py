@@ -236,6 +236,30 @@ class EltakoBinarySensor(AbstractBinarySensor):
             self.schedule_update_ha_state()
 
             return
+        
+        elif self.dev_eep in [F6_01_01]:
+
+            # fire event
+            switch_address = config_helpers.format_address((msg.address, None))
+            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
+            event_data = {
+                    "id": event_id,
+                    "data": int.from_bytes(msg.data, "big"),
+                    "switch_address": switch_address,
+                    "pressed": decoded.button_pushed,
+                }
+            LOGGER.debug("[%s %s] Send event: %s, pushed down: %s", Platform.BINARY_SENSOR, str(self.dev_id), event_id, str(decoded.button_pushed))
+            self.hass.bus.fire(event_id, event_data)
+            
+            # Show status change in HA. It will only for the moment when the button is pushed down.
+            if not self.invert_signal:
+                self._attr_is_on = decoded.button_pushed
+            else: 
+                self._attr_is_on = not ( decoded.button_pushed )
+            self.schedule_update_ha_state()
+
+            return
+
         elif self.dev_eep in [F6_10_00]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             

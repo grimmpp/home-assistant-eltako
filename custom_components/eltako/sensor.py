@@ -387,13 +387,14 @@ async def async_setup_entry(
         for entity_config in config[Platform.BINARY_SENSOR]:
             try:
                 dev_conf = DeviceConf(entity_config)
-                if dev_conf.eep in [F6_02_01, F6_02_02]:
+                if dev_conf.eep in [F6_01_01, F6_02_01, F6_02_02]:
                     def convert_event(event):
                         # if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
                         return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
 
                     event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, dev_conf.id)
-                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
+                    if dev_conf.eep in [F6_02_01, F6_02_02]:
+                        entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
 
                     entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Event Id", event_id, "mdi:form-textbox"))
             

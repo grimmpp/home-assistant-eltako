@@ -1,5 +1,9 @@
 # Changes and Feature List
 
+## Version 1.5.7
+* Tested new devices: FB55EB, FWZ12
+* Added EEP F6-01-01 and tested FMH1W
+
 ## Version 1.5.6 Added EEP A5-10-03 for current and target temperature
 * Only for sensors available
 
