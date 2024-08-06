@@ -94,7 +94,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
             if len(g_list) == 0:
                 return self.async_show_form(
-                    step_id="detect",
+                    step_id="manual",
                     data_schema=vol.Schema({}),
                     errors=errors,
                 )
