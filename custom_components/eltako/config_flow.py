@@ -19,6 +19,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the Eltako config flows."""
 
     VERSION = 1
+    MINOR_VERSION = 1
     MANUAL_PATH_VALUE = "Custom path"
 
     def __init__(self) -> None:
@@ -34,14 +35,17 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
         # is called when adding a new gateway
+        LOGGER.debug("config_flow user step started.")
         return await self.async_step_detect()
 
     async def async_step_detect(self, user_input=None):
         """Propose a list of detected gateways."""
+        LOGGER.debug("config_flow detect step started.")
         return await self.manual_selection_routine(user_input)
         
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
+        LOGGER.debug("config_flow manual step started.")
         return await self.manual_selection_routine(user_input, manual_setp=True)
     
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
