@@ -91,7 +91,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Available serial paths: %s", serial_paths)
 
         if manual_setp or len(serial_paths) == 0:
-            # errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
+            errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
             if len(g_list) == 0:
                 return self.async_show_form(
                     step_id="detect",
