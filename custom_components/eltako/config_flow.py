@@ -54,7 +54,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # ensure data entry is set
         if DATA_ELTAKO not in self.hass.data:
-            return
+            return True
             self.hass.data.setdefault(DATA_ELTAKO, {})
 
         # goes recursively ...
