@@ -79,6 +79,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
+            LOGGER.debug("No gateways are configured in the 'configuration.yaml'.")
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
 
         # add manually added serial paths and ip addresses from configuration
@@ -93,9 +94,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         device_registry = dr.async_get(self.hass)
         serial_paths_of_registered_gateways = await gateway.async_get_serial_path_of_registered_gateway(device_registry)
         serial_paths = list(set([sp for sp in serial_paths if sp not in serial_paths_of_registered_gateways]))
-        LOGGER.debug("Available serial paths: %s", serial_paths)
+        LOGGER.debug("Available serial paths/IP addresses: %s", serial_paths)
 
         if manual_setp or len(serial_paths) == 0:
+            LOGGER.debug("No usb port or any manually configured address available.")
             errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
                 
             return self.async_show_form(
