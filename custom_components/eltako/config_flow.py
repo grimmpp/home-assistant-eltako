@@ -93,11 +93,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if manual_setp or len(serial_paths) == 0:
             # errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
             if len(g_list) == 0:
-                return self.async_show_form(
-                    step_id="manual",
-                    data_schema=vol.Schema({}),
-                    errors=errors,
-                )
+                return self.create_eltako_entry(user_input)
             else:
                 return self.async_show_form(
                     step_id="manual",
