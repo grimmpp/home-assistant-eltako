@@ -102,7 +102,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="manual",
                 data_schema=vol.Schema({
                     vol.Required(CONF_GATEWAY_DESCRIPTION, msg="EnOcean Gateway", description="Gateway to be initialized."): vol.In(g_list),
-                    vol.Optional(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): str
+                    vol.Required(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): str
                 }),
                 errors=errors,
             )
@@ -113,7 +113,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="detect",
             data_schema=vol.Schema({
                 vol.Required(CONF_GATEWAY_DESCRIPTION, msg="EnOcean Gateway", description="Gateway to be initialized."): vol.In(g_list),
-                vol.Optional(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): vol.In(serial_paths),
+                vol.Required(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): vol.In(serial_paths),
             }),
             errors=errors,
         )
