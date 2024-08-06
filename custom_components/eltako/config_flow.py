@@ -54,7 +54,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # ensure data entry is set
         if DATA_ELTAKO not in self.hass.data:
-            LOGGER.debug("No configuration available.", g_list)
+            LOGGER.debug("No configuration available.")
             self.hass.data.setdefault(DATA_ELTAKO, {})
 
         # goes recursively ...
@@ -76,6 +76,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
             errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
+            return self.async_step_ignore(user_input)
 
         # add manually added serial paths and ip addresses from configuration
         for g_id in g_list_dict.keys():
@@ -103,10 +104,6 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors=errors,
             )
 
-        elif len(g_list) == 0:
-            errors = {CONF_GATEWAY_DESCRIPTION: ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE}
-
-            return self.async_step_ignore(user_input)
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
