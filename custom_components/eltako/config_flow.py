@@ -91,22 +91,17 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Available serial paths: %s", serial_paths)
 
         if manual_setp or len(serial_paths) == 0:
-            errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
             if len(g_list) == 0:
-                return self.async_show_form(
-                    step_id="manual",
-                    data_schema=vol.Schema({}),
-                    errors=errors,
-                )
-            else:
-                return self.async_show_form(
-                    step_id="manual",
-                    data_schema=vol.Schema({
-                        vol.Required(CONF_GATEWAY_DESCRIPTION, msg="EnOcean Gateway", description="Gateway to be initialized."): vol.In(g_list),
-                        vol.Required(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): str
-                    }),
-                    errors=errors,
-                )
+                errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
+                
+            return self.async_show_form(
+                step_id="manual",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_GATEWAY_DESCRIPTION, msg="EnOcean Gateway", description="Gateway to be initialized."): vol.In(g_list),
+                    vol.Required(CONF_SERIAL_PATH, msg="Serial Port", description="Serial path for selected gateway."): str
+                }),
+                errors=errors,
+            )
 
         # show form in which gateways and serial paths are displayed so that a mapping can be selected.
         return self.async_show_form(
