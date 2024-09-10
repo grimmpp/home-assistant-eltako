@@ -46,6 +46,7 @@ CONF_DEVICE_TYPE: Final = "device_type"
 CONF_SERIAL_PATH: Final = "serial_path"
 CONF_GATEWAY_ADDRESS: Final = "address"
 CONF_GATEWAY_MESSAGE_DELAY: Final = "message_delay"
+
 CONF_GATEWAY_AUTO_RECONNECT: Final = "auto_reconnect"
 CONF_GATEWAY_PORT: Final = "port"
 CONF_CUSTOM_SERIAL_PATH: Final = "custom_serial_path"

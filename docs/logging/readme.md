@@ -23,7 +23,8 @@ logger:
   logs:
     eltako: debug                                       # enables detailed information for Home Assistant Eltako Integration 
     eltakobus.serial: info                              # enables detailed information of the communication library for enocean devices based on ESP2 protocol
-    enocean.communicators.SerialCommunicator: info      # enables detailed information of the communication library for enocean devices based on ESP2 protocol
+    enocean.communicators.SerialCommunicator: info      # enables detailed information of the communication library for enocean devices based on ESP3 protocol
+    eltakobus.tcp2serial: info                         # enables detailed information of the communication library for gateway connected via TCP and enocean devices based on ESP3 protocol
 ```
 
 ## Read logs
