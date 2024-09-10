@@ -45,6 +45,8 @@ CONF_BASE_ID: Final = "base_id"
 CONF_DEVICE_TYPE: Final = "device_type"
 CONF_SERIAL_PATH: Final = "serial_path"
 CONF_GATEWAY_ADDRESS: Final = "address"
+CONF_GATEWAY_MESSAGE_DELAY: Final = "message_delay"
+
 CONF_GATEWAY_AUTO_RECONNECT: Final = "auto_reconnect"
 CONF_GATEWAY_PORT: Final = "port"
 CONF_CUSTOM_SERIAL_PATH: Final = "custom_serial_path"
@@ -57,6 +59,7 @@ CONF_ID_REGEX: Final = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-
 CONF_METER_TARIFFS: Final = "meter_tariffs"
 CONF_TIME_CLOSES: Final = "time_closes"
 CONF_TIME_OPENS: Final = "time_opens"
+CONF_TIME_TILTS: Final = "time_tilts"
 CONF_INVERT_SIGNAL: Final = "invert_signal"
 CONF_VOC_TYPE_INDEXES: Final = "voc_type_indexes"
 

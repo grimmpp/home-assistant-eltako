@@ -323,10 +323,11 @@ async def async_setup_entry(
                 elif dev_conf.eep in [A5_12_01]:
                     if dev_name == "":
                         dev_name = DEFAULT_DEVICE_NAME_ELECTRICITY_METER
-                        
+                    
                     for tariff in dev_conf.get(CONF_METER_TARIFFS, []):
                         entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CUMULATIVE, tariff=(tariff - 1)))
-                    entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0))
+                    _tariff_in_name = dev_conf.get(CONF_METER_TARIFFS, []) != []
+                    entities.append(EltakoMeterSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep, SENSOR_DESC_ELECTRICITY_CURRENT, tariff=0, tariff_in_name=_tariff_in_name))
 
                 elif dev_conf.eep in [A5_12_02]:
                     if dev_name == "":
@@ -351,7 +352,7 @@ async def async_setup_entry(
                     if dev_conf.eep in [A5_10_12]:
                         entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
 
-                elif dev_conf.eep in [A5_10_06]:
+                elif dev_conf.eep in [A5_10_06, A5_10_03]:
                     entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                 
@@ -386,13 +387,14 @@ async def async_setup_entry(
         for entity_config in config[Platform.BINARY_SENSOR]:
             try:
                 dev_conf = DeviceConf(entity_config)
-                if dev_conf.eep in [F6_02_01, F6_02_02]:
+                if dev_conf.eep in [F6_01_01, F6_02_01, F6_02_02]:
                     def convert_event(event):
                         # if hasattr(event, 'data') and isinstance(event.data, dict) and 'pressed_buttons' in event.data:
                         return config_helpers.button_abbreviation_to_str(event.data['pressed_buttons'])
 
                     event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, dev_conf.id)
-                    entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
+                    if dev_conf.eep in [F6_02_01, F6_02_02]:
+                        entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
 
                     entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Event Id", event_id, "mdi:form-textbox"))
             
@@ -418,6 +420,8 @@ async def async_setup_entry(
     entities.append(GatewayInfoField(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
     entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
     entities.append(GatewayInfoField(platform, gateway, "USB Protocol", gateway.native_protocol, "mdi:usb"))
+    entities.append(GatewayInfoField(platform, gateway, "Message Delay", gateway.message_delay, "mdi:av-timer"))
+    entities.append(GatewayInfoField(platform, gateway, "Auto Connect Enabled", gateway.is_auto_reconnect_enabled, "mdi:connection"))
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
@@ -526,15 +530,19 @@ class EltakoMeterSensor(EltakoSensor):
     - A5-12-02 (Automated Meter Reading, Gas)
     - A5-12-03 (Automated Meter Reading, Water)
     """
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff) -> None:
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep:EEP, description: EltakoSensorEntityDescription, *, tariff, tariff_in_name:bool=True) -> None:
         """Initialize the Eltako meter sensor device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
         self._tariff = tariff
+        self._tariff_in_name = tariff_in_name
 
     @property
     def name(self):
         """Return the default name for the sensor."""
-        return f"{self.entity_description.name} (Tariff {self._tariff + 1})"
+        if self._tariff_in_name:
+            return f"{self.entity_description.name} (Tariff {self._tariff + 1})"
+        else:
+            return f"{self.entity_description.name}"
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor.

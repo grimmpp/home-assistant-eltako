@@ -1,5 +1,21 @@
 # Changes and Feature List
 
+## Version 1.5.8
+* Fixed dependency incompatibility with HA 2024.9
+
+## Version 1.5.7
+* Tested new devices: FB55EB, FWZ12
+* Added EEP F6-01-01 and tested FMH1W
+
+## Version 1.5.6 Added EEP A5-10-03 for current and target temperature
+* Only for sensors available
+
+## Version 1.5.5 Added message-delay for GWs as config parameter
+* Added argument `message_delay` to config distance of bulk messages being translated in the gateway so that buffer overflows can be prevented.
+
+## Version 1.5.4 Cover motion fixed
+* changed min movement time from 0 to 1 so that covers won't move completely up or down.
+
 ## Version 1.5.3 Added auto-reconnect for GWs as config parameter
 * Added argument `auto_reconnect` to disable auto-reconnect for all Gateways
 
