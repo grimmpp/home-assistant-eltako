@@ -69,7 +69,7 @@ class MetadataTest(unittest.TestCase):
             requirements_txt = f.read()
 
         for r in manifest['requirements']:
-            self.assertTrue(r in requirements_txt)
+            self.assertTrue(r in requirements_txt, msg=f"{r} not in manifest")
 
 
     def test_eltako14bus_required_and_installed_is_the_same(self):
