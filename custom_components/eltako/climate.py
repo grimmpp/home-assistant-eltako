@@ -136,11 +136,11 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
 
-        self.preset_modes = [PRESET_HOME, # normal mode
+        self._attr_preset_modes = [PRESET_HOME, # normal mode
                              PRESET_SLEEP, # night set back -4°K
                              PRESET_ECO # -2°K
                              ]   
-        self.preset_mode = PRESET_HOME
+        self._attr_preset_mode = PRESET_HOME
 
         self._attr_temperature_unit = temp_unit
         # self._attr_target_temperature_high = max_temp
