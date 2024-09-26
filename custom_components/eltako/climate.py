@@ -12,7 +12,9 @@ from homeassistant.components.climate import (
     ClimateEntity,
     HVACAction,
     HVACMode,
-    ClimateEntityFeature
+    ClimateEntityFeature,
+    PRESET_SLEEP,
+    PRESET_HOME
 )
 from homeassistant import config_entries
 from homeassistant.const import Platform, CONF_TEMPERATURE_UNIT, Platform
@@ -132,6 +134,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
+
+        self.preset_modes = [PRESET_SLEEP, PRESET_HOME]
+        self.preset_mode = PRESET_HOME
 
         self._attr_temperature_unit = temp_unit
         # self._attr_target_temperature_high = max_temp
