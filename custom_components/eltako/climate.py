@@ -338,7 +338,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
-            if  msg.org == 0x07:
+            if msg.org == 0x07:
                 decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
             LOGGER.warning(f"[climate {self.dev_id}] Could not decode message: %s", str(e))
@@ -359,5 +359,15 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 # show target temp in 0.5 steps
                 self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
+
+        if msg.org == 0x05:
+            heater_mode = A5_10_06.Heater_Mode(msg.data)
+            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {heater_mode}")
+            if A5_10_06.Heater_Mode.OFF == msg.data:
+                self._attr_hvac_mode = HVACMode.OFF
+            elif A5_10_06.Heater_Mode.NORMAL == msg.data:
+                self._attr_hvac_mode = self._hvac_mode_from_heating
+            else:
+                self._attr_hvac_mode = self._hvac_mode_from_heating
 
         self.schedule_update_ha_state()
