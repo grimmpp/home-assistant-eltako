@@ -139,8 +139,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
 
-        self._loop = asyncio.get_event_loop()
-        self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
+        # self._loop = asyncio.get_event_loop()
+        # self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
 
 
     def load_value_initially(self, latest_state:State):
