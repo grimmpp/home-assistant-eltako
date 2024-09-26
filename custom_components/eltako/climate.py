@@ -109,7 +109,12 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     _attr_swing_modes = None
     _attr_current_temperature = 0
     _attr_target_temperature = 0
-    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
+    _attr_preset_modes = [PRESET_HOME, # normal mode
+                            PRESET_SLEEP, # night set back -4°K
+                            PRESET_ECO # -2°K
+                            ]   
+    _attr_preset_mode = PRESET_HOME
 
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
@@ -135,12 +140,6 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
-
-        self._attr_preset_modes = [PRESET_HOME, # normal mode
-                             PRESET_SLEEP, # night set back -4°K
-                             PRESET_ECO # -2°K
-                             ]   
-        self._attr_preset_mode = PRESET_HOME
 
         self._attr_temperature_unit = temp_unit
         # self._attr_target_temperature_high = max_temp
