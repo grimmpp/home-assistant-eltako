@@ -103,7 +103,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             self.send_message(msg)
 
         else:
-            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
             return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -136,7 +136,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             self.send_message(msg)
 
         else:
-            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
             return
 
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -168,4 +168,4 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
                 self.schedule_update_ha_state()
 
         else:
-            LOGGER.warn("[%s %s] Device EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self.dev_eep.eep_string)
+            LOGGER.warning("[%s %s] Device EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self.dev_eep.eep_string)

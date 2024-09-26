@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.9
+* Replaced deprecated log function warn through warning
+
 ## Version 1.5.8
 * Fixed dependency incompatibility with HA 2024.9
 
