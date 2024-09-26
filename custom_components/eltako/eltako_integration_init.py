@@ -139,6 +139,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
     usb_gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
+
     
     await usb_gateway.async_setup()
     set_gateway_to_hass(hass, usb_gateway)

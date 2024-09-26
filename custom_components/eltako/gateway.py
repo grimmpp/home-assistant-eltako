@@ -49,6 +49,7 @@ class EnOceanGateway:
     def __init__(self, general_settings:dict, hass: HomeAssistant, 
                  dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None, 
                  config_entry: ConfigEntry = None):
+
         """Initialize the Eltako gateway."""
 
         self._loop = asyncio.get_event_loop()
