@@ -2,6 +2,7 @@
 
 ## Version 1.5.9
 * Replaced deprecated log function warn through warning
+* Fixed deprecation warning for async_forward_entry_setup
 
 ## Version 1.5.8
 * Fixed dependency incompatibility with HA 2024.9
