@@ -248,9 +248,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         """Send command to set target temperature."""
         address, _ = self._sender_id
-        if self.current_temperature and self.target_temperature:
+        if self.target_temperature:
             LOGGER.debug(f"[climate {self.dev_id}] Send status update: current temp: {target_temp}, mode: {mode}")
-            msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+            msg = A5_10_06(mode, target_temp, 0, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
