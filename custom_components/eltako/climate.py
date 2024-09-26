@@ -343,23 +343,23 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         #         LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
         #         LOGGER.debug(f"NOT YET IMPLEMENTED")
 
-    def _get_heater_mode_by_preset(self):
+    def _send_command_to_change_mode_(self):
         if self.hvac_mode != HVACMode.OFF:
             if self.preset_mode == PRESET_HOME:
-                return A5_10_06.Heater_Mode.NORMAL
+                self._send_set_normal_mode()
             elif self.preset_mode == PRESET_ECO:
-                return A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
+                self._send_mode_setback()
             elif self.preset_mode == PRESET_SLEEP:
-                return A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
+                self._send_mode_night()
         else:
-            return A5_10_06.Heater_Mode.OFF
+            self._send_mode_off()
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
 
         self._attr_preset_mode = preset_mode
-        self._send_command(self._get_heater_mode_by_preset(), self.target_temperature)
-        
+        self._send_command_to_change_mode_()
+
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
