@@ -231,15 +231,14 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
 
-        if self._actuator_mode != None and self.current_temperature > 0:
-            new_target_temp = kwargs['temperature']
+        new_target_temp = kwargs['temperature']
+        LOGGER.debug(f"[climate {self.dev_id}] target temperature changed: to {new_target_temp} (Mode: {self._actuator_mode})")
 
-            if self._actuator_mode == A5_10_06.Heater_Mode.OFF:
-                self._actuator_mode = A5_10_06.Heater_Mode.NORMAL
+        if self._actuator_mode in [None, A5_10_06.Heater_Mode.OFF]:
+            self._actuator_mode = A5_10_06.Heater_Mode.NORMAL
 
-            self._send_command(self._actuator_mode, new_target_temp)
-        else:
-            LOGGER.debug(f"[climate {self.dev_id}] default state of actor was not yet transferred.")
+        self._send_command(self._actuator_mode, new_target_temp)
+        
 
 
     async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
