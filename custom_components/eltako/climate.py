@@ -14,7 +14,8 @@ from homeassistant.components.climate import (
     HVACMode,
     ClimateEntityFeature,
     PRESET_SLEEP,
-    PRESET_HOME
+    PRESET_HOME,
+    PRESET_ECO
 )
 from homeassistant import config_entries
 from homeassistant.const import Platform, CONF_TEMPERATURE_UNIT, Platform
@@ -135,7 +136,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
 
-        self.preset_modes = [PRESET_SLEEP, PRESET_HOME]
+        self.preset_modes = [PRESET_HOME, # normal mode
+                             PRESET_SLEEP, # night set back -4°K
+                             PRESET_ECO # -2°K
+                             ]   
         self.preset_mode = PRESET_HOME
 
         self._attr_temperature_unit = temp_unit
@@ -340,6 +344,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         #         LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
         #         LOGGER.debug(f"NOT YET IMPLEMENTED")
 
+    async def async_set_preset_mode(self, preset_mode):
+        """Set new target preset mode."""
+        pass
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
