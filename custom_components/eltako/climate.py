@@ -343,9 +343,23 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         #         LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
         #         LOGGER.debug(f"NOT YET IMPLEMENTED")
 
+    def _get_heater_mode_by_preset(self):
+        if self.hvac_mode != HVACMode.OFF:
+            if self.preset_mode == PRESET_HOME:
+                return A5_10_06.Heater_Mode.NORMAL
+            elif self.preset_mode == PRESET_ECO:
+                return A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
+            elif self.preset_mode == PRESET_SLEEP:
+                return A5_10_06.Heater_Mode.STAND_BY_2_DEGREES
+        else:
+            return A5_10_06.Heater_Mode.OFF
+
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
-        pass
+
+        self._attr_preset_mode = preset_mode
+        self._send_command(self._get_heater_mode_by_preset(), self.target_temperature)
+        
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
         try:
@@ -363,9 +377,14 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
             elif decoded.mode == A5_10_06.Heater_Mode.NORMAL:
-                self._attr_hvac_mode = self._hvac_mode_from_heating
+                self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_preset_mode = PRESET_HOME
             elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
-                self._attr_hvac_mode = self._hvac_mode_from_heating
+                self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_preset_mode = PRESET_ECO
+            elif decoded.mode == A5_10_06.Heater_Mode.NIGHT_SET_BACK_4_DEGREES:
+                self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_preset_mode = PRESET_SLEEP
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
                 # show target temp in 0.5 steps
@@ -377,8 +396,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             if A5_10_06.Heater_Mode.OFF.value == msg.data:
                 self._attr_hvac_mode = HVACMode.OFF
             elif A5_10_06.Heater_Mode.NORMAL.value == msg.data:
-                self._attr_hvac_mode = self._hvac_mode_from_heating
-            else:
-                self._attr_hvac_mode = self._hvac_mode_from_heating
+                self._attr_preset_mode = PRESET_HOME
+            elif A5_10_06.Heater_Mode.STAND_BY_2_DEGREES.value == msg.data:
+                self._attr_preset_mode = PRESET_ECO
+            elif A5_10_06.Heater_Mode.NIGHT_SET_BACK_4_DEGREES.value == msg.data:
+                self._attr_preset_mode = PRESET_SLEEP
 
         self.schedule_update_ha_state()
