@@ -363,9 +363,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         if msg.org == 0x05:
             heater_mode = A5_10_06.Heater_Mode(msg.data)
             LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {heater_mode}")
-            if A5_10_06.Heater_Mode.OFF == msg.data:
+            if A5_10_06.Heater_Mode.OFF.value == msg.data:
                 self._attr_hvac_mode = HVACMode.OFF
-            elif A5_10_06.Heater_Mode.NORMAL == msg.data:
+            elif A5_10_06.Heater_Mode.NORMAL.value == msg.data:
                 self._attr_hvac_mode = self._hvac_mode_from_heating
             else:
                 self._attr_hvac_mode = self._hvac_mode_from_heating
