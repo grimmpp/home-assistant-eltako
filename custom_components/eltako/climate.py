@@ -73,6 +73,9 @@ async def async_setup_entry(
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
+                    # subscribe for prio config
+                    
+
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)

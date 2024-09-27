@@ -60,6 +60,8 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
 
         super().__init__(platform, gateway, dev_id, _dev_name, dev_eep)
 
+        self.event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_CLIMATE_PRIORITY_SELECTED, self.dev_id)
+
         self._attr_options = [A5_10_06.ControllerPriority.AUTO.description,
                               A5_10_06.ControllerPriority.HOME_AUTOMATION.description,
                               A5_10_06.ControllerPriority.THERMOSTAT.description,
@@ -89,8 +91,8 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] selected option: {option}")
         
-        event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_CLIMATE_PRIORITY_SELECTED, AddressExpression((self.dev_id, None)))
+        
         event_data = {
             "priority": option
         }
-        self.hass.bus.fire(event_id, event_data)
+        self.hass.bus.fire(self.event_id, event_data)
