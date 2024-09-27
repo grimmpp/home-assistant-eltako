@@ -64,24 +64,24 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
                               A5_10_06.ControllerPriority.HOME_AUTOMATION.description,
                               A5_10_06.ControllerPriority.THERMOSTAT.description,
                               A5_10_06.ControllerPriority.LIMIT.description]
+        self._attr_current_option = A5_10_06.ControllerPriority.HOME_AUTOMATION.description
 
     
     def load_value_initially(self, latest_state:State):
-        # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
-        # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
-        # try:
-        #     self._attr_current_option = latest_state.state
-        #     if self._attr_current_option == None:
-        #         self._attr_current_option = self.DEFAULT_PRIO
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+        try:
+            self._attr_current_option = latest_state.state
+            if self._attr_current_option == None:
+                self._attr_current_option = self.DEFAULT_PRIO
                 
-        # except Exception as e:
-        #     self._attr_current_option = self.DEFAULT_PRIO
-        #     raise e
+        except Exception as e:
+            self._attr_current_option = self.DEFAULT_PRIO
+            raise e
         
-        # self.schedule_update_ha_state()
+        self.schedule_update_ha_state()
 
-        # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] value initially loaded: [state: {self.state}]")
-        pass
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] value initially loaded: [state: {self.state}]")
 
 
     async def async_select_option(self, option: str) -> None:
