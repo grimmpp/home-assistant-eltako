@@ -7,7 +7,7 @@ exe() { echo "\$ ${@/eval/}" ; "$@" ; }
 
 echo -e "\nInstall custom component for Eltako Baureihe 14\n"
 
-$current_branch = $(git branch --show-current)
+current_branch = $(git branch --show-current)
 ehco "Running on branch $current_branch\n"
 
 repo_name="home-assistant-eltako"
