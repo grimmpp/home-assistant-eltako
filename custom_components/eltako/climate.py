@@ -270,7 +270,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         address, _ = self._sender_id
         if self.target_temperature:
             LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, mode: {mode}")
-            msg = A5_10_06(mode, target_temp, current_temp=0, priority=priority).encode_message(address)
+            msg = A5_10_06(mode, target_temp, current_temp=40, priority=priority).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
@@ -349,11 +349,6 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat.id}")
                 self.change_temperature_values(msg)
 
-        # Implemented via eventing: async_handle_event
-        # if self.cooling_switch:
-        #     if msg.address == self.cooling_switch.id[0]:
-        #         LOGGER.debug(f"[climate {self.dev_id}] Change mode triggered by cooling switch: {self.cooling_switch.id[0]}")
-        #         LOGGER.debug(f"NOT YET IMPLEMENTED")
 
     def _send_command_to_change_mode_(self):
         if self.hvac_mode != HVACMode.OFF:
