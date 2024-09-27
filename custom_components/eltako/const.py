@@ -22,6 +22,7 @@ SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
 SIGNAL_SEND_MESSAGE: Final = "send_message"
 EVENT_BUTTON_PRESSED: Final = "btn_pressed"
 EVENT_CONTACT_CLOSED: Final = "contact_closed"
+EVENT_CLIMATE_PRIORITY_SELECTED: Final = "climate_priority_selected"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 
