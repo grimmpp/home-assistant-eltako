@@ -71,10 +71,12 @@ async def async_setup_entry(
                         event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, 
                                                                      config_helpers.convert_button_pos_from_hex_to_str(cooling_switch.get(CONF_SWITCH_BUTTON)))
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
-                        hass.bus.async_listen(event_id, climate_entity.async_handle_event)
+                        hass.bus.async_listen(event_id, climate_entity.async_handle_cooling_switch_event)
 
                     # subscribe for prio config
-                    
+                    event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_PRIORITY_SELECTED, dev_conf.id)
+                    LOGGER.debug(f"Subscribe for listening to priority change events: {event_id}")
+                    hass.bus.async_listen(event_id, climate_entity.async_handle_priority_events)
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -207,7 +209,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 # FIXME should I just restart with back-off?
 
     
-    async def async_handle_event(self, call):
+    async def async_handle_cooling_switch_event(self, call):
         """Receives signal from cooling switches if defined in configuration."""
         # LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
@@ -216,6 +218,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         await self._async_check_if_cooling_is_activated()
 
+    async def async_handle_priority_events(self, call):
+        LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""

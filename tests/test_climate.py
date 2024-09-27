@@ -167,5 +167,5 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         #0x70 = 3
         msg = F6_02_01(3, 1, 0, 0).encode_message(b'\xFF\xFF\xFF\x01')
         # cc.value_changed(msg)
-        await cc.async_handle_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
+        await cc.async_handle_cooling_switch_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
         self.assertEqual(cc.hvac_mode, HVACMode.COOL)
