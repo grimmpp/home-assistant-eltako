@@ -269,7 +269,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         """Send command to set target temperature."""
         address, _ = self._sender_id
         if self.target_temperature:
-            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, mode: {mode}")
+            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, mode: {mode}, priority: '{priority.description}'")
             msg = A5_10_06(mode, target_temp, current_temp=40, priority=priority).encode_message(address)
             self.send_message(msg)
         else:
