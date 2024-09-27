@@ -151,6 +151,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         # self._attr_target_temperature_low = min_temp
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
+        self.priority = A5_10_06.ControllerPriority.AUTO.value
 
         # self._loop = asyncio.get_event_loop()
         # self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
@@ -202,7 +203,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
                 # send frequently status update if not connected with thermostat. 
                 if self.thermostat is None:
-                    await self._async_send_command(self._actuator_mode, self.target_temperature)
+                    await self._async_send_command(self._actuator_mode, self.target_temperature, self.priority)
                 
             except Exception as e:
                 LOGGER.exception(e)
@@ -220,6 +221,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
     async def async_handle_priority_events(self, call):
         LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
+        self.priority = A5_10_06.ControllerPriority[ call.data['priority'] ]
+
+        self._send_command(self._actuator_mode, self.target_temperature, self.priority)
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""
@@ -252,20 +256,20 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         if self._actuator_mode in [None, A5_10_06.HeaterMode.OFF]:
             self._actuator_mode = A5_10_06.HeaterMode.NORMAL
 
-        self._send_command(self._actuator_mode, new_target_temp)
+        self._send_command(self._actuator_mode, new_target_temp, self.priority)
         
 
 
-    async def _async_send_command(self, mode: A5_10_06.HeaterMode, target_temp: float) -> None:
+    async def _async_send_command(self, mode: A5_10_06.HeaterMode, target_temp: float, priority:A5_10_06.ControllerPriority) -> None:
         """Send command to set target temperature."""
-        self._send_command(mode, target_temp)
+        self._send_command(mode, target_temp, priority)
 
-    def _send_command(self, mode: A5_10_06.HeaterMode, target_temp: float) -> None:
+    def _send_command(self, mode: A5_10_06.HeaterMode, target_temp: float, priority:A5_10_06.ControllerPriority) -> None:
         """Send command to set target temperature."""
         address, _ = self._sender_id
         if self.target_temperature:
             LOGGER.debug(f"[climate {self.dev_id}] Send status update: current temp: {target_temp}, mode: {mode}")
-            msg = A5_10_06(mode, target_temp, 0).encode_message(address)
+            msg = A5_10_06(mode, target_temp, 0, priority).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
