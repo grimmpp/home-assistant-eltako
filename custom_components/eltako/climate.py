@@ -221,11 +221,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
     async def async_handle_priority_events(self, call):
         LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
-        for p in A5_10_06.ControllerPriority:
-            if p.description == call.data['priority']:
-                self.priority = p
-                self._send_command(self._actuator_mode, self.target_temperature, self.priority)
-                return
+
+        self.priority = A5_10_06.ControllerPriority.find_by_description(call.data['priority'])
+        self._send_command(self._actuator_mode, self.target_temperature, self.priority)
+        
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode on the panel."""
@@ -270,8 +269,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         """Send command to set target temperature."""
         address, _ = self._sender_id
         if self.target_temperature:
-            LOGGER.debug(f"[climate {self.dev_id}] Send status update: current temp: {target_temp}, mode: {mode}")
-            msg = A5_10_06(mode, target_temp, 0, priority).encode_message(address)
+            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, mode: {mode}")
+            msg = A5_10_06(mode, target_temp, current_temp=0, priority=priority).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
