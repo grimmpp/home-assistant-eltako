@@ -60,6 +60,8 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
 
         super().__init__(platform, gateway, dev_id, _dev_name, dev_eep)
 
+        self.name = "Priority"
+
         self.event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_CLIMATE_PRIORITY_SELECTED, self.dev_id)
 
         self._attr_options = [A5_10_06.ControllerPriority.AUTO.description,
