@@ -74,7 +74,7 @@ async def async_setup_entry(
                         hass.bus.async_listen(event_id, climate_entity.async_handle_cooling_switch_event)
 
                     # subscribe for prio config
-                    event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_PRIORITY_SELECTED, dev_conf.id)
+                    event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_CLIMATE_PRIORITY_SELECTED, dev_conf.id)
                     LOGGER.debug(f"Subscribe for listening to priority change events: {event_id}")
                     hass.bus.async_listen(event_id, climate_entity.async_handle_priority_events)
 
