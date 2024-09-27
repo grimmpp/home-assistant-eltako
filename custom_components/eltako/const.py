@@ -76,6 +76,7 @@ PLATFORMS: Final = [
     Platform.COVER,
     Platform.CLIMATE,
     Platform.BUTTON,
+    Platform.SELECT
 ]
 
 class GatewayDeviceType(str, Enum):
