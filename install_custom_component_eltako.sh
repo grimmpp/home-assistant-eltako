@@ -7,6 +7,9 @@ exe() { echo "\$ ${@/eval/}" ; "$@" ; }
 
 echo -e "\nInstall custom component for Eltako Baureihe 14\n"
 
+$current_branch $(git branch --show-current)
+ehco "Running on branch $current_branch\n"
+
 repo_name="home-assistant-eltako"
 if [[ $(pwd) != *"$repo_name"* ]]; then
     repo_name="https://github.com/grimmpp/home-assistant-eltako.git"

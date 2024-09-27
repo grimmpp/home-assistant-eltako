@@ -93,7 +93,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     _update_frequency = 55 # sec
-    _actuator_mode: A5_10_06.Heater_Mode = None
+    _actuator_mode: A5_10_06.HeaterMode = None
     _hvac_mode_from_heating = HVACMode.HEAT
 
     COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
@@ -242,23 +242,23 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         new_target_temp = kwargs['temperature']
         LOGGER.debug(f"[climate {self.dev_id}] target temperature changed: to {new_target_temp} (Mode: {self._actuator_mode})")
 
-        if self._actuator_mode in [None, A5_10_06.Heater_Mode.OFF]:
-            self._actuator_mode = A5_10_06.Heater_Mode.NORMAL
+        if self._actuator_mode in [None, A5_10_06.HeaterMode.OFF]:
+            self._actuator_mode = A5_10_06.HeaterMode.NORMAL
 
         self._send_command(self._actuator_mode, new_target_temp)
         
 
 
-    async def _async_send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
+    async def _async_send_command(self, mode: A5_10_06.HeaterMode, target_temp: float) -> None:
         """Send command to set target temperature."""
         self._send_command(mode, target_temp)
 
-    def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
+    def _send_command(self, mode: A5_10_06.HeaterMode, target_temp: float) -> None:
         """Send command to set target temperature."""
         address, _ = self._sender_id
         if self.target_temperature:
             LOGGER.debug(f"[climate {self.dev_id}] Send status update: current temp: {target_temp}, mode: {mode}")
-            msg = A5_10_06(mode, target_temp, 0, self.hvac_action == HVACAction.IDLE).encode_message(address)
+            msg = A5_10_06(mode, target_temp, 0).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
@@ -374,32 +374,32 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             self._actuator_mode = decoded.mode
             self._attr_current_temperature = decoded.current_temperature
 
-            if decoded.mode == A5_10_06.Heater_Mode.OFF:
+            if decoded.mode == A5_10_06.HeaterMode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
-            elif decoded.mode == A5_10_06.Heater_Mode.NORMAL:
+            elif decoded.mode == A5_10_06.HeaterMode.NORMAL:
                 self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_preset_mode = PRESET_HOME
-            elif decoded.mode == A5_10_06.Heater_Mode.STAND_BY_2_DEGREES:
+            elif decoded.mode == A5_10_06.HeaterMode.STAND_BY_2_DEGREES:
                 self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_preset_mode = PRESET_ECO
-            elif decoded.mode == A5_10_06.Heater_Mode.NIGHT_SET_BACK_4_DEGREES:
+            elif decoded.mode == A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES:
                 self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_preset_mode = PRESET_SLEEP
 
-            if decoded.mode != A5_10_06.Heater_Mode.OFF:
+            if decoded.mode != A5_10_06.HeaterMode.OFF:
                 # show target temp in 0.5 steps
                 self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
 
         if msg.org == 0x05:
-            heater_mode = A5_10_06.Heater_Mode( int.from_bytes(msg.data, byteorder='big') )
-            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {heater_mode}")
-            if A5_10_06.Heater_Mode.OFF.value == msg.data:
+            HeaterMode = A5_10_06.HeaterMode( int.from_bytes(msg.data, byteorder='big') )
+            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {HeaterMode}")
+            if A5_10_06.HeaterMode.OFF.value == msg.data:
                 self._attr_hvac_mode = HVACMode.OFF
-            elif A5_10_06.Heater_Mode.NORMAL.value == msg.data:
+            elif A5_10_06.HeaterMode.NORMAL.value == msg.data:
                 self._attr_preset_mode = PRESET_HOME
-            elif A5_10_06.Heater_Mode.STAND_BY_2_DEGREES.value == msg.data:
+            elif A5_10_06.HeaterMode.STAND_BY_2_DEGREES.value == msg.data:
                 self._attr_preset_mode = PRESET_ECO
-            elif A5_10_06.Heater_Mode.NIGHT_SET_BACK_4_DEGREES.value == msg.data:
+            elif A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES.value == msg.data:
                 self._attr_preset_mode = PRESET_SLEEP
 
         self.schedule_update_ha_state()
