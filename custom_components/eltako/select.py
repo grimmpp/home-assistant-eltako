@@ -68,7 +68,7 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
                               A5_10_06.ControllerPriority.HOME_AUTOMATION.description,
                               A5_10_06.ControllerPriority.THERMOSTAT.description,
                               A5_10_06.ControllerPriority.LIMIT.description]
-        self._attr_current_option = A5_10_06.ControllerPriority.HOME_AUTOMATION.description
+        self._attr_current_option = A5_10_06.ControllerPriority.AUTO.description
 
     
     def load_value_initially(self, latest_state:State):
@@ -92,9 +92,6 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
         """Change the selected option."""
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] selected option: {option}")
-        
-        
-        event_data = {
-            "priority": option
-        }
-        self.hass.bus.fire(self.event_id, event_data)
+        LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Send event id: '{self.event_id}' data: '{option}'")
+
+        self.hass.bus.fire(self.event_id, { "priority": option })
