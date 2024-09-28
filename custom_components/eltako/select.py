@@ -65,7 +65,7 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
         self.event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_PRIORITY_SELECTED, self.dev_id)
 
         self._attr_options = [A5_10_06.ControllerPriority.AUTO.description,
-                              A5_10_06.ControllerPriority.HOME_AUTOMATION.description,
+                              "bla", #A5_10_06.ControllerPriority.HOME_AUTOMATION.description,
                               A5_10_06.ControllerPriority.THERMOSTAT.description,
                               A5_10_06.ControllerPriority.LIMIT.description]
         self._attr_current_option = A5_10_06.ControllerPriority.AUTO.description
