@@ -172,6 +172,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
             self._attr_current_temperature = latest_state.attributes.get('current_temperature', None)
             self._attr_target_temperature = latest_state.attributes.get('temperature', None)
+            self._attr_preset_mode = latest_state.attributes.get('preset_mode', None)
+            self._attr_hvac_mode = HVACMode(latest_state.state)
 
             self._attr_hvac_mode = None
             for m_enum in HVACMode:

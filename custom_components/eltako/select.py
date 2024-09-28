@@ -76,13 +76,16 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
         try:
             self._attr_current_option = latest_state.state
-            if self._attr_current_option == None:
+            if self._attr_current_option in [None, 'unknown']:
                 self._attr_current_option = self.DEFAULT_PRIO
                 
         except Exception as e:
             self._attr_current_option = self.DEFAULT_PRIO
             raise e
         
+        ## send value to initially set value of climate controller
+        self.hass.bus.fire(self.event_id, { "priority": self._attr_current_option })
+
         self.schedule_update_ha_state()
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] value initially loaded: [state: {self.state}]")
