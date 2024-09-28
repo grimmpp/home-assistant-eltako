@@ -98,7 +98,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     """Representation of an Eltako heating and cooling actor."""
 
     _update_frequency = 55 # sec
-    _actuator_mode: A5_10_06.HeaterMode = None
+    _attr_actuator_mode: A5_10_06.HeaterMode = None
     _hvac_mode_from_heating = HVACMode.HEAT
 
     COOLING_SWITCH_SIGNAL_FREQUENCY_IN_MIN: int = 15 # FTS14EM signals are repeated every 15min
@@ -151,16 +151,17 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         # self._attr_target_temperature_low = min_temp
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
-        self.priority = A5_10_06.ControllerPriority.AUTO.value
+        self._attr_priority = A5_10_06.ControllerPriority.AUTO.value
+        self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
 
         # self._loop = asyncio.get_event_loop()
         # self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
 
 
     def load_value_initially(self, latest_state:State):
-        # LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
-        # LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
-        # LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
+        LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
+        LOGGER.debug(f"[climate {self.dev_id}] latest state - state: {latest_state.state}")
+        LOGGER.debug(f"[climate {self.dev_id}] latest state - attributes: {latest_state.attributes}")
 
         try:
             self.hvac_modes = []
@@ -203,7 +204,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
                 # send frequently status update if not connected with thermostat. 
                 if self.thermostat is None:
-                    await self._async_send_command(self._actuator_mode, self.target_temperature, self.priority)
+                    await self._async_send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
                 
             except Exception as e:
                 LOGGER.exception(e)
@@ -222,8 +223,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     async def async_handle_priority_events(self, call):
         LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
-        self.priority = A5_10_06.ControllerPriority.find_by_description(call.data['priority'])
-        self._send_command(self._actuator_mode, self.target_temperature, self.priority)
+        self._attr_priority = A5_10_06.ControllerPriority.find_by_description(call.data['priority'])
+        self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
         
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -252,12 +253,12 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         """Set new target temperature."""
 
         new_target_temp = kwargs['temperature']
-        LOGGER.debug(f"[climate {self.dev_id}] target temperature changed: to {new_target_temp} (Mode: {self._actuator_mode})")
+        LOGGER.debug(f"[climate {self.dev_id}] target temperature changed: to {new_target_temp} (Mode: {self._attr_actuator_mode})")
 
-        if self._actuator_mode in [None, A5_10_06.HeaterMode.OFF]:
-            self._actuator_mode = A5_10_06.HeaterMode.NORMAL
+        if self._attr_actuator_mode in [None, A5_10_06.HeaterMode.OFF]:
+            self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
 
-        self._send_command(self._actuator_mode, new_target_temp, self.priority)
+        self._send_command(self._attr_actuator_mode, new_target_temp, self._attr_priority)
         
 
 
@@ -378,7 +379,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
 
-            self._actuator_mode = decoded.mode
+            self._attr_actuator_mode = decoded.mode
             self._attr_current_temperature = decoded.current_temperature
 
             if decoded.mode == A5_10_06.HeaterMode.OFF:

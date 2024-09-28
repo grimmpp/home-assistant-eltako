@@ -46,7 +46,7 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(cc.cooling_switch, None)
         self.assertEqual(cc.thermostat, None)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, None)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -74,7 +74,7 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(cc.cooling_switch, None)
         self.assertIsNotNone(cc.thermostat)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, None)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -85,7 +85,7 @@ class TestClimate(unittest.TestCase):
         msg = A5_10_06(mode, target_temp, current_temperature, False).encode_message(b'\xFF\xFF\xFF\x01')
         cc.value_changed(msg)
         self.assertEqual(cc.hvac_mode, HVACMode.HEAT)
-        self.assertEqual(cc._actuator_mode, A5_10_06.Heater_Mode.NORMAL);
+        self.assertEqual(cc._attr_actuator_mode, A5_10_06.Heater_Mode.NORMAL);
         self.assertEqual( round(cc.current_temperature), current_temperature)
         self.assertEqual( round(cc.target_temperature), target_temp)
 
@@ -104,7 +104,7 @@ class TestClimate(unittest.TestCase):
         self.assertIsNotNone(cc.cooling_switch)
         self.assertEqual(cc.thermostat, None)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, None)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -159,7 +159,7 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(cc.cooling_switch)
         self.assertEqual(cc.thermostat, None)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, None)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
