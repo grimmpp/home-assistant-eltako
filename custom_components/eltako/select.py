@@ -98,3 +98,6 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Send event id: '{self.event_id}' data: '{option}'")
 
         self.hass.bus.fire(self.event_id, { "priority": option })
+
+        self._attr_current_option = option
+        self.schedule_update_ha_state()
