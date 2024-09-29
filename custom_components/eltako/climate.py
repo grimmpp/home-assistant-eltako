@@ -403,22 +403,20 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
 
         if msg.org == 0x05:
-            HeaterMode = A5_10_06.HeaterMode( int.from_bytes(msg.data, byteorder='big') )
-            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {HeaterMode} (data={b2s(msg.data)})")
+            heater_mode = A5_10_06.HeaterMode( int.from_bytes(msg.data, byteorder='big') )
+            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {heater_mode} (data={b2s(msg.data)})")
             if A5_10_06.HeaterMode.OFF.value == msg.data:
                 self._attr_hvac_mode = HVACMode.OFF
-            elif A5_10_06.HeaterMode.NORMAL.value == msg.data:
-                self._attr_preset_mode = PRESET_HOME
+            else:
                 self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_hvac_action = HVACAction.HEATING
-            elif A5_10_06.HeaterMode.STAND_BY_2_DEGREES.value == msg.data:
-                self._attr_preset_mode = PRESET_ECO
-                self._attr_hvac_mode = HVACMode.HEAT
-                self._attr_hvac_action = HVACAction.HEATING
-            elif A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES.value == msg.data:
-                self._attr_preset_mode = PRESET_SLEEP
-                self._attr_hvac_mode = HVACMode.HEAT
-                self._attr_hvac_action = HVACAction.HEATING
+
+                if A5_10_06.HeaterMode.NORMAL == heater_mode:
+                    self._attr_preset_mode = PRESET_HOME                
+                elif A5_10_06.HeaterMode.STAND_BY_2_DEGREES == heater_mode:
+                    self._attr_preset_mode = PRESET_ECO
+                elif A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES == heater_mode:
+                    self._attr_preset_mode = PRESET_SLEEP                
 
         LOGGER.debug(f"[climate {self.dev_id}] Change to hvac_mode: {self.hvac_mode}, preset_mode: {self.preset_mode}, hvac_action: {self.hvac_action}")
         self.schedule_update_ha_state()
