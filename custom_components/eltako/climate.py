@@ -387,17 +387,15 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             if decoded.mode == A5_10_06.HeaterMode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
                 self._attr_hvac_action = HVACAction.OFF
-            elif decoded.mode == A5_10_06.HeaterMode.NORMAL:
+            else:
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_hvac_action = HVACAction.HEATING
+
+            if decoded.mode == A5_10_06.HeaterMode.NORMAL:
                 self._attr_preset_mode = PRESET_HOME
-                self._attr_hvac_action = HVACAction.HEATING
             elif decoded.mode == A5_10_06.HeaterMode.STAND_BY_2_DEGREES:
-                self._attr_hvac_mode = HVACMode.HEAT
-                self._attr_hvac_action = HVACAction.HEATING
                 self._attr_preset_mode = PRESET_ECO
             elif decoded.mode == A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES:
-                self._attr_hvac_mode = HVACMode.HEAT
-                self._attr_hvac_action = HVACAction.HEATING
                 self._attr_preset_mode = PRESET_SLEEP
 
             if decoded.mode != A5_10_06.HeaterMode.OFF:
