@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message
 
@@ -247,8 +247,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             
         # mode can only be selected when active. e.g. heating can be selected if in heating mode. cooling would be inactive. cooling and heating mode needs to be switched via rocker swtich.
         elif hvac_mode == self._get_mode():
-            self._attr_hvac_mode = hvac_mode            
-            self._send_command_to_change_mode()
+            self._attr_hvac_mode = hvac_mode
+            self._send_set_normal_mode()
 
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -353,7 +353,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 self.change_temperature_values(msg)
 
 
-    def _send_command_to_change_mode(self):
+    def _send_command_to_change_mode_(self):
         if self.hvac_mode != HVACMode.OFF:
             if self.preset_mode == PRESET_HOME:
                 self._send_set_normal_mode()
@@ -368,7 +368,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         """Set new target preset mode."""
 
         self._attr_preset_mode = preset_mode
-        self._send_command_to_change_mode()
+        self._send_command_to_change_mode_()
 
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
@@ -402,7 +402,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         if msg.org == 0x05:
             HeaterMode = A5_10_06.HeaterMode( int.from_bytes(msg.data, byteorder='big') )
-            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {HeaterMode}")
+            LOGGER.debug(f"[climate {self.dev_id}] Heater running in mode: {HeaterMode} (data={b2s(msg.data)})")
             if A5_10_06.HeaterMode.OFF.value == msg.data:
                 self._attr_hvac_mode = HVACMode.OFF
             elif A5_10_06.HeaterMode.NORMAL.value == msg.data:
