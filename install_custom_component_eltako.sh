@@ -8,7 +8,7 @@ exe() { echo "\$ ${@/eval/}" ; "$@" ; }
 echo -e "\nInstall custom component for Eltako Baureihe 14"
 
 current_branch=$(git branch --show-current)
-echo "Running on branch $current_branch\n"
+echo -e "Running on branch $current_branch\n"
 
 repo_name="home-assistant-eltako"
 if [[ $(pwd) != *"$repo_name"* ]]; then

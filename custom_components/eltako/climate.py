@@ -407,9 +407,12 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 self._attr_hvac_mode = HVACMode.OFF
             elif A5_10_06.HeaterMode.NORMAL.value == msg.data:
                 self._attr_preset_mode = PRESET_HOME
+                self._attr_hvac_mode = HVACMode.HEAT
             elif A5_10_06.HeaterMode.STAND_BY_2_DEGREES.value == msg.data:
                 self._attr_preset_mode = PRESET_ECO
+                self._attr_hvac_mode = HVACMode.HEAT
             elif A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES.value == msg.data:
                 self._attr_preset_mode = PRESET_SLEEP
+                self._attr_hvac_mode = HVACMode.HEAT
 
         self.schedule_update_ha_state()
