@@ -386,14 +386,18 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
             if decoded.mode == A5_10_06.HeaterMode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
+                self._attr_hvac_action = HVACAction.OFF
             elif decoded.mode == A5_10_06.HeaterMode.NORMAL:
                 self._attr_hvac_mode = HVACMode.HEAT
                 self._attr_preset_mode = PRESET_HOME
+                self._attr_hvac_action = HVACAction.HEATING
             elif decoded.mode == A5_10_06.HeaterMode.STAND_BY_2_DEGREES:
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_hvac_action = HVACAction.HEATING
                 self._attr_preset_mode = PRESET_ECO
             elif decoded.mode == A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES:
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_hvac_action = HVACAction.HEATING
                 self._attr_preset_mode = PRESET_SLEEP
 
             if decoded.mode != A5_10_06.HeaterMode.OFF:
@@ -408,11 +412,15 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             elif A5_10_06.HeaterMode.NORMAL.value == msg.data:
                 self._attr_preset_mode = PRESET_HOME
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_hvac_action = HVACAction.HEATING
             elif A5_10_06.HeaterMode.STAND_BY_2_DEGREES.value == msg.data:
                 self._attr_preset_mode = PRESET_ECO
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_hvac_action = HVACAction.HEATING
             elif A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES.value == msg.data:
                 self._attr_preset_mode = PRESET_SLEEP
                 self._attr_hvac_mode = HVACMode.HEAT
+                self._attr_hvac_action = HVACAction.HEATING
 
+        LOGGER.debug(f"[climate {self.dev_id}] Change to hvac_mode: {self.hvac_mode}, preset_mode: {self.preset_mode}, hvac_action: {self.hvac_action}")
         self.schedule_update_ha_state()
