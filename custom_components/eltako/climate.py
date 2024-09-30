@@ -227,7 +227,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         self._attr_priority = A5_10_06.ControllerPriority.find_by_description(call.data['priority'])
         if self._attr_priority == A5_10_06.ControllerPriority.THERMOSTAT:
-            self._send_command(A5_10_06.HeaterMode.UNKNOWN, 40, A5_10_06.ControllerPriority.HOME_AUTOMATION)   # send 00-00-00-08
+            self._send_command(A5_10_06.HeaterMode.UNKNOWN, 40, A5_10_06.ControllerPriority.HOME_AUTOMATION)   # send 00-00-00-08 to enable thermostat prio
         else:
             self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)  # send temperature update with new prio
         
