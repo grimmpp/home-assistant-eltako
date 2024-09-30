@@ -3,10 +3,10 @@
 <img src="screenshot_teach_in_button.png" width="25%" />
 
 Teach-In buttons are used to program the actuators so that they react on sensors or switches. 
-When we want to power on and off a light by using Home Assistant we need to tell the actuator that it needs to react on a specific button in Home Assistant. Every button in Home Assistant has its own id/address and sends telegrams either onto the bus or into wireless network. The actuators are listening for telegrams and if they corresponding address is programmed in / teached in for this button they react will on there telegrams.
+When we want to power on and off a light by using Home Assistant we need to tell the actuator that it needs to react on a specific button in Home Assistant. Every button in Home Assistant has its own id/address and sends telegrams either onto the bus or into wireless network. The actuators are listening for telegrams and if the corresponding address is programmed in / teached in for this button they react will on there telegrams.
 
 # Teach-In Progress
-1. Most of the time you need to turon on the rotary switch of a device and bring it into learning mode. Usually the devices start to blink. (You should check the specific behavior of the devices in their manual.)
+1. Most of the time you need to turn on the rotary switch of a device and bring it into learning mode. Usually the devices start to blink. (You should check the specific behavior of the devices in their manual.)
 2. While the device is blinking you need to push the Teach-In Button in Home Assistant to program the device for this Home Assistant functionality. 
 3. The device stops with blinking and you can turn back the rotary switches, into a position which tells the device what function to perform. 
 

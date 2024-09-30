@@ -1,5 +1,8 @@
 # Changes and Feature List
 
+## Version 1.5.8
+* Fixed dependency incompatibility with HA 2024.9
+
 ## Version 1.5.7
 * Tested new devices: FB55EB, FWZ12
 * Added EEP F6-01-01 and tested FMH1W
