@@ -226,7 +226,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         LOGGER.debug(f"[climate {self.dev_id}] Event received: {call.data}")
 
         self._attr_priority = A5_10_06.ControllerPriority.find_by_description(call.data['priority'])
-        self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
+        if self._attr_priority == A5_10_06.ControllerPriority.THERMOSTAT:
+            self._send_command(A5_10_06.HeaterMode.UNKNOWN, 40, A5_10_06.ControllerPriority.HOME_AUTOMATION)   # send 00-00-00-08
+        else:
+            self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)  # send temperature update with new prio
         
 
     async def async_set_hvac_mode(self, hvac_mode):
