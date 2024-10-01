@@ -140,6 +140,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         self.cooling_switch_last_signal_timestamp = 0
 
         self.cooling_sender = cooling_sender
+
+        
         
         if self.cooling_switch:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
@@ -173,7 +175,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             self._attr_current_temperature = latest_state.attributes.get('current_temperature', None)
             self._attr_target_temperature = latest_state.attributes.get('temperature', None)
             self._attr_preset_mode = latest_state.attributes.get('preset_mode', None)
-            self._attr_hvac_mode = HVACMode(latest_state.state)
+            if latest_state.state is not None:
+                self._attr_hvac_mode = HVACMode(latest_state.state)
+            else:
+                self._attr_hvac_mode = HVACMode.OFF
 
             self._attr_hvac_mode = None
             for m_enum in HVACMode:

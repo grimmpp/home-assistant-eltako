@@ -6,20 +6,23 @@ import site
 
 class MetadataTest(unittest.TestCase):
 
-    def get_site_package_folder(self):
+    @classmethod
+    def get_site_package_folder(cls):
           for f in site.getsitepackages():
             if 'site-packages' in f:
                 return f
             
-    def find_lib_folder(self, lib_name:str):
-        dirs = [f for f in os.listdir(self.get_site_package_folder()) if f.startswith(lib_name.replace('-', '_')+'-')]
+    @classmethod
+    def find_lib_folder(cls, lib_name:str):
+        dirs = [f for f in os.listdir(cls.get_site_package_folder()) if f.startswith(lib_name.replace('-', '_')+'-')]
         if len(dirs) == 1:
-            return os.path.join(self.get_site_package_folder(), dirs[0])
+            return os.path.join(cls.get_site_package_folder(), dirs[0])
         return None
 
-    def get_installed_lib_version(self, lib_name:str):
+    @classmethod
+    def get_installed_lib_version(cls, lib_name:str):
         
-        dir_name = self.find_lib_folder(lib_name)
+        dir_name = cls.find_lib_folder(lib_name)
         if dir_name:
             metadata_file = os.path.join(dir_name, 'METADATA')
             with open(metadata_file, 'r') as f:
@@ -29,24 +32,29 @@ class MetadataTest(unittest.TestCase):
             return None
         return None
 
-    def get_version_of_installed_eltako14bus(self):
-        return self.get_installed_lib_version('eltako14bus')
+    @classmethod
+    def get_version_of_installed_eltako14bus(cls):
+        return cls.get_installed_lib_version('eltako14bus')
 
-    def get_manifest(self):
+    @classmethod
+    def get_manifest(cls):
         manifest_filename = os.path.join(os.getcwd(), 'custom_components', 'eltako', 'manifest.json')
         with open(manifest_filename, 'r') as f:
             return json.loads( f.read() )
 
-    def get_version_of_required_eltako14bus(self):
-        manifest = self.get_manifest()
+    @classmethod
+    def get_version_of_required_eltako14bus(cls):
+        manifest = cls.get_manifest()
 
         for r in manifest['requirements']:
             if r.startswith('eltako14bus'):
                 return r.split('==')[1].strip()
         return None
     
-    def get_version_of_eltako_integration(self):
-        return self.get_manifest()['version']
+    @classmethod
+    def get_version_of_eltako_integration(cls):
+        return cls.get_manifest()['version']
+
 
     def test_check_all_installed_dependencies(self):
         manifest = self.get_manifest()
