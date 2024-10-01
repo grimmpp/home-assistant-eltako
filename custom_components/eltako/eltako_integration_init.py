@@ -11,8 +11,6 @@ from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
 
-from aiohttp import web
-
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -152,25 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    host = "0.0.0.0"
-    port = 8080
-
-    app = web.Application()
-    app.router.add_get("/", handle_request)
-
-    runner = web.AppRunner(app)
-    await runner.setup()
-
-    site = web.TCPSite(runner, host, port)
-    await site.start()
-
-    LOGGER.info(f"Web server started on http://{host}:{port}")
-
     return True
-
-async def handle_request(request):
-    """Handle web server requests."""
-    return web.Response(text="Hello, this is your Home Assistant web server!")
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
