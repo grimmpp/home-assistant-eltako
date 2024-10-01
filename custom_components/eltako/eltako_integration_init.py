@@ -152,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    host = "127.0.0.1"
+    host = "0.0.0.0"
     port = 8080
 
     app = web.Application()
