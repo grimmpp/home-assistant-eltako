@@ -151,24 +151,66 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
 
 
-    # host = "0.0.0.0"
-    # port = 5100
-    # # Start the TCP server
-    # server = await asyncio.start_server(
-    #     lambda r, w: handle_client(r, w, hass),
-    #     host,
-    #     port,
-    # )
+    host = "0.0.0.0"
+    port = 5100
+    hass.data[DOMAIN]["clients"] = []
 
-    # LOGGER.info(f"TCP Server started on {host}:{port}")
+    # Start the TCP server
+    server = await asyncio.start_server(
+        lambda r, w: handle_client(r, w, hass),
+        host,
+        port,
+    )
+
+    try:
+        # Start the TCP server asynchronously
+        server = await asyncio.start_server(
+            lambda r, w: handle_client(r, w, hass),
+            host,
+            port,
+        )
+
+        task = hass.loop.create_task(periodic_message_sender(hass))
+
+        # Store the task and server to stop them later if needed
+        hass.data[DOMAIN]["tasks"].extend([server, task])
+        LOGGER.info(f"TCP Server started on {host}:{port}")
+    except Exception as e:
+        LOGGER.error(f"Failed to start TCP server: {e}")
+        return False
+
 
     return True
 
+async def periodic_message_sender(hass: HomeAssistant):
+    """Send a message to all connected clients every interval seconds."""
+    interval = 5
+    message = "message", "Hello from Home Assistant!"
+    clients = hass.data[DOMAIN]["clients"]
+
+    while True:
+        if clients:
+            LOGGER.info(f"Sending message to {len(clients)} clients.")
+            disconnected_clients = set()
+            for writer in clients:
+                try:
+                    writer.write(message.encode() + b'\n')
+                    await writer.drain()
+                except Exception as e:
+                    LOGGER.error(f"Error sending message to client: {e}")
+                    disconnected_clients.add(writer)
+
+            # Remove clients that failed to send the message
+            clients.difference_update(disconnected_clients)
+        await asyncio.sleep(interval)
 
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter, hass: HomeAssistant):
     """Handle incoming TCP client connections."""
     addr = writer.get_extra_info('peername')
     LOGGER.info(f"Accepted connection from {addr}")
+
+    # Add client to the set
+    hass.data[DOMAIN]["clients"].add(writer)
 
     try:
         while True:
@@ -178,9 +220,9 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
             message = data.decode().strip()
             LOGGER.info(f"Received message from {addr}: {message}")
             # Echo the message back (optional)
-            data = "message", "Hello from Home Assistant!"
-            writer.write(data)
-            await writer.drain()
+            # data = "message", "Hello from Home Assistant!"
+            # writer.write(data)
+            # await writer.drain()
     except asyncio.CancelledError:
         LOGGER.info(f"Connection with {addr} cancelled.")
     except Exception as e:
