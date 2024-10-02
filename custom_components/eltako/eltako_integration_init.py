@@ -151,33 +151,33 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
 
 
-    host = "0.0.0.0"
-    port = 5100
-    hass.data[DOMAIN]["clients"] = []
+    # host = "0.0.0.0"
+    # port = 5100
+    # hass.data[DOMAIN]["clients"] = []
 
-    # Start the TCP server
-    server = await asyncio.start_server(
-        lambda r, w: handle_client(r, w, hass),
-        host,
-        port,
-    )
+    # # Start the TCP server
+    # server = await asyncio.start_server(
+    #     lambda r, w: handle_client(r, w, hass),
+    #     host,
+    #     port,
+    # )
 
-    try:
-        # Start the TCP server asynchronously
-        server = await asyncio.start_server(
-            lambda r, w: handle_client(r, w, hass),
-            host,
-            port,
-        )
+    # try:
+    #     # Start the TCP server asynchronously
+    #     server = await asyncio.start_server(
+    #         lambda r, w: handle_client(r, w, hass),
+    #         host,
+    #         port,
+    #     )
 
-        task = hass.loop.create_task(periodic_message_sender(hass))
+    #     task = hass.loop.create_task(periodic_message_sender(hass))
 
-        # Store the task and server to stop them later if needed
-        hass.data[DOMAIN]["tasks"].extend([server, task])
-        LOGGER.info(f"TCP Server started on {host}:{port}")
-    except Exception as e:
-        LOGGER.error(f"Failed to start TCP server: {e}")
-        return False
+    #     # Store the task and server to stop them later if needed
+    #     hass.data[DOMAIN]["tasks"].extend([server, task])
+    #     LOGGER.info(f"TCP Server started on {host}:{port}")
+    # except Exception as e:
+    #     LOGGER.error(f"Failed to start TCP server: {e}")
+    #     return False
 
 
     return True
