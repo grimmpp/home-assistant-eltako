@@ -151,16 +151,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         )
 
 
-    host = "0.0.0.0"
-    port = 5100
-    # Start the TCP server
-    server = await asyncio.start_server(
-        lambda r, w: handle_client(r, w, hass),
-        host,
-        port,
-    )
+    # host = "0.0.0.0"
+    # port = 5100
+    # # Start the TCP server
+    # server = await asyncio.start_server(
+    #     lambda r, w: handle_client(r, w, hass),
+    #     host,
+    #     port,
+    # )
 
-    LOGGER.info(f"TCP Server started on {host}:{port}")
+    # LOGGER.info(f"TCP Server started on {host}:{port}")
 
     return True
 
