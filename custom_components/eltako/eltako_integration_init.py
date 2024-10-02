@@ -150,7 +150,47 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
+
+    host = "0.0.0.0"
+    port = 5100
+    # Start the TCP server
+    server = await asyncio.start_server(
+        lambda r, w: handle_client(r, w, hass),
+        host,
+        port,
+    )
+
+    LOGGER.info(f"TCP Server started on {host}:{port}")
+
     return True
+
+
+async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter, hass: HomeAssistant):
+    """Handle incoming TCP client connections."""
+    addr = writer.get_extra_info('peername')
+    LOGGER.info(f"Accepted connection from {addr}")
+
+    try:
+        while True:
+            data = await reader.read(100)
+            if not data:
+                break
+            message = data.decode().strip()
+            LOGGER.info(f"Received message from {addr}: {message}")
+            # Echo the message back (optional)
+            data = "message", "Hello from Home Assistant!"
+            writer.write(data)
+            await writer.drain()
+    except asyncio.CancelledError:
+        LOGGER.info(f"Connection with {addr} cancelled.")
+    except Exception as e:
+        LOGGER.error(f"Error handling client {addr}: {e}")
+    finally:
+        writer.close()
+        await writer.wait_closed()
+        LOGGER.info(f"Connection with {addr} closed.")
+
+
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""

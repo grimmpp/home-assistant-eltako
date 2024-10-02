@@ -6,3 +6,4 @@ homeassistant
 termcolor
 StrEnum
 esp2-gateway-adapter==0.2.11
+pytest
