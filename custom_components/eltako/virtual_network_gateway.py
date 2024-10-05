@@ -43,6 +43,7 @@ class VirtualTCPServer:
         self.tcp_thread = threading.Thread(target=self.tcp_server)
         self.tcp_thread.daemon = True
         self.tcp_thread.start()
+        LOGGER.info("TCP Server started")
 
     def stop_tcp_server(self):
         self._not_stopped = False
