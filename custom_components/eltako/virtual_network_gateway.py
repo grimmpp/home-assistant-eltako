@@ -27,9 +27,7 @@ class VirtualNetworkGateway:
 
     def register_gateway(self, hass, gateway:EnOceanGateway):
         event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
-        # dispatcher_connect(hass, event_id, self.receive_enocean_msg_from_gw)
-        hass.loop.call_soon_threadsafe(dispatcher_connect, hass, event_id, self.receive_enocean_msg_from_gw)
-
+        dispatcher_connect(hass, event_id, self.receive_enocean_msg_from_gw)
 
     async def receive_enocean_msg_from_gw(self, msg):
         self.incoming_message_queue.put(msg)
