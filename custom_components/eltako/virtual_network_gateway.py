@@ -30,9 +30,9 @@ class VirtualTCPServer:
                         LOGGER.debug(f"[{LOGGING_PREFIX}] retrieve data from client")
                         data = conn.recv(1024)
                         if not data:
-                            print(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
+                            LOGGER.debug(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
                             break  # No data means the client has closed the connection
-                        print(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
+                        LOGGER.debug(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
                         # Echo the received data back to the client
                         conn.sendall(data)  # Send data back to the client
                     except Exception as e:
