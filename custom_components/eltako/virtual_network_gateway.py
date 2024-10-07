@@ -25,6 +25,9 @@ class VirtualNetworkGateway:
         self.port = 12345
         self._running = False
 
+    async def receive_message(self, msg):
+        self.incoming_message_queue.put(msg)
+
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
         try:
