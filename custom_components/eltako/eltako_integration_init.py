@@ -8,7 +8,7 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualNetworkGateway
+from .virtual_network_gateway import VirtualNetworkGateway, register_gateway_to_vnetgateway
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
@@ -151,7 +151,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     VIRTUAL_TCP_SERVER.start_tcp_server()
-    VIRTUAL_TCP_SERVER.register_gateway(hass, gateway)
+    register_gateway_to_vnetgateway(hass, VIRTUAL_TCP_SERVER, gateway)
 
     return True
 
