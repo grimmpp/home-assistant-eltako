@@ -7,7 +7,7 @@ from .const import *
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-TCP_IP = '127.0.0.1'
+TCP_IP = '0.0.0.0'
 TCP_PORT = 5005
 BUFFER_SIZE = 1024
 
