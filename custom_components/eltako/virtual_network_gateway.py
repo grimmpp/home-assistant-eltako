@@ -43,6 +43,8 @@ class VirtualNetworkGateway:
                     try:
                         # Receive data from the client
                         msg = self.incoming_message_queue.get(block=True)
+                        LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
+                        ##LOGGER.## TODO
                         if msg:
                             conn.sendall(msg)
 
