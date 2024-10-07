@@ -41,7 +41,7 @@ class VirtualNetworkGateway:
                 while self._running:
                     try:
                         # Receive data from the client
-                        msg = self.incoming_message_queue.get(block=False)
+                        msg = self.incoming_message_queue.get(block=True)
                         if msg:
                             conn.sendall(msg)
 
