@@ -21,7 +21,7 @@ class VirtualTCPServer:
         """Basic TCP Server that listens for connections."""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((TCP_IP, TCP_PORT))
-        s.listen(1)
+        s.listen()
 
         # Get the hostname
         hostname = socket.gethostname()
