@@ -2,6 +2,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.dispatcher import dispatcher_connect
 from homeassistant.helpers.reload import async_reload_integration_platforms
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
@@ -151,10 +152,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     VIRTUAL_TCP_SERVER.start_tcp_server()
-    register_gateway_to_vnetgateway(hass, VIRTUAL_TCP_SERVER, gateway)
+    connect_dispatcher_listener(hass, handle_message_in_event_loop, gateway)
 
     return True
 
+
+def connect_dispatcher_listener(hass, callback, gateway: EnOceanGateway):
+    event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
+    dispatcher_connect(hass, callback, event_id)
+
+# Callback function that will be triggered when the signal is dispatched
+async def handle_message_in_event_loop(message):
+    LOGGER.info(f"Received message: {message}")
+    VIRTUAL_TCP_SERVER.incoming_message_queue.put(message)
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

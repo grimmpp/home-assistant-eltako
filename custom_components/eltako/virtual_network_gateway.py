@@ -15,13 +15,6 @@ BUFFER_SIZE = 1024
 
 LOGGING_PREFIX = "VMGW"
 
-def register_gateway_to_vnetgateway(hass, vnetgw, gateway):
-    async def put_message(msg):
-        LOGGER.info(f"[{LOGGING_PREFIX}] Received message: {msg}")
-        vnetgw.incoming_message_queue.put(msg)
-
-    event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
-    dispatcher_connect(hass, event_id, put_message)
 
 class VirtualNetworkGateway:
 
@@ -31,7 +24,6 @@ class VirtualNetworkGateway:
         self.host = "0.0.0.0"
         self.port = 12345
         self._running = False
-
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
