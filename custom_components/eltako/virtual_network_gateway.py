@@ -7,7 +7,7 @@ from .const import *
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-TCP_IP = '0.0.0.0'
+TCP_IP = '127.0.0.1'
 TCP_PORT = 5005
 BUFFER_SIZE = 1024
 
@@ -16,13 +16,19 @@ class VirtualTCPServer:
     def __init__(self):
         self._not_stopped = False
 
+
     def tcp_server(self):
         """Basic TCP Server that listens for connections."""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((TCP_IP, TCP_PORT))
         s.listen(1)
 
-        LOGGER.info("TCP server listening on %s:%s", TCP_IP, TCP_PORT)
+        # Get the hostname
+        hostname = socket.gethostname()
+        # Get the IP address
+        ip_address = socket.gethostbyname(hostname)
+
+        LOGGER.info("TCP server listening on %s(%s):%s", hostname, ip_address, TCP_PORT)
 
         while self._not_stopped:
             conn, addr = s.accept()
