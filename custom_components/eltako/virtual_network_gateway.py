@@ -45,6 +45,7 @@ class VirtualTCPServer:
                     # You can implement custom logic here to trigger Home Assistant services or update entities.
             
             conn.close()
+            LOGGER.info("[%s] Connection closed!")
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
