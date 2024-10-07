@@ -19,7 +19,7 @@ class VirtualNetworkGateway:
         self.port = 12345
         self._running = False
 
-    async def forward_message(self, msg):
+    def forward_message(self, msg):
         self.incoming_message_queue.put(msg)
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
