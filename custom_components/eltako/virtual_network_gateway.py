@@ -7,8 +7,6 @@ from .const import *
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-TCP_IP = '0.0.0.0'
-TCP_PORT = 12345
 BUFFER_SIZE = 1024
 
 LOGGING_PREFIX = "VMGW"
@@ -16,13 +14,29 @@ LOGGING_PREFIX = "VMGW"
 class VirtualTCPServer:
 
     def __init__(self):
+        self.host = "0.0.0.0"
+        self.port = 12345
         self._not_stopped = False
+
+
+    def handle_client(self, conn, addr):
+        LOGGER.info(f"Connected client by {addr}")
+        with conn:
+            while self._not_stopped:
+                # Receive data from the client
+                data = conn.recv(1024)
+                if not data:
+                    print(f"Connection closed by {addr}")
+                    break  # No data means the client has closed the connection
+                print(f"Received from {addr}: {data.decode()}")
+                # Echo the received data back to the client
+                conn.sendall(data)  # Send data back to the client
 
 
     def tcp_server(self):
         """Basic TCP Server that listens for connections."""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((TCP_IP, TCP_PORT))
+        s.bind((self.host, self.port))
         s.listen()
 
         # Get the hostname
@@ -30,19 +44,16 @@ class VirtualTCPServer:
         # Get the IP address
         ip_address = socket.gethostbyname(hostname)
 
-        LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, TCP_PORT)
+        LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, self.port)
 
         while self._not_stopped:
             try:
                 LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                 conn, addr = s.accept()
                 LOGGER.debug("[%s] Connection from: %s established", LOGGING_PREFIX, addr)
-                with conn:
-                    while self._not_stopped:
-                        data = conn.recv(BUFFER_SIZE)
-                        if not data:
-                            break
-                        LOGGER.debug("[%s] Received data: %s", LOGGING_PREFIX, data.decode("utf-8"))
+                
+                client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
+                client_thread.start()
                         
             except Exception as e:
                 LOGGER.debug("[%s] An error occurred: {e}")
