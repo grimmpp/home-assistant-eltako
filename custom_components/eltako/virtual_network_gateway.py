@@ -4,8 +4,6 @@ import time
 import queue
 
 from .const import *
-from . import config_helpers
-from .gateway import EnOceanGateway
 
 BUFFER_SIZE = 1024
 
