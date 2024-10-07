@@ -20,46 +20,51 @@ class VirtualTCPServer:
 
 
     def handle_client(self, conn, addr):
-        LOGGER.info(f"Connected client by {addr}")
-        with conn:
-            while self._not_stopped:
-                # Receive data from the client
-                data = conn.recv(1024)
-                if not data:
-                    print(f"Connection closed by {addr}")
-                    break  # No data means the client has closed the connection
-                print(f"Received from {addr}: {data.decode()}")
-                # Echo the received data back to the client
-                conn.sendall(data)  # Send data back to the client
+        LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
+        try:
+            with conn:
+                while self._not_stopped:
+                    # Receive data from the client
+                    data = conn.recv(1024)
+                    if not data:
+                        print(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
+                        break  # No data means the client has closed the connection
+                    print(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
+                    # Echo the received data back to the client
+                    conn.sendall(data)  # Send data back to the client
+        except Exception as e:
+            LOGGER.info(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}")
+        finally:
+            LOGGER.info(f"[{LOGGING_PREFIX}] Handler for {addr} exiting.")
 
 
     def tcp_server(self):
         """Basic TCP Server that listens for connections."""
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((self.host, self.port))
-        s.listen()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((self.host, self.port))
+            s.listen()
 
-        # Get the hostname
-        hostname = socket.gethostname()
-        # Get the IP address
-        ip_address = socket.gethostbyname(hostname)
+            # Get the hostname
+            hostname = socket.gethostname()
+            # Get the IP address
+            ip_address = socket.gethostbyname(hostname)
 
-        LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, self.port)
+            LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, self.port)
 
-        while self._not_stopped:
-            try:
-                LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
-                conn, addr = s.accept()
-                LOGGER.debug("[%s] Connection from: %s established", LOGGING_PREFIX, addr)
-                
-                client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
-                client_thread.start()
-                        
-            except Exception as e:
-                LOGGER.debug("[%s] An error occurred: {e}")
-            finally:
-                conn.close()
-                LOGGER.debug("[%s] Connection closed!")
+            while self._not_stopped:
+                try:
+                    LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
+                    conn, addr = s.accept()
+                    LOGGER.debug("[%s] Connection from: %s established", LOGGING_PREFIX, addr)
+                    
+                    client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
+                    client_thread.start()
+                            
+                except Exception as e:
+                    LOGGER.debug("[%s] An error occurred: {e}")
+                finally:
+                    conn.close()
+                    LOGGER.debug("[%s] Connection closed!")
 
 
     def start_tcp_server(self):
