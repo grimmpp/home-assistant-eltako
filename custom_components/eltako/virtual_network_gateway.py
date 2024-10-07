@@ -3,6 +3,8 @@ import threading
 import time
 import queue
 
+from eltakobus.message import ESP2Message
+
 from .const import *
 
 BUFFER_SIZE = 1024
@@ -19,7 +21,7 @@ class VirtualNetworkGateway:
         self.port = 12345
         self._running = False
 
-    def forward_message(self, msg):
+    def forward_message(self, msg: ESP2Message):
         self.incoming_message_queue.put(msg)
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
@@ -29,11 +31,11 @@ class VirtualNetworkGateway:
                 while self._running:
                     try:
                         # Receive data from the client
-                        msg = self.incoming_message_queue.get(block=True)
+                        msg:ESP2Message = self.incoming_message_queue.get(block=True)
                         LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
                         ##LOGGER.## TODO
                         if msg:
-                            conn.sendall(msg)
+                            conn.sendall(msg.serialize())
 
                         time.sleep(.01)
 
