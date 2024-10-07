@@ -11,6 +11,8 @@ TCP_IP = '0.0.0.0'
 TCP_PORT = 12345
 BUFFER_SIZE = 1024
 
+LOGGING_PREFIX = "VMGW"
+
 class VirtualTCPServer:
 
     def __init__(self):
@@ -28,18 +30,19 @@ class VirtualTCPServer:
         # Get the IP address
         ip_address = socket.gethostbyname(hostname)
 
-        LOGGER.info("TCP server listening on %s(%s):%s", hostname, ip_address, TCP_PORT)
+        LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, TCP_PORT)
 
         while self._not_stopped:
             conn, addr = s.accept()
-            LOGGER.info("Connection from: %s", addr)
-            
-            while self._not_stopped:
-                data = conn.recv(BUFFER_SIZE)
-                if not data:
-                    break
-                LOGGER.info("Received data: %s", data.decode("utf-8"))
-                # You can implement custom logic here to trigger Home Assistant services or update entities.
+            LOGGER.info("[%s] Connection from: %s", LOGGING_PREFIX, addr)
+            with conn:
+                while self._not_stopped:
+                    LOGGER.info('[%s] Connected by', LOGGING_PREFIX, addr)
+                    data = conn.recv(BUFFER_SIZE)
+                    if not data:
+                        break
+                    LOGGER.info("[%s] Received data: %s", LOGGING_PREFIX, data.decode("utf-8"))
+                    # You can implement custom logic here to trigger Home Assistant services or update entities.
             
             conn.close()
 
@@ -49,7 +52,7 @@ class VirtualTCPServer:
         self.tcp_thread = threading.Thread(target=self.tcp_server)
         self.tcp_thread.daemon = True
         self.tcp_thread.start()
-        LOGGER.info("TCP Server started")
+        LOGGER.info("[%s] TCP Server started", LOGGING_PREFIX)
 
     def stop_tcp_server(self):
         self._not_stopped = False
