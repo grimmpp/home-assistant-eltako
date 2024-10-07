@@ -19,16 +19,15 @@ class VirtualNetworkGateway:
 
     incoming_message_queue = queue.Queue()
 
-    def __init__(self, hass):
-        self.hass = hass
+    def __init__(self):
         self.host = "0.0.0.0"
         self.port = 12345
         self._running = False
 
 
-    def register_gateway(self, gateway:EnOceanGateway):
+    def register_gateway(self, hass, gateway:EnOceanGateway):
         event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
-        dispatcher_connect(self.hass, event_id, self.receive_enocean_msg_from_gw)
+        dispatcher_connect(hass, event_id, self.receive_enocean_msg_from_gw)
 
 
     def receive_enocean_msg_from_gw(self, msg):
