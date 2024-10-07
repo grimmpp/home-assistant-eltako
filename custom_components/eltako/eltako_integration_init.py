@@ -154,7 +154,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     VIRTUAL_TCP_SERVER.start_tcp_server()
     # receive messages from HA event bus
     event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
-    hass.async_add_hass_job(
+    hass.async_add_job(
         async_dispatcher_connect(
             hass, event_id, VIRTUAL_TCP_SERVER.receive_message
         )
