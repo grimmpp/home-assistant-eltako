@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
 TCP_IP = '0.0.0.0'
-TCP_PORT = 5005
+TCP_PORT = 12345
 BUFFER_SIZE = 1024
 
 class VirtualTCPServer:
