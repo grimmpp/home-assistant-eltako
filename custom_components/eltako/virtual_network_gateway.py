@@ -34,7 +34,7 @@ class VirtualTCPServer:
 
         while self._not_stopped:
             try:
-                LOGGER.debug("[%s] Try to connect")
+                LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                 conn, addr = s.accept()
                 LOGGER.debug("[%s] Connection from: %s", LOGGING_PREFIX, addr)
                 with conn:
