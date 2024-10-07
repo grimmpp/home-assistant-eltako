@@ -1,40 +1,60 @@
 import socket
 import threading
 import time
+import queue
 
 from .const import *
+from . import config_helpers
+from gateway import EnOceanGateway
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_connect
 
 BUFFER_SIZE = 1024
 
 LOGGING_PREFIX = "VMGW"
 
-class VirtualTCPServer:
+class VirtualNetworkGateway:
 
-    def __init__(self):
+    incoming_message_queue = queue.Queue()
+
+    def __init__(self, hass):
+        self.hass = hass
         self.host = "0.0.0.0"
         self.port = 12345
         self._running = False
+
+
+    def register_gateway(self, gateway:EnOceanGateway):
+        event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
+        dispatcher_connect(self.hass, event_id, self.receive_enocean_msg_from_gw)
+
+
+    def receive_enocean_msg_from_gw(self, msg):
+        self.incoming_message_queue.put(msg)
 
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
         try:
             with conn:
-                LOGGER.debug(f"[{LOGGING_PREFIX}] thrad flag: {self._running}")
                 while self._running:
                     try:
                         # Receive data from the client
-                        LOGGER.debug(f"[{LOGGING_PREFIX}] retrieve data from client")
-                        data = conn.recv(1024)
-                        if not data:
-                            LOGGER.debug(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
-                            break  # No data means the client has closed the connection
-                        LOGGER.debug(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
-                        # Echo the received data back to the client
-                        conn.sendall(data)  # Send data back to the client
+                        msg = self.incoming_message_queue.get(block=False)
+                        if msg:
+                            conn.sendall(msg)
+
+                        time.sleep(0.1)
+
+                        # data = conn.recv(1024)
+                        # if not data:
+                        #     LOGGER.debug(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
+                        #     break  # No data means the client has closed the connection
+                        # LOGGER.debug(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
+                        # # Echo the received data back to the client
+                        # conn.sendall(data)  # Send data back to the client
                     except Exception as e:
                         LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
                         time.sleep(1)
@@ -42,7 +62,7 @@ class VirtualTCPServer:
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
-            LOGGER.info(f"[{LOGGING_PREFIX}] Handler for {addr} exiting.")
+            LOGGER.info(f"[{LOGGING_PREFIX}] Handler for {addr} exiting. (Thread flag running: {self._running})")
 
 
     def tcp_server(self):
@@ -56,29 +76,32 @@ class VirtualTCPServer:
             # Get the IP address
             ip_address = socket.gethostbyname(hostname)
 
-            LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, self.port)
+            LOGGER.info(f"[{LOGGING_PREFIX}] TCP server listening on {hostname}({ip_address}):{self.port}")
 
             while self._running:
                 try:
                     # LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                     conn, addr = s.accept()
-                    LOGGER.debug("[%s] Connection from: %s established", LOGGING_PREFIX, addr)
+                    LOGGER.debug(f"[{LOGGING_PREFIX}] Connection from: {addr} established")
                     
                     client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
                     client_thread.start()
                             
                 except Exception as e:
-                    LOGGER.debug("[%s] An error occurred: {e}")
+                    LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred: {e}", exc_info=True, stack_info=True)
             
+        LOGGER.info(f"[{LOGGING_PREFIX}] Closed TCP Server")
 
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
-        self._running = True
-        self.tcp_thread = threading.Thread(target=self.tcp_server)
-        self.tcp_thread.daemon = True
-        self.tcp_thread.start()
-        LOGGER.info("[%s] TCP Server started", LOGGING_PREFIX)
+        if not self._running:
+            self._running = True
+            self.tcp_thread = threading.Thread(target=self.tcp_server)
+            self.tcp_thread.daemon = True
+            self.tcp_thread.start()
+            LOGGER.info("f[{LOGGING_PREFIX}] TCP Server started")
+
 
     def stop_tcp_server(self):
         self._running = False

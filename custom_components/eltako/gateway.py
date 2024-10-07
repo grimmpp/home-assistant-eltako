@@ -32,12 +32,14 @@ async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegist
             base_id_list.append( list(d.connections)[0][1] )
     return base_id_list
 
+
 async def async_get_serial_path_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
     serial_path_list = []
     for d in device_registry.devices.values():
         if d.model and d.model.startswith(GATEWAY_DEFAULT_NAME):
             serial_path_list.append( list(d.identifiers)[0][1] )
     return serial_path_list
+
 
 class EnOceanGateway:
     """Representation of an Eltako gateway.

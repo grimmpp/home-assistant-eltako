@@ -8,12 +8,12 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualTCPServer
+from .virtual_network_gateway import VirtualNetworkGateway
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
 
-VIRTUAL_TCP_SERVER = VirtualTCPServer()
+VIRTUAL_TCP_SERVER = VirtualNetworkGateway()
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -39,12 +39,12 @@ def migrate_old_gateway_descriptions(hass: HomeAssistant):
         # LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
         if GATEWAY_DEFAULT_NAME in key:
             old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
-            LOGGER.info(f"[{LOG_PREFIX}] Support downwards compatibility => from new gatewy description '{key}' to old description '{old_key}'")
+            LOGGER.info(f"[{LOG_PREFIX}] Support downwards compatibility => from new gateway description '{key}' to old description '{old_key}'")
             migration_dict[old_key] = hass.data[DATA_ELTAKO][key]
             # del hass.data[DATA_ELTAKO][key]
         if OLD_GATEWAY_DEFAULT_NAME in key:
             new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
-            LOGGER.info(f"[{LOG_PREFIX}] Migrate gatewy from old description '{key}' to new description '{new_key}'")
+            LOGGER.info(f"[{LOG_PREFIX}] Migrate gateway from old description '{key}' to new description '{new_key}'")
             migration_dict[new_key] = hass.data[DATA_ELTAKO][key]
     # prvide either new or old key in parallel
     for key in migration_dict:
@@ -141,16 +141,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
-    usb_gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
+    gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
 
     
-    await usb_gateway.async_setup()
-    set_gateway_to_hass(hass, usb_gateway)
+    await gateway.async_setup()
+    set_gateway_to_hass(hass, gateway)
 
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     VIRTUAL_TCP_SERVER.start_tcp_server()
+    VIRTUAL_TCP_SERVER.register_gateway(gateway)
 
     return True
 
