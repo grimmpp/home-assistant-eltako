@@ -9,7 +9,7 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualNetworkGateway, register_gateway_to_vnetgateway
+from .virtual_network_gateway import VirtualNetworkGateway
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
