@@ -62,9 +62,7 @@ class VirtualTCPServer:
                             
                 except Exception as e:
                     LOGGER.debug("[%s] An error occurred: {e}")
-                finally:
-                    conn.close()
-                    LOGGER.debug("[%s] Connection closed!")
+            
 
 
     def start_tcp_server(self):
