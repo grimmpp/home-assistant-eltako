@@ -1,6 +1,6 @@
 import socket
 import threading
-import logging
+import time
 
 from .const import *
 
@@ -24,14 +24,19 @@ class VirtualTCPServer:
         try:
             with conn:
                 while self._not_stopped:
-                    # Receive data from the client
-                    data = conn.recv(1024)
-                    if not data:
-                        print(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
-                        break  # No data means the client has closed the connection
-                    print(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
-                    # Echo the received data back to the client
-                    conn.sendall(data)  # Send data back to the client
+                    try:
+                        # Receive data from the client
+                        data = conn.recv(1024)
+                        if not data:
+                            print(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
+                            break  # No data means the client has closed the connection
+                        print(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
+                        # Echo the received data back to the client
+                        conn.sendall(data)  # Send data back to the client
+                    except Exception as e:
+                        LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
+                        time.sleep(1)
+
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
@@ -53,7 +58,7 @@ class VirtualTCPServer:
 
             while self._not_stopped:
                 try:
-                    LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
+                    # LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                     conn, addr = s.accept()
                     LOGGER.debug("[%s] Connection from: %s established", LOGGING_PREFIX, addr)
                     
