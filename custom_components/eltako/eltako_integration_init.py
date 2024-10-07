@@ -142,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
-    gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
+    gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, VIRTUAL_TCP_SERVER, config_entry)
 
     
     await gateway.async_setup()
@@ -152,25 +152,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     VIRTUAL_TCP_SERVER.start_tcp_server()
-    # receive messages from HA event bus
-    event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
-    hass.async_add_job(
-        async_dispatcher_connect(
-            hass, event_id, VIRTUAL_TCP_SERVER.receive_message
-        )
-    )
 
     return True
 
-
-def connect_dispatcher_listener(hass, callback, gateway: EnOceanGateway):
-    event_id = config_helpers.get_bus_event_type(gateway.base_id, SIGNAL_SEND_MESSAGE)
-    dispatcher_connect(hass, callback, event_id)
-
-# Callback function that will be triggered when the signal is dispatched
-async def handle_message_in_event_loop(message):
-    LOGGER.info(f"Received message: {message}")
-    VIRTUAL_TCP_SERVER.incoming_message_queue.put(message)
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

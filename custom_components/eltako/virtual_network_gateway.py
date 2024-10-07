@@ -7,10 +7,6 @@ from .const import *
 from . import config_helpers
 from .gateway import EnOceanGateway
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_connect
-
 BUFFER_SIZE = 1024
 
 LOGGING_PREFIX = "VMGW"
@@ -25,7 +21,7 @@ class VirtualNetworkGateway:
         self.port = 12345
         self._running = False
 
-    async def receive_message(self, msg):
+    async def forward_message(self, msg):
         self.incoming_message_queue.put(msg)
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
