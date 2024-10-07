@@ -30,21 +30,20 @@ class VirtualTCPServer:
         # Get the IP address
         ip_address = socket.gethostbyname(hostname)
 
-        LOGGER.debug("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, TCP_PORT)
+        LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, TCP_PORT)
 
         while self._not_stopped:
             try:
                 LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                 conn, addr = s.accept()
-                LOGGER.debug("[%s] Connection from: %s", LOGGING_PREFIX, addr)
+                LOGGER.debug("[%s] Connection from: %s established", LOGGING_PREFIX, addr)
                 with conn:
                     while self._not_stopped:
-                        LOGGER.debug('[%s] Connected by', LOGGING_PREFIX, addr)
                         data = conn.recv(BUFFER_SIZE)
                         if not data:
                             break
                         LOGGER.debug("[%s] Received data: %s", LOGGING_PREFIX, data.decode("utf-8"))
-                        # You can implement custom logic here to trigger Home Assistant services or update entities.
+                        
             except Exception as e:
                 LOGGER.debug("[%s] An error occurred: {e}")
             finally:
