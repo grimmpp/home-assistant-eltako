@@ -29,26 +29,11 @@ class VirtualNetworkGateway:
         try:
             with conn:
                 while self._running:
-                    try:
-                        # Receive data from the client
-                        msg:ESP2Message = self.incoming_message_queue.get(block=True)
-                        LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
-                        ##LOGGER.## TODO
-                        if msg:
-                            conn.sendall(msg.serialize())
-
-                        time.sleep(.01)
-
-                        # data = conn.recv(1024)
-                        # if not data:
-                        #     LOGGER.debug(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
-                        #     break  # No data means the client has closed the connection
-                        # LOGGER.debug(f"[{LOGGING_PREFIX}] Received from {addr}: {data.decode()}")
-                        # # Echo the received data back to the client
-                        # conn.sendall(data)  # Send data back to the client
-                    except Exception as e:
-                        LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
-                        time.sleep(1)
+                    # Receive data from the client
+                    msg:ESP2Message = self.incoming_message_queue.get(block=True)
+                    LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
+                    if msg:
+                        conn.sendall(msg.serialize())
 
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
