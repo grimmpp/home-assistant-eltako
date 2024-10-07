@@ -33,7 +33,7 @@ class VirtualTCPServer:
                     # Echo the received data back to the client
                     conn.sendall(data)  # Send data back to the client
         except Exception as e:
-            LOGGER.info(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}")
+            LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
             LOGGER.info(f"[{LOGGING_PREFIX}] Handler for {addr} exiting.")
 
