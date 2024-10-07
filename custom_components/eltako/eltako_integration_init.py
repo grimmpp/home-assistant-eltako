@@ -13,7 +13,7 @@ from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
 
-VIRTUAL_TCP_SERVER = VirtualNetworkGateway()
+VIRTUAL_TCP_SERVER = None
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -150,7 +150,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
-    VIRTUAL_TCP_SERVER.start_tcp_server()
+    if VIRTUAL_TCP_SERVER is None:
+        VIRTUAL_TCP_SERVER = VirtualNetworkGateway(hass)
+        VIRTUAL_TCP_SERVER.start_tcp_server()
     VIRTUAL_TCP_SERVER.register_gateway(gateway)
 
     return True
