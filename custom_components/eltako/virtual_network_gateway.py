@@ -30,22 +30,25 @@ class VirtualTCPServer:
         # Get the IP address
         ip_address = socket.gethostbyname(hostname)
 
-        LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, TCP_PORT)
+        LOGGER.debug("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, TCP_PORT)
 
         while self._not_stopped:
-            conn, addr = s.accept()
-            LOGGER.info("[%s] Connection from: %s", LOGGING_PREFIX, addr)
-            with conn:
-                while self._not_stopped:
-                    LOGGER.info('[%s] Connected by', LOGGING_PREFIX, addr)
-                    data = conn.recv(BUFFER_SIZE)
-                    if not data:
-                        break
-                    LOGGER.info("[%s] Received data: %s", LOGGING_PREFIX, data.decode("utf-8"))
-                    # You can implement custom logic here to trigger Home Assistant services or update entities.
-            
-            conn.close()
-            LOGGER.info("[%s] Connection closed!")
+            try:
+                conn, addr = s.accept()
+                LOGGER.debug("[%s] Connection from: %s", LOGGING_PREFIX, addr)
+                with conn:
+                    while self._not_stopped:
+                        LOGGER.debug('[%s] Connected by', LOGGING_PREFIX, addr)
+                        data = conn.recv(BUFFER_SIZE)
+                        if not data:
+                            break
+                        LOGGER.debug("[%s] Received data: %s", LOGGING_PREFIX, data.decode("utf-8"))
+                        # You can implement custom logic here to trigger Home Assistant services or update entities.
+            except Exception as e:
+                LOGGER.debug("[%s] Error occurred: {e}")
+            finally:
+                conn.close()
+                LOGGER.debug("[%s] Connection closed!")
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
