@@ -5,7 +5,7 @@ import queue
 
 from .const import *
 from . import config_helpers
-from gateway import EnOceanGateway
+from .gateway import EnOceanGateway
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
