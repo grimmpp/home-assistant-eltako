@@ -30,7 +30,7 @@ class VirtualNetworkGateway:
         dispatcher_connect(hass, event_id, self.receive_enocean_msg_from_gw)
 
 
-    def receive_enocean_msg_from_gw(self, msg):
+    async def receive_enocean_msg_from_gw(self, msg):
         self.incoming_message_queue.put(msg)
 
 
@@ -45,7 +45,7 @@ class VirtualNetworkGateway:
                         if msg:
                             conn.sendall(msg)
 
-                        time.sleep(0.1)
+                        time.sleep(.01)
 
                         # data = conn.recv(1024)
                         # if not data:
