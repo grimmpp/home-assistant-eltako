@@ -45,7 +45,7 @@ class VirtualTCPServer:
                         LOGGER.debug("[%s] Received data: %s", LOGGING_PREFIX, data.decode("utf-8"))
                         # You can implement custom logic here to trigger Home Assistant services or update entities.
             except Exception as e:
-                LOGGER.debug("[%s] Error occurred: {e}")
+                LOGGER.debug("[%s] An error occurred: {e}")
             finally:
                 conn.close()
                 LOGGER.debug("[%s] Connection closed!")
