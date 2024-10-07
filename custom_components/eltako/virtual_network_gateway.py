@@ -16,16 +16,18 @@ class VirtualTCPServer:
     def __init__(self):
         self.host = "0.0.0.0"
         self.port = 12345
-        self._not_stopped = False
+        self._running = False
 
 
-    def handle_client(self, conn, addr):
+    def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
         try:
             with conn:
-                while self._not_stopped:
+                LOGGER.debug(f"[{LOGGING_PREFIX}] thrad flag: {self._running}")
+                while self._running:
                     try:
                         # Receive data from the client
+                        LOGGER.debug(f"[{LOGGING_PREFIX}] retrieve data from client")
                         data = conn.recv(1024)
                         if not data:
                             print(f"[{LOGGING_PREFIX}] Connection closed by {addr}")
@@ -47,7 +49,7 @@ class VirtualTCPServer:
         """Basic TCP Server that listens for connections."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
-            s.listen()
+            s.listen(1)
 
             # Get the hostname
             hostname = socket.gethostname()
@@ -56,7 +58,7 @@ class VirtualTCPServer:
 
             LOGGER.info("[%s] TCP server listening on %s(%s):%s", LOGGING_PREFIX, hostname, ip_address, self.port)
 
-            while self._not_stopped:
+            while self._running:
                 try:
                     # LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                     conn, addr = s.accept()
@@ -72,12 +74,12 @@ class VirtualTCPServer:
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
-        self._not_stopped = True
+        self._running = True
         self.tcp_thread = threading.Thread(target=self.tcp_server)
         self.tcp_thread.daemon = True
         self.tcp_thread.start()
         LOGGER.info("[%s] TCP Server started", LOGGING_PREFIX)
 
     def stop_tcp_server(self):
-        self._not_stopped = False
+        self._running = False
         self.tcp_thread.join()
