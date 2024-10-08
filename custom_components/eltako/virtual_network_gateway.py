@@ -52,9 +52,12 @@ class VirtualNetworkGateway:
 
     def send_gateway_info(self, conn: socket.socket):
         for gw in self.sending_gateways:
-            data = b'\x8b\x98' + gw.base_id + b'\x00\x00\x00\x00\x00'
-            LOGGER.debug(f"Send gateway info {gw} (id: {gw.id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type})")
-            conn.sendall( ESP2Message.parse(data).serialize() )
+            try:
+                data = b'\x8b\x98' + gw.base_id[0] + b'\x00\x00\x00\x00\x00'
+                LOGGER.debug(f"Send gateway info {gw} (id: {gw.id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type})")
+                conn.sendall( ESP2Message.parse(data).serialize() )
+            except Exception as e:
+                LOGGER.exception(e)
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
@@ -78,6 +81,8 @@ class VirtualNetworkGateway:
                         # send keep alive message
                         conn.sendall(b'IM2M')
 
+        except ConnectionResetError:
+            pass
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
