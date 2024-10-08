@@ -9,12 +9,11 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualNetworkGateway
+from .virtual_network_gateway import create_central_virtual_network_gateway, VirtualNetworkGateway
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
 
-VIRTUAL_TCP_SERVER = VirtualNetworkGateway()
 LOG_PREFIX = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -90,6 +89,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         raise Exception("Gateway Ids are not unique.")
 
 
+    v_gw = create_central_virtual_network_gateway(hass)
+
+
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config
@@ -142,7 +144,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
-    gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, VIRTUAL_TCP_SERVER, config_entry)
+    gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, v_gw, config_entry)
 
     
     await gateway.async_setup()
@@ -150,8 +152,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-
-    VIRTUAL_TCP_SERVER.start_tcp_server()
 
     return True
 

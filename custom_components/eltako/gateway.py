@@ -335,7 +335,7 @@ class EnOceanGateway:
                 dispatcher_send(self.hass, event_id, message)
 
         if self.virtual_mgw is not None:
-            self.virtual_mgw.forward_message(message)
+            self.virtual_mgw.forward_message(self, message)
             
     @property
     def unique_id(self) -> str:
