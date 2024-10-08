@@ -171,7 +171,7 @@ class VirtualNetworkGateway:
         self._running = False
         self.tcp_thread.join()
 
-    def convert_ip_to_bytes(ip_address_str):
+    def convert_ip_to_bytes(self, ip_address_str):
         try:
             if ":" in ip_address_str:  # Check for IPv6
                 return socket.inet_pton(socket.AF_INET6, ip_address_str)
