@@ -37,9 +37,9 @@ class VirtualNetworkGateway:
         self._running = False
         self.hass = hass
         
-    def forward_message(self, gatewagy, msg: ESP2Message):
-        if gatewagy not in self.sending_gateways:
-            self.sending_gateways.append(gatewagy)
+    def forward_message(self, gateway, msg: ESP2Message):
+        if gateway not in self.sending_gateways:
+            self.sending_gateways.append(gateway)
         
         self.incoming_message_queue.put((time.time(),msg))
 
@@ -54,7 +54,7 @@ class VirtualNetworkGateway:
         for gw in self.sending_gateways:
             try:
                 data = b'\x8b\x98' + gw.base_id[0] + b'\x00\x00\x00\x00\x00'
-                LOGGER.debug(f"Send gateway info {gw} (id: {gw.id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type})")
+                LOGGER.debug(f"Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type})")
                 conn.sendall( ESP2Message.parse(data).serialize() )
             except Exception as e:
                 LOGGER.exception(e)
