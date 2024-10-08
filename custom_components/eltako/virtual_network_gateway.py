@@ -3,6 +3,8 @@ import threading
 import queue
 import time
 
+from zeroconf import Zeroconf, ServiceInfo
+
 from eltakobus.message import ESP2Message
 from eltakobus.util import b2s, AddressExpression
 
@@ -14,7 +16,7 @@ from . import config_helpers
 
 BUFFER_SIZE = 1024
 MAX_MESSAGE_DELAY = 5
-LOGGING_PREFIX = "VMGW"
+LOGGING_PREFIX = "VirtGw"
 
 CENTRAL_VIRTUAL_NETWORK_GATEWAY = None
 
@@ -43,11 +45,25 @@ class VirtualNetworkGateway:
         self._running = False
         self.hass = hass
         
+
+    def get_service_info(self, ip_address:str):
+        info = ServiceInfo(
+            "_http._tcp.local.",
+            "VirtualNetworkGatewayAdapter._http._tcp.local.",
+            addresses= self.convert_ip_to_bytes(ip_address),
+            port=self.port,
+            server="VirtualNetworkGatewayAdapter-service.local.",
+        )
+
+        return info        
+
+
     def forward_message(self, gateway, msg: ESP2Message):
         if gateway not in self.sending_gateways:
             self.sending_gateways.append(gateway)
         
         self.incoming_message_queue.put((time.time(),msg))
+
 
     def convert_bus_address_to_external_address(self, gateway, msg):
         address = msg.body[6:10]
@@ -55,6 +71,7 @@ class VirtualNetworkGateway:
             LOGGER.debug(f"TODO: create external id")
         
         return msg
+
 
     def send_gateway_info(self, conn: socket.socket):
         for gw in self.sending_gateways:
@@ -65,6 +82,7 @@ class VirtualNetworkGateway:
                 conn.sendall( ESP2Message(bytes(data)).serialize() )
             except Exception as e:
                 LOGGER.exception(e)
+
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
@@ -107,6 +125,11 @@ class VirtualNetworkGateway:
             # Get the IP address
             ip_address = socket.gethostbyname(hostname)
 
+            # Register the service
+            service_info: ServiceInfo = self.get_service_info(ip_address)
+            zeroconf = Zeroconf()
+            zeroconf.register_service(service_info)
+
             LOGGER.info(f"[{LOGGING_PREFIX}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
 
             while self._running:
@@ -121,6 +144,10 @@ class VirtualNetworkGateway:
                             
                 except Exception as e:
                     LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred: {e}", exc_info=True, stack_info=True)
+
+
+            zeroconf.unregister_service(service_info)
+            zeroconf.close()
             
         LOGGER.info(f"[{LOGGING_PREFIX}] Closed TCP Server")
 
@@ -143,3 +170,13 @@ class VirtualNetworkGateway:
     def stop_tcp_server(self):
         self._running = False
         self.tcp_thread.join()
+
+    def convert_ip_to_bytes(ip_address_str):
+        try:
+            if ":" in ip_address_str:  # Check for IPv6
+                return socket.inet_pton(socket.AF_INET6, ip_address_str)
+            else:  # Assume IPv4
+                return socket.inet_aton(ip_address_str)
+            
+        except socket.error as e:
+            LOGGER.error(f"[{LOGGING_PREFIX}] Invalid IP address: {ip_address_str} - {e}")
