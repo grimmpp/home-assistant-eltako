@@ -75,7 +75,7 @@ class VirtualNetworkGateway:
                 while self._running:
                     # Receive data from the client
                     try:
-                        package = self.incoming_message_queue.get(timeout=5)
+                        package = self.incoming_message_queue.get(timeout=1)
                         t = package[0]
                         msg:ESP2Message = package[1]
                         if time.time() - t < MAX_MESSAGE_DELAY:
