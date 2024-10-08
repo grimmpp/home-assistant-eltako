@@ -9,7 +9,7 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import create_central_virtual_network_gateway, VirtualNetworkGateway
+from .virtual_network_gateway import create_central_virtual_network_gateway, stop_central_virtual_network_gateway, VirtualNetworkGateway
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
@@ -89,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         raise Exception("Gateway Ids are not unique.")
 
 
-    v_gw = create_central_virtual_network_gateway(hass)
+    v_gw:VirtualNetworkGateway = create_central_virtual_network_gateway(hass)
 
 
     # set config for global access
@@ -166,6 +166,6 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     gateway.unload()
     del hass.data[DATA_ELTAKO][gateway.dev_name]
 
-    VIRTUAL_TCP_SERVER.stop_tcp_server()
+    stop_central_virtual_network_gateway()
 
     return True

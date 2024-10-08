@@ -22,9 +22,15 @@ def create_central_virtual_network_gateway(hass):
     global CENTRAL_VIRTUAL_NETWORK_GATEWAY
     if CENTRAL_VIRTUAL_NETWORK_GATEWAY is None:
         CENTRAL_VIRTUAL_NETWORK_GATEWAY = VirtualNetworkGateway(hass)
-        CENTRAL_VIRTUAL_NETWORK_GATEWAY.start_tcp_server()
+    
+    CENTRAL_VIRTUAL_NETWORK_GATEWAY.restart_tcp_server()
     
     return CENTRAL_VIRTUAL_NETWORK_GATEWAY
+
+def stop_central_virtual_network_gateway():
+    global CENTRAL_VIRTUAL_NETWORK_GATEWAY
+    if CENTRAL_VIRTUAL_NETWORK_GATEWAY is None:
+        CENTRAL_VIRTUAL_NETWORK_GATEWAY.stop_tcp_server()
 
 class VirtualNetworkGateway:
 
@@ -117,6 +123,13 @@ class VirtualNetworkGateway:
             
         LOGGER.info(f"[{LOGGING_PREFIX}] Closed TCP Server")
 
+
+    def restart_tcp_server(self):
+        if self._running:
+            self._running = False
+            self.stop_tcp_server()
+        
+        self.start_tcp_server()
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
