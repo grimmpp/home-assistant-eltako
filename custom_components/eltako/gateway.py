@@ -294,6 +294,9 @@ class EnOceanGateway:
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
 
+        if self.virtual_mgw is not None:
+            self.virtual_mgw.forward_message(self, msg)
+
 
     def unload(self):
         """Disconnect callbacks established at init time."""
