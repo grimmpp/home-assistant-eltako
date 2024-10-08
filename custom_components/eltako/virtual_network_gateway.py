@@ -106,7 +106,7 @@ class VirtualNetworkGateway:
             # Get the IP address
             ip_address = socket.gethostbyname(hostname)
 
-            LOGGER.info(f"[{LOGGING_PREFIX}] TCP server listening on {hostname}({ip_address}):{self.port}")
+            LOGGER.info(f"[{LOGGING_PREFIX}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
 
             while self._running:
                 try:
@@ -126,7 +126,6 @@ class VirtualNetworkGateway:
 
     def restart_tcp_server(self):
         if self._running:
-            self._running = False
             self.stop_tcp_server()
         
         self.start_tcp_server()
@@ -138,7 +137,6 @@ class VirtualNetworkGateway:
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
             self.tcp_thread.start()
-            LOGGER.info("f[{LOGGING_PREFIX}] TCP Server started")
 
 
     def stop_tcp_server(self):

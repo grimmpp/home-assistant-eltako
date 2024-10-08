@@ -89,6 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         raise Exception("Gateway Ids are not unique.")
 
 
+    LOGGER.info(f"Start virtual network gateway adapter.")
     v_gw:VirtualNetworkGateway = create_central_virtual_network_gateway(hass)
 
 
