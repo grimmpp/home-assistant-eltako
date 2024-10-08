@@ -55,10 +55,14 @@ class VirtualNetworkGateway:
             with conn:
                 while self._running:
                     # Receive data from the client
-                    msg:ESP2Message = self.incoming_message_queue.get(block=True)
-                    LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
-                    if msg:
-                        conn.sendall(msg.serialize())
+                    try:
+                        msg:ESP2Message = self.incoming_message_queue.get(timeout=5)
+                        LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
+                        if msg:
+                            conn.sendall(msg.serialize())
+                    except:
+                        # send keep alive message
+                        conn.sendall(b'IM2M')
 
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
