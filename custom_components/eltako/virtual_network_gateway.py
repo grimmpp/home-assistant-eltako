@@ -21,6 +21,7 @@ def create_central_virtual_network_gateway(hass):
     global CENTRAL_VIRTUAL_NETWORK_GATEWAY
     if CENTRAL_VIRTUAL_NETWORK_GATEWAY is None:
         CENTRAL_VIRTUAL_NETWORK_GATEWAY = VirtualNetworkGateway(hass)
+        CENTRAL_VIRTUAL_NETWORK_GATEWAY.start_tcp_server()
     
     return CENTRAL_VIRTUAL_NETWORK_GATEWAY
 
