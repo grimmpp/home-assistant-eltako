@@ -17,7 +17,7 @@ LOGGING_PREFIX = "VMGW"
 
 CENTRAL_VIRTUAL_NETWORK_GATEWAY = None
 
-def create_central_virtual_network_gateway(hass, config_entry_id):
+def create_central_virtual_network_gateway(hass):
     if CENTRAL_VIRTUAL_NETWORK_GATEWAY is None:
         CENTRAL_VIRTUAL_NETWORK_GATEWAY = VirtualNetworkGateway(hass)
     
