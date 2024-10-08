@@ -61,10 +61,10 @@ class VirtualNetworkGateway:
                         t = package[0]
                         msg:ESP2Message = package[1]
                         if time.time() - t < MAX_MESSAGE_DELAY:
-                            LOGGER.debug(f"[{LOGGING_PREFIX}] Forward enocean message {msg}")
+                            LOGGER.debug(f"[{LOGGING_PREFIX}] Forward EnOcean message {msg}")
                             conn.sendall(msg.serialize())
                         else:
-                            LOGGER.debug(f"[{LOGGING_PREFIX}] enocean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
+                            LOGGER.debug(f"[{LOGGING_PREFIX}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
                     except:
                         # send keep alive message
                         conn.sendall(b'IM2M')
