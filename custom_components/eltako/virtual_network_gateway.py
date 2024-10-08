@@ -1,6 +1,7 @@
 import socket
 import threading
 import queue
+import time
 
 from eltakobus.message import ESP2Message
 from eltakobus.util import b2s, AddressExpression
@@ -12,7 +13,7 @@ from .const import *
 from . import config_helpers
 
 BUFFER_SIZE = 1024
-
+MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX = "VMGW"
 
 CENTRAL_VIRTUAL_NETWORK_GATEWAY = None
@@ -40,7 +41,7 @@ class VirtualNetworkGateway:
         if gatewagy not in self.sending_gateways:
             self.sending_gateways.append(gatewagy)
         
-        self.incoming_message_queue.put(msg)
+        self.incoming_message_queue.put((time.time(),msg))
 
     def convert_bus_address_to_external_address(self, gateway, msg):
         address = msg.body[6:10]
@@ -56,10 +57,14 @@ class VirtualNetworkGateway:
                 while self._running:
                     # Receive data from the client
                     try:
-                        msg:ESP2Message = self.incoming_message_queue.get(timeout=5)
-                        LOGGER.info(f"[{LOGGING_PREFIX}] Received enocean message {msg}")
-                        if msg:
+                        package = self.incoming_message_queue.get(timeout=5)
+                        t = package[0]
+                        msg:ESP2Message = package[1]
+                        if time.time() - t < MAX_MESSAGE_DELAY:
+                            LOGGER.debug(f"[{LOGGING_PREFIX}] Forward enocean message {msg}")
                             conn.sendall(msg.serialize())
+                        else:
+                            LOGGER.debug(f"[{LOGGING_PREFIX}] enocean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
                     except:
                         # send keep alive message
                         conn.sendall(b'IM2M')
