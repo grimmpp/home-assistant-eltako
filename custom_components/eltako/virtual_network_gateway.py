@@ -9,7 +9,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatche
 from homeassistant.helpers import device_registry as dr
 
 from .const import *
-import config_helpers
+from . import config_helpers
 
 BUFFER_SIZE = 1024
 
