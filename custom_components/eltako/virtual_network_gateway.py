@@ -50,7 +50,7 @@ class VirtualNetworkGateway:
         info = ServiceInfo(
             "_http._tcp.local.",
             "VirtualNetworkGatewayAdapter._http._tcp.local.",
-            addresses= self.convert_ip_to_bytes(ip_address),
+            addresses = [self.convert_ip_to_bytes(ip_address)],
             port=self.port,
             server="VirtualNetworkGatewayAdapter-service.local.",
         )
