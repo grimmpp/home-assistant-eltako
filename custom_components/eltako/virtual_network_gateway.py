@@ -108,6 +108,8 @@ class VirtualNetworkGateway:
 
         except ConnectionResetError:
             pass
+        except BrokenPipeError:
+            pass
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
