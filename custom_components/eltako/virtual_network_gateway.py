@@ -70,7 +70,7 @@ class VirtualNetworkGateway:
         """Basic TCP Server that listens for connections."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
-            s.listen(1)
+            s.listen()
 
             # Get the hostname
             hostname = socket.gethostname()
