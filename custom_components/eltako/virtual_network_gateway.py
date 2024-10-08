@@ -92,6 +92,7 @@ class VirtualNetworkGateway:
                 try:
                     # LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                     conn, addr = s.accept()
+                    conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     LOGGER.debug(f"[{LOGGING_PREFIX}] Connection from: {addr} established")
                     
                     client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
