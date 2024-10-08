@@ -59,8 +59,9 @@ class VirtualNetworkGateway:
     def send_gateway_info(self, conn: socket.socket):
         for gw in self.sending_gateways:
             try:
-                data = b'\x8b\x98' + gw.base_id[0] + b'\x00\x00\x00\x00\x00'
-                LOGGER.debug(f"Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type})")
+                gw_type_id:int = GatewayDeviceType.indexOf(gw.dev_type)
+                data:bytes = b'\x8b\x98' + gw.base_id[0] + gw_type_id.to_bytes(2) + b'\x00\x00\x00\x00'
+                LOGGER.debug(f"[{LOGGING_PREFIX}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type} / {gw_type_id}) ")
                 conn.sendall( ESP2Message(bytes(data)).serialize() )
             except Exception as e:
                 LOGGER.exception(e)

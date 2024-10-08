@@ -91,6 +91,10 @@ class GatewayDeviceType(str, Enum):
     LAN = 'mgw-lan'
 
     @classmethod
+    def indexOf(cls, value):
+        return list(cls).index(value)
+
+    @classmethod
     def find(cls, value):
         for t in GatewayDeviceType:
             if t.value.lower() == value.lower():
