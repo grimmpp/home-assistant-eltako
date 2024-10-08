@@ -50,10 +50,19 @@ class VirtualNetworkGateway:
         
         return msg
 
+    def send_gateway_info(self, conn: socket.socket):
+        for gw in self.sending_gateways:
+            data = b'\x8b\x98' + gw.base_id + b'\x00\x00\x00\x00\x00'
+            LOGGER.debug(f"Send gateway info {gw} (id: {gw.id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type})")
+            conn.sendall( ESP2Message.parse(data).serialize() )
+
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
         try:
             with conn:
+                self.send_gateway_info(conn)
+
+                # send messages coming in and out
                 while self._running:
                     # Receive data from the client
                     try:
