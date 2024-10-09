@@ -49,7 +49,7 @@ class VirtualNetworkGateway:
     def get_service_info(self, ip_address:str):
         info = ServiceInfo(
             "_bsc-sc-socket._tcp.local.",
-            "_virtual-network-gateway-adapter._bsc-sc-socket._tcp.local.",
+            "Virtual-Network-Gateway-Adapter._bsc-sc-socket._tcp.local.",
             addresses = [self.convert_ip_to_bytes(ip_address)],
             port=self.port,
         )
