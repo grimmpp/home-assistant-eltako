@@ -957,7 +957,7 @@ class GatewayBaseId(EltakoSensor):
                         ) )
         self._attr_name = "Base Id"
         
-        self.gateway.add_base_id_change_handler( self.value_changed )
+        self.gateway.add_base_id_change_handler( self.async_value_changed )
 
     @property
     def device_info(self) -> DeviceInfo:
