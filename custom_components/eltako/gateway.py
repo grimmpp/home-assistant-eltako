@@ -83,7 +83,8 @@ class EnOceanGateway:
             self.native_protocol = 'ESP2'
         else:
             self.native_protocol = 'ESP3'
-        self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
+        self._original_dev_name = dev_name
+        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, dev_type.value, dev_id, base_id)
 
         self._init_bus()
 
@@ -345,7 +346,7 @@ class EnOceanGateway:
             if message.body[:2] == b'\x8b\x98':
                 LOGGER.debug("[Gateway] [Id: %d] Received base id: %s", self.dev_id, b2s(message.body[2:6]))
                 self._attr_base_id = AddressExpression( (message.body[2:6], None) )
-                self._attr_dev_name = config_helpers.get_gateway_name(self.dev_name, self.dev_type.value, self.dev_id, self.base_id)
+                self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
             if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
