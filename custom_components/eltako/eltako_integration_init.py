@@ -64,8 +64,7 @@ def set_gateway_to_hass(hass: HomeAssistant, gateway_enity: EnOceanGateway) -> N
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
 
-    gw_id = "gateway_id_"+str(gateway_enity.dev_id)
-    hass.data[DATA_ELTAKO][gw_id] = gateway_enity
+    hass.data[DATA_ELTAKO][gateway_enity.dev_name] = gateway_enity
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: EnOceanGateway) -> ConfigType:
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
@@ -164,10 +163,9 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
     gateway = get_gateway_from_hass(hass, config_entry)
 
-    gw_id = "gateway_id_"+str(gateway.dev_id)
-    LOGGER.info("Unload %s, %s and all its supported devices!", gw_id, gateway.dev_name)
+    LOGGER.info("Unload %s and all its supported devices!", gateway.dev_name)
     gateway.unload()
-    del hass.data[DATA_ELTAKO][gw_id]
+    del hass.data[DATA_ELTAKO][gateway.dev_name]
 
     stop_central_virtual_network_gateway()
 
