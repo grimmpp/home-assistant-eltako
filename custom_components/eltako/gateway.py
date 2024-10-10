@@ -1,5 +1,5 @@
-"""Representation of an Eltako gateway."""
 import glob
+"""Representation of an Eltako gateway."""
 
 from os.path import basename, normpath
 import pytz
@@ -11,7 +11,7 @@ import asyncio
 from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import ESP2Message, EltakoPoll
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant
@@ -156,6 +156,12 @@ class EnOceanGateway:
                                                callback=self._callback_receive_message_from_serial_bus, 
                                                esp2_translation_enabled=True, 
                                                auto_reconnect=self._auto_reconnect)
+        
+        ## try to ask for base_id
+        try:
+            self._bus.send_base_id_request()
+        except Exception as e:
+            LOGGER.exception(e)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
@@ -322,7 +328,7 @@ class EnOceanGateway:
             LOGGER.warning("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
 
 
-    def _callback_receive_message_from_serial_bus(self, message):
+    def _callback_receive_message_from_serial_bus(self, message:ESP2Message):
         """Handle Eltako device's callback.
 
         This is the callback function called by python-enocan whenever there
@@ -333,9 +339,16 @@ class EnOceanGateway:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
             self.process_messages()
 
-            if isinstance(message, ESP2Message):
+            if message.body[:2] == b'\x8b\x98':
+                LOGGER.debug("[Gateway] [Id: %d] Received base id: %s", self.dev_id, b2s(message.body[2:6]))
+                self.base_id = AddressExpression(message.body[2:6], None)
+                self._attr_dev_name = config_helpers.get_gateway_name(self.dev_name, self.dev_type.value, self.dev_id, self.base_id)
+
+            if isinstance(message, ESP2Message) and self.base_id:
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
+            elif self.base_id is None:
+                self._bus.send_base_id_request()
 
         if self.virtual_mgw is not None:
             self.virtual_mgw.forward_message(self, message)
