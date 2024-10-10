@@ -417,7 +417,7 @@ async def async_setup_entry(
 
     # add gateway information
     entities.append(GatewayInfoField(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
-    entities.append(GatewayInfoField(platform, gateway, "Base Id", b2s(gateway.base_id[0]), "mdi:identifier"))
+    entities.append(GatewayBaseId(platform, gateway))
     entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
     entities.append(GatewayInfoField(platform, gateway, "USB Protocol", gateway.native_protocol, "mdi:usb"))
     entities.append(GatewayInfoField(platform, gateway, "Message Delay", gateway.message_delay, "mdi:av-timer"))
@@ -854,7 +854,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
-                         dev_id=gateway.base_id, 
+                         dev_id=gateway.dev_id, 
                          dev_name="Last Message Received", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
@@ -899,7 +899,7 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
-                         dev_id=gateway.base_id, 
+                         dev_id=gateway.dev_id, 
                          dev_name="Received Messages per Session", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
@@ -941,12 +941,48 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
         self.schedule_update_ha_state()
 
 
+class GatewayBaseId(EltakoSensor):
+     """"Displays base id of gateway."""
+
+     def __init__(self, platform: str, gateway: EnOceanGateway):
+        super().__init__(platform, gateway,
+                         dev_id=gateway.dev_id, 
+                         dev_name="Base Id", 
+                         dev_eep=None,
+                         description=EltakoSensorEntityDescription(
+                            key="Base Id",
+                            name="Base Id",
+                            icon="mdi:identifier",
+                            has_entity_name= True,
+                        ) )
+        self._attr_name="Base Id"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.gateway.serial_path)},
+            name= self.gateway.dev_name,
+            manufacturer=MANUFACTURER,
+            model=self.gateway.model,
+            via_device=(DOMAIN, self.gateway.serial_path)
+        )
+
+    def value_changed(self, msg: ESP2Message) -> None:
+        """Update the current value."""
+        # LOGGER.debug("[%s] received amount of messages: %s", Platform.SENSOR, str(value))
+
+        if msg.body[:2] == b'\x8b\x98':
+            self.native_value = b2s(b2s(msg.body[2:6]))
+            self.schedule_update_ha_state()
+
+
 class StaticInfoField(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
         super().__init__(platform, gateway,
-                         dev_id=dev_id, 
+                         dev_id=AddressExpression.parse('00-00-00-00'), 
                          dev_name=dev_name, 
                          dev_eep=dev_eep,
                          description=EltakoSensorEntityDescription(
@@ -968,7 +1004,6 @@ class GatewayInfoField(StaticInfoField):
     def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
         super().__init__(platform, 
                          gateway,
-                         dev_id=gateway.base_id, 
                          dev_name=key, 
                          dev_eep=None,
                          key=key,
