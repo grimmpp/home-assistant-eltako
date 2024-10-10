@@ -854,7 +854,7 @@ class GatewayLastReceivedMessage(EltakoSensor):
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
-                         dev_id=gateway.dev_id, 
+                         dev_id=AddressExpression.parse('00-00-00-00'), 
                          dev_name="Last Message Received", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
