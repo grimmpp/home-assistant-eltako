@@ -85,7 +85,7 @@ class EnOceanGateway:
         else:
             self.native_protocol = 'ESP3'
         self._original_dev_name = dev_name
-        self.hass.create_task( self.create_and_set_name )
+        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
         self._init_bus()
 
