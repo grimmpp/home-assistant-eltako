@@ -89,7 +89,7 @@ class EnOceanGateway:
 
         self._register_device()
 
-        self.add_connection_state_changed_handler()
+        self.add_connection_state_changed_handler(self.query_for_base_id_and_version)
 
 
     def query_for_base_id_and_version(self, connected):
