@@ -345,7 +345,7 @@ class EnOceanGateway:
                 self._attr_dev_name = config_helpers.get_gateway_name(self.dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
             if self.base_id is None or self.base_id[0] == b'\x00\x00\x00\x00':
-                self._bus.send_base_id_request()
+                hass.async_add_job( self._bus.send_base_id_request )
             elif isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
