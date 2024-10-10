@@ -956,7 +956,8 @@ class GatewayBaseId(EltakoSensor):
                             has_entity_name= True,
                         ) )
         self._attr_name = "Base Id"
-        self.listen_to_addresses.append(b'\x00')
+        
+        self.gateway.add_base_id_change_handler( self.value_changed )
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -969,12 +970,11 @@ class GatewayBaseId(EltakoSensor):
             via_device=(DOMAIN, self.gateway.serial_path)
         )
 
-    def value_changed(self, msg: ESP2Message) -> None:
+    async def async_value_changed(self, base_id: AddressExpression) -> None:
         """Update the current value."""
-        # LOGGER.debug("[%s] received amount of messages: %s", Platform.SENSOR, str(value))
 
-        if msg.body[:2] == b'\x8b\x98':
-            self.native_value = b2s(b2s(msg.body[2:6]))
+        if isinstance(base_id, AddressExpression):
+            self.native_value = b2s(base_id[0])
             self.schedule_update_ha_state()
 
 

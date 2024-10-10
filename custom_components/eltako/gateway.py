@@ -74,7 +74,8 @@ class EnOceanGateway:
         self.virtual_mgw = virtual_mgw
 
         self._last_message_received_handler = None
-        self._connection_state_handler = []
+        self._connection_state_handlers = []
+        self._base_id_change_handlers = []
         self._received_message_count_handler = None
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
@@ -84,14 +85,18 @@ class EnOceanGateway:
         else:
             self.native_protocol = 'ESP3'
         self._original_dev_name = dev_name
-        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, dev_type.value, dev_id, base_id)
+        self.hass.create_task( self.create_and_set_name )
 
         self._init_bus()
 
         self._register_device()
 
         self.add_connection_state_changed_handler(self.query_for_base_id_and_version)
+        self.add_base_id_change_handler(self.create_and_set_name)
 
+
+    async def create_and_set_name(self):
+        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
     async def query_for_base_id_and_version(self, connected):
         if connected:
@@ -100,13 +105,22 @@ class EnOceanGateway:
             await self._bus.send_version_request()
 
 
+    def add_base_id_change_handler(self, handler):
+        self._base_id_change_handlers.append(handler)
+
+    def _fire_base_id_change_handlers(self, base_id: AddressExpression):
+        for handler in self._base_id_change_handlers:
+            self.hass.create_task(
+                handler(base_id)
+            )
+
     def add_connection_state_changed_handler(self, handler):
-        self._connection_state_handler.append(handler)
+        self._connection_state_handlers.append(handler)
         self._fire_connection_state_changed_event(self._bus.is_active())
 
 
     def _fire_connection_state_changed_event(self, status):
-        for handler in self._connection_state_handler:
+        for handler in self._connection_state_handlers:
             self.hass.create_task(
                 handler(status)
             )
@@ -346,7 +360,7 @@ class EnOceanGateway:
             if message.body[:2] == b'\x8b\x98':
                 LOGGER.debug("[Gateway] [Id: %d] Received base id: %s", self.dev_id, b2s(message.body[2:6]))
                 self._attr_base_id = AddressExpression( (message.body[2:6], None) )
-                self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
+                self._fire_base_id_change_handlers(self.base_id)
 
             if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
