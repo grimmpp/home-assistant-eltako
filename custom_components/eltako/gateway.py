@@ -90,14 +90,14 @@ class EnOceanGateway:
 
         self._register_device()
 
-        self.add_connection_state_changed_handler(self.query_for_base_id_and_version)
+        # self.add_connection_state_changed_handler(self.query_for_base_id_and_version)
 
 
     def query_for_base_id_and_version(self, connected):
         if connected:
             LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
-            # self.hass.async_add_job( self._bus.send_base_id_request )
-            # self.hass.async_add_job( self._bus.send_version_request )
+            self.hass.async_add_job( self._bus.send_base_id_request )
+            self.hass.async_add_job( self._bus.send_version_request )
 
 
     def add_connection_state_changed_handler(self, handler):
