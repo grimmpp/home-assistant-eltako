@@ -65,7 +65,7 @@ async def async_setup_entry(
 
                     # subscribe for cooling switch events
                     if cooling_switch is not None:
-                        event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, 
+                        event_id = config_helpers.get_bus_event_type(gateway.dev_id, EVENT_BUTTON_PRESSED, cooling_switch.id, 
                                                                      config_helpers.convert_button_pos_from_hex_to_str(cooling_switch.get(CONF_SWITCH_BUTTON)))
                         LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_event)

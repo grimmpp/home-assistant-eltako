@@ -337,7 +337,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
         if self.is_on:
             LOGGER.debug("Fire event for binary sensor.")
             switch_address = config_helpers.format_address((msg.address, None))
-            event_id = config_helpers.get_bus_event_type(self.gateway.base_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
+            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
             self.hass.bus.fire(
                 event_id,
                 {
@@ -357,7 +357,7 @@ class GatewayConnectionState(AbstractBinarySensor):
         self._attr_name = "Connected"
         
         super().__init__(platform, gateway, gateway.base_id, dev_name="Connected", description_key=key)
-        self.gateway.set_connection_state_changed_handler(self.async_value_changed)
+        self.gateway.add_connection_state_changed_handler(self.async_value_changed)
 
     @property
     def device_info(self) -> DeviceInfo:

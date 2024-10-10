@@ -80,7 +80,7 @@ class EltakoEntity(Entity):
         await super().async_added_to_hass()
         
         # Register callbacks.
-        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_RECEIVE_MESSAGE)
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, event_id, self._message_received_callback
@@ -173,7 +173,7 @@ class EltakoEntity(Entity):
     
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
-        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
         
 

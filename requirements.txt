@@ -5,5 +5,5 @@ enocean>=0.60.1
 homeassistant
 termcolor
 StrEnum
-esp2-gateway-adapter==0.2.11
+esp2-gateway-adapter==0.2.13
 pytest

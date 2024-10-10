@@ -74,7 +74,7 @@ class EnOceanGateway:
         self.virtual_mgw = virtual_mgw
 
         self._last_message_received_handler = None
-        self._connection_state_handler = None
+        self._connection_state_handler = []
         self._received_message_count_handler = None
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
@@ -89,16 +89,25 @@ class EnOceanGateway:
 
         self._register_device()
 
+        self.add_connection_state_changed_handler()
 
-    def set_connection_state_changed_handler(self, handler):
-        self._connection_state_handler = handler
+
+    def query_for_base_id_and_version(self, connected):
+        if connected:
+            LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
+            self._bus.send_base_id_request()
+            self._bus.send_version_request()
+
+
+    def add_connection_state_changed_handler(self, handler):
+        self._connection_state_handler.append(handler)
         self._fire_connection_state_changed_event(self._bus.is_active())
 
 
     def _fire_connection_state_changed_event(self, status):
-        if self._connection_state_handler:
+        for handler in self._connection_state_handler:
             self.hass.create_task(
-                self._connection_state_handler(status)
+                handler(status)
             )
 
 
@@ -157,12 +166,6 @@ class EnOceanGateway:
                                                esp2_translation_enabled=True, 
                                                auto_reconnect=self._auto_reconnect)
         
-        ## try to ask for base_id
-        try:
-            self._bus.send_base_id_request()
-        except Exception as e:
-            LOGGER.exception(e)
-
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
 
@@ -236,7 +239,7 @@ class EnOceanGateway:
         LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
 
         # receive messages from HA event bus
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
@@ -246,7 +249,7 @@ class EnOceanGateway:
         # The service will be registered for each gateway, as the user
         # might have different gateways that cause the eltako relays
         # only to react on them.
-        service_name = f"gateway_{self._attr_dev_id}_send_message"
+        service_name = f"gateway_{self.dev_id}_send_message"
         self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
 
 
@@ -297,7 +300,7 @@ class EnOceanGateway:
 
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
-        event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
 
         if self.virtual_mgw is not None:
@@ -344,10 +347,8 @@ class EnOceanGateway:
                 self._attr_base_id = AddressExpression( (message.body[2:6], None) )
                 self._attr_dev_name = config_helpers.get_gateway_name(self.dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
-            if self.base_id is None or self.base_id[0] == b'\x00\x00\x00\x00':
-                self.hass.async_add_job( self._bus.send_base_id_request )
-            elif isinstance(message, ESP2Message):
-                event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
+            if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
+                event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
             
 
