@@ -344,7 +344,7 @@ class EnOceanGateway:
                 self.base_id = AddressExpression(message.body[2:6], None)
                 self._attr_dev_name = config_helpers.get_gateway_name(self.dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
-            if isinstance(message, ESP2Message) and self.base_id:
+            if isinstance(message, ESP2Message) and self.base_id and b2s(self.base_id[0]) != "00-00-00-00":
                 event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
             elif self.base_id is None:
