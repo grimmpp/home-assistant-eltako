@@ -10,9 +10,11 @@ import asyncio
 
 from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import ESP2Message, EltakoPoll
-
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
+
+from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
+from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
@@ -95,7 +97,7 @@ class EnOceanGateway:
         self.add_base_id_change_handler(self.create_and_set_name)
 
 
-    async def create_and_set_name(self):
+    async def create_and_set_name(self, base_id):
         self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
 
     async def query_for_base_id_and_version(self, connected):
@@ -166,16 +168,12 @@ class EnOceanGateway:
                                                auto_reconnect=self._auto_reconnect)
             
         elif GatewayDeviceType.is_lan_gateway(self.dev_type):
-            # lazy import to avoid preloading library
-            from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
             self._bus = TCP2SerialCommunicator(host=self.serial_path, 
                                                port=self.port, 
                                                callback=self._callback_receive_message_from_serial_bus, 
                                                esp2_translation_enabled=True,
                                                auto_reconnect=self._auto_reconnect)
         else:
-            # lazy import to avoid preloading library
-            from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, 
                                                callback=self._callback_receive_message_from_serial_bus, 
                                                esp2_translation_enabled=True, 
