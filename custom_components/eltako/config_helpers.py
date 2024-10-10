@@ -161,7 +161,7 @@ def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
             return False
     return True
 
-def get_gateway_name(dev_name:str, dev_type:str, dev_id: int, base_id:AddressExpression) -> str:
+def get_gateway_name(dev_name:str, dev_type:str, dev_id: int) -> str:
     if not dev_name or len(dev_name) == 0:
         dev_name = GATEWAY_DEFAULT_NAME
     return f"{dev_name} - {dev_type} (Id: {dev_id})"

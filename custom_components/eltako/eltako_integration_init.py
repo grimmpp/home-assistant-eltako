@@ -70,6 +70,7 @@ def unload_gateway_from_hass(hass: HomeAssistant, gateway: EnOceanGateway) -> No
     gw_id = "gateway_"+str(gateway.dev_id)
     if gw_id in hass.data[DATA_ELTAKO]:
         del hass.data[DATA_ELTAKO][gw_id]
+    # because of legacy
     if gateway.dev_name in hass.data[DATA_ELTAKO]:
         del hass.data[DATA_ELTAKO][gateway.dev_name]
 
