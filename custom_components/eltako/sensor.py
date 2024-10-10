@@ -942,9 +942,9 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
 
 
 class GatewayBaseId(EltakoSensor):
-     """"Displays base id of gateway."""
+    """"Displays base id of gateway."""
 
-     def __init__(self, platform: str, gateway: EnOceanGateway):
+    def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
                          dev_id=gateway.dev_id, 
                          dev_name="Base Id", 
@@ -955,7 +955,7 @@ class GatewayBaseId(EltakoSensor):
                             icon="mdi:identifier",
                             has_entity_name= True,
                         ) )
-        self._attr_name="Base Id"
+        self._attr_name = "Base Id"
 
     @property
     def device_info(self) -> DeviceInfo:
