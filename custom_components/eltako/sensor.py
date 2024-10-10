@@ -946,7 +946,7 @@ class GatewayBaseId(EltakoSensor):
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
-                         dev_id=AddressExpression.parse('00'), 
+                         dev_id=AddressExpression.parse('00-00-00-00'), 
                          dev_name="Base Id", 
                          dev_eep=None,
                          description=EltakoSensorEntityDescription(
@@ -956,6 +956,7 @@ class GatewayBaseId(EltakoSensor):
                             has_entity_name= True,
                         ) )
         self._attr_name = "Base Id"
+        self.listen_to_addresses.append(b'\x00')
 
     @property
     def device_info(self) -> DeviceInfo:
