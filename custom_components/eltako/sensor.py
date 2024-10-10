@@ -408,7 +408,7 @@ async def async_setup_entry(
             for entity_config in config[pl]:
                 try:
                     dev_conf = DeviceConf(entity_config)
-                    entities.append(StaticInfoField(platform, gateway, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
+                    entities.append(StaticInfoField(platform, gateway, dev_conf.dev_id, dev_conf.name, dev_conf.eep, "Id", b2s(dev_conf.id[0]), "mdi:identifier"))
                 
                 except Exception as e:
                     LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
@@ -981,9 +981,9 @@ class GatewayBaseId(EltakoSensor):
 class StaticInfoField(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
         super().__init__(platform, gateway,
-                         dev_id=AddressExpression.parse('00-00-00-00'), 
+                         dev_id=dev_id, 
                          dev_name=dev_name, 
                          dev_eep=dev_eep,
                          description=EltakoSensorEntityDescription(
@@ -1005,6 +1005,7 @@ class GatewayInfoField(StaticInfoField):
     def __init__(self, platform: str, gateway: EnOceanGateway, key:str, value:str, icon:str=None):
         super().__init__(platform, 
                          gateway,
+                         dev_id=AddressExpression.parse('00-00-00-00'),
                          dev_name=key, 
                          dev_eep=None,
                          key=key,
