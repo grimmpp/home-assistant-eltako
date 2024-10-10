@@ -176,7 +176,7 @@ def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: di
         return dev_name
     
 def get_id_from_name(dev_name: str) -> AddressExpression:
-    return int(dev_name.split('(Id: ')[1].split(',')[0])
+    return int(dev_name.split('(Id: ')[1].split(')')[0])
     
 def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression = None, data: str=None) -> str:
     event_id = f"{DOMAIN}.gw_{gateway_id}.{function_id}"
