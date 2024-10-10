@@ -87,18 +87,14 @@ class EnOceanGateway:
         else:
             self.native_protocol = 'ESP3'
         self._original_dev_name = dev_name
-        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
+        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id)
 
         self._init_bus()
 
         self._register_device()
 
         self.add_connection_state_changed_handler(self.query_for_base_id_and_version)
-        self.add_base_id_change_handler(self.create_and_set_name)
 
-
-    async def create_and_set_name(self, base_id):
-        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, base_id)
 
     async def query_for_base_id_and_version(self, connected):
         if connected:
