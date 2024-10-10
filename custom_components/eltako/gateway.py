@@ -98,9 +98,7 @@ class EnOceanGateway:
 
 
     async def create_and_set_name(self, base_id):
-        del self.hass.data[DATA_ELTAKO][self.dev_name]
-        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, self.base_id)
-        self.hass.data[DATA_ELTAKO][self.dev_name] = self
+        self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id, base_id)
 
     async def query_for_base_id_and_version(self, connected):
         if connected:

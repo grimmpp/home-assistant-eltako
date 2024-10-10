@@ -136,9 +136,8 @@ def get_list_of_gateway_descriptions(config: dict, filter_out: list[str]=[]) -> 
             g_id = g[CONF_ID]
             g_name = g.get(CONF_NAME, None)
             g_device_type = g[CONF_DEVICE_TYPE]
-            g_base_id = g.get(CONF_BASE_ID, None)
-            if g_base_id and g_base_id not in filter_out:
-                result[g_id] = get_gateway_name(g_name, g_device_type, g_id, AddressExpression.parse(g_base_id))
+            if g_id not in filter_out:
+                result[g_id] = get_gateway_name(g_name, g_device_type, g_id)
     return result
 
 def config_check_gateway(config: dict) -> bool:
@@ -165,7 +164,7 @@ def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
 def get_gateway_name(dev_name:str, dev_type:str, dev_id: int, base_id:AddressExpression) -> str:
     if not dev_name or len(dev_name) == 0:
         dev_name = GATEWAY_DEFAULT_NAME
-    return f"{dev_name} - {dev_type} (Id: {dev_id}, BaseId: {format_address(base_id)})"
+    return f"{dev_name} - {dev_type} (Id: {dev_id})"
 
 def format_address(address: AddressExpression, separator:str='-') -> str:
     return b2a(address[0], separator).upper()
