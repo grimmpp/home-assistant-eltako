@@ -73,8 +73,10 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **Eltako FAM-USB** (based on ESP2, baud rate 9600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
   * **EnOcean USB300** (based on ESP3 but only ESP2 feature set supported, baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
-  * **[PioTek FAM-USB 515](https://www.piotek.de/FAM-USB-515)** (based on ESP3 but only ESP2 feature set supported, baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
-* **[PioTek MGW LAN](https://www.piotek.de/PioTek-MGW-POE)** (ESP3 via TCP/LAN, port=5100, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
+  * [PioTek FAM-USB 515](https://www.piotek.de/FAM-USB-515) (based on ESP3 but only ESP2 feature set supported, baud rate 57600, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
+* [PioTek MGW LAN](https://www.piotek.de/PioTek-MGW-POE) (ESP3 via TCP/LAN, port=5100, uses library [Python EnOcean](https://github.com/kipe/enocean) and [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter))
+* [**EUL - EnOcean USB/WLAN light - TCM515**](https://busware.de/tiki-index.php?page=EUL) (ESP3 Gateway for USB or Wifi with super huge range.) Needs to be flashed with provided software and will be automatically detected by [eo_man](https://github.com/grimmpp/enocean-device-manager).
+
 
 # Installation and Configuration
 
