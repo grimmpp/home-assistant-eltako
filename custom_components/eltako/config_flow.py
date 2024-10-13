@@ -90,7 +90,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if CONF_GATEWAY_ADDRESS in g_c:
                 address = g_c[CONF_GATEWAY_ADDRESS]
                 if CONF_GATEWAY_PORT in g_c:
-                    address += ":"+g_c[CONF_GATEWAY_PORT]
+                    address += ":"+str(g_c[CONF_GATEWAY_PORT])
                 serial_paths.append(address)
 
         # get all serial paths which are not taken by existing gateways
