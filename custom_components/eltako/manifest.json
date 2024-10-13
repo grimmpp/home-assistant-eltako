@@ -9,6 +9,6 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/grimmpp/home-assistant-eltako/issues",
   "loggers": ["eltako"],
-  "requirements": ["eltako14bus==0.0.66", "enocean>=0.60.1", "StrEnum", "esp2-gateway-adapter==0.2.15"],
+  "requirements": ["eltako14bus==0.0.66", "enocean>=0.60.1", "StrEnum", "git+https://github.com/grimmpp/esp2-gateway-adapter"],
   "version": "1.5.9" 
 }
