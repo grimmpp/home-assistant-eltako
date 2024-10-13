@@ -31,7 +31,7 @@ def print_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
-    LOGGER.debug("Available Eltako Obkects")
+    LOGGER.debug("Available Eltako Objects")
     for g in hass.data[DATA_ELTAKO]:
         LOGGER.debug(g)
 
