@@ -26,6 +26,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the Eltako config flow."""
 
     def is_input_available(self, user_input) -> bool:
+        LOGGER.debug("Check available data")
         if user_input is not None:
             if CONF_SERIAL_PATH in user_input and user_input[CONF_SERIAL_PATH] is not None:
                 if CONF_GATEWAY_DESCRIPTION in user_input and user_input[CONF_GATEWAY_DESCRIPTION] is not None:
@@ -74,6 +75,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.create_eltako_entry(user_input)
             
                 errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
+
+        LOGGER.debug("Get data for gateway selection")
 
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
@@ -160,4 +163,5 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     def create_eltako_entry(self, user_input):
         """Create an entry for the provided configuration."""
+        LOGGER.debug("Create Gateway Entry")
         return self.async_create_entry(title="Eltako", data=user_input)
