@@ -76,7 +76,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # get available (not registered) gateways
         g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA))
         # filter out registered gateways. all registered gateways are listen in data section
-        g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO]])
+        g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO] and 'gateway_'+config_helpers.get_id_from_gateway_name(g) not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
             LOGGER.debug("No gateways are configured in the 'configuration.yaml'.")
@@ -88,7 +88,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if CONF_SERIAL_PATH in g_c:
                 serial_paths.append(g_c[CONF_SERIAL_PATH])
             if CONF_GATEWAY_ADDRESS in g_c:
-                serial_paths.append(g_c[CONF_GATEWAY_ADDRESS])
+                address = g_c[CONF_GATEWAY_ADDRESS]
+                if CONF_GATEWAY_PORT in g_c:
+                    address += ":"+g_c[CONF_GATEWAY_PORT]
+                serial_paths.append(address)
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)

@@ -20,7 +20,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
     return True
 
-def print_config_entry(config_entry: ConfigEntry) -> None:
+def print_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     LOGGER.debug("ConfigEntry")
     LOGGER.debug("- tilte: %s", config_entry.title)
     LOGGER.debug("- domain: %s", config_entry.domain)
@@ -30,6 +30,10 @@ def print_config_entry(config_entry: ConfigEntry) -> None:
     LOGGER.debug("- state: %s", config_entry.state)
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
+
+    LOGGER.debug("Available Eltako Obkects")
+    for g in hass.data[DATA_ELTAKO]:
+        LOGGER.debug(g)
 
 # relevant for higher than v.1.3.4: removed 'ESP2' from GATEWAY_DEFAULT_NAME which is still in OLD_GATEWAY_DEFAULT_NAME
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
@@ -82,7 +86,7 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
     LOGGER.info(f"[{LOG_PREFIX}] Start gateway setup.")
-    # print_config_entry(config_entry)
+    print_config_entry(hass, config_entry)
 
     # Check domain
     if config_entry.domain != DOMAIN:
