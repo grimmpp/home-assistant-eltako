@@ -60,7 +60,7 @@ def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnO
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
 
-    g_id = "gateway_"+str(config_helpers.get_id_from_name(config_entry.data[CONF_GATEWAY_DESCRIPTION]))
+    g_id = "gateway_"+str(config_helpers.get_id_from_gateway_name(config_entry.data[CONF_GATEWAY_DESCRIPTION]))
     return hass.data[DATA_ELTAKO][g_id]
 
 
