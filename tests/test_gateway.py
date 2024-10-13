@@ -74,7 +74,7 @@ gateway:
         self.assertEqual(list(g_list.values())[0] ,'GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)')
         self.assertEqual(list(g_list.values())[1] ,'GW2 - fam-usb (Id: 2, BaseId: FF-BB-00-00)')
 
-    def test_get_id_from_name(self):
+    def test_get_id_from_gateway_name(self):
       self.assertEqual(1, config_helpers.get_id_from_gateway_name('GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)'))
       self.assertEqual(87126, config_helpers.get_id_from_gateway_name('GW1 - fgw14usb (Id: 87126, BaseId: FF-AA-00-00)'))
 

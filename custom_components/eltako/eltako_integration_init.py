@@ -126,7 +126,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not ('(' in gateway_description and ')' in gateway_description):
         LOGGER.warning("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
         return
-    gateway_id = config_helpers.get_id_from_name(gateway_description)
+    gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
     
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
