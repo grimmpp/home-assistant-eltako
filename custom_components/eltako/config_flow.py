@@ -129,24 +129,29 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         baud_rate: int = -1
         gateway_selection: str = user_input[CONF_GATEWAY_DESCRIPTION]
 
+        LOGGER.debug("Start serial path validation for %s", gateway_selection)
+
         for gdc in gateway.GatewayDeviceType:
             if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
         
         # check ip address for esp3 over tcp
-        if GatewayDeviceType.LAN in gateway_selection:
-            try:
-                ip = ipaddress.ip_address(serial_path)
-                return True
-            except Exception:
-                return False
-        # check serial ports / usb
-        else:
-            path_is_valid = await self.hass.async_add_executor_job(
-                gateway.validate_path, serial_path, baud_rate
-            )
-            LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
+        for gdt_lan in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value]:
+            if gdt_lan in gateway_selection:
+                try:
+                    ip = ipaddress.ip_address(serial_path)
+                    LOGGER.debug("Found valid IP Address %s.", serial_path)
+                    return True
+                except Exception:
+                    LOGGER.debug("serial_path: %s is no valid IP Address", serial_path)
+                    return False
+            # check serial ports / usb
+            else:
+                path_is_valid = await self.hass.async_add_executor_job(
+                    gateway.validate_path, serial_path, baud_rate
+                )
+                LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
 
         return path_is_valid
 

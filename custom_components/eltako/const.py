@@ -137,4 +137,5 @@ BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
     GatewayDeviceType.USB300: 57600,
     GatewayDeviceType.ESP3: 57600,
     GatewayDeviceType.LAN: -1,
+    GatewayDeviceType.LAN_ESP2: -2,
 }
