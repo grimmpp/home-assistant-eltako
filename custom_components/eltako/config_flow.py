@@ -52,9 +52,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("Add new gateway")
         errors = {}
 
-        LOGGER.debug("Available Eltako Objects")
-        for g in self.hass.data[DATA_ELTAKO]:
-            LOGGER.debug(g)
+        if DATA_ELTAKO in self.hass.data:
+            LOGGER.debug("Available Eltako Objects")
+            for g in self.hass.data[DATA_ELTAKO]:
+                LOGGER.debug(g)
 
         # get configuration for debug purpose
         config = await config_helpers.async_get_home_assistant_config(self.hass, CONFIG_SCHEMA)
