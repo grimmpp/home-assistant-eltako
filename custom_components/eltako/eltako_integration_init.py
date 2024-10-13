@@ -31,9 +31,10 @@ def print_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     for k in config_entry.data.keys():
         LOGGER.debug("- data %s - %s", k, config_entry.data.get(k, ''))
 
-    LOGGER.debug("Available Eltako Objects")
-    for g in hass.data[DATA_ELTAKO]:
-        LOGGER.debug(g)
+    if DATA_ELTAKO in hass.data:
+        LOGGER.debug("Available Eltako Objects")
+        for g in hass.data[DATA_ELTAKO]:
+            LOGGER.debug(g)
 
 # relevant for higher than v.1.3.4: removed 'ESP2' from GATEWAY_DEFAULT_NAME which is still in OLD_GATEWAY_DEFAULT_NAME
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
