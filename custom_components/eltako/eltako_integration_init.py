@@ -119,7 +119,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.warning("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
         return
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
-    if gateway_description == CONF_VIRTUAL_NETWORK_GATEWAY:
+    if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_description:
         LOGGER.info("Create Virtual ESP2 Reverse Network Bridge")
         virt_gw = VirtualNetworkGateway(hass)
         virt_gw.restart_tcp_server()
