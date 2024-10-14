@@ -94,7 +94,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_GATEWAY_ADDRESS: "homeassistant.local",
             CONF_GATEWAY_PORT: 12345
         }
-        g_list_dict[virt_gw_id] = config_helpers.get_gateway_name(virt_gw[CONF_ID], virt_gw[CONF_DEVICE_TYPE], virt_gw_id)
+        g_list_dict[virt_gw_id] = config_helpers.get_gateway_name(virt_gw[CONF_NAME], virt_gw[CONF_DEVICE_TYPE], virt_gw_id)
         # filter out registered gateways. all registered gateways are listen in data section
         g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO] and 'gateway_'+str(config_helpers.get_id_from_gateway_name(g)) not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("Available gateways to be added: %s", g_list)
