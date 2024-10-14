@@ -55,6 +55,8 @@ CONF_MIN_TARGET_TEMPERATURE: Final = "min_target_temperature"
 CONF_ROOM_THERMOSTAT: Final = "thermostat"
 CONF_COOLING_MODE: Final = "cooling_mode"
 
+CONF_VIRTUAL_NETWORK_GATEWAY: Final = "Virtual ESP2 Reverse Network Bridge"
+
 CONF_ID_REGEX: Final = "^([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})-([0-9a-fA-F]{2})( (left|right))?$"
 CONF_METER_TARIFFS: Final = "meter_tariffs"
 CONF_TIME_CLOSES: Final = "time_closes"

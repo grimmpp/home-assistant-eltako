@@ -9,6 +9,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
+from virtual_network_gateway import TCP_SERVER_PORT
 from . import gateway
 from . import config_helpers
 from .const import *
@@ -82,9 +83,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
         
         # get available (not registered) gateways
-        g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA))
+        g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA)) 
         # filter out registered gateways. all registered gateways are listen in data section
-        g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO] and 'gateway_'+str(config_helpers.get_id_from_gateway_name(g)) not in self.hass.data[DATA_ELTAKO]])
+        g_list = list([g for g in g_list_dict.values() + [CONF_VIRTUAL_NETWORK_GATEWAY] if g not in self.hass.data[DATA_ELTAKO] and 'gateway_'+str(config_helpers.get_id_from_gateway_name(g)) not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("Available gateways to be added: %s", g_list)
         if len(g_list) == 0:
             LOGGER.debug("No gateways are configured in the 'configuration.yaml'.")
@@ -98,6 +99,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if CONF_GATEWAY_ADDRESS in g_c:
                 address = g_c[CONF_GATEWAY_ADDRESS]
                 serial_paths.append(address)
+        if CONF_VIRTUAL_NETWORK_GATEWAY in g_list:
+            serial_paths = serial_paths.append("homeassistant.local:"+str(TCP_SERVER_PORT))
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)

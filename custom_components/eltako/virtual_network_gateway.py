@@ -18,6 +18,7 @@ from homeassistant.config_entries import ConfigEntry
 from .const import *
 from . import config_helpers
 
+TCP_SERVER_PORT = 12345
 BUFFER_SIZE = 1024
 MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX = "VirtGw"
@@ -46,7 +47,7 @@ class VirtualNetworkGateway:
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry = None):
         self.host = "0.0.0.0"
-        self.port = 12345
+        self.port = TCP_SERVER_PORT
         self._running = False
         self.hass = hass
         self.config_entry = config_entry
@@ -55,11 +56,11 @@ class VirtualNetworkGateway:
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)
         device_registry.async_get_or_create(
-            config_entry_id = str(uuid.uuid4())
+            config_entry_id = str(uuid.uuid4()),
             identifiers = {(DOMAIN, DEVICE_ID)},
             manufacturer = "Home Assistant Eltako Integration",
             name = "Virtual Gateway Reverse Proxy",
-            model = "TCP Server (ESP2 Netowrk Bridge)"
+            model = "ESP2 Netowrk Reverse Bridge"
         )
 
 
