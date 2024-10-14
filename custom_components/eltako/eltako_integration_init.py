@@ -184,6 +184,9 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     unload_gateway_from_hass(hass, gateway)
     
 
-    stop_central_virtual_network_gateway()
+    if CONF_VIRTUAL_NETWORK_GATEWAY in hass.data[DATA_ELTAKO]:
+        virt_gw:VirtualNetworkGateway = hass.data[DATA_ELTAKO][CONF_VIRTUAL_NETWORK_GATEWAY]
+        virt_gw.stop_tcp_server()
+        del hass.data[DATA_ELTAKO][CONF_VIRTUAL_NETWORK_GATEWAY]
 
     return True
