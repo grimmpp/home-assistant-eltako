@@ -30,7 +30,7 @@ class VirtualNetworkGateway:
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry = None):
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
         self.host = "0.0.0.0"
         self.port = VIRT_GW_PORT
         self._running = False

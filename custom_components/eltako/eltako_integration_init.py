@@ -132,7 +132,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
     if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_description:
         LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
-        virt_gw = VirtualNetworkGateway(hass)
+        virt_gw = VirtualNetworkGateway(hass, config_entry)
         await virt_gw.async_setup()
         virt_gw.restart_tcp_server()
         set_gateway_to_hass(hass, virt_gw)
