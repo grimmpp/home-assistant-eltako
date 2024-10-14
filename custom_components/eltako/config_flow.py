@@ -86,14 +86,15 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # get available (not registered) gateways
         g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA)) 
         # add virtual lan gateway manually
+        virt_gw_id = -123
         virt_gw = {
-            CONF_ID: CONF_VIRTUAL_NETWORK_GATEWAY,
+            CONF_ID: virt_gw_id,
             CONF_NAME: CONF_VIRTUAL_NETWORK_GATEWAY,
             CONF_DEVICE_TYPE: GatewayDeviceType.LAN_ESP2.value,
             CONF_GATEWAY_ADDRESS: "homeassistant.local",
             CONF_GATEWAY_PORT: 12345
         }
-        g_list_dict[-100] = config_helpers.get_gateway_name(virt_gw[CONF_ID], virt_gw[CONF_DEVICE_TYPE], -100)
+        g_list_dict[virt_gw_id] = config_helpers.get_gateway_name(virt_gw[CONF_ID], virt_gw[CONF_DEVICE_TYPE], virt_gw_id)
         # filter out registered gateways. all registered gateways are listen in data section
         g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO] and 'gateway_'+str(config_helpers.get_id_from_gateway_name(g)) not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("Available gateways to be added: %s", g_list)
@@ -104,6 +105,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # add manually added serial paths and ip addresses from configuration
         for g_id in g_list_dict.keys():
             g_c = config_helpers.find_gateway_config_by_id(config, g_id)
+            if g_c is None and g_id == virt_gw_id:
+                g_c = virt_gw
             if CONF_SERIAL_PATH in g_c:
                 serial_paths.append(g_c[CONF_SERIAL_PATH])
             if CONF_GATEWAY_ADDRESS in g_c:
