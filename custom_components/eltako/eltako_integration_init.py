@@ -138,7 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         await virt_gw.async_setup()
         virt_gw.restart_tcp_server()
         set_gateway_to_hass(hass, virt_gw)
-        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+        await hass.config_entries.async_forward_entry_setups(config_entry, [Platform.SENSOR])
         return True
     
     elif not ('(' in gateway_description and ')' in gateway_description):
