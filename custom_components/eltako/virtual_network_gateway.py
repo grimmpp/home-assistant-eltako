@@ -38,7 +38,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         self.host = "0.0.0.0"
 
         super().__init__(general_settings, hass,
-                         dev_id, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
+                         dev_id, GatewayDeviceType.LAN_ESP2, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
                          dev_name, False, 0,
                          config_entry)
 
