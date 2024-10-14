@@ -14,6 +14,7 @@ from . import gateway
 from . import config_helpers
 from .const import *
 from .schema import CONFIG_SCHEMA
+from .virtual_network_gateway import VIRT_GW_ID, VIRT_GW_PORT
 
 LOGGER_PREFIX_CONFIG_FLOW = "config_flow"
 
@@ -86,8 +87,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # get available (not registered) gateways
         g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA)) 
         # add virtual lan gateway manually
-        VIRT_GW_ID = 12345
-        VIRT_GW_PORT = 12345
+        # VIRT_GW_ID = 12345
+        # VIRT_GW_PORT = 12345
         virt_gw = {
             CONF_ID: VIRT_GW_ID,
             CONF_NAME: CONF_VIRTUAL_NETWORK_GATEWAY,
