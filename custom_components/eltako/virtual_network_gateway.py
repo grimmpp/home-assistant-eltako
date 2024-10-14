@@ -18,10 +18,11 @@ from homeassistant.config_entries import ConfigEntry
 from .const import *
 from . import config_helpers
 
-TCP_SERVER_PORT = 12345
+VIRT_GW_ID = 0
+VIRT_GW_PORT = 12345
 BUFFER_SIZE = 1024
 MAX_MESSAGE_DELAY = 5
-LOGGING_PREFIX = "VirtGw"
+LOGGING_PREFIX_VIRT_GW = "VirtGw"
 DEVICE_ID = "VirtGw"
 
 CENTRAL_VIRTUAL_NETWORK_GATEWAY = None
@@ -47,7 +48,7 @@ class VirtualNetworkGateway:
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry = None):
         self.host = "0.0.0.0"
-        self.port = TCP_SERVER_PORT
+        self.port = VIRT_GW_PORT
         self._running = False
         self.hass = hass
         self.config_entry = config_entry
@@ -96,14 +97,14 @@ class VirtualNetworkGateway:
             try:
                 gw_type_id:int = GatewayDeviceType.indexOf(gw.dev_type)
                 data:bytes = b'\x8b\x98' + gw.base_id[0] + gw_type_id.to_bytes(1, 'big') + b'\x00\x00\x00\x00'
-                LOGGER.debug(f"[{LOGGING_PREFIX}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type} / {gw_type_id}) ")
+                LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type} / {gw_type_id}) ")
                 conn.sendall( ESP2Message(bytes(data)).serialize() )
             except Exception as e:
                 LOGGER.exception(e)
 
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
-        LOGGER.info(f"[{LOGGING_PREFIX}] Connected client by {addr}")
+        LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Connected client by {addr}")
         try:
             with conn:
                 self.send_gateway_info(conn)
@@ -116,10 +117,10 @@ class VirtualNetworkGateway:
                         t = package[0]
                         msg:ESP2Message = package[1]
                         if time.time() - t < MAX_MESSAGE_DELAY:
-                            LOGGER.debug(f"[{LOGGING_PREFIX}] Forward EnOcean message {msg}")
+                            LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Forward EnOcean message {msg}")
                             conn.sendall(msg.serialize())
                         else:
-                            LOGGER.debug(f"[{LOGGING_PREFIX}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
+                            LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
                     except:
                         # send keep alive message
                         conn.sendall(b'IM2M')
@@ -129,9 +130,9 @@ class VirtualNetworkGateway:
         except BrokenPipeError:
             pass
         except Exception as e:
-            LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
+            LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
-            LOGGER.info(f"[{LOGGING_PREFIX}] Handler for {addr} exiting. (Thread flag running: {self._running})")
+            LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running})")
 
 
     def tcp_server(self):
@@ -150,26 +151,26 @@ class VirtualNetworkGateway:
             zeroconf = Zeroconf()
             zeroconf.register_service(service_info)
 
-            LOGGER.info(f"[{LOGGING_PREFIX}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
+            LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
 
             while self._running:
                 try:
                     # LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                     conn, addr = s.accept()
                     conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                    LOGGER.debug(f"[{LOGGING_PREFIX}] Connection from: {addr} established")
+                    LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Connection from: {addr} established")
                     
                     client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
                     client_thread.start()
                             
                 except Exception as e:
-                    LOGGER.error(f"[{LOGGING_PREFIX}] An error occurred: {e}", exc_info=True, stack_info=True)
+                    LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
 
 
             zeroconf.unregister_service(service_info)
             zeroconf.close()
             
-        LOGGER.info(f"[{LOGGING_PREFIX}] Closed TCP Server")
+        LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
 
 
     def restart_tcp_server(self):
@@ -199,4 +200,25 @@ class VirtualNetworkGateway:
                 return socket.inet_aton(ip_address_str)
             
         except socket.error as e:
-            LOGGER.error(f"[{LOGGING_PREFIX}] Invalid IP address: {ip_address_str} - {e}")
+            LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] Invalid IP address: {ip_address_str} - {e}")
+
+    async def async_setup(self):
+        """Initialized tcp server and register callback function on HA event bus."""
+        self.start_tcp_server()
+        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] [Id: {VIRT_GW_ID}] Was started.")
+
+        # receive messages from HA event bus
+        # event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
+        # self.dispatcher_disconnect_handle = async_dispatcher_connect(
+        #     self.hass, event_id, self._callback_send_message_to_serial_bus
+        # )
+
+    def unload(self):
+        """Disconnect callbacks established at init time."""
+        if self.dispatcher_disconnect_handle:
+            self.dispatcher_disconnect_handle()
+            self.dispatcher_disconnect_handle = None
+
+        self.stop_tcp_server()
+
+        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] [Id: {VIRT_GW_ID}] Was stopped.")
