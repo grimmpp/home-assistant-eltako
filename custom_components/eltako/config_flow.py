@@ -90,6 +90,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_ID: CONF_VIRTUAL_NETWORK_GATEWAY,
             CONF_NAME: CONF_VIRTUAL_NETWORK_GATEWAY,
             CONF_DEVICE_TYPE: GatewayDeviceType.LAN_ESP2.value,
+            CONF_GATEWAY_ADDRESS: "homeassistant.local",
+            CONF_GATEWAY_PORT: 12345
         }
         g_list_dict[-100] = config_helpers.get_gateway_name(virt_gw[CONF_ID], virt_gw[CONF_DEVICE_TYPE], -100)
         # filter out registered gateways. all registered gateways are listen in data section
@@ -107,8 +109,6 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if CONF_GATEWAY_ADDRESS in g_c:
                 address = g_c[CONF_GATEWAY_ADDRESS]
                 serial_paths.append(address)
-        if CONF_VIRTUAL_NETWORK_GATEWAY in g_list:
-            serial_paths = serial_paths.append("homeassistant.local:"+str(12345))
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)
