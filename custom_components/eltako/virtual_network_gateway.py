@@ -56,7 +56,7 @@ class VirtualNetworkGateway:
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)
         device_registry.async_get_or_create(
-            config_entry_id = str(uuid.uuid4()),
+            config_entry_id = self.config_entry.entry_id,
             identifiers = {(DOMAIN, DEVICE_ID)},
             manufacturer = "Home Assistant Eltako Integration",
             name = "Virtual Gateway Reverse Proxy",
