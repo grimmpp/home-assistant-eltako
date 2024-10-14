@@ -7,7 +7,6 @@ import ipaddress
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
 from virtual_network_gateway import VIRT_GW_ID, VIRT_GW_PORT
