@@ -158,7 +158,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         
         # check ip address for esp2/3 over tcp
         is_network_gw = len([g for g in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value] if g in gateway_selection]) > 0        
-        if is_network_gw:
+        if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_selection and "homeassistant.local" == serial_path:
+            return True
+        elif is_network_gw:
             try:
                 ip = ipaddress.ip_address(serial_path)
                 LOGGER.debug("[%s] Found valid IP Address %s.", serial_path)
