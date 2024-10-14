@@ -123,8 +123,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
 
-    gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
-
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
     # Initialise the gateway
     # get base_id from user input
@@ -132,11 +130,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.warning("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
         return
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
+    gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
 
     ## init virtual network gateway
     if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_description:
         LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
-        virt_gw = VirtualNetworkGateway(general_settings, hass, dev_id, config_entry)
+        virt_gw = VirtualNetworkGateway(general_settings, hass, gateway_id, config_entry)
         await virt_gw.async_setup()
         virt_gw.restart_tcp_server()
         set_gateway_to_hass(hass, virt_gw)
