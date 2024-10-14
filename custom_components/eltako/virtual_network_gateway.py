@@ -37,6 +37,8 @@ class VirtualNetworkGateway:
         self.hass = hass
         self.config_entry = config_entry
         self.zeroconf:Zeroconf = None
+
+        self._register_device()
         
 
     def _register_device(self) -> None:
