@@ -62,7 +62,10 @@ def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnO
     migrate_old_gateway_descriptions(hass)
 
     g_id = "gateway_"+str(config_helpers.get_id_from_gateway_name(config_entry.data[CONF_GATEWAY_DESCRIPTION]))
-    return hass.data[DATA_ELTAKO][g_id]
+    if g_id in hass.data[DATA_ELTAKO]:
+        return hass.data[DATA_ELTAKO][g_id]
+    else:
+        return None
 
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway: EnOceanGateway) -> None:
@@ -72,13 +75,21 @@ def set_gateway_to_hass(hass: HomeAssistant, gateway: EnOceanGateway) -> None:
     g_id = "gateway_"+str(gateway.dev_id)
     hass.data[DATA_ELTAKO][g_id] = gateway
 
-def unload_gateway_from_hass(hass: HomeAssistant, gateway: EnOceanGateway) -> None:
-    gw_id = "gateway_"+str(gateway.dev_id)
-    if gw_id in hass.data[DATA_ELTAKO]:
-        del hass.data[DATA_ELTAKO][gw_id]
-    # because of legacy
-    if gateway.dev_name in hass.data[DATA_ELTAKO]:
-        del hass.data[DATA_ELTAKO][gateway.dev_name]
+def unload_gateway(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+
+    gateway:EnOceanGateway = get_gateway_from_hass(hass, config_entry)
+    if gateway is not None:
+
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Unload {gateway.dev_name} and all its supported devices!")
+        gateway.unload()
+    
+        gw_id = "gateway_"+str(gateway.dev_id)
+        if gw_id in hass.data[DATA_ELTAKO]:
+            del hass.data[DATA_ELTAKO][gw_id]
+        # because of legacy
+        if gateway.dev_name in hass.data[DATA_ELTAKO]:
+            del hass.data[DATA_ELTAKO][gateway.dev_name]
+
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: EnOceanGateway) -> ConfigType:
     return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
@@ -178,11 +189,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
 
-    gateway = get_gateway_from_hass(hass, config_entry)
-
-    LOGGER.info(f"[{LOG_PREFIX_INIT}] Unload {gateway.dev_name} and all its supported devices!")
-    gateway.unload()
-    unload_gateway_from_hass(hass, gateway)
-    
+    unload_gateway(hass, config_entry)
 
     return True

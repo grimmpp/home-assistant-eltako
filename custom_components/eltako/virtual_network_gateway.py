@@ -35,6 +35,7 @@ class VirtualNetworkGateway:
         self._running = False
         self.hass = hass
         self.config_entry = config_entry
+        self.server_task = None
         
 
     def _register_device(self) -> None:
@@ -121,7 +122,7 @@ class VirtualNetworkGateway:
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running})")
 
 
-    def tcp_server(self):
+    async def tcp_server(self):
         """Basic TCP Server that listens for connections."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
@@ -135,7 +136,10 @@ class VirtualNetworkGateway:
             # Register the service
             service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
             zeroconf = Zeroconf()
-            zeroconf.register_service(service_info)
+            try:
+                zeroconf.register_service(service_info)
+            except:
+                pass
 
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
 
@@ -169,14 +173,14 @@ class VirtualNetworkGateway:
         """Start TCP server in a separate thread."""
         if not self._running:
             self._running = True
-            self.tcp_thread = threading.Thread(target=self.tcp_server)
-            self.tcp_thread.daemon = True
-            self.tcp_thread.start()
+            self.server_task = self.hass.loop.create_task(self.tcp_server())
 
 
     def stop_tcp_server(self):
         self._running = False
-        self.tcp_thread.join()
+        if self.server_task is not None:
+            self.server_task.cancel()
+        self.server_task = None
 
     def convert_ip_to_bytes(self, ip_address_str):
         try:
