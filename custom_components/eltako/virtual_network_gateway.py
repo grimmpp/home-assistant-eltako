@@ -11,11 +11,13 @@ from eltakobus.util import b2s, AddressExpression
 from homeassistant.components import zeroconf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
+from gateway import EnOceanGateway
 
 VIRT_GW_ID = 0
 VIRT_GW_PORT = 12345
@@ -25,21 +27,40 @@ LOGGING_PREFIX_VIRT_GW = "VirtGw"
 DEVICE_ID = "VirtGw"
 
 
-class VirtualNetworkGateway:
+class VirtualNetworkGateway(EnOceanGateway):
 
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, dev_id: int, config_entry: ConfigEntry):
+        
+        self.dev_name = "ESP2 Netowrk Reverse Bridge"
         self.host = "0.0.0.0"
-        self.port = VIRT_GW_PORT
+
+        super().__init__(general_settings, hass,
+                         dev_id, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
+                         self.dev_name, False, 0,
+                         config_entry)
+
         self._running = False
         self.hass = hass
         self.config_entry = config_entry
         self.zeroconf:Zeroconf = None
 
-        self._register_device()
         
+
+        self._register_device()
+
+        
+
+    def get_device_info(self) -> DeviceInfo:    
+        return DeviceInfo(
+            config_entry_id = self.config_entry.entry_id,
+            identifiers = {(DOMAIN, DEVICE_ID)},
+            manufacturer = "Home Assistant Eltako Integration",
+            name = "Virtual Gateway Reverse Proxy",
+            model = self.dev_name
+        )
 
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)

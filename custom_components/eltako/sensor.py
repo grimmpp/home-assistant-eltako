@@ -9,7 +9,7 @@ from eltakobus.eep import *
 from eltakobus.message import ESP2Message
 
 from . import config_helpers
-
+from virtual_network_gateway import VirtualNetworkGateway
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -418,7 +418,10 @@ async def async_setup_entry(
     # add gateway information
     entities.append(GatewayInfoField(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
     entities.append(GatewayBaseId(platform, gateway))
-    entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+    if gateway.dev_type not in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2]:
+        entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+    else:
+        entities.append(GatewayInfoField(platform, gateway, "Address", f"{gateway.serial_path}:{gateway.port}", "mdi:usb"))
     entities.append(GatewayInfoField(platform, gateway, "USB Protocol", gateway.native_protocol, "mdi:usb"))
     entities.append(GatewayInfoField(platform, gateway, "Message Delay", gateway.message_delay, "mdi:av-timer"))
     entities.append(GatewayInfoField(platform, gateway, "Auto Connect Enabled", gateway.is_auto_reconnect_enabled, "mdi:connection"))
@@ -998,6 +1001,22 @@ class StaticInfoField(EltakoSensor):
 
     def value_changed(self, value) -> None:
         pass
+
+class VirtGWInfoField(SensorEntity):
+    """Key value fields for gateway information"""
+
+    def __init__(self, platform: str, virt_gw: VirtualNetworkGateway, key:str, value:str, icon:str=None):
+        super().__init__()
+        self.virt_gw = virt_gw
+
+        self._attr_name = "Address"
+        self._attr_native_value = "homeassistant.local:"+str(virt_gw.port)
+        
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return self.virt_gw
+
 
 class GatewayInfoField(StaticInfoField):
     """Key value fields for gateway information"""

@@ -53,7 +53,6 @@ class EnOceanGateway:
 
     def __init__(self, general_settings:dict, hass: HomeAssistant, 
                  dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None, 
-                 virtual_mgw: VirtualNetworkGateway = None,
                  config_entry: ConfigEntry = None):
 
         """Initialize the Eltako gateway."""
@@ -73,7 +72,6 @@ class EnOceanGateway:
         self._attr_dev_id = dev_id
         self._attr_base_id = base_id
         self.config_entry_id = config_entry.entry_id
-        self.virtual_mgw = virtual_mgw
 
         self._last_message_received_handler = None
         self._connection_state_handlers = []
@@ -312,9 +310,6 @@ class EnOceanGateway:
         event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
 
-        if self.virtual_mgw is not None:
-            self.virtual_mgw.forward_message(self, msg)
-
 
     def unload(self):
         """Disconnect callbacks established at init time."""
@@ -360,9 +355,6 @@ class EnOceanGateway:
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
             
-
-        if self.virtual_mgw is not None:
-            self.virtual_mgw.forward_message(self, message)
             
     @property
     def unique_id(self) -> str:
