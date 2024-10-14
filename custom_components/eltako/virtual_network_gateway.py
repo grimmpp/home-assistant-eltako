@@ -3,8 +3,6 @@ import threading
 import queue
 import time
 
-import uuid
-
 from zeroconf import Zeroconf, ServiceInfo
 
 from eltakobus.message import ESP2Message
@@ -25,21 +23,6 @@ MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX_VIRT_GW = "VirtGw"
 DEVICE_ID = "VirtGw"
 
-CENTRAL_VIRTUAL_NETWORK_GATEWAY = None
-
-def create_central_virtual_network_gateway(hass):
-    global CENTRAL_VIRTUAL_NETWORK_GATEWAY
-    if CENTRAL_VIRTUAL_NETWORK_GATEWAY is None:
-        CENTRAL_VIRTUAL_NETWORK_GATEWAY = VirtualNetworkGateway(hass)
-    
-    CENTRAL_VIRTUAL_NETWORK_GATEWAY.restart_tcp_server()
-    
-    return CENTRAL_VIRTUAL_NETWORK_GATEWAY
-
-def stop_central_virtual_network_gateway():
-    global CENTRAL_VIRTUAL_NETWORK_GATEWAY
-    if CENTRAL_VIRTUAL_NETWORK_GATEWAY is None:
-        CENTRAL_VIRTUAL_NETWORK_GATEWAY.stop_tcp_server()
 
 class VirtualNetworkGateway:
 
