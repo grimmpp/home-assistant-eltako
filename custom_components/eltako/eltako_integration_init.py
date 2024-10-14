@@ -130,12 +130,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.warning("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
         return
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
-    gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
 
     ## init virtual network gateway
     if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_description:
         LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
-        virt_gw = VirtualNetworkGateway(general_settings, hass, gateway_id, config_entry)
+        virt_gw = VirtualNetworkGateway(general_settings, hass, config_entry)
         await virt_gw.async_setup()
         virt_gw.restart_tcp_server()
         set_gateway_to_hass(hass, virt_gw)
@@ -145,6 +144,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     elif not ('(' in gateway_description and ')' in gateway_description):
         LOGGER.warning("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
         return
+    
+    gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
     
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)

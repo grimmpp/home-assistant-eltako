@@ -32,13 +32,13 @@ class VirtualNetworkGateway(EnOceanGateway):
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, dev_id: int, config_entry: ConfigEntry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, config_entry: ConfigEntry):
         
         dev_name = "ESP2 Netowrk Reverse Bridge"
         self.host = "0.0.0.0"
 
         super().__init__(general_settings, hass,
-                         dev_id, GatewayDeviceType.LAN_ESP2, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
+                         VIRT_GW_ID, GatewayDeviceType.LAN_ESP2, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
                          dev_name, False, 0,
                          config_entry)
 
@@ -61,10 +61,6 @@ class VirtualNetworkGateway(EnOceanGateway):
         )
 
         return info        
-
-    @property
-    def dev_id(self):
-        return VIRT_GW_ID
 
     def forward_message(self, gateway, msg: ESP2Message):
         if gateway not in self.sending_gateways:
