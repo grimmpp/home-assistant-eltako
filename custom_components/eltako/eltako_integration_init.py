@@ -14,7 +14,7 @@ from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
 
-LOG_PREFIX = "Eltako Integration Setup"
+LOG_PREFIX_INIT = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
@@ -38,18 +38,18 @@ def print_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 
 # relevant for higher than v.1.3.4: removed 'ESP2' from GATEWAY_DEFAULT_NAME which is still in OLD_GATEWAY_DEFAULT_NAME
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
-    LOGGER.debug(f"[{LOG_PREFIX}] Provide new and old gateway descriptions/id for smooth version upgrades.")
+    LOGGER.debug(f"[{LOG_PREFIX_INIT}] Provide new and old gateway descriptions/id for smooth version upgrades.")
     migration_dict:dict = {}
     for key in hass.data[DATA_ELTAKO].keys():
         # LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
         if GATEWAY_DEFAULT_NAME in key:
             old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
-            LOGGER.info(f"[{LOG_PREFIX}] Support downwards compatibility => from new gateway description '{key}' to old description '{old_key}'")
+            LOGGER.info(f"[{LOG_PREFIX_INIT}] Support downwards compatibility => from new gateway description '{key}' to old description '{old_key}'")
             migration_dict[old_key] = hass.data[DATA_ELTAKO][key]
             # del hass.data[DATA_ELTAKO][key]
         if OLD_GATEWAY_DEFAULT_NAME in key:
             new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
-            LOGGER.info(f"[{LOG_PREFIX}] Migrate gateway from old description '{key}' to new description '{new_key}'")
+            LOGGER.info(f"[{LOG_PREFIX_INIT}] Migrate gateway from old description '{key}' to new description '{new_key}'")
             migration_dict[new_key] = hass.data[DATA_ELTAKO][key]
     # prvide either new or old key in parallel
     for key in migration_dict:
@@ -86,12 +86,12 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
-    LOGGER.info(f"[{LOG_PREFIX}] Start gateway setup.")
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Start gateway setup.")
     print_config_entry(hass, config_entry)
 
     # Check domain
     if config_entry.domain != DOMAIN:
-        LOGGER.warning(f"[{LOG_PREFIX}] Ooops, received configuration entry of wrong domain '%s' (expected: '')!", config_entry.domain, DOMAIN)
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, received configuration entry of wrong domain '%s' (expected: '')!", config_entry.domain, DOMAIN)
         return
 
     
@@ -100,14 +100,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # Check if gateway ids are unique
     if not config_helpers.config_check_gateway(config):
-        raise Exception("Gateway Ids are not unique.")
+        raise Exception(f"[{LOG_PREFIX_INIT}] Gateway Ids are not unique.")
 
 
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config
     # print whole eltako configuration
-    LOGGER.debug(f"config: {config}\n")
+    LOGGER.debug(f"[{LOG_PREFIX_INIT}] config: {config}\n")
 
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
@@ -120,7 +120,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
     if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_description:
-        LOGGER.info("Create Virtual ESP2 Reverse Network Bridge")
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
         virt_gw = VirtualNetworkGateway(hass)
         virt_gw.restart_tcp_server()
         hass.data[DATA_ELTAKO][CONF_VIRTUAL_NETWORK_GATEWAY] = virt_gw
@@ -133,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
-        LOGGER.warning(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
         return
     
     # get serial path info
@@ -145,22 +145,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # only transceiver can send teach-in telegrams
     gateway_device_type = GatewayDeviceType.find(gateway_config[CONF_DEVICE_TYPE])    # from configuration
     if gateway_device_type is None:
-        LOGGER.error(f"[{LOG_PREFIX}] USB device {gateway_config[CONF_DEVICE_TYPE]} is not supported!!!")
+        LOGGER.error(f"[{LOG_PREFIX_INIT}] USB device {gateway_config[CONF_DEVICE_TYPE]} is not supported!!!")
         return False
     if gateway_device_type == GatewayDeviceType.LAN:
         if gateway_config.get(CONF_GATEWAY_ADDRESS, None) is None:
-            raise Exception(f"Missing field '{CONF_GATEWAY_ADDRESS}' for LAN Gateway (id: {gateway_id})")
+            raise Exception(f"[{LOG_PREFIX_INIT}] Missing field '{CONF_GATEWAY_ADDRESS}' for LAN Gateway (id: {gateway_id})")
 
     general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = True # GatewayDeviceType.is_transceiver(gateway_device_type) # should only be disabled for decentral gateways
 
-    LOGGER.info(f"[{LOG_PREFIX}] Initializes Gateway Device '{gateway_description}'")
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Initializes Gateway Device '{gateway_description}'")
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
     baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
     port = gateway_config.get(CONF_GATEWAY_PORT, 5100)
     auto_reconnect = gateway_config.get(CONF_GATEWAY_AUTO_RECONNECT, True)
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
-    LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
+    LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
     gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, v_gw, config_entry)
 
     
@@ -179,7 +179,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
     gateway = get_gateway_from_hass(hass, config_entry)
 
-    LOGGER.info("Unload %s and all its supported devices!", gateway.dev_name)
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Unload {gateway.dev_name} and all its supported devices!")
     gateway.unload()
     unload_gateway_from_hass(hass, gateway)
     
