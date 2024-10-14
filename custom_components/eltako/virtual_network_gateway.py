@@ -34,12 +34,12 @@ class VirtualNetworkGateway(EnOceanGateway):
 
     def __init__(self, general_settings:dict, hass: HomeAssistant, dev_id: int, config_entry: ConfigEntry):
         
-        self.dev_name = "ESP2 Netowrk Reverse Bridge"
+        dev_name = "ESP2 Netowrk Reverse Bridge"
         self.host = "0.0.0.0"
 
         super().__init__(general_settings, hass,
                          dev_id, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
-                         self.dev_name, False, 0,
+                         dev_name, False, 0,
                          config_entry)
 
         self._running = False
@@ -50,17 +50,6 @@ class VirtualNetworkGateway(EnOceanGateway):
         
 
         self._register_device()
-
-        
-
-    def get_device_info(self) -> DeviceInfo:    
-        return DeviceInfo(
-            config_entry_id = self.config_entry.entry_id,
-            identifiers = {(DOMAIN, DEVICE_ID)},
-            manufacturer = "Home Assistant Eltako Integration",
-            name = "Virtual Gateway Reverse Proxy",
-            model = self.dev_name
-        )
 
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)
