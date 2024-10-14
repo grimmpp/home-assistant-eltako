@@ -3,13 +3,17 @@ import threading
 import queue
 import time
 
+import uuid
+
 from zeroconf import Zeroconf, ServiceInfo
 
 from eltakobus.message import ESP2Message
 from eltakobus.util import b2s, AddressExpression
 
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
+from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
@@ -17,6 +21,7 @@ from . import config_helpers
 BUFFER_SIZE = 1024
 MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX = "VirtGw"
+DEVICE_ID = "VirtGw"
 
 CENTRAL_VIRTUAL_NETWORK_GATEWAY = None
 
@@ -39,12 +44,24 @@ class VirtualNetworkGateway:
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, hass):
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry = None):
         self.host = "0.0.0.0"
         self.port = 12345
         self._running = False
         self.hass = hass
+        self.config_entry = config_entry
         
+
+    def _register_device(self) -> None:
+        device_registry = dr.async_get(self.hass)
+        device_registry.async_get_or_create(
+            config_entry_id = str(uuid.uuid4())
+            identifiers = {(DOMAIN, DEVICE_ID)},
+            manufacturer = "Home Assistant Eltako Integration",
+            name = "Virtual Gateway Reverse Proxy",
+            model = "TCP Server (ESP2 Netowrk Bridge)"
+        )
+
 
     def get_service_info(self, hostname:str, ip_address:str):
         info = ServiceInfo(
