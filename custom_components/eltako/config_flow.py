@@ -9,7 +9,7 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
-from virtual_network_gateway import TCP_SERVER_PORT
+# from virtual_network_gateway import TCP_SERVER_PORT
 from . import gateway
 from . import config_helpers
 from .const import *
@@ -100,7 +100,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 address = g_c[CONF_GATEWAY_ADDRESS]
                 serial_paths.append(address)
         if CONF_VIRTUAL_NETWORK_GATEWAY in g_list:
-            serial_paths = serial_paths.append("homeassistant.local:"+str(TCP_SERVER_PORT))
+            serial_paths = serial_paths.append("homeassistant.local:"+str(12345))
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)
