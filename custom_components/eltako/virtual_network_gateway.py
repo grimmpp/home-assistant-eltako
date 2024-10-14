@@ -8,6 +8,7 @@ from zeroconf import Zeroconf, ServiceInfo
 from eltakobus.message import ESP2Message
 from eltakobus.util import b2s, AddressExpression
 
+from homeassistant.components import zeroconf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers import device_registry as dr
@@ -35,7 +36,7 @@ class VirtualNetworkGateway:
         self._running = False
         self.hass = hass
         self.config_entry = config_entry
-        self.server_task = None
+        self.zeroconf:Zeroconf = None
         
 
     def _register_device(self) -> None:
@@ -122,7 +123,7 @@ class VirtualNetworkGateway:
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running})")
 
 
-    async def tcp_server(self):
+    def tcp_server(self):
         """Basic TCP Server that listens for connections."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
@@ -133,15 +134,15 @@ class VirtualNetworkGateway:
             # Get the IP address
             ip_address = socket.gethostbyname(hostname)
 
-            # Register the service
-            service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
-            zeroconf = Zeroconf()
-            try:
-                zeroconf.register_service(service_info)
-            except:
-                pass
-
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
+
+            # Register the service
+            try:
+                service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
+                self.zeroconf.register_service(service_info)
+                LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] registered mDNS service record created.")
+            except Exception as e:
+                LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
 
             while self._running:
                 try:
@@ -157,8 +158,7 @@ class VirtualNetworkGateway:
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
 
 
-            zeroconf.unregister_service(service_info)
-            zeroconf.close()
+            self.zeroconf.unregister_service(service_info)
             
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
 
@@ -173,14 +173,14 @@ class VirtualNetworkGateway:
         """Start TCP server in a separate thread."""
         if not self._running:
             self._running = True
-            self.server_task = self.hass.loop.create_task(self.tcp_server())
+            self.tcp_thread = threading.Thread(target=self.tcp_server)
+            self.tcp_thread.daemon = True
+            self.tcp_thread.start()
 
 
     def stop_tcp_server(self):
         self._running = False
-        if self.server_task is not None:
-            self.server_task.cancel()
-        self.server_task = None
+        self.tcp_thread.join()
 
     def convert_ip_to_bytes(self, ip_address_str):
         try:
@@ -194,6 +194,9 @@ class VirtualNetworkGateway:
 
     async def async_setup(self):
         """Initialized tcp server and register callback function on HA event bus."""
+
+        self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
+
         self.start_tcp_server()
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] [Id: {VIRT_GW_ID}] Was started.")
 
