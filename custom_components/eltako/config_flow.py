@@ -150,7 +150,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         baud_rate: int = -1
         gateway_selection: str = user_input[CONF_GATEWAY_DESCRIPTION]
 
-        LOGGER.debug("[%s] Start serial path validation for %s", LOGGER_PREFIX_CONFIG_FLOW, gateway_selection)
+        LOGGER.debug("[%s] Start serial path validation for '%s'", LOGGER_PREFIX_CONFIG_FLOW, gateway_selection)
 
         for gdc in gateway.GatewayDeviceType:
             if gdc in gateway_selection:
@@ -158,21 +158,26 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 break
         
         # check ip address for esp3 over tcp
+        is_network_gw = False
         for gdt_lan in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value]:
             if gdt_lan in gateway_selection:
-                try:
-                    ip = ipaddress.ip_address(serial_path)
-                    LOGGER.debug("[%s] Found valid IP Address %s.", serial_path)
-                    return True
-                except Exception:
-                    LOGGER.debug("[%s] serial_path: %s is no valid IP Address", serial_path)
-                    return False
-            # check serial ports / usb
-            else:
-                path_is_valid = await self.hass.async_add_executor_job(
-                    gateway.validate_path, serial_path, baud_rate
-                )
-                LOGGER.debug("[%s] serial_path: %s, validated with baud rate %d is %s", LOGGER_PREFIX_CONFIG_FLOW, serial_path, baud_rate, path_is_valid)
+                is_network_gw = True
+                break
+            
+        if is_network_gw:
+            try:
+                ip = ipaddress.ip_address(serial_path)
+                LOGGER.debug("[%s] Found valid IP Address %s.", serial_path)
+                return True
+            except Exception:
+                LOGGER.debug("[%s] serial_path: %s is no valid IP Address", serial_path)
+                return False
+        # check serial ports / usb
+        else:
+            path_is_valid = await self.hass.async_add_executor_job(
+                gateway.validate_path, serial_path, baud_rate
+            )
+            LOGGER.debug("[%s] serial_path: %s, validated with baud rate %d is %s", LOGGER_PREFIX_CONFIG_FLOW, serial_path, baud_rate, path_is_valid)
 
         return path_is_valid
 
