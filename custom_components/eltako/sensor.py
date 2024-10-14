@@ -8,9 +8,6 @@ from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import *
 from eltakobus.message import ESP2Message
 
-from . import config_helpers
-from virtual_network_gateway import VirtualNetworkGateway
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -46,6 +43,8 @@ from .config_helpers import *
 from .gateway import EnOceanGateway
 from .const import *
 from . import get_gateway_from_hass, get_device_config_for_gateway
+from . import config_helpers
+from .virtual_network_gateway import VirtualNetworkGateway
 
 DEFAULT_DEVICE_NAME_WINDOW_HANDLE = "Window handle"
 DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"
