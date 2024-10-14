@@ -25,7 +25,6 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from .virtual_network_gateway import VirtualNetworkGateway
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
