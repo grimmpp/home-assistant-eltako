@@ -17,7 +17,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from gateway import EnOceanGateway
+from .gateway import EnOceanGateway
 
 VIRT_GW_ID = 0
 VIRT_GW_PORT = 12345
