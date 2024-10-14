@@ -157,13 +157,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
         
-        # check ip address for esp3 over tcp
-        is_network_gw = False
-        for gdt_lan in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value]:
-            if gdt_lan in gateway_selection:
-                is_network_gw = True
-                break
-            
+        # check ip address for esp2/3 over tcp
+        is_network_gw = len(g for g in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value] if g in gateway_selection) > 0        
         if is_network_gw:
             try:
                 ip = ipaddress.ip_address(serial_path)
