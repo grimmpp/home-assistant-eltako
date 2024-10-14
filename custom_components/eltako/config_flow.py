@@ -150,7 +150,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         baud_rate: int = -1
         gateway_selection: str = user_input[CONF_GATEWAY_DESCRIPTION]
 
-        LOGGER.debug("[%s] Start serial path validation for '%s'", LOGGER_PREFIX_CONFIG_FLOW, gateway_selection)
+        LOGGER.debug("[%s] Start serial path validation for '%s' and address '%s'", LOGGER_PREFIX_CONFIG_FLOW, gateway_selection, serial_path)
 
         for gdc in gateway.GatewayDeviceType:
             if gdc in gateway_selection:
