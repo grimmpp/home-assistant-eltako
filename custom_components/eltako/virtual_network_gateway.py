@@ -59,6 +59,9 @@ class VirtualNetworkGateway:
 
         return info        
 
+    @property
+    def dev_id(self):
+        return VIRT_GW_ID
 
     def forward_message(self, gateway, msg: ESP2Message):
         if gateway not in self.sending_gateways:
