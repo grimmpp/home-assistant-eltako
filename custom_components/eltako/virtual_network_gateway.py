@@ -44,24 +44,11 @@ class VirtualNetworkGateway(EnOceanGateway):
                          dev_id, GatewayDeviceType.VirtualNetworkAdapter, "homeassistant.local:"+str(port), -2, port, AddressExpression.parse('00-00-00-00'), VIRT_GW_DEVICE_NAME, True, None,
                            config_entry  )
 
-        self.hass = hass
-        self.config_entry = config_entry
         self._running = False
         self.hass = hass
         self.zeroconf:Zeroconf = None
 
         self._register_device()
-
-    def _register_device(self) -> None:
-        device_registry = dr.async_get(self.hass)
-        device_registry.async_get_or_create(
-            config_entry_id=self.config_entry.entry_id,
-            identifiers={(DOMAIN, "gateway_"+str(VIRT_GW_ID))},
-            # connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
-            manufacturer=MANUFACTURER,
-            name= self.dev_name,
-            model=self.model,
-        )
 
     @property
     def dev_id(self):
