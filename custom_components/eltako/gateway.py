@@ -12,6 +12,8 @@ from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import ESP2Message, EltakoPoll
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
+from eltakobus.device import FAM14, create_busobject
+from eltakobus import locking
 
 from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
 from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
@@ -25,6 +27,8 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
+
+
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -233,15 +237,42 @@ class EnOceanGateway:
     ### send and receive funtions for RS485 bus (serial bus)
     ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
 
+    async def get_fam14_base_id(self):
+        is_locked = False
+        try:
+            self._bus.set_callback( None )
+
+            is_locked = (await locking.lock_bus(self._bus)) == locking.LOCKED
+            
+            # first get fam14 and make it know to data manager
+            fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
+            base_id_str = await fam14.get_base_id()
+            self.base_id = AddressExpression.parse( base_id_str )
+            LOGGER.debug("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
+
+        except Exception as e:
+            LOGGER.error("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
+            raise e
+        finally:
+            if is_locked:
+                resp = await locking.unlock_bus(self._bus)
+            self._serial_bus.set_callback( self._callback_receive_message_from_serial_bus )
+
+
     def reconnect(self):
         self._bus.stop()
         self._init_bus()
         self._bus.start()
 
+        if self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
+            self.hass.async_create_task(self.get_fam14_base_id)
 
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
         self._bus.start()
+        
+        if self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
+            await self.get_fam14_base_id()
         LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
 
         # receive messages from HA event bus
