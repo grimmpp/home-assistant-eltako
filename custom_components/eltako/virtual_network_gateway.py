@@ -184,7 +184,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
 
     def restart_tcp_server(self):
-        LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Restart TCP server")
+        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Restart TCP server")
         if self._running.is_set():
             self.stop_tcp_server()
         
@@ -197,13 +197,13 @@ class VirtualNetworkGateway(EnOceanGateway):
             self._running.set()
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
-            # self.tcp_thread.start()
+            self.tcp_thread.start()
             self._fire_connection_state_changed_event(True)
 
 
     def stop_tcp_server(self):
         self._running.clear()
-        # self.tcp_thread.join()
+        self.tcp_thread.join()
         self._fire_connection_state_changed_event(False)
 
 
@@ -224,6 +224,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         # self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
 
         self.start_tcp_server()
+
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Was started.")
 
         # receive messages from HA event bus
