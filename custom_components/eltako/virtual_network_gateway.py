@@ -40,7 +40,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
         self.host = "0.0.0.0"
         super().__init__(general_settings, hass,
-                         dev_id, GatewayDeviceType.VirtualNetworkAdapter, "homeassistant.local:"+str(port), -2, port, AddressExpression.parse('00-00-00-00'), VIRT_GW_DEVICE_NAME, True, None,
+                         dev_id, GatewayDeviceType.VirtualNetworkAdapter, "homeassistant.local", -2, port, AddressExpression.parse('00-00-00-00'), VIRT_GW_DEVICE_NAME, True, None,
                            config_entry  )
 
         self._running = threading.Event()
@@ -175,7 +175,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
             # self.zeroconf.unregister_service[Id: {self.dev_id}] (service_info)
         
-        self._fire_connection_state_changed_event(False)    
+        self._fire_connection_state_changed_event(False)
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
 
 
@@ -184,6 +184,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
 
     def restart_tcp_server(self):
+        LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Restart TCP server")
         if self._running.is_set():
             self.stop_tcp_server()
         
@@ -197,11 +198,13 @@ class VirtualNetworkGateway(EnOceanGateway):
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
             # self.tcp_thread.start()
+            self._fire_connection_state_changed_event(True)
 
 
     def stop_tcp_server(self):
         self._running.clear()
         # self.tcp_thread.join()
+        self._fire_connection_state_changed_event(False)
 
 
     def convert_ip_to_bytes(self, ip_address_str):

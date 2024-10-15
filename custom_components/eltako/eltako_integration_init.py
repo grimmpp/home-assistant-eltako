@@ -9,7 +9,7 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualNetworkGateway
+from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_PORT
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
@@ -167,7 +167,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Initializes Gateway Device '{gateway_description}'")
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
     baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
-    port = gateway_config.get(CONF_GATEWAY_PORT, 5100)
+    port = gateway_config.get(CONF_GATEWAY_PORT, VIRT_GW_PORT if gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter else 5100)
     auto_reconnect = gateway_config.get(CONF_GATEWAY_AUTO_RECONNECT, True)
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
