@@ -213,9 +213,9 @@ class VirtualNetworkGateway():
     async def async_setup(self):
         """Initialized tcp server and register callback function on HA event bus."""
 
-        self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
+        # self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
 
-        self.start_tcp_server()
+        # self.start_tcp_server()
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] [Id: {VIRT_GW_ID}] Was started.")
 
         # receive messages from HA event bus
