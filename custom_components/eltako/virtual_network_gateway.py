@@ -203,7 +203,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
     def stop_tcp_server(self):
         self._running.clear()
-        self.tcp_thread.join()
+        self.tcp_thread.join(5)
         self._fire_connection_state_changed_event(False)
 
 
