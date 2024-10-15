@@ -99,9 +99,13 @@ class EnOceanGateway:
 
     async def query_for_base_id_and_version(self, connected):
         if connected:
-            LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
-            await self._bus.send_base_id_request()
-            await self._bus.send_version_request()
+            if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
+                LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
+                await self._bus.send_base_id_request()
+                await self._bus.send_version_request()
+
+            elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
+                self.hass.async_create_task(self.get_fam14_base_id)
 
 
     def add_base_id_change_handler(self, handler):
@@ -264,15 +268,11 @@ class EnOceanGateway:
         self._init_bus()
         self._bus.start()
 
-        if self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-            self.hass.async_create_task(self.get_fam14_base_id)
 
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
         self._bus.start()
 
-        if self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-            await self.get_fam14_base_id()
         LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
 
         # receive messages from HA event bus
