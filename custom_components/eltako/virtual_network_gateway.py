@@ -170,7 +170,11 @@ class VirtualNetworkGateway(EnOceanGateway):
                     
                     client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
                     client_thread.start()
-                            
+                
+                except socket.timeout:
+                    # Timeout used to periodically check for shutdown
+                    continue
+                
                 except Exception as e:
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
 
