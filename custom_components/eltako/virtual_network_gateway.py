@@ -67,7 +67,7 @@ class VirtualNetworkGateway():
         return GatewayDeviceType.LAN_ESP2.value
 
     @property
-    def dev_model(self):
+    def model(self):
         return GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
     def get_service_info(self, hostname:str, ip_address:str):
