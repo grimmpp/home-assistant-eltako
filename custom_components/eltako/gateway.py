@@ -28,7 +28,7 @@ from homeassistant.config_entries import ConfigEntry
 from .const import *
 from . import config_helpers
 
-
+from threading import Thread
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -105,7 +105,7 @@ class EnOceanGateway:
                 await self._bus.send_version_request()
 
             elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-                await self.get_fam14_base_id()
+                Thread(target=self.get_fam14_base_id).start()
 
 
     def add_base_id_change_handler(self, handler):
