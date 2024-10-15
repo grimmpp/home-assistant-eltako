@@ -17,15 +17,13 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from .gateway import EnOceanGateway
+from .gateway import EnOceanGateway, GOBAL_EVENT_BUS_ID
 
 VIRT_GW_PORT = 12345
 VIRT_GW_DEVICE_NAME = "ESP2 Netowrk Reverse Bridge"
 BUFFER_SIZE = 1024
 MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX_VIRT_GW = "VirtGw"
-DEVICE_ID = "VirtGw"
-
 
 class VirtualNetworkGateway(EnOceanGateway):
 
@@ -76,9 +74,9 @@ class VirtualNetworkGateway(EnOceanGateway):
         return info        
 
 
-    def forward_message(self, gateway, msg: ESP2Message):
-        if gateway not in self.sending_gateways:
-            self.sending_gateways.append(gateway)
+    def _forward_message(self, msg: ESP2Message):
+        # if gateway not in self.sending_gateways:
+        #     self.sending_gateways.append(gateway)
         
         self.incoming_message_queue.put((time.time(),msg))
 
@@ -232,11 +230,9 @@ class VirtualNetworkGateway(EnOceanGateway):
 
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Was started.")
 
-        # receive messages from HA event bus
-        # event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
-        # self.dispatcher_disconnect_handle = async_dispatcher_connect(
-        #     self.hass, event_id, self._callback_send_message_to_serial_bus
-        # )
+        self.dispatcher_disconnect_handle = async_dispatcher_connect(
+            self.hass, GOBAL_EVENT_BUS_ID, self._forward_message
+        )
 
 
     def unload(self):

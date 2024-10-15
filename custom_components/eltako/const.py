@@ -22,6 +22,7 @@ SIGNAL_RECEIVE_MESSAGE: Final = "receive_message"
 SIGNAL_SEND_MESSAGE: Final = "send_message"
 EVENT_BUTTON_PRESSED: Final = "btn_pressed"
 EVENT_CONTACT_CLOSED: Final = "contact_closed"
+GOBAL_EVENT_BUS_ID: Final = "eltako_global_event_bus"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 

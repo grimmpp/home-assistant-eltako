@@ -308,6 +308,7 @@ class EnOceanGateway:
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
+        dispatcher_send(self.hass, GOBAL_EVENT_BUS_ID, msg)
 
 
     def unload(self):
@@ -330,6 +331,7 @@ class EnOceanGateway:
                 self.hass.create_task(
                     self._bus.send(msg)
                 )
+                dispatcher_send(self.hass, GOBAL_EVENT_BUS_ID, msg)
         else:
             LOGGER.warning("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
 
@@ -353,6 +355,7 @@ class EnOceanGateway:
             if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
+                dispatcher_send(self.hass, GOBAL_EVENT_BUS_ID, message)
             
             
     @property
