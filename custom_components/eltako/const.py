@@ -114,7 +114,7 @@ class GatewayDeviceType(str, Enum):
 
     @classmethod
     def is_transceiver(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3]
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2]
 
     @classmethod
     def is_bus_gateway(cls, dev_type) -> bool:
@@ -124,7 +124,8 @@ class GatewayDeviceType(str, Enum):
     @classmethod
     def is_esp2_gateway(cls, dev_type) -> bool:
         return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB, 
-                            GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFAMUSB, GatewayDeviceType.EltakoFGW14USB]
+                            GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFAMUSB, GatewayDeviceType.EltakoFGW14USB, GatewayDeviceType.LAN_ESP2, 
+                            GatewayDeviceType.VirtualNetworkAdapter]
     
     @classmethod
     def is_lan_gateway(cls, dev_type) -> bool:

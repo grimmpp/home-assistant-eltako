@@ -416,13 +416,17 @@ async def async_setup_entry(
 
     # add gateway information
     entities.append(GatewayInfoField(platform, gateway, "Id", str(gateway.dev_id), "mdi:identifier"))
-    entities.append(GatewayBaseId(platform, gateway))
-    if gateway.dev_type not in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2]:
-        entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
-    else:
+    
+    if gateway.dev_type is not GatewayDeviceType.VirtualNetworkAdapter:
+        entities.append(GatewayBaseId(platform, gateway))
+
+    if GatewayDeviceType.is_lan_gateway(gateway.dev_type):
         entities.append(GatewayInfoField(platform, gateway, "Address", f"{gateway.serial_path}:{gateway.port}", "mdi:usb"))
+    else:
+        entities.append(GatewayInfoField(platform, gateway, "Serial Path", gateway.serial_path, "mdi:usb"))
+        entities.append(GatewayInfoField(platform, gateway, "Message Delay", gateway.message_delay, "mdi:av-timer"))
+        
     entities.append(GatewayInfoField(platform, gateway, "USB Protocol", gateway.native_protocol, "mdi:usb"))
-    entities.append(GatewayInfoField(platform, gateway, "Message Delay", gateway.message_delay, "mdi:av-timer"))
     entities.append(GatewayInfoField(platform, gateway, "Auto Connect Enabled", gateway.is_auto_reconnect_enabled, "mdi:connection"))
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))

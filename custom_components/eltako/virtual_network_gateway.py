@@ -134,6 +134,8 @@ class VirtualNetworkGateway(EnOceanGateway):
         finally:
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running})")
 
+    async def query_for_base_id_and_version(self, connected):
+        pass
 
     def tcp_server(self):
         """Basic TCP Server that listens for connections."""
@@ -147,6 +149,7 @@ class VirtualNetworkGateway(EnOceanGateway):
             ip_address = socket.gethostbyname(hostname)
 
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
+            self._fire_connection_state_changed_event(True)
 
             # Register the service
             try:
@@ -169,11 +172,14 @@ class VirtualNetworkGateway(EnOceanGateway):
                 except Exception as e:
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
 
-
             self.zeroconf.unregister_service(service_info)
-            
+        
+        self._fire_connection_state_changed_event(False)    
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
 
+
+    def reconnect(self):
+        self.restart_tcp_server()
 
     def restart_tcp_server(self):
         if self._running:
