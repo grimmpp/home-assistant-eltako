@@ -149,7 +149,9 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 is_network_gw = True
         
         # check ip address for esp2/3 over tcp
-        if is_network_gw:
+        if GatewayDeviceType.VirtualNetworkAdapter.value in gateway_selection:
+            return True
+        elif is_network_gw:
             try:
                 ip = ipaddress.ip_address(serial_path)
                 LOGGER.debug("[%s] Found valid IP Address %s.", serial_path)

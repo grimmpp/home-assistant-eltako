@@ -95,7 +95,7 @@ class GatewayDeviceType(str, Enum):
     ESP3 = 'esp3-gateway'
     LAN = 'mgw-lan'
     LAN_ESP2 = "lan-gw-esp2"
-    VirtualNetworkAdapter = 'virtual-network-adapter'
+    VirtualNetworkAdapter = 'esp2-netowrk-reverse-bridge'   # subtype of LAN_ESP2
 
     @classmethod
     def indexOf(cls, value):
@@ -142,4 +142,5 @@ BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
     GatewayDeviceType.ESP3: 57600,
     GatewayDeviceType.LAN: -1,
     GatewayDeviceType.LAN_ESP2: -2,
+    GatewayDeviceType.VirtualNetworkAdapter: -2
 }

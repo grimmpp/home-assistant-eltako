@@ -24,45 +24,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         hass.data[DATA_ELTAKO] = {}
 
     # Migrage existing gateway configs / ESP2 was removed in the name
-    # migrate_old_gateway_descriptions(hass)
+    migrate_old_gateway_descriptions(hass)
 
-
-    if 'gateway_'+str(VIRT_GW_ID) not in hass.data[DATA_ELTAKO]:
-
-        LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
-
-        # Check if there is already a config entry for this domain
-        existing_entries = hass.config_entries.async_entries(DOMAIN)
-        
-        if not existing_entries:
-            LOGGER.info(f"[{LOG_PREFIX_INIT}] Create and add new entry for {VIRT_GW_DEVICE_NAME}")
-            # If no config entry exists, create a new one
-            config_entry = ConfigEntry(
-                version=1,
-                domain=DOMAIN,
-                title=VIRT_GW_DEVICE_NAME,
-                data={},  # Any required data for the integration
-                source="user",  # Or "system" if it is system managed
-                options={},
-                entry_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # This should be a unique and valid UUID
-                unique_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # Unique ID for the config entry
-                discovery_keys=[],  # List of discovery keys if applicable
-                minor_version=1  
-            )
-            
-            # Add this config entry to Home Assistant
-            await hass.config_entries.async_add(config_entry)
-        else:
-            config_entry = existing_entries[0]  # Use the existing config entry
-
-        LOGGER.info(f"[{LOG_PREFIX_INIT}] test 1")
-        virt_gw = VirtualNetworkGateway(hass, config_entry)
-        # await virt_gw.async_setup()
-        # virt_gw.restart_tcp_server()
-        LOGGER.info(f"[{LOG_PREFIX_INIT}] test 2")
-        set_gateway_to_hass(hass, virt_gw)
-
-    LOGGER.info(f"[{LOG_PREFIX_INIT}] Eltako Integration loaded")
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Eltako Integration initiallized. ... loading device configuration")
 
     return True
 
@@ -176,6 +140,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return
     
     gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
+
+    if GatewayDeviceType.VirtualNetworkAdapter in gateway_description:
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
+
+        virt_gw = VirtualNetworkGateway(hass, config_entry)
+        # await virt_gw.async_setup()
+        # virt_gw.restart_tcp_server()
+        set_gateway_to_hass(hass, virt_gw)
+
+        return True
     
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
