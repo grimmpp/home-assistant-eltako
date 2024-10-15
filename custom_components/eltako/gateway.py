@@ -254,6 +254,7 @@ class EnOceanGateway:
             base_id_str = await fam14.get_base_id()
             self.base_id = AddressExpression.parse( base_id_str )
             LOGGER.info("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
+            self._fire_base_id_change_handlers(self.base_id)
 
         except Exception as e:
             LOGGER.error("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
