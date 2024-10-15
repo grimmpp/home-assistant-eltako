@@ -42,6 +42,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             source="user",  # Or "system" if it is system managed
             options={},
             entry_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # This should be a unique and valid UUID
+            unique_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # Unique ID for the config entry
+            discovery_keys=[],  # List of discovery keys if applicable
+            minor_version=1  
         )
         
         # Add this config entry to Home Assistant
