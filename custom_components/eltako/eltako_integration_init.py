@@ -24,7 +24,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         hass.data[DATA_ELTAKO] = {}
 
     # Migrage existing gateway configs / ESP2 was removed in the name
-    migrate_old_gateway_descriptions(hass)
+    # migrate_old_gateway_descriptions(hass)
 
 
     if 'gateway_'+str(VIRT_GW_ID) not in hass.data[DATA_ELTAKO]:
@@ -35,6 +35,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         existing_entries = hass.config_entries.async_entries(DOMAIN)
         
         if not existing_entries:
+            LOGGER.info(f"[{LOG_PREFIX_INIT}] Create and add new entry for {VIRT_GW_DEVICE_NAME}")
             # If no config entry exists, create a new one
             config_entry = ConfigEntry(
                 version=1,
@@ -54,10 +55,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         else:
             config_entry = existing_entries[0]  # Use the existing config entry
 
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] test 1")
         virt_gw = VirtualNetworkGateway(hass, config_entry)
         # await virt_gw.async_setup()
         # virt_gw.restart_tcp_server()
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] test 2")
         set_gateway_to_hass(hass, virt_gw)
+
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Eltako Integration loaded")
 
     return True
 
