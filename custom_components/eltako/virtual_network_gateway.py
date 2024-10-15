@@ -32,14 +32,13 @@ class VirtualNetworkGateway():
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant):
         
         self.host = "0.0.0.0"
 
         self.hass = hass
         self._running = False
         self.hass = hass
-        self.config_entry = config_entry
         self.zeroconf:Zeroconf = None
 
         self._register_device()

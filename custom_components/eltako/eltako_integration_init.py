@@ -18,6 +18,8 @@ LOG_PREFIX_INIT = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Initialize Home Assistant Eltako Integration: https://github.com/grimmpp/home-assistant-eltako")
+
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
     virt_gw = VirtualNetworkGateway(hass)
     await virt_gw.async_setup()
