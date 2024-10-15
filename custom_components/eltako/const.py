@@ -96,7 +96,7 @@ class GatewayDeviceType(str, Enum):
     ESP3 = 'esp3-gateway'
     LAN = 'lan'
     MGW_LAN = 'mgw-lan'
-    EUL_LAN = 'EUL_LAN'
+    EUL_LAN = 'eul_lan'
     LAN_ESP2 = "lan-gw-esp2"
     VirtualNetworkAdapter = 'esp2-netowrk-reverse-bridge'   # subtype of LAN_ESP2
 
