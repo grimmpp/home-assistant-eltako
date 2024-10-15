@@ -9,7 +9,7 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_DEVICE_NAME
+from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_DEVICE_NAME, VIRT_GW_ID
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
@@ -27,35 +27,37 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     migrate_old_gateway_descriptions(hass)
 
 
-    LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
+    if 'gateway_'+str(VIRT_GW_ID) not in hass.data[DATA_ELTAKO]:
 
-    # Check if there is already a config entry for this domain
-    existing_entries = hass.config_entries.async_entries(DOMAIN)
-    
-    if not existing_entries:
-        # If no config entry exists, create a new one
-        config_entry = ConfigEntry(
-            version=1,
-            domain=DOMAIN,
-            title=VIRT_GW_DEVICE_NAME,
-            data={},  # Any required data for the integration
-            source="user",  # Or "system" if it is system managed
-            options={},
-            entry_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # This should be a unique and valid UUID
-            unique_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # Unique ID for the config entry
-            discovery_keys=[],  # List of discovery keys if applicable
-            minor_version=1  
-        )
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
+
+        # Check if there is already a config entry for this domain
+        existing_entries = hass.config_entries.async_entries(DOMAIN)
         
-        # Add this config entry to Home Assistant
-        await hass.config_entries.async_add(config_entry)
-    else:
-        config_entry = existing_entries[0]  # Use the existing config entry
+        if not existing_entries:
+            # If no config entry exists, create a new one
+            config_entry = ConfigEntry(
+                version=1,
+                domain=DOMAIN,
+                title=VIRT_GW_DEVICE_NAME,
+                data={},  # Any required data for the integration
+                source="user",  # Or "system" if it is system managed
+                options={},
+                entry_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # This should be a unique and valid UUID
+                unique_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # Unique ID for the config entry
+                discovery_keys=[],  # List of discovery keys if applicable
+                minor_version=1  
+            )
+            
+            # Add this config entry to Home Assistant
+            await hass.config_entries.async_add(config_entry)
+        else:
+            config_entry = existing_entries[0]  # Use the existing config entry
 
-    virt_gw = VirtualNetworkGateway(hass, config_entry)
-    # await virt_gw.async_setup()
-    # virt_gw.restart_tcp_server()
-    set_gateway_to_hass(hass, virt_gw)
+        virt_gw = VirtualNetworkGateway(hass, config_entry)
+        # await virt_gw.async_setup()
+        # virt_gw.restart_tcp_server()
+        set_gateway_to_hass(hass, virt_gw)
 
     return True
 
