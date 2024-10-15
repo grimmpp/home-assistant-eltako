@@ -48,7 +48,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
         
         # Add this config entry to Home Assistant
-        hass.config_entries._entries.append(config_entry)
+        await hass.config_entries.async_add(config_entry)
     else:
         config_entry = existing_entries[0]  # Use the existing config entry
 
