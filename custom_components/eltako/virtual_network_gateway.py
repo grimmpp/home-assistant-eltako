@@ -28,14 +28,21 @@ LOGGING_PREFIX_VIRT_GW = "VirtGw"
 DEVICE_ID = "VirtGw"
 
 
-class VirtualNetworkGateway():
+class VirtualNetworkGateway(EnOceanGateway):
 
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
+    def __init__(self, general_settings:dict, hass: HomeAssistant, 
+                 dev_id: int, port:int, config_entry: ConfigEntry):
         
+        if port is None:
+            port = VIRT_GW_PORT
+
         self.host = "0.0.0.0"
+        super().__init__(general_settings, hass,
+                         dev_id, GatewayDeviceType.VirtualNetworkAdapter, "homeassistant.local:"+str(port), -2, port, AddressExpression.parse('00-00-00-00'), VIRT_GW_DEVICE_NAME, True, None,
+                           config_entry  )
 
         self.hass = hass
         self.config_entry = config_entry
