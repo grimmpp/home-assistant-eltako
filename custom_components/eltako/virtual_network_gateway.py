@@ -44,7 +44,8 @@ class VirtualNetworkGateway(EnOceanGateway):
                          dev_id, GatewayDeviceType.VirtualNetworkAdapter, "homeassistant.local:"+str(port), -2, port, AddressExpression.parse('00-00-00-00'), VIRT_GW_DEVICE_NAME, True, None,
                            config_entry  )
 
-        self._running = False
+        self._running = threading.Event()
+        self._running.clear()
         self.hass = hass
         self.zeroconf:Zeroconf = None
 
@@ -110,7 +111,7 @@ class VirtualNetworkGateway(EnOceanGateway):
                 self.send_gateway_info(conn)
 
                 # send messages coming in and out
-                while self._running:
+                while self._running.is_set():
                     # Receive data from the client
                     try:
                         package = self.incoming_message_queue.get(timeout=1)
@@ -132,7 +133,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
-            LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running})")
+            LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running.is_set()})")
 
     async def query_for_base_id_and_version(self, connected):
         pass
@@ -159,7 +160,7 @@ class VirtualNetworkGateway(EnOceanGateway):
             except Exception as e:
                 LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
 
-            while self._running:
+            while self._running.is_set():
                 try:
                     # LOGGER.debug("[%s] Try to connect", LOGGING_PREFIX)
                     conn, addr = s.accept()
@@ -182,22 +183,22 @@ class VirtualNetworkGateway(EnOceanGateway):
         self.restart_tcp_server()
 
     def restart_tcp_server(self):
-        if self._running:
+        if self._running.is_set():
             self.stop_tcp_server()
         
         self.start_tcp_server()
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
-        if not self._running:
-            self._running = True
+        if not self._running.is_set():
+            self._running.set()
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
             self.tcp_thread.start()
 
 
     def stop_tcp_server(self):
-        self._running = False
+        self._running.clear()
         self.tcp_thread.join()
 
     def convert_ip_to_bytes(self, ip_address_str):
