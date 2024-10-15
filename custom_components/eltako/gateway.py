@@ -160,7 +160,7 @@ class EnOceanGateway:
                                                delay_message=self._message_delay,
                                                auto_reconnect=self._auto_reconnect)
             
-        elif self.dev_type == GatewayDeviceType.LAN:
+        elif GatewayDeviceType.is_lan_gateway(self.dev_type) and not GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = TCP2SerialCommunicator(host=self.serial_path, 
                                                port=self.port, 
                                                callback=self._callback_receive_message_from_serial_bus, 
