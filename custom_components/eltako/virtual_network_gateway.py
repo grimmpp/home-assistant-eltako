@@ -49,7 +49,7 @@ class VirtualNetworkGateway():
         device_registry = dr.async_get(self.hass)
         device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
-            identifiers={(DOMAIN, )},
+            identifiers={(DOMAIN, "gateway_"+str(VIRT_GW_ID))},
             # connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
             manufacturer=MANUFACTURER,
             name= self.dev_name,
