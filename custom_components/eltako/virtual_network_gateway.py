@@ -19,7 +19,6 @@ from .const import *
 from . import config_helpers
 from .gateway import EnOceanGateway
 
-VIRT_GW_ID = 0
 VIRT_GW_PORT = 12345
 VIRT_GW_DEVICE_NAME = "ESP2 Netowrk Reverse Bridge"
 BUFFER_SIZE = 1024
@@ -51,9 +50,6 @@ class VirtualNetworkGateway(EnOceanGateway):
 
         self._register_device()
 
-    @property
-    def dev_id(self):
-        return VIRT_GW_ID
     
     @property
     def dev_name(self):
@@ -67,6 +63,7 @@ class VirtualNetworkGateway(EnOceanGateway):
     def model(self):
         return GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
+
     def get_service_info(self, hostname:str, ip_address:str):
         info = ServiceInfo(
             "_bsc-sc-socket._tcp.local.",
@@ -77,6 +74,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         )
 
         return info        
+
 
     def forward_message(self, gateway, msg: ESP2Message):
         if gateway not in self.sending_gateways:
@@ -135,8 +133,10 @@ class VirtualNetworkGateway(EnOceanGateway):
         finally:
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running.is_set()})")
 
+
     async def query_for_base_id_and_version(self, connected):
         pass
+
 
     def tcp_server(self):
         """Basic TCP Server that listens for connections."""
@@ -153,12 +153,12 @@ class VirtualNetworkGateway(EnOceanGateway):
             self._fire_connection_state_changed_event(True)
 
             # Register the service
-            try:
-                service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
-                self.zeroconf.register_service(service_info)
-                LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] registered mDNS service record created.")
-            except Exception as e:
-                LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
+            # try:
+            #     service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
+            #     self.zeroconf.register_service(service_info)
+            #     LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] registered mDNS service record created.")
+            # except Exception as e:
+            #     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
 
             while self._running.is_set():
                 try:
@@ -173,7 +173,7 @@ class VirtualNetworkGateway(EnOceanGateway):
                 except Exception as e:
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
 
-            self.zeroconf.unregister_service(service_info)
+            # self.zeroconf.unregister_service[Id: {self.dev_id}] (service_info)
         
         self._fire_connection_state_changed_event(False)    
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
@@ -182,11 +182,13 @@ class VirtualNetworkGateway(EnOceanGateway):
     def reconnect(self):
         self.restart_tcp_server()
 
+
     def restart_tcp_server(self):
         if self._running.is_set():
             self.stop_tcp_server()
         
         self.start_tcp_server()
+
 
     def start_tcp_server(self):
         """Start TCP server in a separate thread."""
@@ -201,6 +203,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         self._running.clear()
         self.tcp_thread.join()
 
+
     def convert_ip_to_bytes(self, ip_address_str):
         try:
             if ":" in ip_address_str:  # Check for IPv6
@@ -211,19 +214,21 @@ class VirtualNetworkGateway(EnOceanGateway):
         except socket.error as e:
             LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] Invalid IP address: {ip_address_str} - {e}")
 
+
     async def async_setup(self):
         """Initialized tcp server and register callback function on HA event bus."""
 
-        self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
+        # self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
 
         self.start_tcp_server()
-        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] [Id: {VIRT_GW_ID}] Was started.")
+        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Was started.")
 
         # receive messages from HA event bus
         # event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         # self.dispatcher_disconnect_handle = async_dispatcher_connect(
         #     self.hass, event_id, self._callback_send_message_to_serial_bus
         # )
+
 
     def unload(self):
         """Disconnect callbacks established at init time."""
@@ -233,4 +238,4 @@ class VirtualNetworkGateway(EnOceanGateway):
 
         self.stop_tcp_server()
 
-        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] [Id: {VIRT_GW_ID}] Was stopped.")
+        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Was stopped.")

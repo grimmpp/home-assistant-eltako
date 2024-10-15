@@ -9,7 +9,6 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME
 from homeassistant.helpers import device_registry as dr
 
-# from virtual_network_gateway import VIRT_GW_ID, VIRT_GW_PORT
 from . import gateway
 from . import config_helpers
 from .const import *
