@@ -125,6 +125,9 @@ class VirtualNetworkGateway(EnOceanGateway):
                         if time.time() - t < MAX_MESSAGE_DELAY:
                             LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Forward EnOcean message {msg}")
                             conn.sendall(msg.serialize())
+
+                            self._fire_received_message_count_event()
+                            self._fire_last_message_received_event()
                         else:
                             LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
                     except:
@@ -159,6 +162,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
             self._fire_connection_state_changed_event(True)
+            self._received_message_count = 0
 
             # Register the service
             try:
