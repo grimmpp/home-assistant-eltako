@@ -21,6 +21,7 @@ from .gateway import EnOceanGateway
 
 VIRT_GW_ID = 0
 VIRT_GW_PORT = 12345
+VIRT_GW_DEVICE_NAME = "ESP2 Netowrk Reverse Bridge"
 BUFFER_SIZE = 1024
 MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX_VIRT_GW = "VirtGw"
@@ -32,11 +33,12 @@ class VirtualNetworkGateway():
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, hass: HomeAssistant):
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
         
         self.host = "0.0.0.0"
 
         self.hass = hass
+        self.config_entry = config_entry
         self._running = False
         self.hass = hass
         self.zeroconf:Zeroconf = None
@@ -46,7 +48,7 @@ class VirtualNetworkGateway():
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)
         device_registry.async_get_or_create(
-            config_entry_id=self.config_entry_id,
+            config_entry_id=self.config_entry.entry_id,
             identifiers={(DOMAIN, )},
             # connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
             manufacturer=MANUFACTURER,
@@ -55,16 +57,12 @@ class VirtualNetworkGateway():
         )
 
     @property
-    def config_entry_id(self):
-        return "8b3e39c7-3fec-4730-b065-c8fa5978c702"
-
-    @property
     def dev_id(self):
         return VIRT_GW_ID
     
     @property
     def dev_name(self):
-        return "ESP2 Netowrk Reverse Bridge"
+        return VIRT_GW_DEVICE_NAME
     
     @property
     def dev_type(self):

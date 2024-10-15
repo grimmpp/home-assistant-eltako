@@ -9,7 +9,7 @@ from homeassistant.helpers import entity_registry as er, device_registry as dr, 
 
 
 from .const import *
-from .virtual_network_gateway import VirtualNetworkGateway
+from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_DEVICE_NAME
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
@@ -20,8 +20,29 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Initialize Home Assistant Eltako Integration: https://github.com/grimmpp/home-assistant-eltako")
 
-    LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
-    virt_gw = VirtualNetworkGateway(hass)
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
+
+    # Check if there is already a config entry for this domain
+    existing_entries = hass.config_entries.async_entries(DOMAIN)
+    
+    if not existing_entries:
+        # If no config entry exists, create a new one
+        config_entry = ConfigEntry(
+            version=1,
+            domain=DOMAIN,
+            title=VIRT_GW_DEVICE_NAME,
+            data={},  # Any required data for the integration
+            source="user",  # Or "system" if it is system managed
+            options={},
+            entry_id="8b3e39c7-3fec-4730-b065-c8fa5978c702",  # This should be a unique and valid UUID
+        )
+        
+        # Add this config entry to Home Assistant
+        hass.config_entries._entries.append(config_entry)
+    else:
+        config_entry = existing_entries[0]  # Use the existing config entry
+
+    virt_gw = VirtualNetworkGateway(hass, config_entry)
     await virt_gw.async_setup()
     virt_gw.restart_tcp_server()
     set_gateway_to_hass(hass, virt_gw)
