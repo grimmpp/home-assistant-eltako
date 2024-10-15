@@ -196,12 +196,12 @@ class VirtualNetworkGateway(EnOceanGateway):
             self._running.set()
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
-            self.tcp_thread.start()
+            # self.tcp_thread.start()
 
 
     def stop_tcp_server(self):
         self._running.clear()
-        self.tcp_thread.join()
+        # self.tcp_thread.join()
 
 
     def convert_ip_to_bytes(self, ip_address_str):
