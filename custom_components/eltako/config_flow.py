@@ -169,4 +169,4 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def create_eltako_entry(self, user_input):
         """Create an entry for the provided configuration."""
         LOGGER.debug("[%s] Create Gateway Entry", LOGGER_PREFIX_CONFIG_FLOW)
-        return self.async_create_entry(title="Eltako", data=user_input)
+        return self.async_create_entry(title=user_input[CONF_GATEWAY_DESCRIPTION], data=user_input)
