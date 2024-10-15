@@ -94,7 +94,9 @@ class GatewayDeviceType(str, Enum):
     EltakoFAMUSB = 'fam-usb'
     USB300 = 'enocean-usb300'
     ESP3 = 'esp3-gateway'
-    LAN = 'mgw-lan'
+    LAN = 'lan'
+    MGW_LAN = 'mgw-lan'
+    EUL_LAN = 'EUL_LAN'
     LAN_ESP2 = "lan-gw-esp2"
     VirtualNetworkAdapter = 'esp2-netowrk-reverse-bridge'   # subtype of LAN_ESP2
 
@@ -115,7 +117,8 @@ class GatewayDeviceType(str, Enum):
 
     @classmethod
     def is_transceiver(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2]
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN, 
+                            GatewayDeviceType.LAN_ESP2, GatewayDeviceType.MGW_LAN, GatewayDeviceType.EUL_LAN]
 
     @classmethod
     def is_bus_gateway(cls, dev_type) -> bool:
@@ -130,7 +133,7 @@ class GatewayDeviceType(str, Enum):
     
     @classmethod
     def is_lan_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2, GatewayDeviceType.VirtualNetworkAdapter]
+        return dev_type in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2, GatewayDeviceType.MGW_LAN, GatewayDeviceType.EUL_LAN, GatewayDeviceType.VirtualNetworkAdapter]
 
 BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
     GatewayDeviceType.GatewayEltakoFAM14: 57600,
