@@ -106,7 +106,7 @@ class EnOceanGateway:
 
             elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
                 await asyncio.to_thread(asyncio.run, self.get_fam14_base_id())
-                # self.hass.async_add_executor_job(self.get_fam14_base_id)
+
 
 
     def add_base_id_change_handler(self, handler):
@@ -253,7 +253,7 @@ class EnOceanGateway:
             # first get fam14 and make it know to data manager
             fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
             base_id_str = await fam14.get_base_id()
-            self.base_id = AddressExpression.parse( base_id_str )
+            self._attr_base_id = AddressExpression.parse( base_id_str )
             LOGGER.info("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
             self._fire_base_id_change_handlers(self.base_id)
 
