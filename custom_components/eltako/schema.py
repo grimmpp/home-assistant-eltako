@@ -265,7 +265,7 @@ class GatewaySchema(EltakoPlatformSchema):
     ENTITY_SCHEMA = vol.Schema({
             vol.Required(CONF_ID): cv.Number,
             vol.Required(CONF_DEVICE_TYPE, default=GatewayDeviceType.GatewayEltakoFGW14USB.value): vol.In([g.value for g in GatewayDeviceType]),
-            vol.Optional(CONF_BASE_ID, default=None): cv.matches_regex(CONF_ID_REGEX),
+            vol.Optional(CONF_BASE_ID, default='00-00-00-00'): cv.matches_regex(CONF_ID_REGEX),
             vol.Optional(CONF_NAME, default=""): cv.string,
             vol.Optional(CONF_SERIAL_PATH): cv.string,
             vol.Optional(CONF_GATEWAY_AUTO_RECONNECT, default=True): cv.boolean,
