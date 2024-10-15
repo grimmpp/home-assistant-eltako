@@ -146,7 +146,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         is_network_gw = False
         for gdc in GatewayDeviceType:
-            if GatewayDeviceType.is_network_gw(gdc) and gdc in gateway_selection:
+            if GatewayDeviceType.is_lan_gateway(gdc) and gdc in gateway_selection:
                 is_network_gw = True
                 break
         
