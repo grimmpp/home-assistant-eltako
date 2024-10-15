@@ -74,10 +74,11 @@ class VirtualNetworkGateway(EnOceanGateway):
         return info        
 
 
-    def _forward_message(self, msg: ESP2Message):
-        # if gateway not in self.sending_gateways:
-        #     self.sending_gateways.append(gateway)
-        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] received message: {msg}")
+    def _forward_message(self, gateway:EnOceanGateway, msg: ESP2Message):
+        if gateway not in self.sending_gateways:
+            self.sending_gateways.append(gateway)
+
+        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] received message: {msg} from gateway: {gateway.dev_name}")
 
         self.incoming_message_queue.put((time.time(),msg))
 
