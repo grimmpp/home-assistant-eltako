@@ -46,13 +46,17 @@ class VirtualNetworkGateway():
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)
         device_registry.async_get_or_create(
-            config_entry_id=None,
+            config_entry_id=self.config_entry_id,
             identifiers={(DOMAIN, )},
             # connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
             manufacturer=MANUFACTURER,
             name= self.dev_name,
             model=self.model,
         )
+
+    @property
+    def config_entry_id(self):
+        return "8b3e39c7-3fec-4730-b065-c8fa5978c702"
 
     @property
     def dev_id(self):
