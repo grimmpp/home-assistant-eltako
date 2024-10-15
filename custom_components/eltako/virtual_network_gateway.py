@@ -73,7 +73,7 @@ class VirtualNetworkGateway(EnOceanGateway):
     
     @property
     def dev_type(self):
-        return GatewayDeviceType.LAN_ESP2.value
+        return GatewayDeviceType.VirtualNetworkAdapter
 
     @property
     def model(self):
