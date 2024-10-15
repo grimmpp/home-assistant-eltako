@@ -74,13 +74,16 @@ class VirtualNetworkGateway(EnOceanGateway):
         return info        
 
 
-    def _forward_message(self, gateway:EnOceanGateway, msg: ESP2Message):
-        if gateway not in self.sending_gateways:
-            self.sending_gateways.append(gateway)
+    async def _forward_message(self, data:dict):
+        gateway:EnOceanGateway = data['gateway']
+        msg: ESP2Message = data['esp2_msg']
 
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] received message: {msg} from gateway: {gateway.dev_name}")
 
-        self.incoming_message_queue.put((time.time(),msg))
+        if gateway not in self.sending_gateways:
+            self.sending_gateways.append(gateway)
+
+        self.incoming_message_queue.put((time.time(), msg))
 
 
     def convert_bus_address_to_external_address(self, gateway, msg):
@@ -208,7 +211,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
     def stop_tcp_server(self):
         self._running.clear()
-        self.tcp_thread.join(5)
+        self.tcp_thread.join(10)
         self._fire_connection_state_changed_event(False)
 
 
@@ -226,15 +229,16 @@ class VirtualNetworkGateway(EnOceanGateway):
     async def async_setup(self):
         """Initialized tcp server and register callback function on HA event bus."""
 
+        # register for all incoming and outgoing messages from all gateways
+        self.dispatcher_disconnect_handle = async_dispatcher_connect(
+            self.hass, GOBAL_EVENT_BUS_ID, self._forward_message
+        )
+
         self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
 
         self.start_tcp_server()
 
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Was started.")
-
-        self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, GOBAL_EVENT_BUS_ID, self._forward_message
-        )
 
 
     def unload(self):
