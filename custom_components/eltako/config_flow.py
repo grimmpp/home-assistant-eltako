@@ -94,12 +94,14 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         # add manually added serial paths and ip addresses from configuration
         for g_id in g_list_dict.keys():
-            g_c = config_helpers.find_gateway_config_by_id(config, g_id)
-            if CONF_SERIAL_PATH in g_c:
-                serial_paths.append(g_c[CONF_SERIAL_PATH])
-            if CONF_GATEWAY_ADDRESS in g_c:
-                address = g_c[CONF_GATEWAY_ADDRESS]
-                serial_paths.append(address)
+            #only for available gw
+            if g_list_dict[g_id] in g_list:
+                g_c = config_helpers.find_gateway_config_by_id(config, g_id)
+                if CONF_SERIAL_PATH in g_c:
+                    serial_paths.append(g_c[CONF_SERIAL_PATH])
+                if CONF_GATEWAY_ADDRESS in g_c:
+                    address = g_c[CONF_GATEWAY_ADDRESS]
+                    serial_paths.append(address)
 
         # get all serial paths which are not taken by existing gateways
         device_registry = dr.async_get(self.hass)
