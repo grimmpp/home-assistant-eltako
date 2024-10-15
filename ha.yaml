@@ -3,6 +3,11 @@ eltako:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
     show_dev_id_in_dev_name: True
   gateway:
+  - id: 0
+    device_type: esp2-netowrk-reverse-bridge
+    address: homeassistant.local
+    port: 12345
+
   - id: 1
     device_type: fgw14usb            # Supported gateways: gam14, fgw14usb
     base_id: FF-AA-80-00
