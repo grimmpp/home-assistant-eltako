@@ -251,7 +251,7 @@ class EnOceanGateway:
             is_locked = (await locking.lock_bus(self._bus)) == locking.LOCKED
             
             # first get fam14 and make it know to data manager
-            response = await self.bus.exchange(EltakoMemoryRequest(255, 1), EltakoMemoryResponse)
+            response = await self._bus.exchange(EltakoMemoryRequest(255, 1), EltakoMemoryResponse)
             base_id_str = b2s(response[0:4])
 
             # fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
