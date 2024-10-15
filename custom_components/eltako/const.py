@@ -128,7 +128,7 @@ class GatewayDeviceType(str, Enum):
     
     @classmethod
     def is_lan_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2]
+        return dev_type in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2, GatewayDeviceType.VirtualNetworkAdapter]
 
 BAUD_RATE_DEVICE_TYPE_MAPPING: dict = {
     GatewayDeviceType.GatewayEltakoFAM14: 57600,

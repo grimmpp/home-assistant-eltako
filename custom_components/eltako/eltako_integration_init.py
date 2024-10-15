@@ -141,17 +141,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
 
-    if GatewayDeviceType.VirtualNetworkAdapter in gateway_description:
-        LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
-
-        virt_gw = VirtualNetworkGateway(hass, config_entry)
-        # await virt_gw.async_setup()
-        # virt_gw.restart_tcp_server()
-        set_gateway_to_hass(hass, virt_gw)
-        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-
-        return True
-    
     # get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
@@ -169,7 +158,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if gateway_device_type is None:
         LOGGER.error(f"[{LOG_PREFIX_INIT}] USB device {gateway_config[CONF_DEVICE_TYPE]} is not supported!!!")
         return False
-    if gateway_device_type == GatewayDeviceType.LAN:
+    if GatewayDeviceType.is_lan_gateway(gateway_device_type):
         if gateway_config.get(CONF_GATEWAY_ADDRESS, None) is None:
             raise Exception(f"[{LOG_PREFIX_INIT}] Missing field '{CONF_GATEWAY_ADDRESS}' for LAN Gateway (id: {gateway_id})")
 
@@ -183,7 +172,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
-    gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
+    if gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter:
+        gateway = VirtualNetworkGateway(general_settings, hass, gateway_id, port, config_entry)
+    else:
+        gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
 
     
     await gateway.async_setup()
