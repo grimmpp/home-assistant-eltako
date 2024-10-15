@@ -122,7 +122,7 @@ def get_device_config(config: dict, id: int) -> dict:
                 return g[CONF_DEVICES]
             else:
                 return {}
-    return None
+    return {}
 
 async def async_get_list_of_gateway_descriptions(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config, filter_out: list[str]=[]) -> dict:
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)

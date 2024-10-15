@@ -18,6 +18,12 @@ LOG_PREFIX_INIT = "Eltako Integration Setup"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
+    virt_gw = VirtualNetworkGateway(hass)
+    await virt_gw.async_setup()
+    virt_gw.restart_tcp_server()
+    set_gateway_to_hass(hass, virt_gw)
+
     return True
 
 def print_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -131,17 +137,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
 
-    ## init virtual network gateway
-    if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_description:
-        LOGGER.info(f"[{LOG_PREFIX_INIT}] Create Virtual ESP2 Reverse Network Bridge")
-        virt_gw = VirtualNetworkGateway(general_settings, hass, config_entry)
-        await virt_gw.async_setup()
-        virt_gw.restart_tcp_server()
-        set_gateway_to_hass(hass, virt_gw)
-        await hass.config_entries.async_forward_entry_setups(config_entry, [Platform.SENSOR])
-        return True
-    
-    elif not ('(' in gateway_description and ')' in gateway_description):
+    if not ('(' in gateway_description and ')' in gateway_description):
         LOGGER.warning("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
         return
     

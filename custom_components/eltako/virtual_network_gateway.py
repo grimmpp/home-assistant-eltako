@@ -27,21 +27,16 @@ LOGGING_PREFIX_VIRT_GW = "VirtGw"
 DEVICE_ID = "VirtGw"
 
 
-class VirtualNetworkGateway(EnOceanGateway):
+class VirtualNetworkGateway():
 
     incoming_message_queue = queue.Queue()
     sending_gateways = []
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, config_entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
         
-        dev_name = "ESP2 Netowrk Reverse Bridge"
         self.host = "0.0.0.0"
 
-        super().__init__(general_settings, hass,
-                         VIRT_GW_ID, GatewayDeviceType.LAN_ESP2, self.host, None, VIRT_GW_PORT, AddressExpression.parse('00-00-00-00'), 
-                         dev_name, False, 0,
-                         config_entry)
-
+        self.hass = hass
         self._running = False
         self.hass = hass
         self.config_entry = config_entry
@@ -49,7 +44,32 @@ class VirtualNetworkGateway(EnOceanGateway):
 
         self._register_device()
 
+    def _register_device(self) -> None:
+        device_registry = dr.async_get(self.hass)
+        device_registry.async_get_or_create(
+            config_entry_id=None,
+            identifiers={(DOMAIN, )},
+            # connections={(CONF_MAC, config_helpers.format_address(self.base_id))},
+            manufacturer=MANUFACTURER,
+            name= self.dev_name,
+            model=self.model,
+        )
 
+    @property
+    def dev_id(self):
+        return VIRT_GW_ID
+    
+    @property
+    def dev_name(self):
+        return "ESP2 Netowrk Reverse Bridge"
+    
+    @property
+    def dev_type(self):
+        return GatewayDeviceType.LAN_ESP2.value
+
+    @property
+    def dev_model(self):
+        return GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
     def get_service_info(self, hostname:str, ip_address:str):
         info = ServiceInfo(
@@ -172,12 +192,12 @@ class VirtualNetworkGateway(EnOceanGateway):
             self._running = True
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
-            self.tcp_thread.start()
+            # self.tcp_thread.start()
 
 
     def stop_tcp_server(self):
         self._running = False
-        self.tcp_thread.join()
+        # self.tcp_thread.join()
 
     def convert_ip_to_bytes(self, ip_address_str):
         try:
