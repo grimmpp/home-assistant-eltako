@@ -143,6 +143,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen()
+            s.settimeout(1.0)   # Set timeout so it can periodically check for shutdown
 
             # Get the hostname
             hostname = socket.gethostname()
