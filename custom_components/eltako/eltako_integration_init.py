@@ -172,6 +172,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
     message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
+    
     if gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter:
         gateway = VirtualNetworkGateway(general_settings, hass, gateway_id, port, config_entry)
     else:

@@ -145,9 +145,10 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
 
         is_network_gw = False
-        for gdc in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value]:
-            if gdc in gateway_selection:
+        for gdc in GatewayDeviceType:
+            if GatewayDeviceType.is_network_gw(gdc) and gdc in gateway_selection:
                 is_network_gw = True
+                break
         
         # check ip address for esp2/3 over tcp
         if GatewayDeviceType.VirtualNetworkAdapter.value in gateway_selection:
