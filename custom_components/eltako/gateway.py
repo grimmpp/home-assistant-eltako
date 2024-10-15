@@ -256,7 +256,7 @@ class EnOceanGateway:
         finally:
             if is_locked:
                 resp = await locking.unlock_bus(self._bus)
-            self._serial_bus.set_callback( self._callback_receive_message_from_serial_bus )
+            self._bus.set_callback( self._callback_receive_message_from_serial_bus )
 
 
     def reconnect(self):
@@ -270,7 +270,7 @@ class EnOceanGateway:
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
         self._bus.start()
-        
+
         if self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
             await self.get_fam14_base_id()
         LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
