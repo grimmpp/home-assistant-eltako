@@ -242,6 +242,7 @@ class EnOceanGateway:
     ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
 
     async def get_fam14_base_id(self):
+        LOGGER.debug("[Gateway] [Id: %d] Try to read base id of FAM14", self.dev_id)
         is_locked = False
         try:
             self._bus.set_callback( None )
@@ -252,7 +253,7 @@ class EnOceanGateway:
             fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
             base_id_str = await fam14.get_base_id()
             self.base_id = AddressExpression.parse( base_id_str )
-            LOGGER.debug("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
+            LOGGER.info("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
 
         except Exception as e:
             LOGGER.error("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
