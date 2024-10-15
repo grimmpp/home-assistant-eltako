@@ -256,7 +256,7 @@ class EnOceanGateway:
 
             # fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
             # base_id_str = await fam14.get_base_id()
-            # self._attr_base_id = AddressExpression.parse( base_id_str )
+            self._attr_base_id = AddressExpression.parse( base_id_str )
             LOGGER.info("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
             self._fire_base_id_change_handlers(self.base_id)
 
