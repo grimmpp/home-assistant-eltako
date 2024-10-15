@@ -20,6 +20,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Initialize Home Assistant Eltako Integration: https://github.com/grimmpp/home-assistant-eltako")
 
+
+    # Migrage existing gateway configs / ESP2 was removed in the name
+    migrate_old_gateway_descriptions(hass)
+
+
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Create {VIRT_GW_DEVICE_NAME}")
 
     # Check if there is already a config entry for this domain
@@ -69,26 +74,24 @@ def print_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 def migrate_old_gateway_descriptions(hass: HomeAssistant):
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] Provide new and old gateway descriptions/id for smooth version upgrades.")
     migration_dict:dict = {}
-    for key in hass.data[DATA_ELTAKO].keys():
-        # LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
-        if GATEWAY_DEFAULT_NAME in key:
-            old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
-            LOGGER.info(f"[{LOG_PREFIX_INIT}] Support downwards compatibility => from new gateway description '{key}' to old description '{old_key}'")
-            migration_dict[old_key] = hass.data[DATA_ELTAKO][key]
-            # del hass.data[DATA_ELTAKO][key]
-        if OLD_GATEWAY_DEFAULT_NAME in key:
-            new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
-            LOGGER.info(f"[{LOG_PREFIX_INIT}] Migrate gateway from old description '{key}' to new description '{new_key}'")
-            migration_dict[new_key] = hass.data[DATA_ELTAKO][key]
-    # prvide either new or old key in parallel
-    for key in migration_dict:
-        hass.data[DATA_ELTAKO][key] = migration_dict[key]
+    if DATA_ELTAKO in hass.data:
+        for key in hass.data[DATA_ELTAKO].keys():
+            # LOGGER.debug(f"[{LOG_PREFIX}] Check description: {key}")
+            if GATEWAY_DEFAULT_NAME in key:
+                old_key = key.replace(GATEWAY_DEFAULT_NAME, OLD_GATEWAY_DEFAULT_NAME)
+                LOGGER.info(f"[{LOG_PREFIX_INIT}] Support downwards compatibility => from new gateway description '{key}' to old description '{old_key}'")
+                migration_dict[old_key] = hass.data[DATA_ELTAKO][key]
+                # del hass.data[DATA_ELTAKO][key]
+            if OLD_GATEWAY_DEFAULT_NAME in key:
+                new_key = key.replace(OLD_GATEWAY_DEFAULT_NAME, GATEWAY_DEFAULT_NAME)
+                LOGGER.info(f"[{LOG_PREFIX_INIT}] Migrate gateway from old description '{key}' to new description '{new_key}'")
+                migration_dict[new_key] = hass.data[DATA_ELTAKO][key]
+        # prvide either new or old key in parallel
+        for key in migration_dict:
+            hass.data[DATA_ELTAKO][key] = migration_dict[key]
 
 
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnOceanGateway:
-
-    # Migrage existing gateway configs / ESP2 was removed in the name
-    migrate_old_gateway_descriptions(hass)
 
     g_id = "gateway_"+str(config_helpers.get_id_from_gateway_name(config_entry.data[CONF_GATEWAY_DESCRIPTION]))
     if g_id in hass.data[DATA_ELTAKO]:
@@ -99,8 +102,6 @@ def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnO
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway: EnOceanGateway) -> None:
 
-    # Migrage existing gateway configs / ESP2 was removed in the name
-    migrate_old_gateway_descriptions(hass)
     g_id = "gateway_"+str(gateway.dev_id)
     hass.data[DATA_ELTAKO][g_id] = gateway
 
@@ -149,9 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # print whole eltako configuration
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] config: {config}\n")
 
-    # Migrage existing gateway configs / ESP2 was removed in the name
-    migrate_old_gateway_descriptions(hass)
-
+    
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
     # Initialise the gateway
     # get base_id from user input
