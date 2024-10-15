@@ -205,7 +205,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
     def stop_tcp_server(self):
         self._running = False
-        # self.tcp_thread.join()
+        self.tcp_thread.join()
 
     def convert_ip_to_bytes(self, ip_address_str):
         try:
