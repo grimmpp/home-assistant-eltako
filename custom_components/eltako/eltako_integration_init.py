@@ -20,6 +20,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component."""
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Initialize Home Assistant Eltako Integration: https://github.com/grimmpp/home-assistant-eltako")
 
+    if DATA_ELTAKO not in hass.data:
+        hass.data[DATA_ELTAKO] = {}
 
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
