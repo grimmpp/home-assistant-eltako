@@ -14,7 +14,6 @@ from . import gateway
 from . import config_helpers
 from .const import *
 from .schema import CONFIG_SCHEMA
-from .virtual_network_gateway import VIRT_GW_ID, VIRT_GW_PORT
 
 LOGGER_PREFIX_CONFIG_FLOW = "config_flow"
 
@@ -156,13 +155,13 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         for gdc in gateway.GatewayDeviceType:
             if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
-                break
+
+        for gdc in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value]:
+            if gdc in gateway_selection:
+                is_network_gw = True
         
         # check ip address for esp2/3 over tcp
-        is_network_gw = len([g for g in [GatewayDeviceType.LAN.value, GatewayDeviceType.LAN_ESP2.value] if g in gateway_selection]) > 0        
-        if CONF_VIRTUAL_NETWORK_GATEWAY in gateway_selection and "homeassistant.local" == serial_path:
-            return True
-        elif is_network_gw:
+        if is_network_gw:
             try:
                 ip = ipaddress.ip_address(serial_path)
                 LOGGER.debug("[%s] Found valid IP Address %s.", serial_path)
