@@ -9,7 +9,7 @@ import serial
 import asyncio
 
 from eltakobus.serial import RS485SerialInterfaceV2
-from eltakobus.message import ESP2Message, EltakoPoll
+from eltakobus.message import ESP2Message, EltakoPoll, EltakoMemoryRequest, EltakoMemoryResponse
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
 from eltakobus.device import FAM14, create_busobject
@@ -251,9 +251,12 @@ class EnOceanGateway:
             is_locked = (await locking.lock_bus(self._bus)) == locking.LOCKED
             
             # first get fam14 and make it know to data manager
-            fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
-            base_id_str = await fam14.get_base_id()
-            self._attr_base_id = AddressExpression.parse( base_id_str )
+            response = await self.bus.exchange(EltakoMemoryRequest(255, 1), EltakoMemoryResponse)
+            base_id_str = b2s(response[0:4])
+
+            # fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
+            # base_id_str = await fam14.get_base_id()
+            # self._attr_base_id = AddressExpression.parse( base_id_str )
             LOGGER.info("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
             self._fire_base_id_change_handlers(self.base_id)
 
