@@ -105,7 +105,7 @@ class EnOceanGateway:
                 await self._bus.send_version_request()
 
             elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-                Thread(target=self.get_fam14_base_id).start()
+                self.hass.async_add_executor_job(self.get_fam14_base_id)
 
 
     def add_base_id_change_handler(self, handler):
