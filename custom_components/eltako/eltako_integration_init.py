@@ -53,8 +53,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         config_entry = existing_entries[0]  # Use the existing config entry
 
     virt_gw = VirtualNetworkGateway(hass, config_entry)
-    await virt_gw.async_setup()
-    virt_gw.restart_tcp_server()
+    # await virt_gw.async_setup()
+    # virt_gw.restart_tcp_server()
     set_gateway_to_hass(hass, virt_gw)
 
     return True
