@@ -154,12 +154,12 @@ class VirtualNetworkGateway(EnOceanGateway):
             self._fire_connection_state_changed_event(True)
 
             # Register the service
-            # try:
-            #     service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
-            #     self.zeroconf.register_service(service_info)
-            #     LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] registered mDNS service record created.")
-            # except Exception as e:
-            #     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
+            try:
+                service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
+                self.zeroconf.register_service(service_info)
+                LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] registered mDNS service record created.")
+            except Exception as e:
+                LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
 
             while self._running.is_set():
                 try:
@@ -174,11 +174,11 @@ class VirtualNetworkGateway(EnOceanGateway):
                 except socket.timeout:
                     # Timeout used to periodically check for shutdown
                     continue
-                
+
                 except Exception as e:
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
 
-            # self.zeroconf.unregister_service[Id: {self.dev_id}] (service_info)
+            self.zeroconf.unregister_service(service_info)
         
         self._fire_connection_state_changed_event(False)
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
@@ -226,7 +226,7 @@ class VirtualNetworkGateway(EnOceanGateway):
     async def async_setup(self):
         """Initialized tcp server and register callback function on HA event bus."""
 
-        # self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
+        self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
 
         self.start_tcp_server()
 
