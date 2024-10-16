@@ -154,7 +154,7 @@ class EnOceanGateway:
                 self._received_message_count_handler( self._received_message_count ),
             )
 
-    def process_messages(self, data=None):
+    def report_message_stats(self, data=None):
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
         self._fire_received_message_count_event()
         self._fire_last_message_received_event()
@@ -444,7 +444,7 @@ class EnOceanGateway:
 
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
-            self.process_messages()
+            self.report_message_stats()
 
             if message.body[:2] == b'\x8b\x98':
                 LOGGER.debug("[Gateway] [Id: %d] Received base id: %s", self.dev_id, b2s(message.body[2:6]))
@@ -453,7 +453,7 @@ class EnOceanGateway:
 
 
             # only send messages to HA when base id is known
-            if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
+            if self.base_id != b'\x00\x00\x00\x00':
 
                 # Send message on local bus. Only devices configure to this gateway will receive those message.
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
