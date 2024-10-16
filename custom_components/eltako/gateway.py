@@ -300,18 +300,16 @@ class EnOceanGateway:
                         assert id == dev_response.reported_address, "Queried for ID %s, received %s" % (id, prettify(dev_response))
 
                         self._callback_receive_message_from_serial_bus(dev_response)
-                        asyncio.sleep(0.05)
 
                         # iterate through memory lines
-                        for line in range(1, dev_response.memory_size):
-                            try:
-                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(id, line), EltakoMemoryResponse, retries=3)
-                                self._callback_receive_message_from_serial_bus(mem_response)
-                                asyncio.sleep(0.05)
-                            except TimeoutError:
-                                continue
-                            except Exception as e:
-                                LOGGER.error("[Gateway] [Id: %d] Cannot read memory line %d from device (id=%d)", self.dev_id, line, id)
+                        # for line in range(1, dev_response.memory_size):
+                        #     try:
+                        #         mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(id, line), EltakoMemoryResponse, retries=3)
+                        #         self._callback_receive_message_from_serial_bus(mem_response)
+                        #     except TimeoutError:
+                        #         continue
+                        #     except Exception as e:
+                        #         LOGGER.error("[Gateway] [Id: %d] Cannot read memory line %d from device (id=%d)", self.dev_id, line, id)
 
                     except TimeoutError:
                         continue
