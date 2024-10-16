@@ -283,6 +283,7 @@ class EnOceanGateway:
 
         # receive messages from HA event bus
         event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
+        LOGGER.debug("[Gateway] [Id: %d] Register gateway bus for message event_id %s", event_id)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
@@ -292,7 +293,8 @@ class EnOceanGateway:
         # The service will be registered for each gateway, as the user
         # might have different gateways that cause the eltako relays
         # only to react on them.
-        service_name = f"gateway_{self.dev_id}_send_message"
+        service_name = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE_SERVICE)
+        LOGGER.debug("[Gateway] [Id: %d] Register send message service event_id %s", event_id)
         self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
 
 
@@ -345,7 +347,7 @@ class EnOceanGateway:
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
-        dispatcher_send(self.hass, GOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
+        dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
 
 
     def unload(self):
@@ -368,7 +370,7 @@ class EnOceanGateway:
                 self.hass.create_task(
                     self._bus.send(msg)
                 )
-                dispatcher_send(self.hass, GOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
+                dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
         else:
             LOGGER.warning("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
 
@@ -389,10 +391,17 @@ class EnOceanGateway:
                 self._attr_base_id = AddressExpression( (message.body[2:6], None) )
                 self._fire_base_id_change_handlers(self.base_id)
 
+
             if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
-                dispatcher_send(self.hass, GOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': message})
+
+                global_msg = ESP2Message(message.body)
+                address = message.body[6:10]
+                if address[0] == b'\x00' and address[1] == b'\x00':
+                    global_msg.address = bytes((a + b) & 0xFF for a, b in zip(self.base_id[0], address))
+
+                dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': message})
             
             
     @property

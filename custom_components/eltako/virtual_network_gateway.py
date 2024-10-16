@@ -17,7 +17,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from .gateway import EnOceanGateway, GOBAL_EVENT_BUS_ID
+from .gateway import EnOceanGateway, GLOBAL_EVENT_BUS_ID
 
 VIRT_GW_PORT = 12345
 VIRT_GW_DEVICE_NAME = "ESP2 Netowrk Reverse Bridge"
@@ -239,7 +239,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
         # register for all incoming and outgoing messages from all gateways
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
-            self.hass, GOBAL_EVENT_BUS_ID, self._forward_message
+            self.hass, GLOBAL_EVENT_BUS_ID, self._forward_message
         )
 
         self.zeroconf:Zeroconf = await zeroconf.async_get_instance(self.hass)
