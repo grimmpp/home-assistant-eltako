@@ -302,15 +302,15 @@ class EnOceanGateway:
                             except TimeoutError:
                                 continue
                             except Exception as e:
-                                LOGGER.error("[Gateway] [Id: %d] Cannot detect device")
+                                LOGGER.error("[Gateway] [Id: %d] Cannot read memory line %d", self.dev_id, line)
 
                     except TimeoutError:
                         continue
                     except Exception as e:
-                        LOGGER.error("[Gateway] [Id: %d] Cannot detect device with address {i}")
+                        LOGGER.exception("[Gateway] [Id: %d] Cannot detect device with address {i}. (%s)", self.dev_id, i)
 
             except Exception as e:
-                LOGGER.error("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
+                LOGGER.exception("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
                 raise e
             finally:
                 if is_locked:
