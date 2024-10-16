@@ -28,7 +28,7 @@ from homeassistant.config_entries import ConfigEntry
 from .const import *
 from . import config_helpers
 
-from threading import Thread
+import threading
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -89,6 +89,8 @@ class EnOceanGateway:
             self.native_protocol = 'ESP3'
         self._original_dev_name = dev_name
         self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id)
+
+        self._reading_memory_of_devices_is_running = threading.Event()
 
         self._init_bus()
 
@@ -270,11 +272,15 @@ class EnOceanGateway:
 
 
     async def read_memory_of_all_bus_members(self):
-        await asyncio.to_thread(asyncio.run, self._read_memory_of_all_bus_members())
+        if not self._reading_memory_of_devices_is_running.is_set():
+            await asyncio.to_thread(asyncio.run, self._read_memory_of_all_bus_members())
 
     async def _read_memory_of_all_bus_members(self):
+        
         if self.dev_type == GatewayDeviceType.EltakoFAM14:
             LOGGER.debug("[Gateway] [Id: %d] Try to read memory of all bus devices", self.dev_id)
+            
+            self._reading_memory_of_devices_is_running.set()
             is_locked = False
             try:
                 self._bus.set_callback( None )
@@ -315,6 +321,7 @@ class EnOceanGateway:
             finally:
                 if is_locked:
                     resp = await locking.unlock_bus(self._bus)
+                self._reading_memory_of_devices_is_running.clear()
                 self._bus.set_callback( self._callback_receive_message_from_serial_bus ) 
         else:
             LOGGER.error(f"Cannot read memory of FAM14 beceuase this is a different gateway ({self.dev_type})")
