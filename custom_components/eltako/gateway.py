@@ -299,7 +299,7 @@ class EnOceanGateway:
 
                         assert id == dev_response.reported_address, "Queried for ID %s, received %s" % (id, prettify(dev_response))
 
-                        self._callback_receive_message_from_serial_bus(dev_response)
+                        self._callback_receive_message_from_serial_bus(EltakoDiscoveryReply.parse(dev_response.body))
 
                         # iterate through memory lines
                         # for line in range(1, dev_response.memory_size):

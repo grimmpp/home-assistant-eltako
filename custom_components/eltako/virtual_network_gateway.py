@@ -22,7 +22,7 @@ from .gateway import EnOceanGateway, GLOBAL_EVENT_BUS_ID
 VIRT_GW_PORT = 12345
 VIRT_GW_DEVICE_NAME = "ESP2 Netowrk Reverse Bridge"
 BUFFER_SIZE = 1024
-MAX_MESSAGE_DELAY = 500
+MAX_MESSAGE_DELAY = 5
 LOGGING_PREFIX_VIRT_GW = "VirtGw"
 
 class VirtualNetworkGateway(EnOceanGateway):
