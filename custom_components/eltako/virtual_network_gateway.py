@@ -27,9 +27,6 @@ LOGGING_PREFIX_VIRT_GW = "VirtGw"
 
 class VirtualNetworkGateway(EnOceanGateway):
 
-    incoming_message_queue = queue.Queue()
-    sending_gateways:list[EnOceanGateway] = []
-
     def __init__(self, general_settings:dict, hass: HomeAssistant, 
                  dev_id: int, port:int, config_entry: ConfigEntry):
         
@@ -45,6 +42,8 @@ class VirtualNetworkGateway(EnOceanGateway):
         self._running.clear()
         self.hass = hass
         self.zeroconf:Zeroconf = None
+        self.incoming_message_queue = queue.Queue()
+        self.sending_gateways:list[EnOceanGateway] = []
 
         self._register_device()
 
@@ -162,6 +161,8 @@ class VirtualNetworkGateway(EnOceanGateway):
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
             self._fire_connection_state_changed_event(True)
             self._received_message_count = 0
+
+            self.incoming_message_queue.empty()
 
             # Register the service
             try:
