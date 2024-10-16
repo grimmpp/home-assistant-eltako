@@ -28,7 +28,7 @@ LOGGING_PREFIX_VIRT_GW = "VirtGw"
 class VirtualNetworkGateway(EnOceanGateway):
 
     incoming_message_queue = queue.Queue()
-    sending_gateways = []
+    sending_gateways:list[EnOceanGateway] = []
 
     def __init__(self, general_settings:dict, hass: HomeAssistant, 
                  dev_id: int, port:int, config_entry: ConfigEntry):
@@ -98,10 +98,9 @@ class VirtualNetworkGateway(EnOceanGateway):
         for gw in self.sending_gateways:
             try:
                 ## send base id and put gateway type as well into it
-                gw_type_id:int = GatewayDeviceType.indexOf(gw.dev_type) + 1
-                data:bytes = b'\x8b\x98' + gw.base_id[0] + gw_type_id.to_bytes(1, 'big') + b'\x00\x00\x00\x00'
-                LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type} / {gw_type_id}) ")
-                conn.sendall( ESP2Message(bytes(data)).serialize() )
+                msg = gw.create_base_id_infO_message()
+                LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type}) ")
+                conn.sendall( msg.serialize() )
 
                 ## request gateway version
                 #TODO: ...

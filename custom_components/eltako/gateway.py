@@ -9,10 +9,10 @@ import serial
 import asyncio
 
 from eltakobus.serial import RS485SerialInterfaceV2
-from eltakobus.message import ESP2Message, EltakoPoll, EltakoMemoryRequest, EltakoMemoryResponse
+from eltakobus.message import *
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
-from eltakobus.device import FAM14, create_busobject
+from eltakobus.device import known_objects
 from eltakobus import locking
 
 from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
@@ -269,6 +269,59 @@ class EnOceanGateway:
             self._bus.set_callback( self._callback_receive_message_from_serial_bus )
 
 
+    async def read_memory_of_all_bus_members(self):
+        await asyncio.to_thread(asyncio.run, self._read_memory_of_all_bus_members())
+
+    async def _read_memory_of_all_bus_members(self):
+        if self.dev_type == GatewayDeviceType.EltakoFAM14:
+            LOGGER.debug("[Gateway] [Id: %d] Try to read memory of all bus devices", self.dev_id)
+            is_locked = False
+            try:
+                self._bus.set_callback( None )
+
+                is_locked = (await locking.lock_bus(self._bus)) == locking.LOCKED
+                
+                self._callback_receive_message_from_serial_bus( self.create_base_id_infO_message() )
+
+                # iterate through devices
+                for i in range(1, 256):
+                    try:
+                        dev_response:EltakoDiscoveryReply = await self._bus.exchange(EltakoDiscoveryRequest(address=i), EltakoDiscoveryReply, retries=3)
+                        if dev_response == None:
+                            break
+
+                        assert id == dev_response.reported_address, "Queried for ID %s, received %s" % (id, prettify(dev_response))
+
+                        self._callback_receive_message_from_serial_bus(dev_response)
+
+                        # iterate through memory lines
+                        for line in range(1, dev_response.memory_size):
+                            try:
+                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.address, line), EltakoMemoryResponse, retries=3)
+                                self._callback_receive_message_from_serial_bus(mem_response)
+                            except TimeoutError:
+                                continue
+                            except Exception as e:
+                                LOGGER.error("[Gateway] [Id: %d] Cannot detect device")
+
+                    except TimeoutError:
+                        continue
+                    except Exception as e:
+                        LOGGER.error("[Gateway] [Id: %d] Cannot detect device with address {i}")
+
+            except Exception as e:
+                LOGGER.error("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
+                raise e
+            finally:
+                if is_locked:
+                    resp = await locking.unlock_bus(self._bus)
+                self._bus.set_callback( self._callback_receive_message_from_serial_bus ) 
+        else:
+            LOGGER.error(f"Cannot read memory of FAM14 beceuase this is a different gateway ({self.dev_type})")
+
+
+
+
     def reconnect(self):
         self._bus.stop()
         self._init_bus()
@@ -392,18 +445,30 @@ class EnOceanGateway:
                 self._fire_base_id_change_handlers(self.base_id)
 
 
+            # only send messages to HA when base id is known
             if self.base_id != b'\x00\x00\x00\x00' and isinstance(message, ESP2Message):
+
+                # Send message on local bus. Only devices configure to this gateway will receive those message.
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
 
+                # Send message on global bus with external/outside address
                 global_msg = ESP2Message(message.body)
-                address = message.body[6:10]
-                if address[0] == b'\x00' and address[1] == b'\x00':
-                    global_msg.address = bytes((a + b) & 0xFF for a, b in zip(self.base_id[0], address))
+                # do not change discovery and memory message addresses, base id will be sent upfront so that the receive known to whom the message belong
+                if type(message) in [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoMessage]:
+                    address = message.body[6:10]
+                    if address[0] == b'\x00' and address[1] == b'\x00':
+                        global_msg.address = bytes((a + b) & 0xFF for a, b in zip(self.base_id[0], address))
 
-                dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': message})
+                dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
             
             
+    def create_base_id_infO_message(gw):
+        gw_type_id:int = GatewayDeviceType.indexOf(gw.dev_type) + 1
+        data:bytes = b'\x8b\x98' + gw.base_id[0] + gw_type_id.to_bytes(1, 'big') + b'\x00\x00\x00\x00'
+        return ESP2Message(bytes(data))
+
+
     @property
     def unique_id(self) -> str:
         """Return the unique id of the gateway."""
