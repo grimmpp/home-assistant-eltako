@@ -275,6 +275,7 @@ class EnOceanGateway:
         if not self._reading_memory_of_devices_is_running.is_set():
             await asyncio.to_thread(asyncio.run, self._read_memory_of_all_bus_members())
 
+
     async def _read_memory_of_all_bus_members(self):
         
         if self.dev_type == GatewayDeviceType.EltakoFAM14:
