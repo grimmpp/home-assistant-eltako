@@ -284,9 +284,9 @@ class EnOceanGateway:
                 self._callback_receive_message_from_serial_bus( self.create_base_id_infO_message() )
 
                 # iterate through devices
-                for i in range(1, 256):
+                for id in range(1, 256):
                     try:
-                        dev_response:EltakoDiscoveryReply = await self._bus.exchange(EltakoDiscoveryRequest(address=i), EltakoDiscoveryReply, retries=3)
+                        dev_response:EltakoDiscoveryReply = await self._bus.exchange(EltakoDiscoveryRequest(address=id), EltakoDiscoveryReply, retries=3)
                         if dev_response == None:
                             break
 
@@ -297,17 +297,17 @@ class EnOceanGateway:
                         # iterate through memory lines
                         for line in range(1, dev_response.memory_size):
                             try:
-                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.address, line), EltakoMemoryResponse, retries=3)
+                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(id, line), EltakoMemoryResponse, retries=3)
                                 self._callback_receive_message_from_serial_bus(mem_response)
                             except TimeoutError:
                                 continue
                             except Exception as e:
-                                LOGGER.error("[Gateway] [Id: %d] Cannot read memory line %d", self.dev_id, line)
+                                LOGGER.error("[Gateway] [Id: %d] Cannot read memory line %d from device (id=%d)", self.dev_id, line, id)
 
                     except TimeoutError:
                         continue
                     except Exception as e:
-                        LOGGER.exception("[Gateway] [Id: %d] Cannot detect device with address {i}. (%s)", self.dev_id, i)
+                        LOGGER.exception("[Gateway] [Id: %d] Cannot detect device with address {i}", self.dev_id, id)
 
             except Exception as e:
                 LOGGER.exception("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
