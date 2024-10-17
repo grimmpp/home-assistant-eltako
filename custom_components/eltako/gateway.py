@@ -308,6 +308,7 @@ class EnOceanGateway:
                         assert id == dev_response.reported_address, "Queried for ID %s, received %s" % (id, prettify(dev_response))
 
                         self._callback_receive_message_from_serial_bus(dev_response)
+                        asyncio.sleep(.02)
 
                         device_name = ""
                         for o in sorted_known_objects:
@@ -325,6 +326,7 @@ class EnOceanGateway:
                                 LOGGER.debug("[Gateway] [Id: %d] Read memory line %d", self.dev_id, line)
                                 mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.reported_address, line), EltakoMemoryResponse, retries=3)
                                 self._callback_receive_message_from_serial_bus(mem_response)
+                                asyncio.sleep(.02)
                             except TimeoutError:
                                 continue
                             except Exception as e:
