@@ -303,14 +303,14 @@ class EnOceanGateway:
 
                         assert id == dev_response.reported_address, "Queried for ID %s, received %s" % (id, prettify(dev_response))
 
-                        self._callback_receive_message_from_serial_bus(EltakoDiscoveryReply.parse(dev_response.body))
+                        self._callback_receive_message_from_serial_bus(dev_response)
 
                         device_name = ""
                         for o in sorted_known_objects:
                             if dev_response.model[0:2] in o.discovery_names:
                                 device_name = o.__name__
 
-                        LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", )
+                        LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", self.dev_id, device_name)
                         # iterate through memory lines
                         for line in range(1, dev_response.memory_size):
                             # exit if gateway is about to be deleted
