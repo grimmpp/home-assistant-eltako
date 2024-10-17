@@ -310,7 +310,7 @@ class EnOceanGateway:
                             if dev_response.model[0:2] in o.discovery_names:
                                 device_name = o.__name__
 
-                        LOGGER.error("[Gateway] [Id: %d] Read memory from %s", )
+                        LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", )
                         # iterate through memory lines
                         for line in range(1, dev_response.memory_size):
                             # exit if gateway is about to be deleted
@@ -318,7 +318,7 @@ class EnOceanGateway:
                                 return
                                 
                             try:                             
-                                LOGGER.error("[Gateway] [Id: %d] Read memory line %d", self.dev_id, line)
+                                LOGGER.debug("[Gateway] [Id: %d] Read memory line %d", self.dev_id, line)
                                 mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.reported_address, line), EltakoMemoryResponse, retries=3)
                                 self._callback_receive_message_from_serial_bus(mem_response)
                             except TimeoutError:
