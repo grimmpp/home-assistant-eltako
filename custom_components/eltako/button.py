@@ -115,8 +115,8 @@ class GatewayReconnectButton(AbstractButton):
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         self.entity_description = ButtonEntityDescription(
-            key="gateway_" + str(gateway.dev_id) + "Serial Reconnection",
-            name="Reconnect Gateway "+str(gateway.dev_id),
+            key="gateway_" + str(gateway.dev_id) + "_serial_reconnection",
+            name="Reconnect Gateway",
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
         )
@@ -144,8 +144,8 @@ class GatewayReadAllDevicesButton(AbstractButton):
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         self.entity_description = ButtonEntityDescription(
-            key="gateway_" + str(gateway.dev_id) + "Read all Devices",
-            name="Read add devices"+str(gateway.dev_id),
+            key="gateway_" + str(gateway.dev_id) + "read_memory_of_bus_devices",
+            name="Read memory of bus devices",
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.IDENTIFY,
         )
