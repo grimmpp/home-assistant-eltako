@@ -292,6 +292,10 @@ class EnOceanGateway:
 
                 # iterate through devices
                 for id in range(1, 256):
+                    # exit if gateway is about to be deleted
+                    if not self._reading_memory_of_devices_is_running.is_set():
+                        return
+                    
                     try:
                         dev_response:EltakoDiscoveryReply = await self._bus.exchange(EltakoDiscoveryRequest(address=id), EltakoDiscoveryReply, retries=3)
                         if dev_response == None:
@@ -309,7 +313,11 @@ class EnOceanGateway:
                         LOGGER.error("[Gateway] [Id: %d] Read memory from %s", )
                         # iterate through memory lines
                         for line in range(1, dev_response.memory_size):
-                            try:
+                            # exit if gateway is about to be deleted
+                            if not self._reading_memory_of_devices_is_running.is_set():
+                                return
+                                
+                            try:                             
                                 LOGGER.error("[Gateway] [Id: %d] Read memory line %d", self.dev_id, line)
                                 mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.reported_address, line), EltakoMemoryResponse, retries=3)
                                 self._callback_receive_message_from_serial_bus(mem_response)
@@ -421,6 +429,7 @@ class EnOceanGateway:
     def unload(self):
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
+            self._reading_memory_of_devices_is_running.clear()
             self._bus.stop()
             self._bus.join()
             LOGGER.debug("[Gateway] [Id: %d] Was stopped.", self.dev_id)
