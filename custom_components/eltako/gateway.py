@@ -466,7 +466,8 @@ class EnOceanGateway:
                 if type(message) in [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoMessage]:
                     address = message.body[6:10]
                     if address[0] == b'\x00' and address[1] == b'\x00':
-                        global_msg.address = bytes((a + b) & 0xFF for a, b in zip(self.base_id[0], address))
+                        g_address = (int.from_bytes(address, 'big') + int.from_bytes(self.base_id, 'big')).to_bytes(4, byteorder='big')
+                        global_msg = ESP2Message( message.body[:8] + g_address + message.body[12:] )
 
                 dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
             
