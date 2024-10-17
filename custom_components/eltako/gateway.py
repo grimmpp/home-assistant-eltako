@@ -317,7 +317,7 @@ class EnOceanGateway:
 
                         # LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", self.dev_id, device_name)
                         # iterate through memory lines
-                        for line in range(1, dev_response.memory_size):
+                        for line in range(0, dev_response.memory_size):
                             # exit if gateway is about to be deleted
                             if not self._reading_memory_of_devices_is_running.is_set():
                                 return
