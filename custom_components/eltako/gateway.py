@@ -12,7 +12,7 @@ from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import *
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
-from eltakobus.device import known_objects
+from eltakobus.device import sorted_known_objects
 from eltakobus import locking
 
 from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
@@ -301,6 +301,12 @@ class EnOceanGateway:
 
                         self._callback_receive_message_from_serial_bus(EltakoDiscoveryReply.parse(dev_response.body))
 
+                        device_name = ""
+                        for o in sorted_known_objects:
+                            if dev_response.model[0:2] in o.discovery_names:
+                                device_name = o.__name__
+
+                        LOGGER.error("[Gateway] [Id: %d] Read memory from %s", )
                         # iterate through memory lines
                         for line in range(1, dev_response.memory_size):
                             try:
