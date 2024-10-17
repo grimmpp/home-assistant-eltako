@@ -470,7 +470,7 @@ class EnOceanGateway:
 
 
             # only send messages to HA when base id is known
-            if int.from_bytes(self.base_id) != 0:
+            if int.from_bytes(self.base_id[0]) != 0:
 
                 # Send message on local bus. Only devices configure to this gateway will receive those message.
                 event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
@@ -483,7 +483,7 @@ class EnOceanGateway:
                     if type(message) in [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoMessage]:
                         address = message.body[6:10]
                         if address[0] == b'\x00' and address[1] == b'\x00':
-                            g_address = (int.from_bytes(address, 'big') + int.from_bytes(self.base_id, 'big')).to_bytes(4, byteorder='big')
+                            g_address = (int.from_bytes(address, 'big') + int.from_bytes(self.base_id[0], 'big')).to_bytes(4, byteorder='big')
                             global_msg = prettify(ESP2Message( message.body[:8] + g_address + message.body[12:] ))
 
 
