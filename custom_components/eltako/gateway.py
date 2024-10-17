@@ -97,6 +97,7 @@ class EnOceanGateway:
         self._register_device()
 
         self.add_connection_state_changed_handler(self.query_for_base_id_and_version)
+        self.add_connection_state_changed_handler(lambda: self._reading_memory_of_devices_is_running.clear() )
 
 
     async def query_for_base_id_and_version(self, connected):
