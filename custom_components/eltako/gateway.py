@@ -461,13 +461,13 @@ class EnOceanGateway:
                 dispatcher_send(self.hass, event_id, message)
 
                 # Send message on global bus with external/outside address
-                global_msg = message
+                global_msg = prettify(message.serialize())
                 # do not change discovery and memory message addresses, base id will be sent upfront so that the receive known to whom the message belong
                 if type(message) in [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoMessage]:
                     address = message.body[6:10]
                     if address[0] == b'\x00' and address[1] == b'\x00':
                         g_address = (int.from_bytes(address, 'big') + int.from_bytes(self.base_id, 'big')).to_bytes(4, byteorder='big')
-                        global_msg = ESP2Message( message.body[:8] + g_address + message.body[12:] )
+                        global_msg = prettify(ESP2Message( message.body[:8] + g_address + message.body[12:] ))
 
                 dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
             
