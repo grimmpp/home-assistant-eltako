@@ -304,7 +304,7 @@ class EnOceanGateway:
                         # iterate through memory lines
                         for line in range(1, dev_response.memory_size):
                             try:
-                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(id, line), EltakoMemoryResponse, retries=3)
+                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.reported_address, line), EltakoMemoryResponse, retries=3)
                                 self._callback_receive_message_from_serial_bus(mem_response)
                             except TimeoutError:
                                 continue
