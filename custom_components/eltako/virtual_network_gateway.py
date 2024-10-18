@@ -126,7 +126,7 @@ class VirtualNetworkGateway(EnOceanGateway):
                     t = package[0]
                     msg:ESP2Message = package[1]
                     if time.time() - t < MAX_MESSAGE_DELAY:
-                        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Forward EnOcean message {msg}")
+                        # LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Forward EnOcean message {msg}")
                         conn.sendall(msg.serialize())
 
                         self._fire_received_message_count_event()
