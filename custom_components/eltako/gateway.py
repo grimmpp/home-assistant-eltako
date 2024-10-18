@@ -315,7 +315,7 @@ class EnOceanGateway:
                             if dev_response.model[0:2] in o.discovery_names:
                                 device_name = o.__name__
 
-                        # LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", self.dev_id, device_name)
+                        LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", self.dev_id, device_name)
                         # iterate through memory lines
                         for line in range(0, dev_response.memory_size):
                             # exit if gateway is about to be deleted

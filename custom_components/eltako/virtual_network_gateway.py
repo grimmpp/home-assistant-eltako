@@ -2,6 +2,7 @@ import socket
 import threading
 import queue
 import time
+from typing import Dict, List
 
 from zeroconf import Zeroconf, ServiceInfo
 
@@ -42,8 +43,10 @@ class VirtualNetworkGateway(EnOceanGateway):
         self._running.clear()
         self.hass = hass
         self.zeroconf:Zeroconf = None
-        self.incoming_message_queue = queue.Queue()
+        self.connected_clients = []
+        self.incoming_message_queues:Dict[socket.socket, List[queue.Queue]] = {}
         self.sending_gateways:list[EnOceanGateway] = []
+        
 
         self._register_device()
 
@@ -82,7 +85,8 @@ class VirtualNetworkGateway(EnOceanGateway):
         if gateway not in self.sending_gateways:
             self.sending_gateways.append(gateway)
 
-        self.incoming_message_queue.put((time.time(), msg))
+        for cc in self.connected_clients:
+            self.incoming_message_queues[cc].put((time.time(), msg))
 
 
     def convert_bus_address_to_external_address(self, gateway, msg):
@@ -109,28 +113,29 @@ class VirtualNetworkGateway(EnOceanGateway):
 
     def handle_client(self, conn: socket.socket, addr: socket.AddressInfo):
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Connected client by {addr}")
+        self.incoming_message_queues[conn] = queue.Queue()
         try:
-            with conn:
-                self.send_gateway_info(conn)
+            self.connected_clients.append(conn)
+            self.send_gateway_info(conn)
 
-                # send messages coming in and out
-                while self._running.is_set():
-                    # Receive data from the client
-                    try:
-                        package = self.incoming_message_queue.get(timeout=1)
-                        t = package[0]
-                        msg:ESP2Message = package[1]
-                        if time.time() - t < MAX_MESSAGE_DELAY:
-                            LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Forward EnOcean message {msg}")
-                            conn.sendall(msg.serialize())
+            # send messages coming in and out
+            while self._running.is_set():
+                # Receive data from the client
+                try:
+                    package = self.incoming_message_queues[conn].get(timeout=1)
+                    t = package[0]
+                    msg:ESP2Message = package[1]
+                    if time.time() - t < MAX_MESSAGE_DELAY:
+                        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Forward EnOcean message {msg}")
+                        conn.sendall(msg.serialize())
 
-                            self._fire_received_message_count_event()
-                            self._fire_last_message_received_event()
-                        else:
-                            LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
-                    except:
-                        # send keep alive message
-                        conn.sendall(b'IM2M')
+                        self._fire_received_message_count_event()
+                        self._fire_last_message_received_event()
+                    else:
+                        LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
+                except:
+                    # send keep alive message
+                    conn.sendall(b'IM2M')
 
         except ConnectionResetError:
             pass
@@ -139,11 +144,11 @@ class VirtualNetworkGateway(EnOceanGateway):
         except Exception as e:
             LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
+            del self.incoming_message_queues[conn]
+            self.connected_clients.remove(conn)
+            conn.close()
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Handler for {addr} exiting. (Thread flag running: {self._running.is_set()})")
 
-
-    async def query_for_base_id_and_version(self, connected):
-        pass
 
 
     def tcp_server(self):
@@ -161,8 +166,6 @@ class VirtualNetworkGateway(EnOceanGateway):
             LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Virtual Network Gateway Adapter listening on {hostname}({ip_address}):{self.port}")
             self._fire_connection_state_changed_event(True)
             self._received_message_count = 0
-
-            self.incoming_message_queue.empty()
 
             # Register the service
             try:
