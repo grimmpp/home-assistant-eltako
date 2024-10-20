@@ -1,8 +1,8 @@
 """Representation of an Eltako device."""
 from datetime import datetime
 
-from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
-from eltakobus.util import AddressExpression
+from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage, prettify
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant, State
@@ -36,6 +36,10 @@ class EltakoEntity(Entity):
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
+        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_PROXY]:
+            # calculate external address
+            g_address = (int.from_bytes(self.dev_id[0], 'big') + int.from_bytes(self.gateway.base_id[0], 'big')).to_bytes(4, byteorder='big')
+            self.listen_to_addresses.append(AddressExpression((g_address, None)))
         self.description_key = description_key
         self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
@@ -86,6 +90,14 @@ class EltakoEntity(Entity):
                 self.hass, event_id, self._message_received_callback
             )
         )
+
+        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_PROXY]:
+            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_RECEIVE_MESSAGE)
+            self.async_on_remove(
+                async_dispatcher_connect(
+                    self.hass, GLOBAL_EVENT_BUS_ID, self._message_received_callback
+                )
+            )
 
         # load initial value
         if isinstance(self, RestoreEntity):
