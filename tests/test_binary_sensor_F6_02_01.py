@@ -77,11 +77,12 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         self.assertTrue('push_telegram_received_time_in_sec' in fired_event_0['event_data'])
         self.assertTrue(fired_event_0['event_data']['push_telegram_received_time_in_sec'] > 0)
 
+        self.assertEqual(bs._attr_is_on, True)
+
         time.sleep(0.2)
 
         # send release button
         msg:Regular1BSMessage = RPSMessage(switch_address, status=b'\x30', data=b'\x00')
-        self.assertEqual(bs._attr_is_on, True)
 
         bs.value_changed(msg)
 
@@ -108,6 +109,8 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         self.assertTrue(fired_event_3['event_data']['push_duration_in_sec'] > 0)
         self.assertTrue(fired_event_3['event_data']['push_telegram_received_time_in_sec'] < fired_event_3['event_data']['release_telegram_received_time_in_sec'])
         self.assertEqual(fired_event_3['event_data']['release_telegram_received_time_in_sec'] - fired_event_3['event_data']['push_telegram_received_time_in_sec'], fired_event_3['event_data']['push_duration_in_sec'] )
+
+        self.assertEqual(bs._attr_is_on, False)
 
 
     def test_binary_sensor_rocker_switch_button_test(self):

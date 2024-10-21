@@ -254,9 +254,9 @@ class EltakoBinarySensor(AbstractBinarySensor):
 
             # Show status change in HA. It will only for the moment when the button is pushed down.
             if not self.invert_signal:
-                self._attr_is_on = len(pressed_buttons) > 0
+                self._attr_is_on = release_telegram_received_time == -1
             else: 
-                self._attr_is_on = not ( len(pressed_buttons) > 0 )
+                self._attr_is_on = not ( release_telegram_received_time == -1 )
             self.schedule_update_ha_state()
 
             return
