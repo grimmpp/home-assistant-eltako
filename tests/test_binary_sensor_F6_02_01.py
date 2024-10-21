@@ -60,8 +60,8 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
 
         # check event data
         expected_data = {
+            'id': 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40.d_RT', 
             'data': 112,
-            'id': expexced_event_type,
             'pressed': True,
             'pressed_buttons': ['RT'],
             'push_duration_in_sec': -1,
@@ -73,9 +73,9 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
             'two_buttons_pressed': False}
         for k in expected_data:
             if k != 'push_telegram_received_time_in_sec':
-                self.assertEqual(fired_event_0['event_data'][k], expected_data[k])
+                self.assertEqual(fired_event_1['event_data'][k], expected_data[k])
         self.assertTrue('push_telegram_received_time_in_sec' in fired_event_0['event_data'])
-        self.assertTrue(fired_event_0['event_data']['push_telegram_received_time_in_sec'] > 0)
+        self.assertTrue(fired_event_1['event_data']['push_telegram_received_time_in_sec'] > 0)
 
         self.assertEqual(bs._attr_is_on, True)
 
@@ -92,7 +92,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
             'id': 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40.d_RT', 
             'data': 0, 
             'switch_address': 'FE-DB-B6-40', 
-            'pressed_buttons': ['RT'], 
+            'pressed_buttons': [], 
             'pressed': False, 
             'two_buttons_pressed': False, 
             'rocker_first_action': 0, 

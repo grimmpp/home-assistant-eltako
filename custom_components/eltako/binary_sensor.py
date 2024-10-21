@@ -181,6 +181,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
             push_telegram_received_time = telegram_received_time
             release_telegram_received_time = -1
             pushed_duration = -1
+            prev_pressed_buttons = []
 
             # Data is only available when button is pressed. 
             # Button cannot be identified when releasing it.
@@ -206,7 +207,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
 
             if not pressed and not two_buttons_pressed:
                 # button released but no detailed information available
-                pressed_buttons = self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])]['pressed_buttons']
+                prev_pressed_buttons = self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])]['pressed_buttons']
                 push_telegram_received_time = self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])]['push_telegram_received_time_in_sec']
                 release_telegram_received_time = telegram_received_time
                 pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
@@ -228,35 +229,26 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "release_telegram_received_time_in_sec": release_telegram_received_time, 
                     "push_duration_in_sec": pushed_duration,
                 }
+            if len(prev_pressed_buttons) > 0:
+                event_data['prev_pressed_buttons'] = prev_pressed_buttons
             
+            # send generic event id per swtich
             LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
-            # fire second event for a specific buttons pushed on the swtich
-            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(pressed_buttons))
-            event_data = {
-                    "id": event_id,
-                    "data": int.from_bytes(msg.data, "big"),
-                    "switch_address": switch_address,
-                    "pressed_buttons": pressed_buttons,
-                    "pressed": pressed,
-                    "two_buttons_pressed": two_buttons_pressed,
-                    "rocker_first_action": decoded.rocker_first_action,
-                    "rocker_second_action": decoded.rocker_second_action,
-                    "push_telegram_received_time_in_sec": push_telegram_received_time,
-                    "release_telegram_received_time_in_sec": release_telegram_received_time, 
-                    "push_duration_in_sec": pushed_duration,
-                }
-            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
+            # send event id containing button positions
+            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)), '-'.join(prev_pressed_buttons+pressed_buttons))
+            event_data['id'] = event_id
+            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(prev_pressed_buttons+pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
             self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])] = event_data
 
             # Show status change in HA. It will only for the moment when the button is pushed down.
             if not self.invert_signal:
-                self._attr_is_on = release_telegram_received_time == -1
+                self._attr_is_on = len(pressed_buttons) > 0
             else: 
-                self._attr_is_on = not ( release_telegram_received_time == -1 )
+                self._attr_is_on = not ( len(pressed_buttons) > 0 )
             self.schedule_update_ha_state()
 
             return
