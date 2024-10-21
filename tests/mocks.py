@@ -64,6 +64,12 @@ class GatewayMock(EnOceanGateway):
     def _register_device(self) -> None:
         pass
 
+    def _fire_connection_state_changed_event(self, status):
+        pass
+
+    def add_connection_state_changed_handler(self, handler):
+        pass
+
 
 class LatestStateMock():
     def __init__(self, state:str=None, attributes:dict[str:str]={}):

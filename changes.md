@@ -2,10 +2,12 @@
 
 ## Version 2.0.0
 * No Need for defining base id in config file except for FGW14-SUB
+  * Entity Ids of gateways change so that base id is not contained anymore
 * Reverse Network EnOcean Bridge to be able to connect eo_man.
 * FAM14 can detect bus devices and report it into eo_man 
 * Support for EUL Gateway
-* Gateways can be used as proxy in HA
+* Gateways can be used as repeater inside HA
+* For dimming switches/buttons events contains when it was pushed and released
 
 ## Version 1.5.9
 * Replaced deprecated log function warn through warning

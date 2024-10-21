@@ -36,7 +36,7 @@ class EltakoEntity(Entity):
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
         self.listen_to_addresses.append(self.dev_id[0])
-        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_PROXY]:
+        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_HA_REPEATER]:
             # calculate external address
             g_address = (int.from_bytes(self.dev_id[0], 'big') + int.from_bytes(self.gateway.base_id[0], 'big')).to_bytes(4, byteorder='big')
             self.listen_to_addresses.append(AddressExpression((g_address, None)))
@@ -91,7 +91,7 @@ class EltakoEntity(Entity):
             )
         )
 
-        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_PROXY]:
+        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_HA_REPEATER]:
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_RECEIVE_MESSAGE)
             self.async_on_remove(
                 async_dispatcher_connect(

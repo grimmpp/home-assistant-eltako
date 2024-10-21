@@ -1,5 +1,6 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
+from typing import Dict
 
 from eltakobus.util import AddressExpression
 from eltakobus.eep import *
@@ -11,6 +12,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
+
+import time
 
 from .device import *
 from .const import *
@@ -115,6 +118,8 @@ class EltakoBinarySensor(AbstractBinarySensor):
     - D5-00-01
     """
 
+    RECEIVED_TELEGRAMS:Dict[str,Dict] = {}
+
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, 
                  device_class: str, invert_signal: bool, description: EntityDescription=None):
         """Initialize the Eltako binary sensor."""
@@ -163,6 +168,8 @@ class EltakoBinarySensor(AbstractBinarySensor):
                             Platform.BINARY_SENSOR, str(self.dev_id), self.dev_eep.eep_string, type(msg).__name__, str(msg.org) )
             return
 
+        telegram_received_time = time.time()
+
         if self.dev_eep in [F6_02_01, F6_02_02]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             pressed_buttons = []
@@ -170,6 +177,10 @@ class EltakoBinarySensor(AbstractBinarySensor):
             two_buttons_pressed = decoded.second_action == 1
             fa = decoded.rocker_first_action
             sa = decoded.rocker_second_action
+
+            push_telegram_received_time = telegram_received_time
+            release_telegram_received_time = None
+            pushed_duration = None
 
             # Data is only available when button is pressed. 
             # Button cannot be identified when releasing it.
@@ -192,9 +203,14 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     pressed_buttons += ["RB"]
                 if sa == 3:
                     pressed_buttons += ["RT"]
-            else:
+
+            if not pressed and not two_buttons_pressed:
                 # button released but no detailed information available
-                pass
+                pressed_buttons = self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])]['pressed_buttons']
+                push_telegram_received_time = self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])]['push_telegram_received_time_in_sec']
+                release_telegram_received_time = telegram_received_time
+                pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
+                
 
             # fire first event for the entire switch
             switch_address = config_helpers.format_address((msg.address, None))
@@ -208,6 +224,9 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "two_buttons_pressed": two_buttons_pressed,
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
+                    "push_telegram_received_time_in_sec": push_telegram_received_time,
+                    "release_telegram_received_time_in_sec": release_telegram_received_time, 
+                    "push_duration_in_sec": pushed_duration,
                 }
             
             LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
@@ -224,9 +243,14 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "two_buttons_pressed": two_buttons_pressed,
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
+                    "push_telegram_received_time_in_sec": push_telegram_received_time,
+                    "release_telegram_received_time_in_sec": release_telegram_received_time, 
+                    "push_duration_in_sec": pushed_duration,
                 }
             LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
+
+            self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])] = event_data
 
             # Show status change in HA. It will only for the moment when the button is pushed down.
             if not self.invert_signal:
@@ -239,6 +263,15 @@ class EltakoBinarySensor(AbstractBinarySensor):
         
         elif self.dev_eep in [F6_01_01]:
 
+            if decoded.button_pushed: 
+                push_telegram_received_time = telegram_received_time
+                release_telegram_received_time = None
+                pushed_duration = None
+            else:
+                push_telegram_received_time = self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])]['push_telegram_received_time_in_sec']
+                release_telegram_received_time = telegram_received_time
+                pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
+
             # fire event
             switch_address = config_helpers.format_address((msg.address, None))
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
@@ -247,9 +280,14 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "data": int.from_bytes(msg.data, "big"),
                     "switch_address": switch_address,
                     "pressed": decoded.button_pushed,
+                    "push_telegram_received_time_in_sec": push_telegram_received_time,
+                    "release_telegram_received_time_in_sec": release_telegram_received_time, 
+                    "push_duration_in_sec": pushed_duration,
                 }
             LOGGER.debug("[%s %s] Send event: %s, pushed down: %s", Platform.BINARY_SENSOR, str(self.dev_id), event_id, str(decoded.button_pushed))
             self.hass.bus.fire(event_id, event_data)
+
+            self.RECEIVED_TELEGRAMS[b2s(self.dev_id[0])] = event_data
             
             # Show status change in HA. It will only for the moment when the button is pushed down.
             if not self.invert_signal:

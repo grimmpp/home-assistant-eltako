@@ -33,6 +33,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
     def test_binary_sensor_rocker_switch(self):
         bs = TestBinarySensor().create_binary_sensor()
         
+        # send push button
         switch_address = b'\xfe\xdb\xb6\x40'
         msg:Regular1BSMessage = RPSMessage(switch_address, status=b'\x30', data=b'\x70')
 
@@ -47,26 +48,65 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         expexced_event_type = 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40'
 
         # check event type
+        # check no button specific event
         fired_event_0 = bs.hass.bus.fired_events[0]
         self.assertEqual(fired_event_0['event_type'], get_bus_event_type(bs.gateway.dev_id, EVENT_BUTTON_PRESSED, (msg.address,None)))
         self.assertEqual(fired_event_0['event_type'], expexced_event_type)
 
+        # check button specific event
         fired_event_1 = bs.hass.bus.fired_events[1]
         self.assertEqual(fired_event_0['event_type'], get_bus_event_type(bs.gateway.dev_id, EVENT_BUTTON_PRESSED, (msg.address,None)), "RT")
         self.assertEqual(fired_event_1['event_type'], expexced_event_type + '.d_RT')
 
         # check event data
-        exprected_data = {
-            'id': expexced_event_type, 
-            "data": 112,
+        expected_data = {
+            'data': 112,
+            'id': expexced_event_type,
+            'pressed': True,
+            'pressed_buttons': ['RT'],
+            'push_duration_in_sec': None,
+            'push_telegram_received_time_in_sec': 1729513695.2430093,
+            'release_telegram_received_time_in_sec': None,
+            'rocker_first_action': 3,
+            'rocker_second_action': 0,
+            'switch_address': 'FE-DB-B6-40',
+            'two_buttons_pressed': False}
+        for k in expected_data:
+            if k != 'push_telegram_received_time_in_sec':
+                self.assertEqual(fired_event_0['event_data'][k], expected_data[k])
+
+        time.sleep(0.2)
+
+        # send release button
+        msg:Regular1BSMessage = RPSMessage(switch_address, status=b'\x30', data=b'\x00')
+        self.assertEqual(bs._attr_is_on, True)
+
+        bs.value_changed(msg)
+
+        # check button specific event
+        fired_event_3 = bs.hass.bus.fired_events[3]
+        expected_data = {
+            'id': 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40.d_RT', 
+            'data': 0, 
             'switch_address': 'FE-DB-B6-40', 
             'pressed_buttons': ['RT'], 
-            'pressed': True, 
+            'pressed': False, 
             'two_buttons_pressed': False, 
-            'rocker_first_action': 3, 
-            'rocker_second_action': 0
-        }
-        self.assertEqual(fired_event_0['event_data'], exprected_data)
+            'rocker_first_action': 0, 
+            'rocker_second_action': 0, 
+            'push_telegram_received_time_in_sec': 1729514202.6208754, 
+            'release_telegram_received_time_in_sec': 1729514206.3687692, 
+            'push_duration_in_sec': 3.747893810272217}
+        for k in expected_data:
+            if k not in ['push_telegram_received_time_in_sec', 'release_telegram_received_time_in_sec', 'push_duration_in_sec']:
+                self.assertEqual(fired_event_3['event_data'][k], expected_data[k])
+        
+        self.assertTrue(fired_event_3['event_data']['push_telegram_received_time_in_sec'] > 0)
+        self.assertTrue(fired_event_3['event_data']['release_telegram_received_time_in_sec'] > 0)
+        self.assertTrue(fired_event_3['event_data']['push_duration_in_sec'] > 0)
+        self.assertTrue(fired_event_3['event_data']['push_telegram_received_time_in_sec'] < fired_event_3['event_data']['release_telegram_received_time_in_sec'])
+        self.assertEqual(fired_event_3['event_data']['release_telegram_received_time_in_sec'] - fired_event_3['event_data']['push_telegram_received_time_in_sec'], fired_event_3['event_data']['push_duration_in_sec'] )
+
 
     def test_binary_sensor_rocker_switch_button_test(self):
         bs = TestBinarySensor().create_binary_sensor()

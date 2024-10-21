@@ -8,6 +8,7 @@ import yaml
 # mock update of Home Assistant
 EnOceanGateway._register_device = mock.Mock(return_value=None)
 EnOceanGateway._init_bus = mock.Mock(return_value=None)
+EnOceanGateway.add_connection_state_changed_handler = mock.Mock(return_value=None)
 RS485SerialInterface.__init__ = mock.Mock(return_value=None)
 asyncio.get_event_loop = mock.Mock(return_value=None)
 
@@ -16,7 +17,8 @@ class TestGateway(TestCase):
     def test_gateway_types(self):
         for t in GatewayDeviceType:
             
-            if t in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3]:
+            if t in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN, 
+                            GatewayDeviceType.LAN_ESP2, GatewayDeviceType.MGW_LAN, GatewayDeviceType.EUL_LAN]:
                 self.assertTrue(GatewayDeviceType.is_transceiver(t))
             else:
                 self.assertFalse(GatewayDeviceType.is_transceiver(t))
@@ -35,7 +37,7 @@ class TestGateway(TestCase):
         self.assertEqual(gw.model, "EnOcean Gateway - FAM14")
         self.assertEqual(gw.dev_id, 123)
         self.assertEqual(gw.dev_type, sub_type)
-        self.assertEqual(gw.dev_name, 'GW - fam14 (Id: 123, BaseId: FF-AA-00-00)')
+        self.assertEqual(gw.dev_name, 'GW - fam14 (Id: 123)')
 
     config_str = """
 general_settings:
@@ -71,12 +73,12 @@ gateway:
 
         g_list:dict = config_helpers.get_list_of_gateway_descriptions(config)
         self.assertEqual(len(g_list), 2)
-        self.assertEqual(list(g_list.values())[0] ,'GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)')
-        self.assertEqual(list(g_list.values())[1] ,'GW2 - fam-usb (Id: 2, BaseId: FF-BB-00-00)')
+        self.assertEqual(list(g_list.values())[0] ,'GW1 - fgw14usb (Id: 1)')
+        self.assertEqual(list(g_list.values())[1] ,'GW2 - fam-usb (Id: 2)')
 
     def test_get_id_from_gateway_name(self):
-      self.assertEqual(1, config_helpers.get_id_from_gateway_name('GW1 - fgw14usb (Id: 1, BaseId: FF-AA-00-00)'))
-      self.assertEqual(87126, config_helpers.get_id_from_gateway_name('GW1 - fgw14usb (Id: 87126, BaseId: FF-AA-00-00)'))
+      self.assertEqual(1, config_helpers.get_id_from_gateway_name('GW1 - fgw14usb (Id: 1)'))
+      self.assertEqual(87126, config_helpers.get_id_from_gateway_name('GW1 - fgw14usb (Id: 87126)'))
 
     def test_get_gateway_from_config(self):
         config = yaml.safe_load(self.config_str)
