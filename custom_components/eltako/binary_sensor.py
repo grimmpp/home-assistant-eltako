@@ -179,8 +179,8 @@ class EltakoBinarySensor(AbstractBinarySensor):
             sa = decoded.rocker_second_action
 
             push_telegram_received_time = telegram_received_time
-            release_telegram_received_time = None
-            pushed_duration = None
+            release_telegram_received_time = -1
+            pushed_duration = -1
 
             # Data is only available when button is pressed. 
             # Button cannot be identified when releasing it.

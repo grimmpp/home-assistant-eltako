@@ -64,9 +64,9 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
             'id': expexced_event_type,
             'pressed': True,
             'pressed_buttons': ['RT'],
-            'push_duration_in_sec': None,
+            'push_duration_in_sec': -1,
             'push_telegram_received_time_in_sec': 1729513695.2430093,
-            'release_telegram_received_time_in_sec': None,
+            'release_telegram_received_time_in_sec': -1,
             'rocker_first_action': 3,
             'rocker_second_action': 0,
             'switch_address': 'FE-DB-B6-40',
@@ -74,6 +74,8 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         for k in expected_data:
             if k != 'push_telegram_received_time_in_sec':
                 self.assertEqual(fired_event_0['event_data'][k], expected_data[k])
+        self.assertTrue('push_telegram_received_time_in_sec' in fired_event_0['event_data'])
+        self.assertTrue(fired_event_0['event_data']['push_telegram_received_time_in_sec'] > 0)
 
         time.sleep(0.2)
 
