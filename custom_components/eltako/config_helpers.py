@@ -204,7 +204,7 @@ def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:
     return id.lower()
 
 
-def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression | bytes, description_key:str=None) -> str:
+def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression | bytes=None, description_key:str=None) -> str:
     return get_identifier(gateway_id, source_id, function_id, description_key)
 
 def get_device_id(gateway_id:int, dev_id: AddressExpression | bytes, description_key:str=None) -> str:
