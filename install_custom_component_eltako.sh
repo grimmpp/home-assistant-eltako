@@ -5,7 +5,10 @@
 # Function to display commands
 exe() { echo "\$ ${@/eval/}" ; "$@" ; }
 
-echo -e "\nInstall custom component for Eltako Baureihe 14\n"
+echo -e "\nInstall custom component for Eltako Baureihe 14"
+
+current_branch=$(git branch --show-current)
+echo -e "Running on branch $current_branch\n"
 
 repo_name="home-assistant-eltako"
 if [[ $(pwd) != *"$repo_name"* ]]; then

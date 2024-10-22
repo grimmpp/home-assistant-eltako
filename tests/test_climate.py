@@ -46,7 +46,7 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(cc.cooling_switch, None)
         self.assertEqual(cc.thermostat, None)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, A5_10_06.HeaterMode.NORMAL)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -54,10 +54,15 @@ class TestClimate(unittest.TestCase):
         mode = A5_10_06.HeaterMode.NORMAL
         target_temp = 24
         current_temperature = 21
-        msg = A5_10_06(mode, target_temp, current_temperature, A5_10_06.ControllerPriority.AUTO).encode_message(b'\x00\x00\x00\x01')
+        prio = A5_10_06.ControllerPriority.AUTO
+        msg = A5_10_06(mode, target_temp, current_temperature, prio).encode_message(b'\x00\x00\x00\x01')
         cc.value_changed(msg)
+        self.assertEqual(cc.hvac_mode, HVACMode.HEAT)
+        self.assertEqual( cc._attr_actuator_mode, mode)
         self.assertEqual( round(cc.current_temperature), current_temperature)
         self.assertEqual( round(cc.target_temperature), target_temp)
+        # priority is handled in select entity
+        self.assertEqual( A5_10_06.decode_message(msg).priority, prio)
         
 
     def test_climate_thermostat(self):
@@ -74,7 +79,7 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(cc.cooling_switch, None)
         self.assertIsNotNone(cc.thermostat)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, A5_10_06.HeaterMode.NORMAL)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -82,10 +87,11 @@ class TestClimate(unittest.TestCase):
         mode = A5_10_06.HeaterMode.NORMAL
         target_temp = 24
         current_temperature = 21
-        msg = A5_10_06(mode, target_temp, current_temperature, A5_10_06.ControllerPriority.AUTO).encode_message(b'\xFF\xFF\xFF\x01')
+        prio = A5_10_06.ControllerPriority.AUTO
+        msg = A5_10_06(mode, target_temp, current_temperature, prio).encode_message(b'\xFF\xFF\xFF\x01')
         cc.value_changed(msg)
         self.assertEqual(cc.hvac_mode, HVACMode.HEAT)
-        self.assertEqual(cc._actuator_mode, A5_10_06.Heater_Mode.NORMAL);
+        self.assertEqual( cc._attr_actuator_mode, mode)
         self.assertEqual( round(cc.current_temperature), current_temperature)
         self.assertEqual( round(cc.target_temperature), target_temp)
 
@@ -104,7 +110,7 @@ class TestClimate(unittest.TestCase):
         self.assertIsNotNone(cc.cooling_switch)
         self.assertEqual(cc.thermostat, None)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, A5_10_06.HeaterMode.NORMAL)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -112,6 +118,7 @@ class TestClimate(unittest.TestCase):
         #0x70 = 3
         msg = F6_02_01(3, 1, 0, 0).encode_message(b'\xFF\xFF\xFF\x01')
         cc.value_changed(msg)
+        ##TODO:
         # self.assertEqual(cc.hvac_mode, HVACMode.HEAT)
         # self.assertEqual(cc._actuator_mode, A5_10_06.Heater_Mode.NORMAL);
         # self.assertEqual( round(cc.current_temperature), current_temperature)
@@ -159,7 +166,7 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(cc.cooling_switch)
         self.assertEqual(cc.thermostat, None)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
-        self.assertEqual(cc._actuator_mode, None)
+        self.assertEqual(cc._attr_actuator_mode, A5_10_06.HeaterMode.NORMAL)
 
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
@@ -167,5 +174,5 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         #0x70 = 3
         msg = F6_02_01(3, 1, 0, 0).encode_message(b'\xFF\xFF\xFF\x01')
         # cc.value_changed(msg)
-        await cc.async_handle_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
+        await cc.async_handle_cooling_switch_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
         self.assertEqual(cc.hvac_mode, HVACMode.COOL)

@@ -24,6 +24,7 @@ SIGNAL_SEND_MESSAGE_SERVICE: Final = "send_message_service"
 EVENT_BUTTON_PRESSED: Final = "btn_pressed"
 EVENT_CONTACT_CLOSED: Final = "contact_closed"
 ELTAKO_GLOBAL_EVENT_BUS_ID: Final = "eltako_global_event_bus"
+EVENT_CLIMATE_PRIORITY_SELECTED: Final = "climate_priority_selected"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 
@@ -82,6 +83,7 @@ PLATFORMS: Final = [
     Platform.COVER,
     Platform.CLIMATE,
     Platform.BUTTON,
+    Platform.SELECT
 ]
 
 class GatewayDeviceType(str, Enum):
