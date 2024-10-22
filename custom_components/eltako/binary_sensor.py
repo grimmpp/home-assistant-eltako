@@ -218,6 +218,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
             event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
             event_data = {
                     "id": event_id,
+                    "entity_id": self.entity_id,
                     "data": int.from_bytes(msg.data, "big"),
                     "switch_address": switch_address,
                     "pressed_buttons": pressed_buttons,
