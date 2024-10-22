@@ -1,0 +1,33 @@
+blueprint:
+  name: Dimm Smart Light Down
+  description: This blueprint detects events from EnOcean switches and dims lights down. It can/shall be used in conjunction with 'Dim Smart Light Up', 'Switch Smart Light Off' and 'Switch Smart Light On' so that you can controll one light with two buttons (up down button) of one switch.
+  domain: automation
+  input:
+    enocean_switch_event:
+      name: EnOcean Switch Event
+      description: The event must contain the shortcut of the button position at the end. Similar like this: eltako.gw_1.btn_pressed.sid_FE-DD-AA-10.d_LB
+      selector:
+        entity:
+          domain: switch
+
+alias: light down
+description: ""
+triggers:
+  - trigger: event
+    event_type: eltako.gw_1.btn_pressed.sid_FE-DB-0A-10.d_LB
+conditions: []
+actions:
+  - repeat:
+      while:
+        - condition: state
+          entity_id: binary_sensor.eltako_gw1_fe_db_0a_10
+          state: "on"
+      sequence:
+        - target:
+            entity_id: 2fb48f5d7e27ce6538b39bf718baa910
+          data_template:
+            brightness_step: -20
+          action: light.turn_on
+        - delay:
+            milliseconds: 50
+mode: single

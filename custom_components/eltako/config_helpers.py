@@ -3,7 +3,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_ID
 
-from eltakobus.util import AddressExpression, b2a
+from eltakobus.util import AddressExpression, b2a, b2s
 from eltakobus.eep import EEP
 
 from .const import *
@@ -85,7 +85,7 @@ async def async_find_gateway_config_by_base_id(base_id: AddressExpression, hass:
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:
-            if g[CONF_BASE_ID].upper() == format_address(base_id[0]):
+            if g[CONF_BASE_ID].upper() == b2s(base_id):
                 return g
     return None
 
@@ -168,30 +168,43 @@ def get_gateway_name(dev_name:str, dev_type:str, dev_id: int) -> str:
     
     return f"{dev_name} - {dev_type} (Id: {dev_id})"
 
-def format_address(address: AddressExpression, separator:str='-') -> str:
-    return b2a(address[0], separator).upper()
 
 def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: dict) -> str:
     if general_config[CONF_SHOW_DEV_ID_IN_DEV_NAME]:
-        return f"{dev_name} ({format_address(dev_id)})"
+        return f"{dev_name} ({b2s(dev_id)})"
     else:
         return dev_name
     
 def get_id_from_gateway_name(dev_name: str) -> AddressExpression:
     return int(dev_name.split('(Id: ')[1].split(')')[0])
     
-def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression = None, data: str=None) -> str:
-    event_id = f"{DOMAIN}.gw_{gateway_id}.{function_id}"
-    
-    # add source id e.g. switch id
-    if source_id is not None:
-        event_id += f".sid_{format_address(source_id)}"
-    
-    # add data for better handling in automations
-    if data is not None:
-        event_id += f".d_{data}"
 
-    return event_id
+def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:str=None, description_key:str=None) -> str:
+    id = f"{DOMAIN}_"
+
+    ## add gateway id only for local addresses
+    _dev_id = dev_id
+    if isinstance(_dev_id, AddressExpression): 
+        _dev_id = _dev_id[0]
+    if _dev_id[0:2] == b'\x00\x00':
+        id += f"gw_{gateway_id}_"
+
+    if event_id is not None:
+        id += f"{event_id}_"
+
+    id += f"{b2s(dev_id, '_')}"
+
+    if description_key is not None and description_key != '':
+        id += f"_{description_key.replace(' ', "_").replace('-', '_')}"
+
+    return id.lower()
+
+
+def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression | bytes, description_key:str=None) -> str:
+    return get_identifier(gateway_id, source_id, function_id, description_key)
+
+def get_device_id(gateway_id:int, dev_id: AddressExpression | bytes, description_key:str=None) -> str:
+    return get_identifier(gateway_id, dev_id, event_id=None, description_key=description_key)
 
 def convert_button_pos_from_hex_to_str(pos: int) -> str:
     if pos == 0x10:

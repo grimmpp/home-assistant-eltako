@@ -32,9 +32,9 @@ class TestEntityProperties(unittest.TestCase):
         self.assertEqual(ee.listen_to_addresses[0], b'\xfe4!\x01')
 
         self.assertEqual(ee.dev_name, 'Switch')
-        self.assertEqual(ee.unique_id, 'eltako_gw123_fe_34_21_01')
-        self.assertEqual(ee.entity_id, 'binary_sensor.eltako_gw123_fe_34_21_01')
+        self.assertEqual(ee.unique_id, 'eltako_fe_34_21_01')
+        self.assertEqual(ee.entity_id, 'binary_sensor.eltako_fe_34_21_01')
 
         self.assertTrue( core.valid_domain(ee._attr_ha_platform) )
-        self.assertTrue( core.valid_entity_id(ee.entity_id) )
+        self.assertTrue( core.valid_entity_id(ee.entity_id ) )
         self.assertTrue( core.validate_state(ee.state))

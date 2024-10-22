@@ -45,22 +45,22 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         self.assertEqual(len(bs.hass.bus.fired_events), 2)
         self.assertEqual(bs._attr_is_on, True)
 
-        expexced_event_type = 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40'
+        expexced_event_type = 'eltako_btn_pressed_fe_db_b6_40'
 
         # check event type
         # check no button specific event
         fired_event_0 = bs.hass.bus.fired_events[0]
-        self.assertEqual(fired_event_0['event_type'], get_bus_event_type(bs.gateway.dev_id, EVENT_BUTTON_PRESSED, (msg.address,None)))
+        self.assertEqual(fired_event_0['event_type'], get_bus_event_type(bs.gateway.dev_id, EVENT_BUTTON_PRESSED, msg.address))
         self.assertEqual(fired_event_0['event_type'], expexced_event_type)
 
         # check button specific event
         fired_event_1 = bs.hass.bus.fired_events[1]
-        self.assertEqual(fired_event_0['event_type'], get_bus_event_type(bs.gateway.dev_id, EVENT_BUTTON_PRESSED, (msg.address,None)), "RT")
-        self.assertEqual(fired_event_1['event_type'], expexced_event_type + '.d_RT')
+        self.assertEqual(fired_event_1['event_type'], get_bus_event_type(bs.gateway.dev_id, EVENT_BUTTON_PRESSED, msg.address, "RT"))
+        self.assertEqual(fired_event_1['event_type'], expexced_event_type + '_rt')
 
         # check event data
         expected_data = {
-            'id': 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40.d_RT', 
+            'id': 'eltako_btn_pressed_fe_db_b6_40_rt', 
             'data': 112,
             'pressed': True,
             'pressed_buttons': ['RT'],
@@ -89,7 +89,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         # check button specific event
         fired_event_3 = bs.hass.bus.fired_events[3]
         expected_data = {
-            'id': 'eltako.gw_123.btn_pressed.sid_FE-DB-B6-40.d_RT', 
+            'id': 'eltako_btn_pressed_fe_db_b6_40_rt', 
             'data': 0, 
             'switch_address': 'FE-DB-B6-40', 
             'pressed_buttons': [], 

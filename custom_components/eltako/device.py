@@ -41,19 +41,10 @@ class EltakoEntity(Entity):
             g_address = (int.from_bytes(self.dev_id[0], 'big') + int.from_bytes(self.gateway.base_id[0], 'big')).to_bytes(4, byteorder='big')
             self.listen_to_addresses.append(AddressExpression((g_address, None)))
         self.description_key = description_key
-        self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
+        self._attr_unique_id = config_helpers.get_device_id(gateway.dev_id, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Added entity {self.dev_name} ({type(self).__name__}).")
-
-    @classmethod
-    def _get_identifier(cls, gateway: EnOceanGateway, dev_id: AddressExpression, description_key:str=None) -> str:
-        if description_key is None:
-            description_key = ''
-        else:
-            description_key = '_'+description_key
-
-        return f"{DOMAIN}_gw{gateway.dev_id}_{config_helpers.format_address(dev_id)}{description_key}".replace(' ', "_").replace('-', '_').lower()
 
     def _get_description_key(self, description_key:str=None):
         if description_key is not None:
@@ -70,7 +61,7 @@ class EltakoEntity(Entity):
         """Return the device info."""
         return DeviceInfo(
             identifiers={
-                (DOMAIN, config_helpers.format_address(self.dev_id) )
+                (DOMAIN, b2s(self.dev_id) )
             },
             name=self.dev_name,
             manufacturer=MANUFACTURER,
@@ -159,16 +150,11 @@ class EltakoEntity(Entity):
     def dev_id(self) -> AddressExpression:
         """Return the id of device."""
         return self._attr_dev_id
-
-    # @property
-    # def identifier(self) -> str:
-    #     """Return the identifier of device."""
-    #     return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
     
     @property
     def unique_id(self) -> str:
         """Return the unique id of device"""
-        return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
+        return self._attr_unique_id
 
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""

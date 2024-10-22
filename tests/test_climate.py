@@ -38,8 +38,8 @@ class TestClimate(unittest.TestCase):
 
     def test_climate_temp_actuator(self):
         cc = create_climate_entity()
-        self.assertEqual(cc.unique_id, 'eltako_gw12345_00_00_00_01')
-        self.assertEqual(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
+        self.assertEqual(cc.unique_id, 'eltako_gw_12345_00_00_00_01')
+        self.assertEqual(cc.entity_id, 'climate.eltako_gw_12345_00_00_00_01')
         self.assertEqual(cc.dev_name, 'Room 1')
         self.assertEqual(cc.temperature_unit, '°C')
         self.assertEqual(cc.cooling_sender, None)
@@ -66,8 +66,8 @@ class TestClimate(unittest.TestCase):
             CONF_EEP: 'A5-10-06',
         })
         cc = create_climate_entity(thermostat)
-        self.assertEqual(cc.unique_id, 'eltako_gw12345_00_00_00_01')
-        self.assertEqual(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
+        self.assertEqual(cc.unique_id, 'eltako_gw_12345_00_00_00_01')
+        self.assertEqual(cc.entity_id, 'climate.eltako_gw_12345_00_00_00_01')
         self.assertEqual(cc.dev_name, 'Room 1')
         self.assertEqual(cc.temperature_unit, '°C')
         self.assertEqual(cc.cooling_sender, None)
@@ -96,8 +96,8 @@ class TestClimate(unittest.TestCase):
             CONF_EEP: 'A5-10-06',
         })
         cc = create_climate_entity(cooling_switch=cooling_switch)
-        self.assertEqual(cc.unique_id, 'eltako_gw12345_00_00_00_01')
-        self.assertEqual(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
+        self.assertEqual(cc.unique_id, 'eltako_gw_12345_00_00_00_01')
+        self.assertEqual(cc.entity_id, 'climate.eltako_gw_12345_00_00_00_01')
         self.assertEqual(cc.dev_name, 'Room 1')
         self.assertEqual(cc.temperature_unit, '°C')
         self.assertEqual(cc.cooling_sender, None)
@@ -151,8 +151,8 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
             CONF_SWITCH_BUTTON: 0x50
         })
         cc = create_climate_entity(cooling_switch=cooling_switch)
-        self.assertEqual(cc.unique_id, 'eltako_gw12345_00_00_00_01')
-        self.assertEqual(cc.entity_id, 'climate.eltako_gw12345_00_00_00_01')
+        self.assertEqual(cc.unique_id, 'eltako_gw_12345_00_00_00_01')
+        self.assertEqual(cc.entity_id, 'climate.eltako_gw_12345.00_00_00_01')
         self.assertEqual(cc.dev_name, 'Room 1')
         self.assertEqual(cc.temperature_unit, '°C')
         self.assertEqual(cc.cooling_sender, None)
