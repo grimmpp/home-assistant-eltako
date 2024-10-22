@@ -479,7 +479,7 @@ class EnOceanGateway:
 
                 # Send message on local bus. Only devices configure to this gateway will receive those message.
                 event_id = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_RECEIVE_MESSAGE)
-                dispatcher_send(self.hass, event_id, message)
+                dispatcher_send(self.hass, event_id, {'gateway':self, 'esp2_msg': message})
 
                 if type(message) not in [EltakoDiscoveryRequest]:
                     # Send message on global bus with external/outside address
