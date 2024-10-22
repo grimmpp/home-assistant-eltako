@@ -154,9 +154,10 @@ class EltakoEntity(Entity):
         """Return the unique id of device"""
         return self._attr_unique_id
 
-    def _message_received_callback(self, msg: ESP2Message) -> None:
+    def _message_received_callback(self, data: dict) -> None:
         """Handle incoming messages."""
-        
+        msg = data['esp2_msg']
+
         msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
 
         if type(msg) in msg_types:
