@@ -184,9 +184,9 @@ def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:
 
     ## add gateway id only for local addresses
     _dev_id = dev_id
-    if isinstance(_dev_id, AddressExpression): 
+    if dev_id is not None and isinstance(_dev_id, AddressExpression): 
         _dev_id = _dev_id[0]
-    if _dev_id[0:2] == b'\x00\x00':
+    if dev_id is not None and _dev_id[0:2] == b'\x00\x00':
         id += f"gw_{gateway_id}_"
 
     if event_id is not None:
