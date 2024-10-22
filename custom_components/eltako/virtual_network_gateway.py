@@ -102,7 +102,7 @@ class VirtualNetworkGateway(EnOceanGateway):
             try:
                 ## send base id and put gateway type as well into it
                 msg = gw.create_base_id_infO_message()
-                LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id[0])}, type: {gw.dev_type}) ")
+                LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type}) ")
                 conn.sendall( msg.serialize() )
 
                 ## request gateway version

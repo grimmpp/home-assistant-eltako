@@ -980,7 +980,7 @@ class GatewayBaseId(EltakoSensor):
         """Update the current value."""
 
         if isinstance(base_id, AddressExpression):
-            self.native_value = b2s(base_id[0])
+            self.native_value = b2s(base_id)
             self.schedule_update_ha_state()
 
 
@@ -1066,7 +1066,7 @@ class EventListenerInfoField(EltakoSensor):
         self._attr_native_value = ''
         self.listen_to_addresses.clear()
 
-        LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")
+        LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id)}] [{key}] Register event: {event_id}")
         self.hass.bus.async_listen(event_id, self.value_changed)
 
     
