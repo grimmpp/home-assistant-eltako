@@ -363,7 +363,7 @@ class EnOceanGateway:
         LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
 
         # receive messages from HA event bus
-        event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_SEND_MESSAGE)
         LOGGER.debug("[Gateway] [Id: %d] Register gateway bus for message event_id %s", event_id)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._callback_send_message_to_serial_bus
@@ -374,7 +374,7 @@ class EnOceanGateway:
         # The service will be registered for each gateway, as the user
         # might have different gateways that cause the eltako relays
         # only to react on them.
-        service_name = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE_SERVICE)
+        service_name = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_SEND_MESSAGE_SERVICE)
         LOGGER.debug("[Gateway] [Id: %d] Register send message service event_id %s", event_id)
         self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
 
@@ -426,7 +426,7 @@ class EnOceanGateway:
 
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
-        event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
+        event_id = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
         dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
 
@@ -478,7 +478,7 @@ class EnOceanGateway:
             if int.from_bytes(self.base_id[0]) != 0:
 
                 # Send message on local bus. Only devices configure to this gateway will receive those message.
-                event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_RECEIVE_MESSAGE)
+                event_id = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_RECEIVE_MESSAGE)
                 dispatcher_send(self.hass, event_id, message)
 
                 if type(message) not in [EltakoDiscoveryRequest]:
@@ -486,10 +486,10 @@ class EnOceanGateway:
                     global_msg = prettify(message)
                     # do not change discovery and memory message addresses, base id will be sent upfront so that the receive known to whom the message belong
                     if type(message) in [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoMessage]:
-                        address = message.body[6:10]
-                        if address[0:2] == b'\x00\x00':
-                            g_address = (int.from_bytes(address, 'big') + int.from_bytes(self.base_id[0], 'big')).to_bytes(4, byteorder='big')
-                            global_msg = prettify(ESP2Message( message.body[:8] + g_address + message.body[12:] ))
+                        address = AddressExpression((message.body[6:10], None))
+                        if address.is_local_address():
+                            address = address.add(self.base_id)
+                            global_msg = prettify(ESP2Message( message.body[:8] + address[0] + message.body[12:] ))
 
 
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)

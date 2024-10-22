@@ -164,6 +164,7 @@ class EltakoEntity(Entity):
             if adr.is_local_address():
                 adr = adr.add(self.gateway.base_id)
 
+            LOGGER.debug(f"[{self.platform} {self.dev_id}] check if message address {b2s(msg.address)} is in registered list {', '.join([b2s(a) for a in self.listen_to_addresses])}")
             if adr[0] in self.listen_to_addresses:
                 self.value_changed(msg)
 
