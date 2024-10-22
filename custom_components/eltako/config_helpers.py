@@ -192,7 +192,8 @@ def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:
         if not id.endswith('_'): id += '_'
         id += f"{event_id}"
 
-    if dev_id is not None:
+    # if dev_id = 00-00-00-00 leave it away because entitiy belongs then to gateway
+    if dev_id is not None and int.from_bytes(dev_id[0], 'big') > 0:
         if not id.endswith('_'): id += '_'
         id += f"{b2s(dev_id, '_')}"
 
