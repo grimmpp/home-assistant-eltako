@@ -190,12 +190,16 @@ def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:
         id += f"gw_{gateway_id}_"
 
     if event_id is not None:
-        id += f"{event_id}_"
+        if not id.endswith('_'): id += '_'
+        id += f"{event_id}"
 
-    id += f"{b2s(dev_id, '_')}"
+    if dev_id is not None:
+        if not id.endswith('_'): id += '_'
+        id += f"{b2s(dev_id, '_')}"
 
     if description_key is not None and description_key != '':
-        id += f"_{description_key.replace(' ', "_").replace('-', '_')}"
+        if not id.endswith('_'): id += '_'
+        id += f"{description_key.replace(' ', "_").replace('-', '_')}"
 
     return id.lower()
 

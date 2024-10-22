@@ -7,7 +7,10 @@
 * FAM14 can detect bus devices and report it into eo_man 
 * Support for EUL Gateway
 * Gateways can be used as repeater inside HA
-* For dimming switches/buttons events contains when it was pushed and released
+* For e.g. dimming light switches/buttons events contains time information when and for how long they were pushed
+* Created blueprint for dmming and switch lights off and on which trigger by EnOcean switches and not controlled via eltako actuators. You can use EnOcean switches to e.g. controll Zigbee lights from Philips Hue or any other protocol and lights which can be controlled by Home Assistant Automations.
+
+TODO: improve performance of controlling groups. (send only one group telegram instead of many indivitual commands)
 
 ## Version 1.5.9
 * Replaced deprecated log function warn through warning
