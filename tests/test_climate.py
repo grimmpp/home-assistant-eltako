@@ -51,10 +51,10 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
 
-        mode = A5_10_06.Heater_Mode.NORMAL
+        mode = A5_10_06.HeaterMode.NORMAL
         target_temp = 24
         current_temperature = 21
-        msg = A5_10_06(mode, target_temp, current_temperature, False).encode_message(b'\x00\x00\x00\x01')
+        msg = A5_10_06(mode, target_temp, current_temperature, A5_10_06.ControllerPriority.AUTO).encode_message(b'\x00\x00\x00\x01')
         cc.value_changed(msg)
         self.assertEqual( round(cc.current_temperature), current_temperature)
         self.assertEqual( round(cc.target_temperature), target_temp)
@@ -79,10 +79,10 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(cc.target_temperature, 0)
         self.assertEqual(cc.current_temperature, 0)
 
-        mode = A5_10_06.Heater_Mode.NORMAL
+        mode = A5_10_06.HeaterMode.NORMAL
         target_temp = 24
         current_temperature = 21
-        msg = A5_10_06(mode, target_temp, current_temperature, False).encode_message(b'\xFF\xFF\xFF\x01')
+        msg = A5_10_06(mode, target_temp, current_temperature, A5_10_06.ControllerPriority.AUTO).encode_message(b'\xFF\xFF\xFF\x01')
         cc.value_changed(msg)
         self.assertEqual(cc.hvac_mode, HVACMode.HEAT)
         self.assertEqual(cc._actuator_mode, A5_10_06.Heater_Mode.NORMAL);

@@ -23,7 +23,7 @@ SIGNAL_SEND_MESSAGE: Final = "send_message"
 SIGNAL_SEND_MESSAGE_SERVICE: Final = "send_message_service"
 EVENT_BUTTON_PRESSED: Final = "btn_pressed"
 EVENT_CONTACT_CLOSED: Final = "contact_closed"
-GLOBAL_EVENT_BUS_ID: Final = "eltako_global_event_bus"
+ELTAKO_GLOBAL_EVENT_BUS_ID: Final = "eltako_global_event_bus"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 
@@ -36,7 +36,6 @@ CONF_SENDER: Final = "sender"
 CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"
 CONF_SHOW_DEV_ID_IN_DEV_NAME: Final = "show_dev_id_in_dev_name"
-CONF_USE_GATEAYS_AS_HA_REPEATER: Final = "use_gateays_as_ha_repeater"
 CONF_ENABLE_TEACH_IN_BUTTONS: Final = "enable_teach_in_buttons"
 CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
 GATEWAY_DEFAULT_NAME: Final = "EnOcean Gateway"

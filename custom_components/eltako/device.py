@@ -35,11 +35,15 @@ class EltakoEntity(Entity):
         self._attr_dev_name = config_helpers.get_device_name(dev_name, dev_id, self.general_settings)
         self._attr_dev_eep = dev_eep
         self.listen_to_addresses = []
-        self.listen_to_addresses.append(self.dev_id[0])
-        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_HA_REPEATER]:
-            # calculate external address
-            g_address = (int.from_bytes(self.dev_id[0], 'big') + int.from_bytes(self.gateway.base_id[0], 'big')).to_bytes(4, byteorder='big')
-            self.listen_to_addresses.append(AddressExpression((g_address, None)))
+        
+        # calculate external address
+        if self.dev_id.is_local_address():
+            self._external_dev_id = self.dev_id.add(self.gateway.base_id)
+        else:
+            self._external_dev_id = self.dev_id
+
+        self.listen_to_addresses.append( self._external_dev_id[0] )
+
         self.description_key = description_key
         self._attr_unique_id = config_helpers.get_device_id(gateway.dev_id, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
@@ -73,26 +77,16 @@ class EltakoEntity(Entity):
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
         await super().async_added_to_hass()
-        
+
         # Register callbacks.
-        event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_RECEIVE_MESSAGE)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, event_id, self._message_received_callback
+                self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, self._message_received_callback
             )
         )
 
-        if self.gateway.general_settings[CONF_USE_GATEAYS_AS_HA_REPEATER]:
-            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_RECEIVE_MESSAGE)
-            self.async_on_remove(
-                async_dispatcher_connect(
-                    self.hass, GLOBAL_EVENT_BUS_ID, self._message_received_callback
-                )
-            )
-
         # load initial value
         if isinstance(self, RestoreEntity):
-
             # check if value is not set
             is_value_available = getattr(self, '_attr_native_value', None)
             if is_value_available is None:
@@ -125,6 +119,10 @@ class EltakoEntity(Entity):
         if sender_id is not None:
             return self.gateway.validate_sender_id(self.sender_id, self.dev_name)
         return True
+
+    @property
+    def external_dev_id(self) -> str:
+        return b2s(self._external_dev_id)
 
     @property
     def dev_name(self) -> str:
@@ -162,7 +160,11 @@ class EltakoEntity(Entity):
         msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
 
         if type(msg) in msg_types:
-            if msg.address in self.listen_to_addresses:
+            adr = AddressExpression((msg.address, None))
+            if adr.is_local_address():
+                adr = adr.add(self.gateway.base_id)
+
+            if adr[0] in self.listen_to_addresses:
                 self.value_changed(msg)
 
 

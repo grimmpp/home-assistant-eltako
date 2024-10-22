@@ -428,7 +428,7 @@ class EnOceanGateway:
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
-        dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
+        dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
 
 
     def unload(self):
@@ -452,7 +452,7 @@ class EnOceanGateway:
                 self.hass.create_task(
                     self._bus.send(msg)
                 )
-                dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
+                dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
         else:
             LOGGER.warning("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
 
@@ -493,7 +493,7 @@ class EnOceanGateway:
 
 
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
-                    dispatcher_send(self.hass, GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
+                    dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
             
             
     def create_base_id_infO_message(gw):
