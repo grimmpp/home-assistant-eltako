@@ -395,7 +395,7 @@ async def async_setup_entry(
                     if dev_conf.eep in [F6_02_01, F6_02_02]:
                         entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
 
-                    entities.append(StaticInfoField(platform, gateway, dev_conf.name, dev_conf.eep, "Event Id", event_id, "mdi:form-textbox"))
+                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Event Id", event_id, "mdi:form-textbox"))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
