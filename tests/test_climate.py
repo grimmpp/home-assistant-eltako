@@ -152,7 +152,7 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         })
         cc = create_climate_entity(cooling_switch=cooling_switch)
         self.assertEqual(cc.unique_id, 'eltako_gw_12345_00_00_00_01')
-        self.assertEqual(cc.entity_id, 'climate.eltako_gw_12345.00_00_00_01')
+        self.assertEqual(cc.entity_id, 'climate.eltako_gw_12345_00_00_00_01')
         self.assertEqual(cc.dev_name, 'Room 1')
         self.assertEqual(cc.temperature_unit, '°C')
         self.assertEqual(cc.cooling_sender, None)
