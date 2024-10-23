@@ -5,7 +5,7 @@ A gateway is the component which builds the bridge between Home Assistant and th
 ## Summary of Supported Gateways
 What gateway is preferred for what?
 
-### EnOcean Transceiver (USB based like Eltako FAM-USB, USB300, PioTek FAM-USB515, PioTek MGW, ...)
+### EnOcean Transceiver (USB based like Eltako FAM-USB, USB300, PioTek FAM-USB515, PioTek MGW, Busware TCM515 USB ...)
 * Is a good match for controlling actuators mounted on a RS485 bus with FAM14 and especially for decentralized actuators in Home Assistant.
 * It also allows to send teach-in telegrams so that you can teach-in actuators by using the Eltako Integration in Home Assistant.
 * It receives status update telegrams repatedly about each minute of every device on the bus.
@@ -266,6 +266,69 @@ eltako:
           eep: A5-38-08
 ```
 
+
+### Busware EnOcean TCM515 USB/WLAN Stick
+
+
+<img src="./Busware_TCM515.JPG" height=100>
+
+| Specialty | Description |
+| ----- | ----- |
+| Chip Set | [TCM515]([https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf)), [User Manual](https://busware.de/tiki-index.php?page=EUL), [Firmeware/Web-Installer](https://install.busware.de/) |
+| Protocol | ESP3 |
+| Connection | TCP Port 2325 |
+| Tool | [Firmware @Github](https://github.com/tostmann/busware-esp32/blob/main/firmware/busware-eul-c3-wifi-transparent.factory.bin), [Firmware @Busware](https://install.busware.de/firmware/busware-eul-c3-wifi-transparent.factory.bin) |
+| Sender Address Range | TCM515 has 128 address in the range of 0xFF80_0000 to 0xFFFF_FFFE starting at a base address (BaseId).  |
+
+Where to buy?: https://shop.busware.de/product_info.php/products_id/66?osCsid=d0ad3e15909d88de68471549c6ec8a1d
+
+#### Pro
+* TCP/Serial Wifi-Bridge
+* Full functionality
+* Easy installation + cheap price (~40-50€)
+
+#### Con
+* Firmware needs to be flashed by yourself
+* Needs WiFi connection
+ 
+<br> How-To:
+
+1. Connect your USB Stick to your PC
+2. Go to: https://install.busware.de/ with e.g Chrome Browser / Microsoft Edge
+3. Choose the correct FW (--> EnOcean TCM515 (EUL) | WiFi-bridge (Port 2325))
+   <br><img src="./Install_WiFi-Bridge.png" height=300>
+4. press connect and choose the your COM-port
+   <br><img src="./COM-Port.png" height=200>
+5. Erase the flash and install
+6. Enter your WiFi credentials
+7. After successful installation you will be forwareded to the UI of the stick
+  <br><img src="./Busware_TCM515_UI.png" height=200>
+8. HomeAssistant: install Eltako - [feature branch](/docs/install-specific-version-or-branch.md)
+9. add to your HomeAssistant configuration.yaml | adjust the Base ID and IP address
+```
+eltako:
+  gateway:
+  - id: 1
+    device_type: mgw-lan
+    base_id: FF-C1-58-00
+    address: 192.168.177.153
+    port: 2325
+    name: LAN_Gateway
+    devices:
+      light:
+      - id: FF-AA-00-01         # baseId of FAM14 (FF-AA-00-00) + internal address
+        eep: M5-38-08
+        name: FSR14_4x - 1
+        sender:
+          id: FF-80-80-01       # baseId of USB300 (FF-80-80-00) + sender id (0-80 HEX/128 DEZ)
+          eep: A5-38-08
+```
+10. add the Eltako Integration in HomeAssistant
+<br> <img src="./HA_add_TCP_Bridge_Eltako_Integration.png" height=200>
+
+
+
+ 
 
 ### FTD14 - RS485 bus telegram duplicator
 
