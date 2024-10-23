@@ -491,11 +491,15 @@ class EnOceanGateway:
                             address = address.add(self.base_id)
                             global_msg = prettify(ESP2Message( message.body[:8] + address[0] + message.body[12:] ))
 
-
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
                     dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
+
+                else:
+                    msg:EltakoDiscoveryReply = message
+                    LOGGER.debug(f"[Gateway] [Id: {str(self.dev_id)}] reported_address: {msg.reported_address}, reported_size; {msg.reported_size}, memory_size; {msg.memory_size}, model: {msg.model}, is_fam: {msg.is_fam}")
             
-            
+    
+    # TODO move into library
     def create_base_id_infO_message(gw):
         gw_type_id:int = GatewayDeviceType.indexOf(gw.dev_type) + 1
         data:bytes = b'\x8b\x98' + gw.base_id[0] + gw_type_id.to_bytes(1, 'big') + b'\x00\x00\x00\x00'
