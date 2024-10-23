@@ -105,13 +105,13 @@ class EnOceanGateway:
 
     async def query_for_base_id_and_version(self, connected):
         if connected:
-            if not GatewayDeviceType.is_esp2_gateway(self.dev_type):
+            if not GatewayDeviceType.is_esp2_gateway(self.dev_type) or self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
                 LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
                 await self._bus.send_base_id_request()
                 await self._bus.send_version_request()
 
-            elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-                await asyncio.to_thread(asyncio.run, self.get_fam14_base_id())
+            # elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
+            #     await asyncio.to_thread(asyncio.run, self.get_fam14_base_id())
 
 
 
@@ -244,35 +244,6 @@ class EnOceanGateway:
         return result
     
 
-    ### send and receive funtions for RS485 bus (serial bus)
-    ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
-
-    async def get_fam14_base_id(self):
-        LOGGER.debug("[Gateway] [Id: %d] Try to read base id of FAM14", self.dev_id)
-        is_locked = False
-        try:
-            self._bus.set_callback( None )
-
-            is_locked = (await locking.lock_bus(self._bus)) == locking.LOCKED
-            
-            # first get fam14 and make it know to data manager
-            response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(255, 1), EltakoMemoryResponse)
-            base_id_str = b2s(response.value[0:4])
-
-            # fam14:FAM14 = await create_busobject(bus=self._bus, id=255)
-            # base_id_str = await fam14.get_base_id()
-            self._attr_base_id = AddressExpression.parse( base_id_str )
-            LOGGER.info("[Gateway] [Id: %d] Found base id for FAM14 %s", self.dev_id, base_id_str)
-            self._fire_base_id_change_handlers(self.base_id)
-
-        except Exception as e:
-            LOGGER.error("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
-            raise e
-        finally:
-            if is_locked:
-                resp = await locking.unlock_bus(self._bus)
-            self._bus.set_callback( self._callback_receive_message_from_serial_bus )
-
 
     async def read_memory_of_all_bus_members(self):
         if not self._reading_memory_of_devices_is_running.is_set():
@@ -280,72 +251,13 @@ class EnOceanGateway:
 
 
     async def _read_memory_of_all_bus_members(self):
-        
-        if self.dev_type == GatewayDeviceType.EltakoFAM14:
-            LOGGER.debug("[Gateway] [Id: %d] Try to read memory of all bus devices", self.dev_id)
-            
+        try:
             self._reading_memory_of_devices_is_running.set()
-            is_locked = False
-            try:
-                self._bus.set_callback( None )
-
-                is_locked = (await locking.lock_bus(self._bus)) == locking.LOCKED
-                
-                self._callback_receive_message_from_serial_bus( self.create_base_id_infO_message() )
-
-                # iterate through devices
-                for id in range(1, 256):
-                    # exit if gateway is about to be deleted
-                    if not self._reading_memory_of_devices_is_running.is_set():
-                        return
-                    
-                    try:
-                        dev_response:EltakoDiscoveryReply = await self._bus.exchange(EltakoDiscoveryRequest(address=id), EltakoDiscoveryReply, retries=3)
-                        if dev_response == None:
-                            break
-
-                        assert id == dev_response.reported_address, "Queried for ID %s, received %s" % (id, prettify(dev_response))
-
-                        self._callback_receive_message_from_serial_bus(dev_response)
-                        asyncio.sleep(.02)
-
-                        device_name = ""
-                        for o in sorted_known_objects:
-                            if dev_response.model[0:2] in o.discovery_names:
-                                device_name = o.__name__
-
-                        LOGGER.debug("[Gateway] [Id: %d] Read memory from %s", self.dev_id, device_name)
-                        # iterate through memory lines
-                        for line in range(0, dev_response.memory_size):
-                            # exit if gateway is about to be deleted
-                            if not self._reading_memory_of_devices_is_running.is_set():
-                                return
-                                
-                            try:                             
-                                # LOGGER.debug("[Gateway] [Id: %d] Read memory line %d", self.dev_id, line)
-                                mem_response:EltakoMemoryResponse = await self._bus.exchange(EltakoMemoryRequest(dev_response.reported_address, line), EltakoMemoryResponse, retries=3)
-                                self._callback_receive_message_from_serial_bus(mem_response)
-                                asyncio.sleep(.02)
-                            except TimeoutError:
-                                continue
-                            except Exception as e:
-                                LOGGER.error("[Gateway] [Id: %d] Cannot read memory line %d from device (id=%d)", self.dev_id, line, id)
-
-                    except TimeoutError:
-                        continue
-                    except Exception as e:
-                        LOGGER.exception("[Gateway] [Id: %d] Cannot detect device with address {i}", self.dev_id, id)
-
-            except Exception as e:
-                LOGGER.exception("[Gateway] [Id: %d] Failed to load base_id from FAM14.", self.dev_id)
-                raise e
-            finally:
-                if is_locked:
-                    resp = await locking.unlock_bus(self._bus)
-                self._reading_memory_of_devices_is_running.clear()
-                self._bus.set_callback( self._callback_receive_message_from_serial_bus ) 
-        else:
-            LOGGER.error(f"Cannot read memory of FAM14 beceuase this is a different gateway ({self.dev_type})")
+            await request_memory_of_all_devices(self._bus)
+        except Exception as e:
+            LOGGER.exception(f"[Gateway] [Id: {self.dev_id}] {e}")
+        finally:
+            self._reading_memory_of_devices_is_running.clear()
 
 
 
@@ -490,22 +402,11 @@ class EnOceanGateway:
                         if address.is_local_address():
                             address = address.add(self.base_id)
                             global_msg = prettify(ESP2Message( message.body[:8] + address[0] + message.body[12:] ))
-                            
-                    elif type(message) in [EltakoDiscoveryReply]:
-                        msg:EltakoDiscoveryReply = message
-                        LOGGER.debug(f"[Gateway] [Id: {str(self.dev_id)}] reported_address: {msg.reported_address}, reported_size; {msg.reported_size}, memory_size; {msg.memory_size}, model: {msg.model}, is_fam: {msg.is_fam}")
 
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
                     dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
             
     
-    # TODO move into library
-    def create_base_id_infO_message(gw):
-        gw_type_id:int = GatewayDeviceType.indexOf(gw.dev_type) + 1
-        data:bytes = b'\x8b\x98' + gw.base_id[0] + gw_type_id.to_bytes(1, 'big') + b'\x00\x00\x00\x00'
-        return ESP2Message(bytes(data))
-
-
     @property
     def unique_id(self) -> str:
         """Return the unique id of the gateway."""

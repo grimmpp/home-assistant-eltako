@@ -5,34 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: device discovery (Linux)",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/eltakodevice_discovery/ha_discovery.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            // Change the serial path if it does not mach in your case.
-            "args": ["--verbose", "--eltakobus", "/dev/ttyUSB0", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"],
-            "env": {
-                "PYTHONPATH": "${workspaceRoot}",
-            }
-        },
-
-        {
-            "name": "Python: device discovery (Windows)",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/eltakodevice_discovery/ha_discovery.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            // Change the number of the COM port if it does not mach in your case.
-            "args": ["--verbose", "--eltakobus", "COM10", "--output", "ha.yaml", "--offset-sender-address", "0x0000B000"],   //, "-wsa"
-            "env": {
-                "PYTHONPATH": "${workspaceRoot}",
-            }
-        },
-
-        {
             "name": "Python: Debug Tests",
             "type": "debugpy",
             "request": "launch",
@@ -45,19 +17,7 @@
             },
             "justMyCode": false,
             "cwd": "${workspaceRoot}",
-          },
-
-          {
-              "name": "Python: Device Discovery GUI",
-              "type": "python",
-                "request": "launch",
-                "program": "${workspaceFolder}/eltakodevice_discovery/dd_gui.py",
-                "console": "integratedTerminal",
-                "justMyCode": true,
-                "env": {
-                    "PYTHONPATH": "${workspaceRoot}",
-                }
-            }
+          }
           
     ]
 }

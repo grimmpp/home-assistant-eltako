@@ -123,7 +123,6 @@ python -m unittest discover tests -v
 ```
 
 # Documentation
-* [Create Home Assistant Configuration File for Eltako Integration](https://github.com/grimmpp/home-assistant-eltako/tree/main/eltakodevice_discovery/)
 * [Eltako Home Automation](https://github.com/cvanlabe/Eltako-home-automation) from [Cedric Van Labeke](https://github.com/cvanlabe)
 * [Simple Eltako Setup](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/simple_eltako_setup.md)
 * [How to detect Switch Signals and react on thoese in Home Assistant](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
