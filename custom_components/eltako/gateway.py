@@ -494,9 +494,9 @@ class EnOceanGateway:
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
                     dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
 
-                else:
-                    msg:EltakoDiscoveryReply = message
-                    LOGGER.debug(f"[Gateway] [Id: {str(self.dev_id)}] reported_address: {msg.reported_address}, reported_size; {msg.reported_size}, memory_size; {msg.memory_size}, model: {msg.model}, is_fam: {msg.is_fam}")
+                    if type(message) in [EltakoDiscoveryReply]:
+                        msg:EltakoDiscoveryReply = message
+                        LOGGER.debug(f"[Gateway] [Id: {str(self.dev_id)}] reported_address: {msg.reported_address}, reported_size; {msg.reported_size}, memory_size; {msg.memory_size}, model: {msg.model}, is_fam: {msg.is_fam}")
             
     
     # TODO move into library
