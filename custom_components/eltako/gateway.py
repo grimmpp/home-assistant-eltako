@@ -12,7 +12,7 @@ from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import *
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
-from eltakobus.device import sorted_known_objects
+from eltakobus.device import request_memory_of_all_devices
 from eltakobus import locking
 
 from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
