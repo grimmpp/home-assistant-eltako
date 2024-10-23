@@ -8,6 +8,7 @@ from zeroconf import Zeroconf, ServiceInfo
 
 from eltakobus.message import ESP2Message
 from eltakobus.util import b2s, AddressExpression
+from eltakobus.serial import RS485SerialInterfaceV2
 
 from homeassistant.components import zeroconf
 from homeassistant.core import HomeAssistant
@@ -101,7 +102,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         for gw in self.sending_gateways:
             try:
                 ## send base id and put gateway type as well into it
-                msg = gw.create_base_id_infO_message()
+                msg = RS485SerialInterfaceV2.create_base_id_info_message(gw.base_id, GatewayDeviceType.indexOf(gw.dev_type)+1)
                 LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type}) ")
                 conn.sendall( msg.serialize() )
 
