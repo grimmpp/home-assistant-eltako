@@ -106,6 +106,9 @@ class VirtualNetworkGateway(EnOceanGateway):
                 LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Send gateway info {gw} (id: {gw.dev_id}, base id: {b2s(gw.base_id)}, type: {gw.dev_type}) ")
                 conn.sendall( msg.serialize() )
 
+                if gw.dev_type == GatewayDeviceType.EltakoFAM14:
+                    gw.read_memory_of_all_bus_members()
+
                 ## request gateway version
                 #TODO: ...
             except Exception as e:
