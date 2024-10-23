@@ -167,6 +167,7 @@ class EltakoEntity(Entity):
 
             # LOGGER.debug(f"[{self.platform} {self.dev_id}] check if message address {b2s(msg.address)} is in registered list {', '.join([b2s(a) for a in self.listen_to_addresses])}")
             if adr[0] in self.listen_to_addresses:
+                ## TODO: filter out message sent twice through other gateways
                 self.value_changed(msg)
 
 

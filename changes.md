@@ -4,6 +4,8 @@
 * No Need for defining base id in config file except for FGW14-SUB
   * Entity Ids of gateways change so that base id is not contained anymore
 * Reverse Network EnOcean Bridge to be able to connect eo_man.
+  * TODO: sending of message does often not work in the beginning
+  * TODO: send gateway information frequently
 * FAM14 can detect bus devices and report it into eo_man 
 * Support for EUL Gateway
 * Gateways can be used as repeater inside HA
