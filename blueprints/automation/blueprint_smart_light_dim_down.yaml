@@ -10,24 +10,22 @@ blueprint:
         entity:
           domain: switch
 
-alias: light down
+alias: Light Down
 description: ""
 triggers:
-  - trigger: event
-    event_type: eltako.gw_1.btn_pressed.sid_FE-DB-0A-10.d_LB
+  - event_type: eltako.gw_1.btn_pressed.sid_FE-DB-0A-10.d_LB
+    trigger: event
 conditions: []
 actions:
   - repeat:
       while:
-        - condition: state
-          entity_id: binary_sensor.eltako_gw1_fe_db_0a_10
-          state: "on"
+        - condition: template
+          value_template: "{{ is_state(trigger.event.data.id, 'on') }}"
       sequence:
         - target:
             entity_id: 2fb48f5d7e27ce6538b39bf718baa910
-          data_template:
+          data:
             brightness_step: -20
           action: light.turn_on
         - delay:
             milliseconds: 50
-mode: single
