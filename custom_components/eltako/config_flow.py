@@ -61,6 +61,31 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 }),
             }),
         )
+    
+    async def async_step_all_enocean_switch_event_ids(self, user_input=None):
+        """Handle the selection of a specific sensor."""
+        if user_input is not None:
+            # Store selected sensor in config entry
+            return self.async_create_entry(title="Sensor Selection", data=user_input)
+
+        enocean_switch_event_ids = [
+            entity_id for entity_id in self.hass.states.async_entity_ids("sensor")
+            if DOMAIN in entity_id and "_event_id" in entity_id  # Filter criterion: only entities with "event" in the ID
+        ]
+
+        LOGGER.debug("[%s] create filter 'all_enocean_switch_event_ids' %s", LOGGER_PREFIX_CONFIG_FLOW, ', '.join(enocean_switch_event_ids))
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({
+                vol.Required("all_enocean_switch_event_ids"): selector({
+                    "entity": {
+                        "domain": "sensor",
+                        "filter": enocean_switch_event_ids  # Using a dynamically filtered list
+                    }
+                }),
+            }),
+        )
 
     async def async_step_select_hub(self, user_input=None):
         """Handle an Eltako config flow start."""
