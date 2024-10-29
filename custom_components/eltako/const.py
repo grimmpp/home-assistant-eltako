@@ -101,7 +101,7 @@ class GatewayDeviceType(str, Enum):
     MGW_LAN = 'mgw-lan'
     EUL_LAN = 'eul_lan'
     LAN_ESP2 = "lan-gw-esp2"
-    VirtualNetworkAdapter = 'esp2-netowrk-reverse-bridge'   # subtype of LAN_ESP2
+    VirtualNetworkAdapter = 'esp2-network-reverse-bridge'   # subtype of LAN_ESP2
 
     @classmethod
     def indexOf(cls, value):
