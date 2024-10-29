@@ -30,7 +30,6 @@ from homeassistant.const import (
     PERCENTAGE,
     CONF_LANGUAGE,
     UnitOfElectricPotential,
-    EltakoSupportedFeatures
 )
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
