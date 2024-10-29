@@ -8,6 +8,7 @@ import ipaddress
 from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.selector import selector
 
 from . import gateway
 from . import config_helpers
@@ -35,10 +36,35 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return False
 
     async def async_step_user(self, user_input=None):
-        """Handle an Eltako config flow start."""
-        # is called when adding a new gateway
-        LOGGER.debug("[%s] config_flow user step started.", LOGGER_PREFIX_CONFIG_FLOW)
-        return await self.async_step_detect()
+        """Handle the initial step."""
+
+        if user_input is not None:
+            # Process the user input and continue the flow
+            return self.async_create_entry(title=DOMAIN, data=user_input)
+
+        # Use a filtered list of entities as a selector, e.g., for `binary_sensor` devices with specific criteria.
+        enocean_switch_event_ids = [
+            entity_id for entity_id in self.hass.states.async_entity_ids("sensor")
+            if DOMAIN in entity_id and "_event_id" in entity_id  # Filter criterion: only entities with "event" in the ID
+        ]
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({
+                vol.Required("all_enocean_switch_event_ids"): selector({
+                    "entity": {
+                        "domain": "sensor",
+                        "filter": enocean_switch_event_ids  # Using a dynamically filtered list
+                    }
+                }),
+            }),
+        )
+
+    # async def async_step_user(self, user_input=None):
+    #     """Handle an Eltako config flow start."""
+    #     # is called when adding a new gateway
+    #     LOGGER.debug("[%s] config_flow user step started.", LOGGER_PREFIX_CONFIG_FLOW)
+    #     return await self.async_step_detect()
 
     async def async_step_detect(self, user_input=None):
         """Propose a list of detected gateways."""
