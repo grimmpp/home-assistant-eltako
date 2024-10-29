@@ -1,6 +1,7 @@
 """Support for Eltako sensors."""
 from __future__ import annotations
 
+from typing import List
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -29,6 +30,7 @@ from homeassistant.const import (
     PERCENTAGE,
     CONF_LANGUAGE,
     UnitOfElectricPotential,
+    EltakoSupportedFeatures
 )
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -395,7 +397,7 @@ async def async_setup_entry(
                     if dev_conf.eep in [F6_02_01, F6_02_02]:
                         entities.append(EventListenerInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, event_id, "Pushed Buttons", convert_event, "mdi:gesture-tap-button"))
 
-                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Event Id", event_id, "mdi:form-textbox"))
+                    entities.append(StaticInfoField(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, "Event Id", event_id, "mdi:form-textbox", EltakoSupportedFeatures.EnOceanEvent))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", Platform.BINARY_SENSOR)
@@ -987,7 +989,7 @@ class GatewayBaseId(EltakoSensor):
 class StaticInfoField(EltakoSensor):
     """Key value fields for gateway information"""
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None, supported_features:List[EltakoSupportedFeatures]=[]):
         super().__init__(platform, gateway,
                          dev_id=dev_id, 
                          dev_name=dev_name, 
@@ -1001,6 +1003,8 @@ class StaticInfoField(EltakoSensor):
         )
         self._attr_name = key
         self._attr_native_value = value
+        for sf in supported_features:
+            self._attr_supported_features |= sf
 
     def value_changed(self, value) -> None:
         pass
