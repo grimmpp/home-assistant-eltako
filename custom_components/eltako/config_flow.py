@@ -48,6 +48,8 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if DOMAIN in entity_id and "_event_id" in entity_id  # Filter criterion: only entities with "event" in the ID
         ]
 
+        LOGGER.debug("[%s] create filter 'all_enocean_switch_event_ids' %s", LOGGER_PREFIX_CONFIG_FLOW, ', '.join(enocean_switch_event_ids))
+
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
