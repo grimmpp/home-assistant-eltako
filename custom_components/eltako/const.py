@@ -86,9 +86,7 @@ PLATFORMS: Final = [
     Platform.SELECT
 ]
 
-class EltakoSupportedFeatures(Enum):
-    EnOceanEvent = 0x01
-    
+
 class GatewayDeviceType(str, Enum):
     GatewayEltakoFAM14 = 'fam14'
     GatewayEltakoFGW14USB = 'fgw14usb'

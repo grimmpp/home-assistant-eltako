@@ -1,0 +1,114 @@
+blueprint:
+  name: Switch Light on/off
+  description: Turns light on and off if left direction switch is pressed
+  domain: automation
+  author: Philipp Grimm
+  input:
+    event_id:
+      name: Name of event
+      description: Enter event id of button
+      selector:
+        text: {}
+    switch_position:
+      name: Switch Position
+      description: Choose 'left', 'right', 'both' or 'single'
+      selector:
+        select:
+          options:
+            - left
+            - right
+            - both
+            - single
+      default: left
+    button_timeout:
+      name: Timeout
+      description: "Timeout for releasing button. After button is pushed for too long event will be ignored. (timeout = 0: decativates the timeout)"
+      selector: 
+        number:
+          min: 0
+          max: 60
+          step: 0.1
+          unit_of_measurement: "seconds"
+      default: 0.4
+    light_target:
+      name: Light to Control
+      description: The light entity to turn on or off based on the event data
+      selector:
+        target:
+          entity:
+            domain: light
+
+
+variables:
+  var_timeout: !input button_timeout
+  var_position: !input switch_position
+  var_target_light: !input light_target
+
+triggers:
+  - trigger: event
+    event_type: !input event_id
+    
+conditions:
+  - condition:
+      - condition: template
+        value_template: >-
+          {{ var_timeout == 0 or 
+          (trigger.event.data.push_duration_in_sec > 0 and 
+          trigger.event.data.push_duration_in_sec < var_timeout) and 
+          trigger.event.data.pressed == False}}
+
+actions:
+  - action: system_log.write
+    metadata: {}
+    data:
+      level: info
+      message: "Test test: {{var_position}}, {{ trigger.event.data.prev_pressed_buttons}}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['LT'] and var_position == 'left'}}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['LB'] and var_position == 'left'}}"
+        sequence:
+          - service: light.turn_off
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['RT'] and var_position == 'right'}}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['RB'] and var_position == 'right'}}"
+        sequence:
+          - service: light.turn_off
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['RT', 'LT'] and var_position == 'both'}}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['RB', 'LB'] and var_position == 'both'}}"
+        sequence:
+          - service: light.turn_off
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.pressed and var_position == 'single'}}"
+        sequence:
+          - service: light.toggle
+            target: !input light_target
+      - conditions:
+          - condition: template
+            value_template: "{{ not trigger.event.data.pressed and var_position == 'single'}}"
+        sequence:
+          - service: light.toggle
+            target: !input light_target

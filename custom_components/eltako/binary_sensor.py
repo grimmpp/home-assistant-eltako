@@ -232,6 +232,16 @@ class EltakoBinarySensor(AbstractBinarySensor):
             if len(prev_pressed_buttons) > 0:
                 event_data['prev_pressed_buttons'] = prev_pressed_buttons
             
+
+            # Show status change in HA. It will only for the moment when the button is pushed down.
+            # Change first button status so that automations can request it after event was fired.
+            if not self.invert_signal:
+                self._attr_is_on = len(pressed_buttons) > 0
+            else: 
+                self._attr_is_on = not ( len(pressed_buttons) > 0 )
+            self.schedule_update_ha_state()
+           
+
             # send generic event id per swtich
             LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
@@ -243,13 +253,6 @@ class EltakoBinarySensor(AbstractBinarySensor):
             self.hass.bus.fire(event_id, event_data)
 
             self.RECEIVED_TELEGRAMS[b2s(self.dev_id)] = event_data
-
-            # Show status change in HA. It will only for the moment when the button is pushed down.
-            if not self.invert_signal:
-                self._attr_is_on = len(pressed_buttons) > 0
-            else: 
-                self._attr_is_on = not ( len(pressed_buttons) > 0 )
-            self.schedule_update_ha_state()
 
             return
         
