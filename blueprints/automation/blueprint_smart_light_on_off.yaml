@@ -37,12 +37,29 @@ blueprint:
         target:
           entity:
             domain: light
-
+    last_brightness:
+      name: Remember last brightness
+      description: When switching on previouse brightness will be used.
+      default: true  # Optional default value
+      selector:
+        boolean: {}
+    brightness: 
+      name: Brightness
+      description: Brightness which shall be set when switched on
+      selector: 
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "brightness in %"
+      default: 75
 
 variables:
   var_timeout: !input button_timeout
   var_position: !input switch_position
   var_target_light: !input light_target
+  var_brightness: !input brightness
+  var_last_brightness: !input last_brightness
 
 triggers:
   - trigger: event
@@ -66,7 +83,15 @@ actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['LT'] and var_position == 'left'}}"
+            value_template: "{{ not var_last_brightness and trigger.event.data.prev_pressed_buttons == ['LT'] and var_position == 'left'}}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+            data:
+              brightness_pct: "{{var_brightness | int}}"
+      - conditions:
+          - condition: template
+            value_template: "{{ var_last_brightness and trigger.event.data.prev_pressed_buttons == ['LT'] and var_position == 'left'}}"
         sequence:
           - service: light.turn_on
             target: !input light_target
@@ -78,7 +103,15 @@ actions:
             target: !input light_target
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['RT'] and var_position == 'right'}}"
+            value_template: "{{ not var_last_brightness and trigger.event.data.prev_pressed_buttons == ['RT'] and var_position == 'right'}}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+            data:
+              brightness_pct: "{{var_brightness | int}}"
+      - conditions:
+          - condition: template
+            value_template: "{{ var_last_brightness and trigger.event.data.prev_pressed_buttons == ['RT'] and var_position == 'right'}}"
         sequence:
           - service: light.turn_on
             target: !input light_target
@@ -90,7 +123,15 @@ actions:
             target: !input light_target
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.prev_pressed_buttons == ['RT', 'LT'] and var_position == 'both'}}"
+            value_template: "{{ not var_last_brightness and trigger.event.data.prev_pressed_buttons == ['RT', 'LT'] and var_position == 'both'}}"
+        sequence:
+          - service: light.turn_on
+            target: !input light_target
+            data:
+              brightness_pct: "{{var_brightness | int}}"
+      - conditions:
+          - condition: template
+            value_template: "{{ var_last_brightness and trigger.event.data.prev_pressed_buttons == ['RT', 'LT'] and var_position == 'both'}}"
         sequence:
           - service: light.turn_on
             target: !input light_target
@@ -102,13 +143,15 @@ actions:
             target: !input light_target
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.pressed and var_position == 'single'}}"
+            value_template: "{{  not var_last_brightness and trigger.event.data.pressed and var_position == 'single'}}"
         sequence:
           - service: light.toggle
             target: !input light_target
+            data:
+              brightness_pct: "{{var_brightness | int}}"
       - conditions:
           - condition: template
-            value_template: "{{ not trigger.event.data.pressed and var_position == 'single'}}"
+            value_template: "{{  var_last_brightness and trigger.event.data.pressed and var_position == 'single'}}"
         sequence:
           - service: light.toggle
             target: !input light_target
