@@ -12,6 +12,7 @@
 * Button event ids changed => INCOMPATIBILTIY to older versions
 * Button events can be used for e.g. dimming therefore events contains time information when and for how long buttons were pushed
 * Created blueprint for dmming and switch lights off and on which trigger by EnOcean switches and not controlled via eltako actuators. You can use EnOcean switches to e.g. controll Zigbee lights from Philips Hue or any other protocol and lights which can be controlled by Home Assistant Automations.
+* Connection state fixed: Display information about gateway connection was sometimes displayed incorrectly
 
 TODO: improve performance of controlling groups. (send only one group telegram instead of many indivitual commands)
 
