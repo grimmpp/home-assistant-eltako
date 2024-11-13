@@ -267,7 +267,7 @@ class EnOceanGateway:
             LOGGER.info("[Gateway] [Id: %d] Connection Restart", self.dev_id)
             self._bus.stop()
             self._bus.join(10)    # wait until thread is really stopped
-            LOGGER.debug("[Gateway] [Id: %d] Connection steopped", self.dev_id)
+            LOGGER.debug("[Gateway] [Id: %d] Connection stopped", self.dev_id)
             self._init_bus()
             self._bus.start()
         except Exception as e:
