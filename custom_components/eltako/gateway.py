@@ -264,6 +264,7 @@ class EnOceanGateway:
 
     def reconnect(self):
         self._bus.stop()
+        self._bus.join()
         self._init_bus()
         self._bus.start()
 

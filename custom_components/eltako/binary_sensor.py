@@ -118,7 +118,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
     - D5-00-01
     """
 
-    RECEIVED_TELEGRAMS:Dict[str,Dict] = {}
+    LAST_RECEIVED_TELEGRAMS:Dict[str,Dict] = {}
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, 
                  device_class: str, invert_signal: bool, description: EntityDescription=None):
@@ -170,6 +170,26 @@ class EltakoBinarySensor(AbstractBinarySensor):
 
         telegram_received_time = time.time()
 
+        event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, msg.address)
+        event_data = {
+            "id": event_id,
+            "entity_id": self.entity_id,
+            "data": int.from_bytes(msg.data, "big"),
+            "eep": self.dev_eep.eep_string,
+            "switch_address": b2s(msg.address),
+            "pressed_buttons": [],
+            "prev_pressed_buttons": [],
+            "pressed": False,
+            "two_buttons_pressed": False,
+            "rocker_first_action": None,
+            "rocker_second_action": None,
+            "push_telegram_received_time_in_sec": telegram_received_time,
+            "release_telegram_received_time_in_sec": -1, 
+            "push_duration_in_sec": -1,
+        }
+
+
+        # wall switches
         if self.dev_eep in [F6_02_01, F6_02_02]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id), self.dev_eep.eep_string)
             pressed_buttons = []
@@ -181,7 +201,6 @@ class EltakoBinarySensor(AbstractBinarySensor):
             push_telegram_received_time = telegram_received_time
             release_telegram_received_time = -1
             pushed_duration = -1
-            prev_pressed_buttons = []
 
             # Data is only available when button is pressed. 
             # Button cannot be identified when releasing it.
@@ -205,100 +224,46 @@ class EltakoBinarySensor(AbstractBinarySensor):
                 if sa == 3:
                     pressed_buttons += ["RT"]
 
-            if not pressed and not two_buttons_pressed:
-                # button released but no detailed information available
-                prev_pressed_buttons = self.RECEIVED_TELEGRAMS[b2s(self.dev_id)]['pressed_buttons']
-                push_telegram_received_time = self.RECEIVED_TELEGRAMS[b2s(self.dev_id)]['push_telegram_received_time_in_sec']
-                release_telegram_received_time = telegram_received_time
-                pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
-                
-
             # fire first event for the entire switch
-            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, msg.address)
-            event_data = {
-                    "id": event_id,
-                    "entity_id": self.entity_id,
-                    "data": int.from_bytes(msg.data, "big"),
-                    "switch_address": b2s(msg.address),
-                    "pressed_buttons": pressed_buttons,
-                    "pressed": pressed,
-                    "two_buttons_pressed": two_buttons_pressed,
-                    "rocker_first_action": decoded.rocker_first_action,
-                    "rocker_second_action": decoded.rocker_second_action,
-                    "push_telegram_received_time_in_sec": push_telegram_received_time,
-                    "release_telegram_received_time_in_sec": release_telegram_received_time, 
-                    "push_duration_in_sec": pushed_duration,
-                }
-            if len(prev_pressed_buttons) > 0:
-                event_data['prev_pressed_buttons'] = prev_pressed_buttons
+            event_data.update({
+                "pressed_buttons": pressed_buttons,
+                "pressed": pressed or two_buttons_pressed,
+                "two_buttons_pressed": two_buttons_pressed,
+                "rocker_first_action": decoded.rocker_first_action,
+                "rocker_second_action": decoded.rocker_second_action,
+            })
             
-            # send generic event id per swtich
-            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
-            self.hass.bus.fire(event_id, event_data)
 
             # send event id containing button positions
-            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, msg.address, '-'.join(prev_pressed_buttons+pressed_buttons))
-            event_data['id'] = event_id
-            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(prev_pressed_buttons+pressed_buttons))
-            self.hass.bus.fire(event_id, event_data)
+            # event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, msg.address, '-'.join(prev_pressed_buttons+pressed_buttons))
+            # event_data['id'] = event_id
+            # LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(prev_pressed_buttons+pressed_buttons))
+            # self.hass.bus.fire(event_id, event_data)
 
-            self.RECEIVED_TELEGRAMS[b2s(self.dev_id)] = event_data
 
             # Show status change in HA. It will only for the moment when the button is pushed down.
             # Change first button status so that automations can request it after event was fired.
-            if not self.invert_signal:
-                self._attr_is_on = len(pressed_buttons) > 0
-            else: 
-                self._attr_is_on = not ( len(pressed_buttons) > 0 )
-            self.schedule_update_ha_state()
-
-            return
+            # != is XOR
+            self._attr_is_on = self.invert_signal != (len(pressed_buttons) > 0)
         
+        # switch / single button
         elif self.dev_eep in [F6_01_01]:
 
-            if decoded.button_pushed: 
-                push_telegram_received_time = telegram_received_time
-                release_telegram_received_time = None
-                pushed_duration = None
-            else:
-                push_telegram_received_time = self.RECEIVED_TELEGRAMS[b2s(self.dev_id)]['push_telegram_received_time_in_sec']
-                release_telegram_received_time = telegram_received_time
-                pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
-
-            # fire event
-            switch_address = b2s(msg.address)
-            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_BUTTON_PRESSED, AddressExpression((msg.address, None)))
-            event_data = {
-                    "id": event_id,
-                    "data": int.from_bytes(msg.data, "big"),
-                    "switch_address": switch_address,
-                    "pressed": decoded.button_pushed,
-                    "push_telegram_received_time_in_sec": push_telegram_received_time,
-                    "release_telegram_received_time_in_sec": release_telegram_received_time, 
-                    "push_duration_in_sec": pushed_duration,
-                }
-            LOGGER.debug("[%s %s] Send event: %s, pushed down: %s", Platform.BINARY_SENSOR, str(self.dev_id), event_id, str(decoded.button_pushed))
-            self.hass.bus.fire(event_id, event_data)
-
-            self.RECEIVED_TELEGRAMS[b2s(self.dev_id)] = event_data
-            
+            # extend event data
+            event_data['pressed'] = decoded.button_pushed
+                
             # Show status change in HA. It will only for the moment when the button is pushed down.
-            if not self.invert_signal:
-                self._attr_is_on = decoded.button_pushed
-            else: 
-                self._attr_is_on = not ( decoded.button_pushed )
+            self._attr_is_on = self.invert_signal != ( decoded.button_pushed )
             self.schedule_update_ha_state()
 
             return
 
         elif self.dev_eep in [F6_10_00]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id), self.dev_eep.eep_string)
-            
-            # is_on == True => open
-            self._attr_is_on = decoded.handle_position > 0
+            event_data['pressed'] = decoded.handle_position == 0
 
-            if self.invert_signal:
-                self._attr_is_on = not self._attr_is_on
+            # is_on == True => open
+            self._attr_is_on = self.invert_signal != (decoded.handle_position > 0)
 
         elif self.dev_eep in [D5_00_01]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id), self.dev_eep.eep_string)
@@ -306,11 +271,9 @@ class EltakoBinarySensor(AbstractBinarySensor):
             if decoded.learn_button == 0:
                 return
             
-            # contact: 0=open, 1=closed
-            if not self.invert_signal:
-                self._attr_is_on = decoded.contact == 0
-            else:
-                self._attr_is_on = decoded.contact == 1
+            event_data['pressed'] = decoded.contact == 1
+            
+            self._attr_is_on = self.invert_signal != decoded.contact == 1
 
         elif self.dev_eep in [A5_08_01]:
             # Occupancy Sensor
@@ -318,46 +281,60 @@ class EltakoBinarySensor(AbstractBinarySensor):
             if decoded.learn_button == 0:
                 return
                 
-            self._attr_is_on = decoded.pir_status == 1
+            event_data['pressed'] = decoded.pir_status == 1
 
-            if self.invert_signal:
-                self._attr_is_on = not self._attr_is_on
+            self._attr_is_on = self.invert_signal != decoded.pir_status == 1
 
         elif self.dev_eep in [A5_07_01]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id), self.dev_eep.eep_string)
 
-            self._attr_is_on = decoded.pir_status_on == 1
+            event_data['pressed'] = decoded.pir_status == 1
 
-            if self.invert_signal:
-                self._attr_is_on = not self._attr_is_on
+            self._attr_is_on = self.invert_signal != decoded.pir_status_on == 1
 
         elif self.dev_eep in [A5_30_01]:
 
             if self.description_key == "low_battery":
-                self._attr_is_on = decoded.low_battery
+                event_data['pressed'] = decoded.low_battery
+                self._attr_is_on = self.invert_signal != decoded.low_battery
             else:
-                self._attr_is_on = decoded._contact_closed
+                event_data['pressed'] = decoded._contact_closed
+                self._attr_is_on = self.invert_signal != decoded._contact_closed
 
-            if self.invert_signal:
-                self._attr_is_on = not self._attr_is_on
 
         elif self.dev_eep in [A5_30_03]:
 
             if self.description_key == "0":
-                self._attr_is_on = decoded.digital_input_0
+                if decoded.digital_input_0:
+                    event_data['pressed_buttons'] = [self.description_key]
+                    event_data['pressed'] = True
+                self._attr_is_on = self.invert_signal != decoded.digital_input_0
+
             elif self.description_key == "1":
-                self._attr_is_on = decoded.digital_input_1
+                if decoded.digital_input_1:
+                    event_data['pressed_buttons'] = [self.description_key]
+                    event_data['pressed'] = True
+                self._attr_is_on = self.invert_signal != decoded.digital_input_1
+
             elif self.description_key == "2":
-                self._attr_is_on = decoded.digital_input_2
+                if decoded.digital_input_2:
+                    event_data['pressed_buttons'] = [self.description_key]
+                    event_data['pressed'] = True
+                self._attr_is_on = self.invert_signal != decoded.digital_input_2
+
             elif self.description_key == "3":
-                self._attr_is_on = decoded.digital_input_3
+                if decoded.digital_input_3:
+                    event_data['pressed_buttons'] = [self.description_key]
+                    event_data['pressed'] = True
+                self._attr_is_on = self.invert_signal != decoded.digital_input_3
+
             elif self.description_key == "wake":
-                self._attr_is_on = decoded.status_of_wake
+                if decoded.status_of_wake:
+                    event_data['pressed_buttons'] = [self.description_key]
+                    event_data['pressed'] = True
+                self._attr_is_on = self.invert_signal != decoded.status_of_wake
             else:
                 raise Exception("[%s %s] EEP %s Unknown description key for A5-30-03", Platform.BINARY_SENSOR, str(self.dev_id), A5_30_03.eep_string)
-
-            if self.invert_signal:
-                self._attr_is_on = not self._attr_is_on
 
         else:
             LOGGER.warning("[%s %s] EEP %s not found for data processing.", Platform.BINARY_SENSOR, str(self.dev_id), self.dev_eep.eep_string)
@@ -365,17 +342,29 @@ class EltakoBinarySensor(AbstractBinarySensor):
         
         self.schedule_update_ha_state()
 
-        if self.is_on:
-            LOGGER.debug("Fire event for binary sensor.")
-            event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, EVENT_CONTACT_CLOSED, AddressExpression((msg.address, None)))
-            self.hass.bus.fire(
-                event_id,
-                {
-                    "id": event_id,
-                    "contact_address": b2s(msg.address),
-                    "is_on": self.is_on
-                },
-            )
+        # prepare event data
+        LOGGER.debug("Fire event for binary sensor.")
+        event_data['is_on'] = self.is_on
+        prev_pressed_buttons = self.LAST_RECEIVED_TELEGRAMS.get( b2s(self.dev_id), {'pressed_buttons':[]})['pressed_buttons']
+        if event_data['pressed_buttons'] == [] and prev_pressed_buttons != []:
+            event_data['prev_pressed_buttons'] = prev_pressed_buttons
+        # when button released
+        if not event_data['pressed']:
+            push_telegram_received_time = self.LAST_RECEIVED_TELEGRAMS[ b2s(self.dev_id), {'push_telegram_received_time_in_sec': -1}]['push_telegram_received_time_in_sec']
+            release_telegram_received_time = telegram_received_time
+            pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
+
+            if push_telegram_received_time == -1:
+                raise Exception(f"[{Platform.BINARY_SENSOR} {b2(self.dev_id)}] EEP {self.dev_eep.eep_string}: No information about previouse event.")
+        
+            event_data.update({
+                "push_telegram_received_time_in_sec": push_telegram_received_time,
+                "release_telegram_received_time_in_sec": release_telegram_received_time, 
+                "push_duration_in_sec": pushed_duration,
+            })
+
+        self.LAST_RECEIVED_TELEGRAMS[b2s(self.dev_id)] = event_data
+        self.hass.bus.fire(event_id, event_data)
 
 class GatewayConnectionState(AbstractBinarySensor):
     """Protocols last time when message received"""

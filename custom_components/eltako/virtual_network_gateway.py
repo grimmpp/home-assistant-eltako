@@ -192,6 +192,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
                 except Exception as e:
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
+                    self._fire_connection_state_changed_event(False)
 
             self.zeroconf.unregister_service(service_info)
         
@@ -218,13 +219,11 @@ class VirtualNetworkGateway(EnOceanGateway):
             self.tcp_thread = threading.Thread(target=self.tcp_server)
             self.tcp_thread.daemon = True
             self.tcp_thread.start()
-            self._fire_connection_state_changed_event(True)
 
 
     def stop_tcp_server(self):
         self._running.clear()
         self.tcp_thread.join(10)
-        self._fire_connection_state_changed_event(False)
 
 
     def convert_ip_to_bytes(self, ip_address_str):

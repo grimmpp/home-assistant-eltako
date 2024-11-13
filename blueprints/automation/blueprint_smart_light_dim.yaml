@@ -1,6 +1,6 @@
 blueprint:
-  name: Dim Smart Light Down
-  description: This blueprint detects events from EnOcean switches and dims lights down. It can/shall be used in conjunction with 'Dim Smart Light Up', 'Switch Smart Light Off' and 'Switch Smart Light On' so that you can controll one light with two buttons (up down button) of one switch.
+  name: Dim Smart Light
+  description: This blueprint detects events from EnOcean switches and dims lightsdown. It can/shall be used in conjunction with 'Switch Smart Light Off/On' so that you can controll one light with two buttons (up down button) of one switch.
   domain: automation
   author: Philipp Grimm
   input:
@@ -22,9 +22,9 @@ blueprint:
       name: Light to Control
       description: The light entity to turn on or off based on the event data
       selector:
-        target:
-          entity:
-            domain: light
+        entity:
+          multiple: true
+          domain: light
     start_offset:
       name: start delay
       description: Starts after a small delay so that there is not interference with switch on/off.
@@ -51,6 +51,7 @@ variables:
   var_start_offset: !input start_offset
   var_start_time: "{{ var_start_offset * 1000 }}"
 
+
 triggers:
   - trigger: event
     event_type: !input event_id
@@ -62,25 +63,33 @@ conditions:
           {{ trigger.event.data.pressed == True}}
 
 actions:
-  - delay:
-      milliseconds: "{{var_start_time |int}}"
   - action: system_log.write
     metadata: {}
     data:
       level: info
-      message: "Test2 test2: {{var_start_time}}, {{ trigger.event.data.pressed_buttons}}, {{is_state(trigger.event.data.id, 'on')}}, {{trigger.event.data.entity_id}}"
+      message: "Debug Automation: {{var_target_light}}, {{ trigger.event.data.pressed_buttons}}, {{is_state(trigger.event.data.id, 'on')}}, {{trigger.event.data.entity_id}}"
+    enabled: false
+  - delay:
+      milliseconds: "{{var_start_time |int}}"
   - repeat:
       while:
         - condition: template
-          value_template: "{{is_state(trigger.event.data.entity_id, 'on')}}"
+          value_template: >
+            {{ is_state(trigger.event.data.entity_id, 'on') }}
       sequence:
         - choose:
             - conditions:
                 - condition: template
                   value_template: "{{ trigger.event.data.pressed_buttons == ['LT'] and var_position == 'left'}}"
               sequence:
+                - action: system_log.write
+                  metadata: {}
+                  data:
+                    level: info
+                    message: "test"
                 - service: light.turn_on
-                  target: !input light_target
+                  target: 
+                    entity_id: !input light_target
                   data:
                     brightness_step: 20
                 - delay:
@@ -90,7 +99,8 @@ actions:
                   value_template: "{{ trigger.event.data.pressed_buttons == ['LB'] and var_position == 'left'}}"
               sequence:
                 - service: light.turn_on
-                  target: !input light_target
+                  target: 
+                    entity_id: !input light_target
                   data:
                     brightness_step: -20
                 - delay:
@@ -100,7 +110,8 @@ actions:
                   value_template: "{{ trigger.event.data.pressed_buttons == ['RT'] and var_position == 'right'}}"
               sequence:
                 - service: light.turn_on
-                  target: !input light_target
+                  target: 
+                    entity_id: !input light_target
                   data:
                     brightness_step: 20
                 - delay:
@@ -110,7 +121,8 @@ actions:
                   value_template: "{{ trigger.event.data.pressed_buttons == ['RB'] and var_position == 'right'}}"
               sequence:
                 - service: light.turn_on
-                  target: !input light_target
+                  target: 
+                    entity_id: !input light_target
                   data:
                     brightness_step: -20
                 - delay:

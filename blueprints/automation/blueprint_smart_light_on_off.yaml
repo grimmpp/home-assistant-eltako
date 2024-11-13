@@ -75,11 +75,6 @@ conditions:
           trigger.event.data.pressed == False}}
 
 actions:
-  - action: system_log.write
-    metadata: {}
-    data:
-      level: info
-      message: "Test test: {{var_position}}, {{ trigger.event.data.prev_pressed_buttons}}"
   - choose:
       - conditions:
           - condition: template
