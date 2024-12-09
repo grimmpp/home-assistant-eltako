@@ -70,14 +70,12 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
     LOGGER.info(f"[{LOG_PREFIX}] Start gateway setup.")
-    # print_config_entry(config_entry)
 
     # Check domain
     if config_entry.domain != DOMAIN:
         LOGGER.warn(f"[{LOG_PREFIX}] Ooops, received configuration entry of wrong domain '%s' (expected: '')!", config_entry.domain, DOMAIN)
-        return
+        return False
 
-    
     # Read the config
     config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
 
@@ -85,41 +83,40 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not config_helpers.config_check_gateway(config):
         raise Exception("Gateway Ids are not unique.")
 
-
-    # set config for global access
+    # Set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
     eltako_data[ELTAKO_CONFIG] = config
-    # print whole eltako configuration
+    # Print whole eltako configuration
     LOGGER.debug(f"config: {config}\n")
 
-    # Migrage existing gateway configs / ESP2 was removed in the name
+    # Migrate existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
 
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
     # Initialise the gateway
-    # get base_id from user input
+    # Get base_id from user input
     if CONF_GATEWAY_DESCRIPTION not in config_entry.data.keys():
         LOGGER.warn("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
-        return
+        return False
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
     if not ('(' in gateway_description and ')' in gateway_description):
         LOGGER.warn("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
-        return
+        return False
     gateway_id = config_helpers.get_id_from_name(gateway_description)
     
-    # get home assistant configuration section matching base_id
+    # Get home assistant configuration section matching base_id
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
         LOGGER.warn(f"[{LOG_PREFIX}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
-        return
+        return False
     
-    # get serial path info
+    # Get serial path info
     if CONF_SERIAL_PATH not in config_entry.data.keys():
         LOGGER.warn("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
-        return
+        return False
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
-    # only transceiver can send teach-in telegrams
+    # Only transceiver can send teach-in telegrams
     gateway_device_type = GatewayDeviceType.find(gateway_config[CONF_DEVICE_TYPE])    # from configuration
     if gateway_device_type is None:
         LOGGER.error(f"[{LOG_PREFIX}] USB device {gateway_config[CONF_DEVICE_TYPE]} is not supported!!!")
@@ -140,16 +137,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
     usb_gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
 
-    
     await usb_gateway.async_setup()
     set_gateway_to_hass(hass, usb_gateway)
 
-    # Set up platforms using async_forward_entry_setups                       
-    success = await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-    if not success:
-        LOGGER.error("Failed to set up all platforms")
-        
-    return True
+    hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
+
+    setup_successful = True
+    for platform in PLATFORMS:
+        try:
+            await hass.config_entries.async_forward_entry_setup(config_entry, platform)
+        except Exception as e:
+            LOGGER.error(f"Failed to set up platform {platform}: {e}")
+            setup_successful = False
+
+    if setup_successful:
+        return True
+    else:
+        return False
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
