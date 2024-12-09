@@ -81,15 +81,16 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
 
 
-    def load_value_initially(self, latest_state:State):
-        # LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
-        # LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
+    def load_value_initially(self, latest_state: State):
         try:
-            self._attr_current_cover_position = latest_state.attributes['current_position']
-            self._attr_current_cover_tilt_position = latest_state.attributes['current_tilt_position']
+            # Prüfen, ob die benötigten Attribute vorhanden sind
+            self._attr_current_cover_position = latest_state.attributes.get('current_position', None)
+            self._attr_current_cover_tilt_position = latest_state.attributes.get('current_tilt_position', None)
 
-            #if self._attr_current_cover_tilt_position == 0:
-            #    self._attr_current_cover_tilt_position = 0
+            if self._attr_current_cover_position is None or self._attr_current_cover_tilt_position is None:
+                LOGGER.warning(f"[cover {self.dev_id}] Missing 'current_position' or 'current_tilt_position' in latest_state.attributes. Defaulting to None.")
+            
+            # Zustand basierend auf latest_state.state setzen
             if latest_state.state == STATE_OPEN:
                 self._attr_is_opening = False
                 self._attr_is_closing = False
@@ -110,21 +111,34 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 self._attr_is_opening = True
                 self._attr_is_closing = False
                 self._attr_is_closed = False
+            else:
+                LOGGER.warning(f"[cover {self.dev_id}] Unknown state: {latest_state.state}")
             
-        except Exception as e:
+        except KeyError as e:
+            # Spezifischer Fehler bei fehlendem Schlüssel
+            LOGGER.error(f"[cover {self.dev_id}] KeyError while accessing attributes: {e}")
             self._attr_current_cover_position = None
             self._attr_current_cover_tilt_position = None
             self._attr_is_opening = None
             self._attr_is_closing = None
-            self._attr_is_closed = None # means undefined state
-            raise e
+            self._attr_is_closed = None  # means undefined state
+        except Exception as e:
+            # Allgemeiner Fehler
+            LOGGER.error(f"[cover {self.dev_id}] Unexpected error in load_value_initially: {e}")
+            self._attr_current_cover_position = None
+            self._attr_current_cover_tilt_position = None
+            self._attr_is_opening = None
+            self._attr_is_closing = None
+            self._attr_is_closed = None  # means undefined state
+            raise e  # Optional: Fehler weiterwerfen, wenn es kritisch ist
         
+        # Aktualisiere den Zustand in Home Assistant
         self.schedule_update_ha_state()
-        LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [" 
-                     + f"is_opening: {self.is_opening}, "
-                     + f"is_closing: {self.is_closing}, "
-                     + f"is_closed: {self.is_closed}, "
-                     + f"current_possition: {self._attr_current_cover_position}, "
+        LOGGER.debug(f"[cover {self.dev_id}] Value initially loaded: [" 
+                     + f"is_opening: {self._attr_is_opening}, "
+                     + f"is_closing: {self._attr_is_closing}, "
+                     + f"is_closed: {self._attr_is_closed}, "
+                     + f"current_position: {self._attr_current_cover_position}, "
                      + f"current_tilt_position: {self._attr_current_cover_tilt_position}, "
                      + f"state: {self.state}]")
 
