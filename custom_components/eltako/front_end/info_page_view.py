@@ -6,6 +6,7 @@ class InfoPageView(HomeAssistantView):
 
     url = "/eltako/info"
     name = "eltako-info"
+    requires_auth = False
 
     async def get(self, request):
         """Handle GET request."""
