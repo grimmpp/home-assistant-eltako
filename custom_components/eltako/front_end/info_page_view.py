@@ -5,7 +5,7 @@ class InfoPageView(HomeAssistantView):
     """Serve a custom page."""
 
     url = "/eltako-info"
-    name = "eltako-info"
+    name = "eltako_info"
     requires_auth = True
 
     async def get(self, request):
