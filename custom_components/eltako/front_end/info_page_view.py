@@ -11,10 +11,6 @@ class InfoPageView(HomeAssistantView):
     async def get(self, request):
         """Handle GET request."""
 
-        headers = request.headers
-        # Log the headers for debugging
-        request.app["hass"].logger.debug(f"Request headers: {headers}")
-
         return web.Response(
             text="<html><body><h1>Hello, Home Assistant!</h1></body></html>",
             content_type="text/html"
