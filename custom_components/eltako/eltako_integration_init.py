@@ -195,7 +195,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
         frontend_url_path="eltako-info",  # URL in the sidebar
         config={
-            "url": "/eltako/info"  # URL served by the view
+            "url": "/eltako-info"  # URL served by the view
         },
     )
 

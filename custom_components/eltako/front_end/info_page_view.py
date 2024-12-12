@@ -4,7 +4,7 @@ from homeassistant.components.http import HomeAssistantView
 class InfoPageView(HomeAssistantView):
     """Serve a custom page."""
 
-    url = "/eltako/info"
+    url = "/eltako-info"
     name = "eltako-info"
     requires_auth = True
 
