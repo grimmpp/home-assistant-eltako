@@ -188,9 +188,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     hass.http.register_view(InfoPageView())
 
-    views = hass.http.app.router.resources()
-    for view in views:
-        LOGGER.info(f"Registered view: {view}")
+    # Register the sidebar panel
+    hass.components.frontend.async_register_built_in_panel(
+        component_name="iframe",  # Use iframe to embed the view
+        sidebar_title="Eltako",  # Title in the sidebar
+        sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
+        frontend_url_path="eltako-info",  # URL in the sidebar
+        config={
+            "url": "/eltako/info"  # URL served by the view
+        },
+    )
 
     return True
 
