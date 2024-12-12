@@ -188,6 +188,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     hass.http.register_view(InfoPageView())
 
+    views = hass.http.app.router.resources()
+    for view in views:
+        LOGGER.info(f"Registered view: {view}")
+
     return True
 
 
