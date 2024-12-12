@@ -193,9 +193,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         component_name="iframe",  # Use iframe to embed the view
         sidebar_title="Eltako",  # Title in the sidebar
         sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
-        frontend_url_path="eltako-info",  # URL in the sidebar
+        frontend_url_path="eltako",  # URL in the sidebar
         config={
-            "url": "/eltako-info?auth_callback=1"  # URL served by the view
+            "url": "/eltako?auth_callback=1"  # URL served by the view
         },
     )
 
