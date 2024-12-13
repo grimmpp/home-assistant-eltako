@@ -189,38 +189,38 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
-    hass.http.register_static_path(
-        "/eltako",
-        # hass.config.path("custom_components/eltako/frontend/index.html"),
-        os.path.join(os.path.dirname(__file__), "/frontend"),
-        cache_headers=False,
-    )
-
-
-    async_register_built_in_panel(
-        hass,
-        "iframe",  # Panel type
-        "Eltako",  # Panel title
-        "mdi:web",  # Panel icon
-        frontend_url_path="eltako",  # URL path for the panel
-        config={
-            "url": "/eltako/index.html"  # Path to the panel HTML
-        },
-        require_admin=False,
-    )
-
-    # hass.http.register_view(InfoPageView())
-
-    # # Register the sidebar panel
-    # hass.components.frontend.async_register_built_in_panel(
-    #     component_name="iframe",  # Use iframe to embed the view
-    #     sidebar_title="Eltako",  # Title in the sidebar
-    #     sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
-    #     frontend_url_path="eltako",  # URL in the sidebar
-    #     config={
-    #         "url": "/eltako?auth_callback=1"  # URL served by the view
-    #     },
+    # hass.http.register_static_path(
+    #     "/eltako",
+    #     # hass.config.path("custom_components/eltako/frontend/index.html"),
+    #     os.path.join(os.path.dirname(__file__), "/frontend"),
+    #     cache_headers=False,
     # )
+
+
+    # async_register_built_in_panel(
+    #     hass,
+    #     "iframe",  # Panel type
+    #     "Eltako",  # Panel title
+    #     "mdi:web",  # Panel icon
+    #     frontend_url_path="eltako",  # URL path for the panel
+    #     config={
+    #         "url": "/eltako/index.html"  # Path to the panel HTML
+    #     },
+    #     require_admin=False,
+    # )
+
+    hass.http.register_view(InfoPageView())
+
+    # Register the sidebar panel
+    hass.components.frontend.async_register_built_in_panel(
+        component_name="iframe",  # Use iframe to embed the view
+        sidebar_title="Eltako",  # Title in the sidebar
+        sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
+        frontend_url_path="eltako",  # URL in the sidebar
+        config={
+            "url": "/eltako?auth_callback=1"  # URL served by the view
+        },
+    )
 
     return True
 
