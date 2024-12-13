@@ -1,4 +1,6 @@
 """Support for Eltako devices."""
+import os
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
@@ -188,8 +190,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     hass.http.register_static_path(
-        "/config/custom_components/eltako/frontend/index.html",
-        hass.config.path("custom_components/eltako/frontend/index.html"),
+        "/custom_components/eltako/frontend/index.html",
+        # hass.config.path("custom_components/eltako/frontend/index.html"),
+        os.path.join(os.path.dirname(__file__), "/frontend/index.html"),
         cache_headers=False,
     )
 
@@ -201,8 +204,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "mdi:web",  # Panel icon
         frontend_url_path="eltako",  # URL path for the panel
         config={
-            "url": "/config/custom_components/eltako/frontend/index.html"  # Path to the panel HTML
+            "url": "/custom_components/eltako/frontend/index.html"  # Path to the panel HTML
         },
+        require_admin=False,
     )
 
     # hass.http.register_view(InfoPageView())
