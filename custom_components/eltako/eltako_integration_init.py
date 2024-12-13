@@ -4,6 +4,7 @@ from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.dispatcher import dispatcher_connect
 from homeassistant.helpers.reload import async_reload_integration_platforms
+from homeassistant.components.frontend import async_register_built_in_panel
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
 
@@ -186,18 +187,36 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
-    hass.http.register_view(InfoPageView())
+    hass.http.register_static_path(
+        "/custom_components/eltako/frontend/index.html",
+        hass.config.path("custom_components/eltako/frontend/index.html"),
+        cache_headers=False,
+    )
 
-    # Register the sidebar panel
-    hass.components.frontend.async_register_built_in_panel(
-        component_name="iframe",  # Use iframe to embed the view
-        sidebar_title="Eltako",  # Title in the sidebar
-        sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
-        frontend_url_path="eltako",  # URL in the sidebar
+
+    async_register_built_in_panel(
+        hass,
+        "iframe",  # Panel type
+        "Eltako",  # Panel title
+        "mdi:web",  # Panel icon
+        frontend_url_path="eltako",  # URL path for the panel
         config={
-            "url": "/eltako?auth_callback=1"  # URL served by the view
+            "url": "/custom_components/eltako/frontend/index.html"  # Path to the panel HTML
         },
     )
+
+    # hass.http.register_view(InfoPageView())
+
+    # # Register the sidebar panel
+    # hass.components.frontend.async_register_built_in_panel(
+    #     component_name="iframe",  # Use iframe to embed the view
+    #     sidebar_title="Eltako",  # Title in the sidebar
+    #     sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
+    #     frontend_url_path="eltako",  # URL in the sidebar
+    #     config={
+    #         "url": "/eltako?auth_callback=1"  # URL served by the view
+    #     },
+    # )
 
     return True
 
