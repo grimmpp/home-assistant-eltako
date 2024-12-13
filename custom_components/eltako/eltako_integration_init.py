@@ -223,16 +223,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         },
     )
 
-    await panel_custom.async_register_panel(
-            hass=hass,
-            frontend_url_path=DOMAIN,
-            webcomponent_name="eltako",
-            sidebar_title=DOMAIN,
-            sidebar_icon="mdi:bus-electric",
-            module_url=f"/frontend/index.html",
-            embed_iframe=True,
-            require_admin=False,
-        )
+    # await panel_custom.async_register_panel(
+    #         hass=hass,
+    #         frontend_url_path=DOMAIN,
+    #         webcomponent_name="eltako",
+    #         sidebar_title=DOMAIN,
+    #         sidebar_icon="mdi:bus-electric",
+    #         module_url=f"/frontend/index.html",
+    #         embed_iframe=True,
+    #         require_admin=False,
+    #     )
 
     return True
 
