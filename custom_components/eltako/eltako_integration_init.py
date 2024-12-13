@@ -7,6 +7,7 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.dispatcher import dispatcher_connect
 from homeassistant.helpers.reload import async_reload_integration_platforms
 from homeassistant.components.frontend import async_register_built_in_panel
+from homeassistant.components import panel_custom, websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
 
@@ -221,6 +222,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             "url": "/eltako?auth_callback=1"  # URL served by the view
         },
     )
+
+    await panel_custom.async_register_panel(
+            hass=hass,
+            frontend_url_path=DOMAIN,
+            webcomponent_name="eltako",
+            sidebar_title=DOMAIN,
+            sidebar_icon="mdi:bus-electric",
+            module_url=f"/frontend/index.html",
+            embed_iframe=True,
+            require_admin=False,
+        )
 
     return True
 
