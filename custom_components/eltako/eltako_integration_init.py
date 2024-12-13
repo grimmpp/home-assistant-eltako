@@ -188,7 +188,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     hass.http.register_static_path(
-        "/custom_components/eltako/frontend/index.html",
+        "/config/custom_components/eltako/frontend/index.html",
         hass.config.path("custom_components/eltako/frontend/index.html"),
         cache_headers=False,
     )
@@ -201,7 +201,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "mdi:web",  # Panel icon
         frontend_url_path="eltako",  # URL path for the panel
         config={
-            "url": "/custom_components/eltako/frontend/index.html"  # Path to the panel HTML
+            "url": "/config/custom_components/eltako/frontend/index.html"  # Path to the panel HTML
         },
     )
 
