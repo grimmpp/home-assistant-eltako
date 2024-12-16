@@ -204,9 +204,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "iframe",  # Panel type
         "Eltako",  # Panel title
         "mdi:web",  # Panel icon
-        frontend_url_path="/eltako?auth_callback=1",  # URL path for the panel
+        frontend_url_path="eltako",  # URL path for the panel
         config={
-            "url": "/eltako?auth_callback=1"  # Path to the panel HTML
+            "url": "eltako?auth_callback=1"  # Path to the panel HTML
         },
         require_admin=False,
     )
