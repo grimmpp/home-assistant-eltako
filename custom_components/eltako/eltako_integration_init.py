@@ -191,12 +191,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
-    # hass.http.register_static_path(
-    #     "/eltako",
-    #     # hass.config.path("custom_components/eltako/frontend/index.html"),
-    #     os.path.join(os.path.dirname(__file__), "/frontend"),
-    #     cache_headers=False,
-    # )
+    hass.http.register_static_path(
+        "/eltako",
+        # hass.config.path("custom_components/eltako/frontend/index.html"),
+        os.path.join(os.path.dirname(__file__), "/frontend"),
+        cache_headers=False,
+    )
 
     # hass.http.register_view(InfoPageView())
 
@@ -215,29 +215,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # hass.http.register_view(InfoPageView())
 
-    # # Register the sidebar panel
-    # hass.components.frontend.async_register_built_in_panel(
-    #     component_name="iframe",  # Use iframe to embed the view
-    #     sidebar_title="Eltako",  # Title in the sidebar
-    #     sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
-    #     frontend_url_path="eltako",  # URL in the sidebar
+    # Register the sidebar panel
+    hass.components.frontend.async_register_built_in_panel(
+        component_name="iframe",  # Use iframe to embed the view
+        sidebar_title="Eltako",  # Title in the sidebar
+        sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
+        frontend_url_path="eltako",  # URL in the sidebar
         
-    #     config={
-    #         "url": "/eltako?auth_callback=1"  # URL served by the view
-    #     },
-    # )
+        config={
+            "url": "/frontend/index.html"  # URL served by the view
+        },
+    )
 
 
-    await panel_custom.async_register_panel(
-            hass=hass,
-            frontend_url_path=DOMAIN,
-            webcomponent_name="eltako",
-            sidebar_title=DOMAIN,
-            sidebar_icon="mdi:bus-electric",
-            module_url=f"/frontend/index.html",
-            embed_iframe=True,
-            require_admin=False,
-        )
+    # await panel_custom.async_register_panel(
+    #         hass=hass,
+    #         frontend_url_path=DOMAIN,
+    #         webcomponent_name="eltako",
+    #         sidebar_title=DOMAIN,
+    #         sidebar_icon="mdi:bus-electric",
+    #         module_url=f"/frontend/index.html",
+    #         embed_iframe=True,
+    #         require_admin=False,
+    #     )
 
     return True
 
