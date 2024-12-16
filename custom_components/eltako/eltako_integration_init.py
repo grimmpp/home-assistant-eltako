@@ -1,6 +1,7 @@
 """Support for Eltako devices."""
 import os
 
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.typing import ConfigType
