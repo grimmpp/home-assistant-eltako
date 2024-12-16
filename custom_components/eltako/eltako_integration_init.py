@@ -197,19 +197,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     #     cache_headers=False,
     # )
 
-    hass.http.register_view(InfoPageView())
+    # hass.http.register_view(InfoPageView())
 
-    async_register_built_in_panel(
-        hass,
-        "iframe",  # Panel type
-        "Eltako",  # Panel title
-        "mdi:web",  # Panel icon
-        frontend_url_path="eltako",  # URL path for the panel
-        config={
-            "url": "eltako?auth_callback=1"  # Path to the panel HTML
-        },
-        require_admin=False,
-    )
+    # async_register_built_in_panel(
+    #     hass,
+    #     "iframe",  # Panel type
+    #     "Eltako",  # Panel title
+    #     "mdi:bus-electric",  # Panel icon
+        
+    #     frontend_url_path="eltako",  # URL path for the panel
+    #     config={
+    #         "url": "eltako?auth_callback=1"  # Path to the panel HTML
+    #     },
+    #     require_admin=False,
+    # )
 
     # hass.http.register_view(InfoPageView())
 
@@ -225,16 +226,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     #     },
     # )
 
-    # await panel_custom.async_register_panel(
-    #         hass=hass,
-    #         frontend_url_path=DOMAIN,
-    #         webcomponent_name="eltako",
-    #         sidebar_title=DOMAIN,
-    #         sidebar_icon="mdi:bus-electric",
-    #         module_url=f"/frontend/index.html",
-    #         embed_iframe=True,
-    #         require_admin=False,
-    #     )
+    await panel_custom.async_register_panel(
+            hass=hass,
+            frontend_url_path=DOMAIN,
+            webcomponent_name="eltako",
+            sidebar_title=DOMAIN,
+            sidebar_icon="mdi:bus-electric",
+            module_url=f"/frontend/index.html",
+            embed_iframe=True,
+            require_admin=False,
+        )
 
     return True
 
