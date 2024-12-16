@@ -194,7 +194,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.http.register_static_path(
         "/eltako",
         # hass.config.path("custom_components/eltako/frontend/index.html"),
-        os.path.join(os.path.dirname(__file__), "/frontend"),
+        os.path.join(os.path.dirname(__file__), "frontend"),
         cache_headers=False,
     )
 
