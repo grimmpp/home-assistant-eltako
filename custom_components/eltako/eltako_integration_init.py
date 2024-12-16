@@ -207,7 +207,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "mdi:web",  # Panel icon
         frontend_url_path="eltako",  # URL path for the panel
         config={
-            "url": "/eltako/index.html"  # Path to the panel HTML
+            "url": "/eltako"  # Path to the panel HTML
         },
         require_admin=True,
     )
