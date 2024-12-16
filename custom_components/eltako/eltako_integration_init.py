@@ -227,6 +227,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     #     },
     # )
 
+
     await panel_custom.async_register_panel(
             hass=hass,
             frontend_url_path=DOMAIN,
