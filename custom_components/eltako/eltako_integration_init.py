@@ -197,7 +197,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     #     cache_headers=False,
     # )
 
-
     hass.http.register_view(InfoPageView())
 
     async_register_built_in_panel(
@@ -205,14 +204,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "iframe",  # Panel type
         "Eltako",  # Panel title
         "mdi:web",  # Panel icon
-        frontend_url_path="eltako",  # URL path for the panel
+        frontend_url_path="/eltako",  # URL path for the panel
         config={
-            "url": "/eltako"  # Path to the panel HTML
+            "url": "/eltako?auth_callback=1"  # Path to the panel HTML
         },
-        require_admin=True,
+        require_admin=False,
     )
 
-   
+    # hass.http.register_view(InfoPageView())
+
     # # Register the sidebar panel
     # hass.components.frontend.async_register_built_in_panel(
     #     component_name="iframe",  # Use iframe to embed the view
