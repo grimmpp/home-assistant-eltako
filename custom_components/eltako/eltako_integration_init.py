@@ -202,7 +202,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     hass.components.frontend.async_register_built_in_panel(
         component_name="iframe",  # Use iframe to embed the view
         sidebar_title="Eltako",  # Title in the sidebar
-        sidebar_icon="mdi:view-dashboard",  # Icon for the sidebar
+        sidebar_icon="mdi:bus-electric" # mdi:view-dashboard",  # Icon for the sidebar
         frontend_url_path="eltako",  # URL in the sidebar
         
         config={
