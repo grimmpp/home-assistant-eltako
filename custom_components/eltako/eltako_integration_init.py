@@ -17,7 +17,7 @@ from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_PORT
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
-from .front_end.info_page_view import InfoPageView
+from .frontend.info_page_view import InfoPageView
 
 LOG_PREFIX_INIT = "Eltako Integration Setup"
 
