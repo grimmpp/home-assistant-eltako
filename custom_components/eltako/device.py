@@ -25,8 +25,7 @@ class EltakoEntity(Entity):
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None, description_key:str=None):
         """Initialize the device."""
         self._attr_has_entity_name = True
-        self._attr_should_poll = True
-
+self._attr_should_poll = False
         self._attr_ha_platform = platform
         self._attr_gateway = gateway
         self.hass = self.gateway.hass
@@ -38,7 +37,7 @@ class EltakoEntity(Entity):
         self.listen_to_addresses.append(self.dev_id[0])
         self.description_key = description_key
         self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
-        self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
+# manual entity_id assignment
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Added entity {self.dev_name} ({type(self).__name__}).")
 
