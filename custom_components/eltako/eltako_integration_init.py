@@ -152,13 +152,22 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     return True
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Unload Eltako config entry."""
+ascync def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Unload an Eltako config entry.
+
+    Call async_unload_platforms for the list of registered platforms and only
+    clean up the gateway if unloading succeeds. Returning False indicates the
+    unload failed and Home Assistant should retry on the next restart.
+    """
+
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        config_entry, PLATFORMS
+    )
+    if not unload_ok:
+        return False
 
     gateway = get_gateway_from_hass(hass, config_entry)
-
     LOGGER.info("Unload %s and all its supported devices!", gateway.dev_name)
     gateway.unload()
     del hass.data[DATA_ELTAKO][gateway.dev_name]
-
-    return True
+    r  return True
