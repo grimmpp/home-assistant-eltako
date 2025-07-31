@@ -186,11 +186,11 @@ SENSOR_DESC_WEATHER_STATION_WIND_SPEED = EltakoSensorEntityDescription(
 )
 
 SENSOR_DESC_WEATHER_STATION_RAIN = EltakoSensorEntityDescription(
-    key=SENSOR_TYPE_WEATHER_STATION_RAIN,
+    key="rain_sensor",
     name="Rain",
-    native_unit_of_measurement="",
     icon="mdi:weather-pouring",
-    device_class="rain",
+    device_class=SensorDeviceClass.PRECIPITATION,
+    native_unit_of_measurement=UnitOfLength.MILLIMETERS,
     state_class=SensorStateClass.MEASUREMENT,
 )
 
