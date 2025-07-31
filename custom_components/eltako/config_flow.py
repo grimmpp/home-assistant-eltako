@@ -146,7 +146,20 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             LOGGER.debug("serial_path: %s, validated with baud rate %d is %s", serial_path, baud_rate, path_is_valid)
 
         return path_is_valid
+async def create_eltako_entry(self, user_input):
+        """Create a config entry for the provided configuration.
 
-    def create_eltako_entry(self, user_input):
-        """Create an entry for the provided configuration."""
-        return self.async_create_entry(title="Eltako", data=user_input)
+        The unique ID for each Eltako gateway is based on the serial path
+        combined with the gateway description.  By setting the unique ID
+        before creating the entry, Home Assistant can detect duplicate
+        entries and abort the flow accordingly.
+        """
+        # Build a unique identifier using the serial path/IP and description
+        unique_id = f"{user_input[CONF_SERIAL_PATH]}_{user_input[CONF_GATEWAY_DESCRIPTION]}"
+        await self.async_set_unique_id(unique_id)
+        # Abort if a config entry with the same unique ID already exists
+        self._abort_if_unique_id_configured()
+        # Use the gateway description as the title for better readability
+        return self.async_create_entry(
+            title=user_input.get(CONF_GATEWAY_DESCRIPTION, "Eltako"), data=user_input
+        )
