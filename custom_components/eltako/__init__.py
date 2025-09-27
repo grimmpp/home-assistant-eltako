@@ -30,7 +30,7 @@ from .coordinator import EltakoDataUpdateCoordinator
 from .gateway import EnOceanGateway, GatewayDeviceType
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
-from eltako14bus.utils import AddressExpression
+# NOTE: eltako14bus imports moved to functions to avoid early import issues
 
 if TYPE_CHECKING:
     pass
@@ -107,6 +107,8 @@ async def _setup_coordinator(
     hass: HomeAssistant, entry: ConfigEntry, config: ConfigType
 ) -> EltakoDataUpdateCoordinator:
     """Set up the Eltako coordinator."""
+    # Import external dependencies here after they have been installed
+    from eltako14bus.utils import AddressExpression
 
     # Extract config entry data
     gateway_description = entry.data.get(CONF_GATEWAY_DESCRIPTION)

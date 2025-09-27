@@ -8,15 +8,48 @@ from datetime import datetime, UTC
 import serial
 import asyncio
 
-from eltakobus.serial import RS485SerialInterfaceV2
-from eltakobus.message import ESP2Message, EltakoPoll
-
-from eltakobus.util import AddressExpression
-from eltakobus.eep import EEP
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.serial import RS485SerialInterfaceV2
+    from eltakobus.message import ESP2Message, EltakoPoll
+    from eltakobus.util import AddressExpression
+    from eltakobus.eep import EEP
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    RS485SerialInterfaceV2 = None
+    ESP2Message = None
+    EltakoPoll = None
+    AddressExpression = None
+    EEP = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global RS485SerialInterfaceV2, ESP2Message, EltakoPoll, AddressExpression, EEP, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.serial import RS485SerialInterfaceV2 as _RS485SerialInterfaceV2
+            from eltakobus.message import ESP2Message as _ESP2Message, EltakoPoll as _EltakoPoll
+            from eltakobus.util import AddressExpression as _AddressExpression
+            from eltakobus.eep import EEP as _EEP
+
+            RS485SerialInterfaceV2 = _RS485SerialInterfaceV2
+            ESP2Message = _ESP2Message
+            EltakoPoll = _EltakoPoll
+            AddressExpression = _AddressExpression
+            EEP = _EEP
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.config_entries import ConfigEntry

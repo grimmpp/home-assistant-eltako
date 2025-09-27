@@ -1,0 +1,18 @@
+# Automation to install Eltako dependencies on Home Assistant startup
+- alias: "Install Eltako Dependencies on Startup"
+  trigger:
+    - platform: homeassistant
+      event: start
+  action:
+    - service: shell_command.install_eltako_deps
+  mode: single
+
+# Shell command definition (add to shell_commands.yaml)
+install_eltako_deps: |
+  python -m pip install --quiet \
+    "eltako14bus>=0.0.61" \
+    "enocean>=0.60.1" \
+    "strenum>=0.4.0" \
+    "esp2-gateway-adapter>=0.2.11" \
+  && echo "Eltako dependencies installed" \
+  || echo "Failed to install Eltako dependencies"

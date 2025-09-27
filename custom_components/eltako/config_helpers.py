@@ -3,8 +3,36 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_ID
 
-from eltakobus.util import AddressExpression, b2a
-from eltakobus.eep import EEP
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.util import AddressExpression, b2a
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    AddressExpression = None
+    b2a = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global AddressExpression, b2a, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.util import AddressExpression as _AddressExpression, b2a as _b2a
+            AddressExpression = _AddressExpression
+            b2a = _b2a
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
+# Handle EEP import
+try:
+    from eltakobus.eep import EEP
+except ImportError:
+    EEP = None
 
 from .const import *
 
