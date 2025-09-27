@@ -1,11 +1,7 @@
 {
   "name": "Eltako",
-  "content_in_root": false,
-  "filename": "eltako.zip",
-  "hide_default_branch": false,
+  "country": ["DE"],
+  "domains": ["sensor", "light", "switch", "binary_sensor", "cover", "climate", "button", "datetime"],
   "homeassistant": "2024.1.0",
-  "persistent_directory": false,
-  "render_readme": true,
-  "zip_release": true,
-  "domains": ["sensor", "light", "switch", "binary_sensor", "cover", "climate", "button", "datetime"]
+  "iot_class": "Local Polling"
 }

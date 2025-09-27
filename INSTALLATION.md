@@ -11,7 +11,7 @@
 1. Gehe zu HACS in Home Assistant
 2. Klicke auf "Integrations"
 3. Klicke auf das "+" Symbol (Add Repository)
-4. Füge diese URL hinzu: `https://github.com/grimmpp/home-assistant-eltako`
+4. Füge diese URL hinzu: `https://github.com/nonsenseMB/home-assistant-eltako`
 5. Wähle "Integration" als Kategorie
 6. Klicke "Add"
 7. Suche nach "Eltako" und installiere es
@@ -24,7 +24,7 @@
 cd /config
 
 # Integration klonen
-git clone https://github.com/grimmpp/home-assistant-eltako.git temp-eltako
+git clone https://github.com/nonsenseMB/home-assistant-eltako.git temp-eltako
 
 # Integration kopieren
 mkdir -p custom_components

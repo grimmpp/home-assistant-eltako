@@ -1,5 +1,5 @@
 [![Generic badge](https://img.shields.io/badge/HACS-Custom-3498db.svg)](https://github.com/hacs/integration)
-[![Generic badge](https://img.shields.io/github/commit-activity/y/grimmpp/home-assistant-eltako.svg?style=flat&color=3498db)](https://github.com/grimmpp/home-assistant-eltako/commits/main)
+[![Generic badge](https://img.shields.io/github/commit-activity/y/nonsenseMB/home-assistant-eltako.svg?style=flat&color=3498db)](https://github.com/nonsenseMB/home-assistant-eltako/commits/main)
 [![Generic badge](https://img.shields.io/badge/Community-Forum-3498db.svg)](https://community.home-assistant.io/)
 [![Generic badge](https://img.shields.io/badge/Community_Forum-Eltako_Integration_Debugging-3498db.svg)](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)
 [![Generic badge](https://img.shields.io/badge/License-MIT-3498db.svg)](/LICENSE)
