@@ -1,0 +1,4 @@
+eltako14bus>=0.0.61,<1.0.0
+enocean>=0.60.1
+strenum>=0.4.0
+esp2-gateway-adapter>=0.2.11,<1.0.0
