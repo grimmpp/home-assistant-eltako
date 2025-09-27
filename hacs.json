@@ -1,3 +1,11 @@
 {
-  "name": "Eltako"
+  "name": "Eltako",
+  "content_in_root": false,
+  "filename": "eltako.zip",
+  "hide_default_branch": false,
+  "homeassistant": "2024.1.0",
+  "persistent_directory": false,
+  "render_readme": true,
+  "zip_release": true,
+  "domains": ["sensor", "light", "switch", "binary_sensor", "cover", "climate", "button", "datetime"]
 }

@@ -1,11 +1,16 @@
 """Config flows for the Eltako integration."""
 # https://developers.home-assistant.io/docs/config_entries_config_flow_handler
 
-import voluptuous as vol
+from __future__ import annotations
 
 import ipaddress
+import logging
+from typing import Any
+
+import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
@@ -13,6 +18,8 @@ from . import gateway
 from . import config_helpers
 from .const import *
 from .schema import CONFIG_SCHEMA
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -150,3 +157,57 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def create_eltako_entry(self, user_input):
         """Create an entry for the provided configuration."""
         return self.async_create_entry(title="Eltako", data=user_input)
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> EltakoOptionsFlowHandler:
+        """Create the options flow."""
+        return EltakoOptionsFlowHandler(config_entry)
+
+
+class EltakoOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle Eltako options flow."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Handle options flow."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        # Get current gateway settings
+        gateway_description = self.config_entry.data.get(CONF_GATEWAY_DESCRIPTION, "")
+        serial_path = self.config_entry.data.get(CONF_SERIAL_PATH, "")
+
+        # Get current options
+        current_options = self.config_entry.options
+        auto_reconnect = current_options.get(CONF_GATEWAY_AUTO_RECONNECT, True)
+        message_delay = current_options.get(CONF_GATEWAY_MESSAGE_DELAY, 0.0)
+        enable_teach_in = current_options.get(CONF_ENABLE_TEACH_IN_BUTTONS, True)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    CONF_GATEWAY_AUTO_RECONNECT,
+                    description="Enable automatic reconnection",
+                    default=auto_reconnect
+                ): bool,
+                vol.Optional(
+                    CONF_GATEWAY_MESSAGE_DELAY,
+                    description="Message delay in seconds",
+                    default=message_delay
+                ): vol.Coerce(float),
+                vol.Optional(
+                    CONF_ENABLE_TEACH_IN_BUTTONS,
+                    description="Enable teach-in buttons",
+                    default=enable_teach_in
+                ): bool,
+            }),
+            description_placeholders={
+                "gateway_name": gateway_description,
+                "serial_path": serial_path,
+            },
+        )
