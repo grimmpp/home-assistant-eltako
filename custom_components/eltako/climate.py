@@ -4,10 +4,6 @@ from __future__ import annotations
 import asyncio
 import time
 
-from eltakobus.util import AddressExpression
-from eltakobus.eep import *
-from eltakobus.message import ESP2Message
-
 from homeassistant.components.climate import (
     ClimateEntity,
     HVACAction,
@@ -25,6 +21,35 @@ from .device import *
 from .const import *
 from .config_helpers import DeviceConf
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.util import AddressExpression
+    from eltakobus.eep import *
+    from eltakobus.message import ESP2Message
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    AddressExpression = None
+    ESP2Message = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global AddressExpression, ESP2Message, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.util import AddressExpression as _AddressExpression
+            from eltakobus.message import ESP2Message as _ESP2Message
+            AddressExpression = _AddressExpression
+            ESP2Message = _ESP2Message
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

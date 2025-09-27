@@ -7,8 +7,26 @@ import voluptuous as vol
 from numbers import Number, Real
 import homeassistant.helpers.config_validation as cv
 
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.eep import *
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
 
-from eltakobus.eep import *
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.eep import *
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
 
 from .const import *
 from .gateway import GatewayDeviceType

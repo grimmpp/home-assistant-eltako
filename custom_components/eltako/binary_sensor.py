@@ -1,9 +1,6 @@
 """Support for Eltako binary sensors."""
 from __future__ import annotations
 
-from eltakobus.util import AddressExpression
-from eltakobus.eep import *
-
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant import config_entries
 from homeassistant.const import CONF_DEVICE_CLASS
@@ -19,6 +16,31 @@ from .schema import CONF_EEP_SUPPORTED_BINARY_SENSOR
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
 import json
+
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.util import AddressExpression
+    from eltakobus.eep import *
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    AddressExpression = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global AddressExpression, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.util import AddressExpression as _AddressExpression
+            AddressExpression = _AddressExpression
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
