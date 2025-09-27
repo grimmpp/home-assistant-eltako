@@ -9,7 +9,10 @@ import homeassistant.helpers.config_validation as cv
 
 # Conditional imports to avoid early dependency loading
 try:
-    from eltakobus.eep import *
+    # Import specific classes instead of * for Python 3.13 compatibility
+    import eltakobus.eep as eep_module
+    # Make the classes available globally
+    globals().update({name: getattr(eep_module, name) for name in dir(eep_module) if not name.startswith("_")})
     ELTAKO_DEPENDENCIES_AVAILABLE = True
 except ImportError:
     # Dependencies not yet installed, will be imported later
@@ -22,7 +25,10 @@ def _ensure_dependencies():
 
     if not ELTAKO_DEPENDENCIES_AVAILABLE:
         try:
-            from eltakobus.eep import *
+            # Import specific classes instead of * for Python 3.13 compatibility
+            import eltakobus.eep as eep_module
+            # Make the classes available globally
+            globals().update({name: getattr(eep_module, name) for name in dir(eep_module) if not name.startswith('_')})
             ELTAKO_DEPENDENCIES_AVAILABLE = True
         except ImportError as e:
             raise ImportError(f"Eltako dependencies not available: {e}")

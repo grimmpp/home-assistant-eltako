@@ -22,8 +22,10 @@ from . import get_gateway_from_hass, get_device_config_for_gateway
 # Conditional imports to avoid early dependency loading
 try:
     from eltakobus.util import AddressExpression
-    from eltakobus.eep import *
     from eltakobus.message import Regular4BSMessage
+    # Import specific EEP classes for Python 3.13 compatibility
+    import eltakobus.eep as eep_module
+    globals().update({name: getattr(eep_module, name) for name in dir(eep_module) if not name.startswith('_')})
     ELTAKO_DEPENDENCIES_AVAILABLE = True
 except ImportError:
     # Dependencies not yet installed, will be imported later

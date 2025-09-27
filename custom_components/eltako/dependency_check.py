@@ -27,7 +27,7 @@ async def ensure_dependencies_installed(hass) -> bool:
 
     # Try to import required dependencies
     try:
-        import eltako14bus
+        import eltakobus
         import enocean
         import strenum
         import esp2_gateway_adapter
@@ -44,9 +44,23 @@ async def ensure_dependencies_installed(hass) -> bool:
     # Read requirements from manifest
     manifest_path = Path(__file__).parent / "manifest.json"
     try:
-        with open(manifest_path) as f:
-            manifest = json.load(f)
-        requirements = manifest.get("requirements", [])
+        # Try to use aiofiles for async reading
+        try:
+            import aiofiles
+            async with aiofiles.open(manifest_path) as f:
+                content = await f.read()
+                manifest = json.loads(content)
+                requirements = manifest.get("requirements", [])
+        except ImportError:
+            # aiofiles not available, read synchronously in executor
+            import asyncio
+
+            def _read_manifest():
+                with open(manifest_path) as f:
+                    return json.load(f)
+
+            manifest = await asyncio.get_event_loop().run_in_executor(None, _read_manifest)
+            requirements = manifest.get("requirements", [])
     except Exception as e:
         _LOGGER.error("Failed to read manifest.json: %s", e)
         return False
@@ -76,9 +90,20 @@ async def ensure_dependencies_installed(hass) -> bool:
         if str(deps_dir) not in sys.path:
             sys.path.insert(0, str(deps_dir))
 
+        # Force reload of sys.path_importer_cache to recognize new directory
+        if str(deps_dir) in sys.path_importer_cache:
+            del sys.path_importer_cache[str(deps_dir)]
+
         # Try importing again
         try:
-            import eltako14bus
+            # Force reload modules if they were previously imported
+            import importlib
+            modules_to_reload = ['eltakobus', 'enocean', 'strenum', 'esp2_gateway_adapter']
+            for module_name in modules_to_reload:
+                if module_name in sys.modules:
+                    importlib.reload(sys.modules[module_name])
+
+            import eltakobus
             import enocean
             import strenum
             import esp2_gateway_adapter
@@ -87,6 +112,7 @@ async def ensure_dependencies_installed(hass) -> bool:
             return True
         except ImportError as e:
             _LOGGER.error("Dependencies installed but import still fails: %s", e)
+            _LOGGER.debug("Python path: %s", sys.path[:5])  # Show first 5 paths for debugging
 
     _LOGGER.error("Failed to install dependencies. Manual installation may be required.")
     return False
