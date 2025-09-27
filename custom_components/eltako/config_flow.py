@@ -25,12 +25,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
-        from . import _ensure_dependencies_installed
+        from .dependency_check import ensure_dependencies_installed
 
         errors = {}
 
         # Check dependencies first
-        if not await _ensure_dependencies_installed(self.hass):
+        if not await ensure_dependencies_installed(self.hass):
             errors["base"] = "dependencies_failed"
 
         if user_input is not None and not errors:

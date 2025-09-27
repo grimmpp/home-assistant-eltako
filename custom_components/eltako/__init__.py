@@ -2,11 +2,6 @@
 from __future__ import annotations
 
 import logging
-import asyncio
-import os
-import sys
-import subprocess
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
@@ -43,176 +38,6 @@ _LOGGER = logging.getLogger(__name__)
 
 LOG_PREFIX = "Eltako Integration Setup"
 
-# Global flag to track dependency installation attempts
-_DEPENDENCY_CHECK_DONE = False
-_DEPENDENCIES_AVAILABLE = False
-
-
-async def _ensure_dependencies_installed(hass: HomeAssistant) -> bool:
-    """Ensure Eltako dependencies are installed and available."""
-    global _DEPENDENCY_CHECK_DONE, _DEPENDENCIES_AVAILABLE
-
-    if _DEPENDENCY_CHECK_DONE:
-        return _DEPENDENCIES_AVAILABLE
-
-    _DEPENDENCY_CHECK_DONE = True
-
-    # Try to import required dependencies
-    try:
-        import eltako14bus
-        import enocean
-        import strenum
-        import esp2_gateway_adapter
-        _DEPENDENCIES_AVAILABLE = True
-        _LOGGER.info("[%s] All dependencies are available", LOG_PREFIX)
-        return True
-    except ImportError as e:
-        _LOGGER.warning("[%s] Dependencies not available, attempting installation: %s", LOG_PREFIX, e)
-
-    # Get config directory path
-    config_dir = Path(hass.config.config_dir)
-    deps_dir = config_dir / "deps"
-
-    # Read requirements from manifest
-    manifest_path = Path(__file__).parent / "manifest.json"
-    try:
-        import json
-        with open(manifest_path) as f:
-            manifest = json.load(f)
-        requirements = manifest.get("requirements", [])
-    except Exception as e:
-        _LOGGER.error("[%s] Failed to read manifest.json: %s", LOG_PREFIX, e)
-        return False
-
-    if not requirements:
-        _LOGGER.warning("[%s] No requirements found in manifest.json", LOG_PREFIX)
-        return False
-
-    # Ensure deps directory exists
-    deps_dir.mkdir(exist_ok=True)
-
-    # Try multiple installation methods
-    installation_success = False
-
-    # Method 1: Try uv first (Home Assistant 2024.10+)
-    if await _try_uv_install(requirements, deps_dir):
-        installation_success = True
-    # Method 2: Fall back to pip if uv fails
-    elif await _try_pip_install(requirements, deps_dir):
-        installation_success = True
-    # Method 3: Try system pip as last resort
-    elif await _try_system_pip_install(requirements):
-        installation_success = True
-
-    if installation_success:
-        # Add deps directory to Python path
-        if str(deps_dir) not in sys.path:
-            sys.path.insert(0, str(deps_dir))
-
-        # Try importing again
-        try:
-            import eltako14bus
-            import enocean
-            import strenum
-            import esp2_gateway_adapter
-            _DEPENDENCIES_AVAILABLE = True
-            _LOGGER.info("[%s] Dependencies successfully installed and imported", LOG_PREFIX)
-            return True
-        except ImportError as e:
-            _LOGGER.error("[%s] Dependencies installed but import still fails: %s", LOG_PREFIX, e)
-
-    _LOGGER.error("[%s] Failed to install dependencies. Manual installation may be required.", LOG_PREFIX)
-    return False
-
-
-async def _try_uv_install(requirements: list[str], deps_dir: Path) -> bool:
-    """Try installing with uv (Home Assistant 2024.10+)."""
-    try:
-        cmd = [
-            "uv", "pip", "install", "--quiet", "--upgrade",
-            "--target", str(deps_dir)
-        ] + requirements
-
-        # Set UV_CACHE_DIR to avoid permission issues
-        env = os.environ.copy()
-        env["UV_CACHE_DIR"] = str(deps_dir / ".uv-cache")
-
-        _LOGGER.debug("[%s] Running uv install: %s", LOG_PREFIX, " ".join(cmd))
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env
-        )
-
-        stdout, stderr = await process.communicate()
-
-        if process.returncode == 0:
-            _LOGGER.info("[%s] Successfully installed dependencies with uv", LOG_PREFIX)
-            return True
-        else:
-            _LOGGER.warning("[%s] uv installation failed: %s", LOG_PREFIX, stderr.decode())
-            return False
-
-    except Exception as e:
-        _LOGGER.warning("[%s] uv not available or failed: %s", LOG_PREFIX, e)
-        return False
-
-
-async def _try_pip_install(requirements: list[str], deps_dir: Path) -> bool:
-    """Try installing with pip."""
-    try:
-        cmd = [
-            sys.executable, "-m", "pip", "install", "--quiet", "--upgrade",
-            "--target", str(deps_dir)
-        ] + requirements
-
-        _LOGGER.debug("[%s] Running pip install: %s", LOG_PREFIX, " ".join(cmd))
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-
-        stdout, stderr = await process.communicate()
-
-        if process.returncode == 0:
-            _LOGGER.info("[%s] Successfully installed dependencies with pip", LOG_PREFIX)
-            return True
-        else:
-            _LOGGER.warning("[%s] pip installation failed: %s", LOG_PREFIX, stderr.decode())
-            return False
-
-    except Exception as e:
-        _LOGGER.warning("[%s] pip installation failed: %s", LOG_PREFIX, e)
-        return False
-
-
-async def _try_system_pip_install(requirements: list[str]) -> bool:
-    """Try installing with system pip as last resort."""
-    try:
-        cmd = ["pip", "install", "--quiet", "--user"] + requirements
-
-        _LOGGER.debug("[%s] Running system pip install: %s", LOG_PREFIX, " ".join(cmd))
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-
-        stdout, stderr = await process.communicate()
-
-        if process.returncode == 0:
-            _LOGGER.info("[%s] Successfully installed dependencies with system pip", LOG_PREFIX)
-            return True
-        else:
-            _LOGGER.warning("[%s] System pip installation failed: %s", LOG_PREFIX, stderr.decode())
-            return False
-
-    except Exception as e:
-        _LOGGER.warning("[%s] System pip installation failed: %s", LOG_PREFIX, e)
-        return False
-
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Eltako component from YAML (legacy)."""
@@ -232,7 +57,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
 
     # Ensure dependencies are installed
-    if not await _ensure_dependencies_installed(hass):
+    from .dependency_check import ensure_dependencies_installed
+    if not await ensure_dependencies_installed(hass):
         raise ConfigEntryNotReady("Eltako dependencies are not available")
 
     # Initialize data storage
