@@ -1,4 +1,4 @@
-"""Simplified config flow for testing dependency installation."""
+"""Config flow for Eltako integration."""
 from __future__ import annotations
 
 import logging
@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """Simplified Eltako config flow for testing."""
+    """Handle a config flow for Eltako."""
 
     VERSION = 1
     MINOR_VERSION = 1
@@ -25,9 +25,15 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
+        from . import _ensure_dependencies_installed
+
         errors = {}
 
-        if user_input is not None:
+        # Check dependencies first
+        if not await _ensure_dependencies_installed(self.hass):
+            errors["base"] = "dependencies_failed"
+
+        if user_input is not None and not errors:
             # Basic validation
             gateway_description = user_input.get(CONF_GATEWAY_DESCRIPTION, "")
             serial_path = user_input.get(CONF_SERIAL_PATH, "")
@@ -38,7 +44,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_SERIAL_PATH] = "Serial path required"
 
             if not errors:
-                # Create entry - this should trigger dependency installation
+                # Create entry
                 return self.async_create_entry(
                     title="Eltako",
                     data={
