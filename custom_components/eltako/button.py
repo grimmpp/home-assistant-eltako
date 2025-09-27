@@ -1,10 +1,6 @@
 """Support for Eltako buttons."""
 from __future__ import annotations
 
-from eltakobus.util import AddressExpression
-from eltakobus.eep import *
-from eltakobus.message import Regular4BSMessage
-
 from homeassistant.components.button import (
     ButtonEntity,
     ButtonDeviceClass,
@@ -22,6 +18,37 @@ from . import config_helpers
 from .gateway import EnOceanGateway
 from .const import *
 from . import get_gateway_from_hass, get_device_config_for_gateway
+
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.util import AddressExpression
+    from eltakobus.message import Regular4BSMessage
+    # Import specific EEP classes for Python 3.13 compatibility
+    import eltakobus.eep as eep_module
+    globals().update({name: getattr(eep_module, name) for name in dir(eep_module) if not name.startswith('_')})
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    AddressExpression = None
+    Regular4BSMessage = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global AddressExpression, Regular4BSMessage, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.util import AddressExpression as _AddressExpression
+            from eltakobus.message import Regular4BSMessage as _Regular4BSMessage
+            AddressExpression = _AddressExpression
+            Regular4BSMessage = _Regular4BSMessage
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 
 EEP_WITH_TEACH_IN_BUTTONS = {
     A5_10_06: b'\x40\x30\x0D\x85',  # climate

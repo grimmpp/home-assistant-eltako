@@ -1,10 +1,6 @@
 """Representation of an Eltako device."""
 from datetime import datetime
 
-from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
-from eltakobus.util import AddressExpression
-from eltakobus.eep import EEP
-
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
@@ -16,6 +12,50 @@ from homeassistant.const import Platform
 from .const import *
 from .gateway import EnOceanGateway
 from . import config_helpers
+
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
+    from eltakobus.util import AddressExpression
+    from eltakobus.eep import EEP
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    ESP2Message = None
+    EltakoWrappedRPS = None
+    EltakoWrapped1BS = None
+    EltakoWrapped4BS = None
+    RPSMessage = None
+    Regular4BSMessage = None
+    Regular1BSMessage = None
+    AddressExpression = None
+    EEP = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage, AddressExpression, EEP, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.message import ESP2Message as _ESP2Message, EltakoWrappedRPS as _EltakoWrappedRPS, EltakoWrapped1BS as _EltakoWrapped1BS, EltakoWrapped4BS as _EltakoWrapped4BS, RPSMessage as _RPSMessage, Regular4BSMessage as _Regular4BSMessage, Regular1BSMessage as _Regular1BSMessage
+            from eltakobus.util import AddressExpression as _AddressExpression
+            from eltakobus.eep import EEP as _EEP
+            ESP2Message = _ESP2Message
+            EltakoWrappedRPS = _EltakoWrappedRPS
+            EltakoWrapped1BS = _EltakoWrapped1BS
+            EltakoWrapped4BS = _EltakoWrapped4BS
+            RPSMessage = _RPSMessage
+            Regular4BSMessage = _Regular4BSMessage
+            Regular1BSMessage = _Regular1BSMessage
+            AddressExpression = _AddressExpression
+            EEP = _EEP
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 
 
 class EltakoEntity(Entity):

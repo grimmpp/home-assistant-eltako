@@ -1,11 +1,16 @@
 """Config flows for the Eltako integration."""
 # https://developers.home-assistant.io/docs/config_entries_config_flow_handler
 
-import voluptuous as vol
+from __future__ import annotations
 
 import ipaddress
+import logging
+from typing import Any
+
+import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
 
@@ -13,6 +18,8 @@ from . import gateway
 from . import config_helpers
 from .const import *
 from .schema import CONFIG_SCHEMA
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -34,6 +41,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle an Eltako config flow start."""
+        # Check dependencies first
+        from .dependency_check import ensure_dependencies_installed
+
+        if not await ensure_dependencies_installed(self.hass):
+            return self.async_abort(reason="dependencies_failed")
+
         # is called when adding a new gateway
         LOGGER.debug("config_flow user step started.")
         return await self.async_step_detect()
@@ -42,12 +55,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Propose a list of detected gateways."""
         LOGGER.debug("config_flow detect step started.")
         return await self.manual_selection_routine(user_input)
-        
+
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
         LOGGER.debug("config_flow manual step started.")
         return await self.manual_selection_routine(user_input, manual_setp=True)
-    
+
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
         LOGGER.debug("Add new gateway")
         errors = {}
@@ -67,12 +80,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if self.is_input_available(user_input):
                 if await self.validate_eltako_conf(user_input):
                     return self.create_eltako_entry(user_input)
-            
+
                 errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
-        
+
         # get available (not registered) gateways
         g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA))
         # filter out registered gateways. all registered gateways are listen in data section
@@ -99,7 +112,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if manual_setp or len(serial_paths) == 0:
             LOGGER.debug("No usb port or any manually configured address available.")
             errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
-                
+
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({
@@ -130,7 +143,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if gdc in gateway_selection:
                 baud_rate = gateway.BAUD_RATE_DEVICE_TYPE_MAPPING[gdc]
                 break
-        
+
         # check ip address for esp3 over tcp
         if GatewayDeviceType.LAN in gateway_selection:
             try:
@@ -150,3 +163,57 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def create_eltako_entry(self, user_input):
         """Create an entry for the provided configuration."""
         return self.async_create_entry(title="Eltako", data=user_input)
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> EltakoOptionsFlowHandler:
+        """Create the options flow."""
+        return EltakoOptionsFlowHandler(config_entry)
+
+
+class EltakoOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle Eltako options flow."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Handle options flow."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        # Get current gateway settings
+        gateway_description = self.config_entry.data.get(CONF_GATEWAY_DESCRIPTION, "")
+        serial_path = self.config_entry.data.get(CONF_SERIAL_PATH, "")
+
+        # Get current options
+        current_options = self.config_entry.options
+        auto_reconnect = current_options.get(CONF_GATEWAY_AUTO_RECONNECT, True)
+        message_delay = current_options.get(CONF_GATEWAY_MESSAGE_DELAY, 0.0)
+        enable_teach_in = current_options.get(CONF_ENABLE_TEACH_IN_BUTTONS, True)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    CONF_GATEWAY_AUTO_RECONNECT,
+                    description="Enable automatic reconnection",
+                    default=auto_reconnect
+                ): bool,
+                vol.Optional(
+                    CONF_GATEWAY_MESSAGE_DELAY,
+                    description="Message delay in seconds",
+                    default=message_delay
+                ): vol.Coerce(float),
+                vol.Optional(
+                    CONF_ENABLE_TEACH_IN_BUTTONS,
+                    description="Enable teach-in buttons",
+                    default=enable_teach_in
+                ): bool,
+            }),
+            description_placeholders={
+                "gateway_name": gateway_description,
+                "serial_path": serial_path,
+            },
+        )

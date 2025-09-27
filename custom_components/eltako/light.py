@@ -3,9 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from eltakobus.util import AddressExpression
-from eltakobus.eep import *
-
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ColorMode,
@@ -23,6 +20,31 @@ from .config_helpers import DeviceConf
 from .device import *
 from .gateway import EnOceanGateway
 from .const import *
+
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.util import AddressExpression
+    from eltakobus.eep import *
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    AddressExpression = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global AddressExpression, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.util import AddressExpression as _AddressExpression
+            AddressExpression = _AddressExpression
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 
 
 async def async_setup_entry(

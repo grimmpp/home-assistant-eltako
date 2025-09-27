@@ -1,6 +1,14 @@
 {
   "config": {
     "step": {
+      "user": {
+        "title": "Setup Eltako Gateway",
+        "description": "Please provide the gateway configuration.",
+        "data": {
+          "gateway_description": "Gateway Description",
+          "serial_path": "Serial Port Path"
+        }
+      },
       "detect": {
         "title": "Select the path to your Eltako gateway",
         "data": {
@@ -15,6 +23,9 @@
       }
     },
     "error": {
+      "dependencies_failed": "Failed to install required dependencies. Please check logs and restart Home Assistant.",
+      "gateway_description_required": "Gateway description is required",
+      "serial_path_required": "Serial path is required",
       "invalid_gateway_path": "No valid gateway found for this path"
     },
     "abort": {

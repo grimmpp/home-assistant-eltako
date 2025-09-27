@@ -1,3 +1,7 @@
 {
-  "name": "Eltako"
+  "name": "Eltako",
+  "country": ["DE"],
+  "domains": ["sensor", "light", "switch", "binary_sensor", "cover", "climate", "button", "datetime"],
+  "homeassistant": "2024.1.0",
+  "iot_class": "Local Polling"
 }

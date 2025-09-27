@@ -1,9 +1,15 @@
 """Constants for the Eltako integration."""
 from enum import Enum
-from strenum import StrEnum
 import logging
 
 from typing import Final
+
+try:
+    from strenum import StrEnum
+except ImportError:
+    # Fallback for when strenum is not available
+    class StrEnum(str, Enum):
+        pass
 
 from homeassistant.const import Platform
 

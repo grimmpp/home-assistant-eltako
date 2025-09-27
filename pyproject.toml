@@ -1,0 +1,135 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "home-assistant-eltako"
+version = "1.0.0"
+description = "Eltako Home Assistant Custom Integration"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "homeassistant>=2024.1.0",
+    "eltako14bus",
+    "eltakobus",
+    "esp2_gateway_adapter",
+    "enocean",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-homeassistant-custom-component>=0.13.0",
+    "pytest-mock>=3.10.0",
+]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "pylint>=2.15.0",
+    "pre-commit>=3.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests_new"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--disable-warnings",
+    "--tb=short",
+    "-v",
+    "--cov=custom_components.eltako",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-fail-under=70",
+]
+markers = [
+    "asyncio: marks tests as async",
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "slow: marks tests as slow running",
+    "requires_hardware: marks tests that require actual hardware",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning",
+]
+asyncio_mode = "auto"
+minversion = "6.0"
+
+[tool.coverage.run]
+source = ["custom_components/eltako"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.black]
+target-version = ["py311"]
+line-length = 100
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+namespace_packages = true
+exclude = [
+    "tests_new/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "eltako14bus.*",
+    "eltakobus.*",
+    "esp2_gateway_adapter.*",
+    "enocean.*",
+]
+ignore_missing_imports = true

@@ -4,10 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from eltakobus.util import AddressExpression, b2s
-from eltakobus.eep import *
-from eltakobus.message import ESP2Message
-
 from . import config_helpers
 
 
@@ -46,6 +42,39 @@ from .config_helpers import *
 from .gateway import EnOceanGateway
 from .const import *
 from . import get_gateway_from_hass, get_device_config_for_gateway
+
+# Conditional imports to avoid early dependency loading
+try:
+    from eltakobus.util import AddressExpression, b2s
+    from eltakobus.message import ESP2Message
+    # Import specific EEP classes for Python 3.13 compatibility
+    import eltakobus.eep as eep_module
+    globals().update({name: getattr(eep_module, name) for name in dir(eep_module) if not name.startswith('_')})
+    ELTAKO_DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    # Dependencies not yet installed, will be imported later
+    AddressExpression = None
+    b2s = None
+    ESP2Message = None
+    ELTAKO_DEPENDENCIES_AVAILABLE = False
+
+
+def _ensure_dependencies():
+    """Ensure eltako dependencies are loaded."""
+    global AddressExpression, b2s, ESP2Message, ELTAKO_DEPENDENCIES_AVAILABLE
+
+    if not ELTAKO_DEPENDENCIES_AVAILABLE:
+        try:
+            from eltakobus.util import AddressExpression as _AddressExpression, b2s as _b2s
+            from eltakobus.message import ESP2Message as _ESP2Message
+            AddressExpression = _AddressExpression
+            b2s = _b2s
+            ESP2Message = _ESP2Message
+            ELTAKO_DEPENDENCIES_AVAILABLE = True
+        except ImportError as e:
+            raise ImportError(f"Eltako dependencies not available: {e}")
+
+
 
 DEFAULT_DEVICE_NAME_WINDOW_HANDLE = "Window handle"
 DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"
