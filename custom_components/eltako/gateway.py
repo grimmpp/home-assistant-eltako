@@ -6,7 +6,7 @@ import pytz
 from datetime import datetime, UTC
 
 import serial
-import asyncio
+import time
 
 from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import ESP2Message, EltakoPoll
@@ -16,7 +16,7 @@ from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.config_entries import ConfigEntry
@@ -52,7 +52,6 @@ class EnOceanGateway:
 
         """Initialize the Eltako gateway."""
 
-        self._loop = asyncio.get_event_loop()
         self._bus_task = None
         self.baud_rate = baud_rate
         self._auto_reconnect = auto_reconnect
@@ -71,6 +70,8 @@ class EnOceanGateway:
         self._last_message_received_handler = None
         self._connection_state_handler = None
         self._received_message_count_handler = None
+        self._last_stats_update = 0.0  # monotonic timestamp for throttling
+        self._stats_update_interval = 1.0  # seconds between stats updates to HA
 
         self._attr_model = GATEWAY_DEFAULT_NAME + " - " + self.dev_type.upper()
 
@@ -91,6 +92,14 @@ class EnOceanGateway:
 
 
     def _fire_connection_state_changed_event(self, status):
+        """Called from serial thread - schedule on event loop."""
+        if self._connection_state_handler:
+            self.hass.loop.call_soon_threadsafe(
+                self._schedule_connection_state_update, status
+            )
+
+    def _schedule_connection_state_update(self, status):
+        """Run on event loop to safely create task."""
         if self._connection_state_handler:
             self.hass.create_task(
                 self._connection_state_handler(status)
@@ -113,7 +122,6 @@ class EnOceanGateway:
 
 
     def _fire_received_message_count_event(self):
-        self._received_message_count += 1
         if self._received_message_count_handler:
             self.hass.create_task(
                 self._received_message_count_handler( self._received_message_count ),
@@ -121,8 +129,15 @@ class EnOceanGateway:
 
     def process_messages(self, data=None):
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
-        self._fire_received_message_count_event()
-        self._fire_last_message_received_event()
+        # Always increment counter for accuracy
+        self._received_message_count += 1
+
+        # Throttle HA state updates to reduce event loop pressure under heavy traffic
+        now = time.monotonic()
+        if now - self._last_stats_update >= self._stats_update_interval:
+            self._last_stats_update = now
+            self._fire_received_message_count_event()
+            self._fire_last_message_received_event()
 
     
     def _init_bus(self):
@@ -197,14 +212,19 @@ class EnOceanGateway:
 
 
     def dev_id_validation_by_transmitter(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-        result = 0xFF == dev_id[0][0]
+        # Wireless senders have IDs starting with FE or FF
+        result = dev_id[0][0] in (0xFE, 0xFF)
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
     
 
     def dev_id_validation_by_bus_gateway(self, dev_id: AddressExpression, device_name: str = "") -> bool:
-        result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
+        # Bus devices have IDs in 00-00-XX-XX range
+        is_bus_device = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
+        # Wireless senders (PTM buttons, etc.) have IDs starting with FE or FF
+        is_wireless_sender = dev_id[0][0] in (0xFE, 0xFF)
+        result = is_bus_device or is_wireless_sender
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
@@ -213,8 +233,10 @@ class EnOceanGateway:
     ### send and receive funtions for RS485 bus (serial bus)
     ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
 
-    def reconnect(self):
+    async def async_reconnect(self):
         self._bus.stop()
+        # Wait for old thread to terminate before creating new one (prevents thread leaks)
+        await self.hass.async_add_executor_job(self._bus.join)
         self._init_bus()
         self._bus.start()
 
@@ -274,7 +296,7 @@ class EnOceanGateway:
         try:
             # create message
             msg = eep.encode_message(sender_id[0])
-            LOGGER.debug(f"[Service Send Message: {event.service}] Generated message: {msg} Serialized: {msg.serialize().hex()}")
+            LOGGER.debug("[Service Send Message: %s] Generated message: %s", event.service, msg)
             # send message
             self.send_message(msg)
         except Exception as e:
@@ -287,14 +309,15 @@ class EnOceanGateway:
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
-        dispatcher_send(self.hass, event_id, msg)
+        async_dispatcher_send(self.hass, event_id, msg)
 
 
-    def unload(self):
+    async def async_unload(self):
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
             self._bus.stop()
-            self._bus.join()
+            # Run blocking join() in executor to avoid blocking the event loop
+            await self.hass.async_add_executor_job(self._bus.join)
             LOGGER.debug("[Gateway] [Id: %d] Was stopped.", self.dev_id)
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
@@ -304,7 +327,7 @@ class EnOceanGateway:
         """Callback method call from HA when receiving events from serial bus."""
         if self._bus.is_active():
             if isinstance(msg, ESP2Message):
-                LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
+                LOGGER.debug("[Gateway] [Id: %d] Send message: %s", self.dev_id, msg)
 
                 # put message on serial bus
                 self.hass.create_task(
@@ -317,17 +340,26 @@ class EnOceanGateway:
     def _callback_receive_message_from_serial_bus(self, message):
         """Handle Eltako device's callback.
 
-        This is the callback function called by python-enocan whenever there
-        is an incoming message.
+        This is the callback function called by the serial bus thread whenever
+        there is an incoming message. Schedule all processing on the HA event
+        loop to ensure thread safety.
         """
-
         if type(message) not in [EltakoPoll]:
-            LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
-            self.process_messages()
+            self.hass.loop.call_soon_threadsafe(
+                self._process_message_on_event_loop, message
+            )
 
-            if isinstance(message, ESP2Message):
-                event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
-                dispatcher_send(self.hass, event_id, message)
+    def _process_message_on_event_loop(self, message):
+        """Process message on HA event loop (called via call_soon_threadsafe)."""
+        LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
+        self.process_messages()
+
+        if isinstance(message, ESP2Message):
+            # Emit address-scoped event so only interested entities receive it
+            event_id = config_helpers.get_bus_event_type(
+                self.base_id, SIGNAL_RECEIVE_MESSAGE, (message.address, None)
+            )
+            async_dispatcher_send(self.hass, event_id, message)
             
     @property
     def unique_id(self) -> str:

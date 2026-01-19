@@ -18,7 +18,6 @@ from .gateway import EnOceanGateway
 from .schema import CONF_EEP_SUPPORTED_BINARY_SENSOR
 from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
 
-import json
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -156,7 +155,6 @@ class EltakoBinarySensor(AbstractBinarySensor):
         
         try:
             decoded = self.dev_eep.decode_message(msg)
-            LOGGER.debug("decoded : %s", json.dumps(decoded.__dict__))
             # LOGGER.debug("msg : %s, data: %s", type(msg), msg.data)
         except Exception as e:
             LOGGER.warning("[%s %s] Could not decode message for eep %s does not fit to message type %s (org %s)", 
@@ -210,7 +208,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "rocker_second_action": decoded.rocker_second_action,
                 }
             
-            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
+            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: %s", Platform.BINARY_SENSOR, str(self.dev_id), event_id, pressed_buttons)
             self.hass.bus.fire(event_id, event_data)
 
             # fire second event for a specific buttons pushed on the swtich
@@ -225,7 +223,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
                 }
-            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
+            LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: %s", Platform.BINARY_SENSOR, str(self.dev_id), event_id, pressed_buttons)
             self.hass.bus.fire(event_id, event_data)
 
             # Show status change in HA. It will only for the moment when the button is pushed down.

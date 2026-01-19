@@ -133,4 +133,4 @@ class GatewayReconnectButton(AbstractButton):
 
     async def async_press(self) -> None:
         """Reconnect serial bus"""
-        self.gateway.reconnect()
+        await self.gateway.async_reconnect()

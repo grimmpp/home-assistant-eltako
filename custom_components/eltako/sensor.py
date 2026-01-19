@@ -906,10 +906,6 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             key="Received Messages per Session",
                             name="Received Messages per Session",
                             state_class=SensorStateClass.TOTAL_INCREASING,
-                            # device_class=SensorDeviceClass.VOLUME,
-                            # native_unit_of_measurement="Messages", # => raises error message
-                            unit_of_measurement="Messages",
-                            suggested_unit_of_measurement="Messages",
                             icon="mdi:chart-line",
                         )
         )
@@ -993,8 +989,8 @@ class EventListenerInfoField(EltakoSensor):
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, event_id: str, key:str, convert_event_function, icon:str=None):
         super().__init__(platform, gateway,
-                         dev_id=dev_id, 
-                         dev_name=dev_name, 
+                         dev_id=dev_id,
+                         dev_name=dev_name,
                          dev_eep=dev_eep,
                          description=EltakoSensorEntityDescription(
                             key=key,
@@ -1003,15 +999,20 @@ class EventListenerInfoField(EltakoSensor):
                             has_entity_name= True,
                         )
         )
+        self._event_id = event_id
         self.convert_event_function = convert_event_function
         self._attr_name = key
         self._attr_native_value = ''
         self.listen_to_addresses.clear()
 
-        LOGGER.debug(f"[{platform}] [{EventListenerInfoField.__name__}] [{b2s(dev_id[0])}] [{key}] Register event: {event_id}")
-        self.hass.bus.async_listen(event_id, self.value_changed)
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to event when added to hass."""
+        await super().async_added_to_hass()
+        LOGGER.debug(f"[{self._attr_ha_platform}] [{EventListenerInfoField.__name__}] [{b2s(self.dev_id[0])}] [{self._attr_name}] Register event: {self._event_id}")
+        self.async_on_remove(
+            self.hass.bus.async_listen(self._event_id, self.value_changed)
+        )
 
-    
     def value_changed(self, event) -> None:
         LOGGER.debug(f"Received event: {event}")
         self.native_value = self.convert_event_function(event)

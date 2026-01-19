@@ -22,14 +22,23 @@ class BusMock():
             'context': context
         })
 
+class LoopMock():
+    """Mock event loop that executes callbacks directly."""
+
+    def call_soon_threadsafe(self, callback, *args):
+        callback(*args)
+
 class HassMock():
-        
+
     def __init__(self) -> None:
         self.bus = BusMock()
-        self.loop = asyncio.get_event_loop()
+        self.loop = LoopMock()
+        self._tasks = []
 
-    # def async_create_task(self, async_call):
-    #     asyncio.run( async_call )
+    def create_task(self, coro):
+        # Close the coroutine to avoid warnings - tests don't actually run async
+        coro.close()
+        return None
         
 class ConfigEntryMock():
 

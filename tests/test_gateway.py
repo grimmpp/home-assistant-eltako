@@ -25,10 +25,9 @@ class TestGateway(TestCase):
     def test_gateway_creation(self):
         sub_type = GatewayDeviceType.GatewayEltakoFAM14
         baud_rate = BAUD_RATE_DEVICE_TYPE_MAPPING[sub_type]
-        conf = ConfigEntry(version=1, minor_version=0, domain=DOMAIN, title="gateway", data={}, source=None, options=None, unique_id=None)
-        gw = EnOceanGateway(DEFAULT_GENERAL_SETTINGS, HassMock(), 
+        gw = EnOceanGateway(DEFAULT_GENERAL_SETTINGS, HassMock(),
                               dev_id=123, dev_type=sub_type, serial_path="serial_path",  baud_rate=baud_rate, port=None, base_id=AddressExpression.parse('FF-AA-00-00'), dev_name="GW", auto_reconnect=True,
-                              config_entry=conf)
+                              config_entry=ConfigEntryMock())
         
         self.assertEqual(gw.identifier, basename(normpath('serial_path')))
         self.assertEqual(gw.general_settings, DEFAULT_GENERAL_SETTINGS)

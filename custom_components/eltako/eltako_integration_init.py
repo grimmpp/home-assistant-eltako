@@ -160,7 +160,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     gateway = get_gateway_from_hass(hass, config_entry)
 
     LOGGER.info("Unload %s and all its supported devices!", gateway.dev_name)
-    gateway.unload()
+    await gateway.async_unload()
     del hass.data[DATA_ELTAKO][gateway.dev_name]
 
     return True

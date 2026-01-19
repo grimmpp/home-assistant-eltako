@@ -56,19 +56,12 @@ async def async_setup_entry(
 
                 if dev_conf.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
-                    climate_entity = ClimateController(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
-                                                       sender.id, sender.eep, 
-                                                       dev_conf.get(CONF_TEMPERATURE_UNIT), 
-                                                       dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf.get(CONF_MAX_TARGET_TEMPERATURE), 
+                    climate_entity = ClimateController(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep,
+                                                       sender.id, sender.eep,
+                                                       dev_conf.get(CONF_TEMPERATURE_UNIT),
+                                                       dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf.get(CONF_MAX_TARGET_TEMPERATURE),
                                                        thermostat, cooling_switch, cooling_sender)
                     entities.append(climate_entity)
-
-                    # subscribe for cooling switch events
-                    if cooling_switch is not None:
-                        event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_BUTTON_PRESSED, cooling_switch.id, 
-                                                                     config_helpers.convert_button_pos_from_hex_to_str(cooling_switch.get(CONF_SWITCH_BUTTON)))
-                        LOGGER.debug(f"Subscribe for listening to cooling switch events: {event_id}")
-                        hass.bus.async_listen(event_id, climate_entity.async_handle_event)
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -121,7 +114,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         self.thermostat = thermostat
         if self.thermostat:
-            self.listen_to_addresses.append(self.thermostat.id)
+            self.listen_to_addresses.add(self.thermostat.id)
 
         self.cooling_switch = cooling_switch
         self.cooling_switch_last_signal_timestamp = 0
@@ -139,9 +132,34 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
 
-        self._loop = asyncio.get_event_loop()
-        self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
+        self._update_task = None
 
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to cooling switch events and start update task when added to hass."""
+        await super().async_added_to_hass()
+
+        # Start periodic update task
+        self._update_task = asyncio.ensure_future(self._wrapped_update())
+
+        if self.cooling_switch:
+            event_id = config_helpers.get_bus_event_type(
+                self.gateway.base_id, EVENT_BUTTON_PRESSED, self.cooling_switch.id,
+                config_helpers.convert_button_pos_from_hex_to_str(self.cooling_switch.get(CONF_SWITCH_BUTTON))
+            )
+            LOGGER.debug(f"[climate {self.dev_id}] Subscribe for cooling switch events: {event_id}")
+            self.async_on_remove(
+                self.hass.bus.async_listen(event_id, self.async_handle_event)
+            )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel periodic update task on removal."""
+        if self._update_task:
+            self._update_task.cancel()
+            try:
+                await self._update_task
+            except asyncio.CancelledError:
+                pass
+        await super().async_will_remove_from_hass()
 
     def load_value_initially(self, latest_state:State):
         # LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")

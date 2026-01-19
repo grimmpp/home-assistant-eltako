@@ -20,12 +20,14 @@ from . import config_helpers
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
-    
-    
+
+    # Message types we handle - class constant to avoid per-message allocation
+    _HANDLED_MSG_TYPES = (EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage)
+
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None, description_key:str=None):
         """Initialize the device."""
         self._attr_has_entity_name = True
-        self._attr_should_poll = True
+        self._attr_should_poll = False
 
         self._attr_ha_platform = platform
         self._attr_gateway = gateway
@@ -34,8 +36,7 @@ class EltakoEntity(Entity):
         self._attr_dev_id = dev_id
         self._attr_dev_name = config_helpers.get_device_name(dev_name, dev_id, self.general_settings)
         self._attr_dev_eep = dev_eep
-        self.listen_to_addresses = []
-        self.listen_to_addresses.append(self.dev_id[0])
+        self.listen_to_addresses = {self.dev_id[0]}  # Set for O(1) address lookup
         self.description_key = description_key
         self._attr_unique_id = EltakoEntity._get_identifier(self.gateway, self.dev_id, self._get_description_key())
         self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
@@ -78,14 +79,18 @@ class EltakoEntity(Entity):
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
         await super().async_added_to_hass()
-        
-        # Register callbacks.
-        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, event_id, self._message_received_callback
+
+        # Register callbacks for each address this entity listens to.
+        for address in self.listen_to_addresses:
+            normalized_address = self._normalize_listen_address(address)
+            event_id = config_helpers.get_bus_event_type(
+                self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE, normalized_address
             )
-        )
+            self.async_on_remove(
+                async_dispatcher_connect(
+                    self.hass, event_id, self._message_received_callback
+                )
+            )
 
         # load initial value
         if isinstance(self, RestoreEntity):
@@ -114,13 +119,12 @@ class EltakoEntity(Entity):
 
 
     def validate_sender_id(self, sender_id=None) -> bool:
-        
         if sender_id is None:
             if hasattr(self, "sender_id"):
                 sender_id = self.sender_id
 
         if sender_id is not None:
-            return self.gateway.validate_sender_id(self.sender_id, self.dev_name)
+            return self.gateway.validate_sender_id(sender_id, self.dev_name)
         return True
 
     @property
@@ -160,12 +164,8 @@ class EltakoEntity(Entity):
 
     def _message_received_callback(self, msg: ESP2Message) -> None:
         """Handle incoming messages."""
-        
-        msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
-
-        if type(msg) in msg_types:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
+        if isinstance(msg, self._HANDLED_MSG_TYPES):
+            self.value_changed(msg)
 
 
     def value_changed(self, msg: ESP2Message):
@@ -175,6 +175,12 @@ class EltakoEntity(Entity):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
+
+    def _normalize_listen_address(self, address):
+        """Normalize listen addresses to AddressExpression-compatible form."""
+        if isinstance(address, (bytes, bytearray)):
+            return AddressExpression((bytes(address), None))
+        return address
         
 
 def validate_actuators_dev_and_sender_id(entities:list[EltakoEntity]):

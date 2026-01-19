@@ -28,8 +28,8 @@ class TestEntityProperties(unittest.TestCase):
 
         self.assertEqual(ee.dev_name, config_helpers.get_device_name(name, address, gw.general_settings))
         
-        self.assertEqual(len(ee.listen_to_addresses),1)
-        self.assertEqual(ee.listen_to_addresses[0], b'\xfe4!\x01')
+        self.assertEqual(len(ee.listen_to_addresses), 1)
+        self.assertIn(b'\xfe4!\x01', ee.listen_to_addresses)
 
         self.assertEqual(ee.dev_name, 'Switch')
         self.assertEqual(ee.unique_id, 'eltako_gw123_fe_34_21_01')
