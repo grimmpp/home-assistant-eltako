@@ -163,6 +163,7 @@ class SensorSchema(EltakoPlatformSchema):
                           A5_06_01.eep_string,
                           A5_07_01.eep_string,
                           A5_08_01.eep_string,
+                          A5_09_04.eep_string,
                           A5_09_0C.eep_string,
                           A5_10_03.eep_string,
                           A5_10_06.eep_string,

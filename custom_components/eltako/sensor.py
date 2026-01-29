@@ -55,6 +55,7 @@ DEFAULT_DEVICE_NAME_WATER_METER = "Water meter"
 DEFAULT_DEVICE_NAME_HYGROSTAT = "Hygrostat"
 DEFAULT_DEVICE_NAME_THERMOMETER = "Thermometer"
 DEFAULT_DEVICE_NAME_AIR_QUAILTY_SENSOR = "Air Quality Sensor"
+DEFAULT_DEVICE_NAME_CO2_SENSOR = "CO2 Sensor"
 
 SENSOR_TYPE_BATTERY_VOLTAGE = "electricity_voltage"
 SENSOR_TYPE_ELECTRICITY_CUMULATIVE = "electricity_cumulative"
@@ -66,6 +67,7 @@ SENSOR_TYPE_WATER_CURRENT = "water_current"
 SENSOR_TYPE_TEMPERATURE = "temperature"
 SENSOR_TYPE_TARGET_TEMPERATURE = "target_temperature"
 SENSOR_TYPE_HUMIDITY = "humidity"
+SENSOR_TYPE_CO2 = "co2"
 SENSOR_TYPE_VOLTAGE = "voltage"
 SENSOR_TYPE_PIR = "pir"
 SENSOR_TYPE_WINDOWHANDLE = "windowhandle"
@@ -264,6 +266,16 @@ SENSOR_DESC_HUMIDITY = EltakoSensorEntityDescription(
     suggested_display_precision=1,
 )
 
+SENSOR_DESC_CO2 = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_CO2,
+    name="CO2",
+    native_unit_of_measurement="ppm",
+    icon="mdi:molecule-co2",
+    device_class=SensorDeviceClass.CO2,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
+)
+
 SENSOR_DESC_VOLTAGE = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_VOLTAGE,
     name="voltage",
@@ -355,6 +367,11 @@ async def async_setup_entry(
                 elif dev_conf.eep in [A5_10_06, A5_10_03]:
                     entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
+                elif dev_conf.eep in [A5_09_04]:
+                    entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoHumiditySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoCO2Sensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                 
                 elif dev_conf.eep in [A5_09_0C]:
                 ### Eltako FLGTF only supports VOCT Total
@@ -805,6 +822,32 @@ class EltakoHumiditySensor(EltakoSensor):
             return
         
         self._attr_native_value = decoded.humidity
+
+        self.schedule_update_ha_state()
+
+class EltakoCO2Sensor(EltakoSensor):
+    """Representation of an Eltako CO2 sensor.
+    
+    EEPs (EnOcean Equipment Profiles):
+    - A5-09-04 (CO2, Temperature and Humidity)
+    """
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, description: EltakoSensorEntityDescription=SENSOR_DESC_CO2) -> None:
+        """Initialize the Eltako CO2 sensor."""
+        _dev_name = dev_name
+        if _dev_name == "":
+            _dev_name = DEFAULT_DEVICE_NAME_CO2_SENSOR
+        super().__init__(platform, gateway, dev_id, _dev_name, dev_eep, description)
+    
+    def value_changed(self, msg: ESP2Message):
+        """Update the internal state of the sensor."""
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+        except Exception as e:
+            LOGGER.warning("[CO2 Sensor %s] Could not decode message: %s", self.dev_id, str(e))
+            return
+        
+        self._attr_native_value = decoded.co2
 
         self.schedule_update_ha_state()
 
