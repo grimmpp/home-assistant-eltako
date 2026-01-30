@@ -50,6 +50,9 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * F6-02-01 and F6-02-02
 * Cover
   * G5-3F-7F (Eltako cover, FSB14, FSB61, FSB71, FJ62)
+* Fan
+  * A5-38-08 (Dimmable Fan/Ventilation: Central command - gateway, FUD14)
+  * M5-38-08 (Switchable Fan/Ventilation: Eltako relay, FSR14)
 
 **Supported sender EEPs**
 * [Light](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/lights-tutorial/readme.md)
@@ -60,11 +63,13 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * F6-02-01 and F6-02-02 (Rocker switch - function 02 'direct  pushbutton top on' default left)
 * Cover
   * H5-3F-7F (Eltako cover, FSB14)
+* Fan
+  * A5-38-08 (Central command - gateway)
 * [Climate](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md) (**Experimental** Feedback is welcome.)
   * A5-10-06 (Eltako FAE14, FHK14, F4HK14, F2L14, FHK61, FME14)
 * [Teach-In Buttons](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/teach_in_buttons/readme.md)
   * A5-10-06, A5-10-12 (climate/thermostats)
-  * A5-38-08 (light and switch)
+  * A5-38-08 (light, switch and fan)
   * H5-3F-7F (cover)
 * [Send Message Service](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/service-send-message/readme.md) Sends any EnOcean Message. Can be used for [automatinos in Home Assistant](https://www.home-assistant.io/getting-started/automation/) so that none-EnOcean and EnOcean deviecs can be combined. 
   * Not supported EEPs: A5-09-0C (Air Quality), A5-38-08 (Central Command)
