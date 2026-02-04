@@ -57,6 +57,8 @@ CONF_MAX_TARGET_TEMPERATURE: Final = "max_target_temperature"
 CONF_MIN_TARGET_TEMPERATURE: Final = "min_target_temperature"
 CONF_ROOM_THERMOSTAT: Final = "thermostat"
 CONF_COOLING_MODE: Final = "cooling_mode"
+CONF_ROOM_SENSOR: Final = "room_sensor"
+CONF_OFF_TEMPERATURE: Final = "off_temperature"
 
 CONF_VIRTUAL_NETWORK_GATEWAY: Final = "Virtual ESP2 Reverse Network Bridge"
 
