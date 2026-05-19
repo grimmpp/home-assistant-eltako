@@ -22,6 +22,8 @@ from homeassistant.const import Platform, CONF_TEMPERATURE_UNIT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.core import Event
 
 from .gateway import EnOceanGateway
 from .device import *
@@ -48,7 +50,9 @@ async def async_setup_entry(
                 dev_conf = DeviceConf(entity_config, [CONF_TEMPERATURE_UNIT, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE])
                 sender = config_helpers.get_device_conf(entity_config, CONF_SENDER)
                 thermostat = config_helpers.get_device_conf(entity_config, CONF_ROOM_THERMOSTAT)
-
+                room_sensor_entity_id = entity_config.get(CONF_ROOM_SENSOR)
+                off_temperature = entity_config.get(CONF_OFF_TEMPERATURE)
+                
                 cooling_switch = None
                 cooling_sender = None
                 if CONF_COOLING_MODE in config.keys():
@@ -63,7 +67,7 @@ async def async_setup_entry(
                                                        sender.id, sender.eep, 
                                                        dev_conf.get(CONF_TEMPERATURE_UNIT), 
                                                        dev_conf.get(CONF_MIN_TARGET_TEMPERATURE), dev_conf.get(CONF_MAX_TARGET_TEMPERATURE), 
-                                                       thermostat, cooling_switch, cooling_sender)
+                                                       thermostat, cooling_switch, cooling_sender, room_sensor_entity_id, off_temperature)
                     entities.append(climate_entity)
 
                     # subscribe for cooling switch events
@@ -74,9 +78,10 @@ async def async_setup_entry(
                         hass.bus.async_listen(event_id, climate_entity.async_handle_cooling_switch_event)
 
                     # subscribe for prio config
-                    event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_PRIORITY_SELECTED, dev_conf.id)
-                    LOGGER.debug(f"Subscribe for listening to priority change events: {event_id}")
-                    hass.bus.async_listen(event_id, climate_entity.async_handle_priority_events)
+                    if thermostat is not None:
+                        event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_PRIORITY_SELECTED, dev_conf.id)
+                        LOGGER.debug(f"Subscribe for listening to priority change events: {event_id}")
+                        hass.bus.async_listen(event_id, climate_entity.async_handle_priority_events)
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -125,16 +130,22 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, 
                  sender_id: AddressExpression, sender_eep: EEP, 
                  temp_unit, min_temp: int, max_temp: int, 
-                 thermostat: DeviceConf, cooling_switch: DeviceConf, cooling_sender: DeviceConf):
+                 thermostat: DeviceConf, cooling_switch: DeviceConf, cooling_sender: DeviceConf,
+                 room_sensor_entity_id: str = None, off_temperature: int = None):
         """Initialize the Eltako heating and cooling source."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._on_state = False
         self._sender_id = sender_id
         self._sender_eep = sender_eep
+        self.off_temperature = off_temperature
+        self._last_on_temp = None
 
         self.thermostat = thermostat
         if self.thermostat:
             self.listen_to_addresses.append(self.thermostat.id)
+
+        self.room_sensor_entity_id = room_sensor_entity_id
+        self._room_sensor_temp = None
 
         self.cooling_switch = cooling_switch
         self.cooling_switch_last_signal_timestamp = 0
@@ -153,11 +164,53 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         # self._attr_target_temperature_low = min_temp
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
-        self._attr_priority = A5_10_06.ControllerPriority.AUTO.value
+        if self.thermostat is None:
+            self._attr_priority = A5_10_06.ControllerPriority.ACTUATOR_ACK
+        else:
+            self._attr_priority = A5_10_06.ControllerPriority.AUTO
+            
         self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
 
-        # self._loop = asyncio.get_event_loop()
         # self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
+
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity about to be added to hass."""
+        await super().async_added_to_hass()
+        if self.room_sensor_entity_id:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, [self.room_sensor_entity_id], self._async_room_sensor_changed
+                )
+            )
+            # Read initial state
+            state = self.hass.states.get(self.room_sensor_entity_id)
+            if state and state.state not in ["unknown", "unavailable"]:
+                try:
+                    self._room_sensor_temp = float(state.state)
+                    self._attr_current_temperature = self._room_sensor_temp
+                except ValueError:
+                    LOGGER.warning(f"[climate {self.dev_id}] Could not convert state {state.state} to float for {self.room_sensor_entity_id}")
+
+    async def _async_room_sensor_changed(self, event: Event):
+        """Handle room sensor state changes."""
+        new_state = event.data.get("new_state")
+        if new_state is None or new_state.state in ["unknown", "unavailable"]:
+            return
+        
+        try:
+            self._room_sensor_temp = float(new_state.state)
+            self._attr_current_temperature = self._room_sensor_temp
+            
+            if self._attr_actuator_mode is None:
+                self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
+                
+            self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
+            
+            self.schedule_update_ha_state()
+            LOGGER.debug(f"[climate {self.dev_id}] Room sensor {self.room_sensor_entity_id} changed to {self._room_sensor_temp}")
+        except ValueError:
+            LOGGER.warning(f"[climate {self.dev_id}] Could not convert state {new_state.state} to float for {self.room_sensor_entity_id}")
 
 
     def load_value_initially(self, latest_state:State):
@@ -173,18 +226,15 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                         self.hvac_modes.append(m_enum)
 
             self._attr_current_temperature = latest_state.attributes.get('current_temperature', None)
-            self._attr_target_temperature = latest_state.attributes.get('temperature', None)
+            self._attr_target_temperature = latest_state.attributes.get('temperature', self._attr_min_temp)
             self._attr_preset_mode = latest_state.attributes.get('preset_mode', None)
+            
+            self._attr_hvac_mode = HVACMode.OFF
             if latest_state.state is not None:
-                self._attr_hvac_mode = HVACMode(latest_state.state)
-            else:
-                self._attr_hvac_mode = HVACMode.OFF
-
-            self._attr_hvac_mode = None
-            for m_enum in HVACMode:
-                if latest_state.state == m_enum.value:
-                    self._attr_hvac_mode = m_enum
-                    break
+                for m_enum in HVACMode:
+                    if latest_state.state == m_enum.value:
+                        self._attr_hvac_mode = m_enum
+                        break
                 
         except Exception as e:
             self._attr_hvac_mode = None
@@ -268,7 +318,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         if self._attr_actuator_mode in [None, A5_10_06.HeaterMode.OFF]:
             self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
 
+        self._attr_target_temperature = new_target_temp
         self._send_command(self._attr_actuator_mode, new_target_temp, self._attr_priority)
+        self.schedule_update_ha_state()
         
 
 
@@ -280,8 +332,12 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         """Send command to set target temperature."""
         address, _ = self._sender_id
         if 0 <= target_temp <= 40:
-            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, mode: {mode}, priority: '{priority.description}'")
-            msg = A5_10_06(mode, target_temp, current_temp=40, priority=priority).encode_message(address)
+            current_temp = 40
+            if self._room_sensor_temp is not None:
+                current_temp = self._room_sensor_temp
+
+            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, current temp: {current_temp}, mode: {mode}, priority: '{priority.description}'")
+            msg = A5_10_06(mode, target_temp, current_temp=current_temp, priority=priority).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
@@ -289,24 +345,46 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
 
     def _send_set_normal_mode(self) -> None:
+        if self.off_temperature is not None:
+            target_temp = self._last_on_temp if self._last_on_temp else self._attr_min_temp
+            self._attr_target_temperature = target_temp
+            self._send_command(A5_10_06.HeaterMode.NORMAL, target_temp, self._attr_priority)
+            self.schedule_update_ha_state()
+
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Normal")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x70', True))
 
 
     def _send_mode_off(self) -> None:
+        if self.off_temperature is not None:
+            if self._attr_hvac_mode != HVACMode.OFF:
+                self._last_on_temp = self.target_temperature
+            self._attr_target_temperature = self.off_temperature
+            self._attr_hvac_mode = HVACMode.OFF
+            self._attr_hvac_action = HVACAction.OFF
+            self._send_command(A5_10_06.HeaterMode.NORMAL, self.off_temperature, self._attr_priority)
+            self.schedule_update_ha_state()
+            return
+
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: OFF")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x10', True))
 
 
     def _send_mode_night(self) -> None:
+        if self.off_temperature is not None:
+            return
+
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Night")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x50', True))
 
 
     def _send_mode_setback(self) -> None:
+        if self.off_temperature is not None:
+            return
+
         LOGGER.debug(f"[climate {self.dev_id}] Send signal to set mode: Temperature Setback")
         address, _ = self._sender_id
         self.send_message(RPSMessage(address, 0x30, b'\x30', True))
@@ -349,8 +427,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     def value_changed(self, msg: ESP2Message) -> None:
         """Update the internal state of this device."""
 
-        climate_address, _ = self.dev_id
-        if msg.address == climate_address:
+        if msg.address == self.dev_id[0] or msg.address == self._external_dev_id[0]:
             LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by actuator: {self.dev_id}")
             self.change_temperature_values(msg)
 
@@ -409,6 +486,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             if decoded.mode != A5_10_06.HeaterMode.OFF:
                 # show target temp in 0.5 steps
                 self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
+            
+            if self.off_temperature is not None and self._attr_target_temperature == self.off_temperature:
+                self._attr_hvac_mode = HVACMode.OFF
+                self._attr_hvac_action = HVACAction.OFF
 
         if msg.org == 0x05:
             heater_mode = A5_10_06.HeaterMode( int.from_bytes(msg.data, byteorder='big') )

@@ -38,8 +38,11 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_config = DeviceConf(entity_config)
-                entities.append(ClimatePriority(platform, gateway, dev_config.id, dev_config.name, dev_config.eep))
+                dev_config = DeviceConf(entity_config, [CONF_ROOM_THERMOSTAT])
+                thermostat = dev_config.get(CONF_ROOM_THERMOSTAT)
+                
+                if thermostat:
+                    entities.append(ClimatePriority(platform, gateway, dev_config.id, dev_config.name, dev_config.eep))
 
             except Exception as e:
                 LOGGER.warning("[%s %s] Could not load configuration", platform, str(dev_config.id))
