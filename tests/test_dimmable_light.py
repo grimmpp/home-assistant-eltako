@@ -22,6 +22,7 @@ class TestDimmableLight(unittest.TestCase):
     def create_switchable_light(self) -> EltakoDimmableLight:
         settings = DEFAULT_GENERAL_SETTINGS
         settings[CONF_FAST_STATUS_CHANGE] = True
+        fast_status_change_per_device = True
         gateway = GatewayMock(settings)
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
@@ -33,7 +34,7 @@ class TestDimmableLight(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        light = EltakoDimmableLight(Platform.LIGHT, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep)
+        light = EltakoDimmableLight(Platform.LIGHT, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, fast_status_change_per_device)
         return light
 
     def test_switchable_light_value_changed(self):

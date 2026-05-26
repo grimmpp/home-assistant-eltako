@@ -20,7 +20,8 @@ class TestCover(unittest.TestCase):
 
     def create_cover(self) -> EltakoCover:
         settings = DEFAULT_GENERAL_SETTINGS
-        settings[CONF_FAST_STATUS_CHANGE] = True
+        settings[CONF_FAST_STATUS_CHANGE] = False
+        fast_status_change_per_device = True
         gateway = GatewayMock(settings)
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
@@ -36,7 +37,7 @@ class TestCover(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts)
+        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts, fast_status_change_per_device)
         ec.send_message = self.mock_send_message
 
         self.assertEqual(ec._attr_is_closing, False)
@@ -48,7 +49,8 @@ class TestCover(unittest.TestCase):
 
     def create_blind(self) -> EltakoCover:
         settings = DEFAULT_GENERAL_SETTINGS
-        settings[CONF_FAST_STATUS_CHANGE] = True
+        settings[CONF_FAST_STATUS_CHANGE] = False
+        fast_status_change_per_device = True
         gateway = GatewayMock(settings)
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
@@ -64,7 +66,7 @@ class TestCover(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts)
+        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts, fast_status_change_per_device)
         ec.send_message = self.mock_send_message
 
         self.assertEqual(ec._attr_is_closing, False)

@@ -22,11 +22,12 @@ class TestSwitch(unittest.TestCase):
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'M5-38-08'
+        fast_status_change_per_device = True
         
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        switch = EltakoSwitch(Platform.SWITCH, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep)
+        switch = EltakoSwitch(Platform.SWITCH, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, fast_status_change_per_device)
         return switch
 
     def test_switch_value_changed_with_sender_epp_A5_38_08(self):

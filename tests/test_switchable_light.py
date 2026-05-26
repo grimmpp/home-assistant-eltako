@@ -22,11 +22,12 @@ class TestSwitchableLight(unittest.TestCase):
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'M5-38-08'
+        fast_status_change_per_device = True
         
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        light = EltakoSwitchableLight(Platform.LIGHT, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep)
+        light = EltakoSwitchableLight(Platform.LIGHT, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, fast_status_change_per_device)
         return light
 
     def test_switchable_light_value_changed(self):
