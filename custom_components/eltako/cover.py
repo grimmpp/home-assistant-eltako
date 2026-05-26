@@ -74,7 +74,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self._time_tilts = time_tilts
         self._fast_status_change = fast_status_change if fast_status_change is not None else self.general_settings[CONF_FAST_STATUS_CHANGE]
 
-        
         self._attr_supported_features = (CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP)
         
         if time_tilts is not None:

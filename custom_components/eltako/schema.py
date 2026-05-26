@@ -129,6 +129,7 @@ class LightSchema(EltakoPlatformSchema):
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
                 vol.Required(CONF_SENDER): _get_sender_schema(CONF_SENDER_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+                vol.Optional(CONF_FAST_STATUS_CHANGE_PER_DEVICE, default=None): cv.boolean,
             }
         ),
     )
@@ -149,6 +150,7 @@ class SwitchSchema(EltakoPlatformSchema):
                 vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
                 vol.Required(CONF_SENDER): _get_sender_schema(CONF_SENDER_EEP_SUPPORTED),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+                vol.Optional(CONF_FAST_STATUS_CHANGE_PER_DEVICE, default=None): cv.boolean,
             }
         ),
     )
@@ -211,6 +213,7 @@ class CoverSchema(EltakoPlatformSchema):
                 vol.Optional(CONF_TIME_CLOSES): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
                 vol.Optional(CONF_TIME_OPENS): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
                 vol.Optional(CONF_TIME_TILTS): vol.All(vol.Coerce(int), vol.Range(min=1, max=255)),
+                vol.Optional(CONF_FAST_STATUS_CHANGE_PER_DEVICE, default=None): cv.boolean,
             }
         ),
     )
