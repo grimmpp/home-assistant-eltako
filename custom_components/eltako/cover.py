@@ -37,12 +37,13 @@ async def async_setup_entry(
         for entity_config in config[platform]:
 
             try:
-                dev_conf = DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS])
+                dev_conf = DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS, CONF_FAST_STATUS_CHANGE_PER_DEVICE])
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
                 entities.append(EltakoCover(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
                                             sender_config.id, sender_config.eep, 
-                                            dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS), dev_conf.get(CONF_TIME_TILTS)))
+                                            dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS), dev_conf.get(CONF_TIME_TILTS),
+                                            dev_conf.get(CONF_FAST_STATUS_CHANGE_PER_DEVICE)))
 
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -56,7 +57,7 @@ async def async_setup_entry(
 class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens, time_tilts):
+    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens, time_tilts, fast_status_change):
         """Initialize the Eltako cover device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._sender_id = sender_id
@@ -71,6 +72,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self._time_closes = time_closes
         self._time_opens = time_opens
         self._time_tilts = time_tilts
+        self._fast_status_change = fast_status_change if fast_status_change is not None else self.general_settings[CONF_FAST_STATUS_CHANGE]
+
         
         self._attr_supported_features = (CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP)
         
@@ -148,7 +151,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             self._attr_is_opening = True
             self._attr_is_closing = False
             
@@ -174,7 +177,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             self._attr_is_closing = True
             self._attr_is_opening = False
 
@@ -218,7 +221,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
             return
         
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             if direction == "up":
                 self._attr_is_opening = True
                 self._attr_is_closing = False
@@ -237,7 +240,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
             self.send_message(msg)
         
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             self._attr_is_closing = False
             self._attr_is_opening = False
 
@@ -349,7 +352,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             self.send_message(msg)
 
         
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             if direction == "up":
                 self._attr_is_opening = True
                 self._attr_is_closing = False

@@ -35,10 +35,10 @@ async def async_setup_entry(
     if platform in config:
         for entity_config in config[platform]:
             try:
-                dev_conf = DeviceConf(entity_config)
+                dev_conf = DeviceConf(entity_config, [CONF_FAST_STATUS_CHANGE_PER_DEVICE])
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                entities.append(EltakoSwitch(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep))
+                entities.append(EltakoSwitch(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep, dev_conf.get(CONF_FAST_STATUS_CHANGE_PER_DEVICE)))
             
             except Exception as e:
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -53,11 +53,12 @@ async def async_setup_entry(
 class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
     """Representation of an Eltako switch device."""
 
-    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP):
+    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, fast_status_change):
         """Initialize the Eltako switch device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep)
         self._sender_id = sender_id
         self._sender_eep = sender_eep
+        self._fast_status_change = fast_status_change if fast_status_change is not None else self.general_settings[CONF_FAST_STATUS_CHANGE]
         
     def load_value_initially(self, latest_state:State):
         try:
@@ -106,7 +107,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
             return
         
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             self._attr_is_on = True
             self.schedule_update_ha_state()
 
@@ -139,7 +140,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.SWITCH, str(self.dev_id), self._sender_eep.eep_string)
             return
 
-        if self.general_settings[CONF_FAST_STATUS_CHANGE]:
+        if self._fast_status_change:
             self._attr_is_on = False
             self.schedule_update_ha_state()
 
