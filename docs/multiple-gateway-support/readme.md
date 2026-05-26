@@ -15,7 +15,7 @@ In this example two gateways are connected to Home Assistant. The first one `Elt
 ```
 eltako:
   general_settings:
-    fast_status_change: False
+    fast_status_change: False       # this general setting can be overwritten on a per-device basis
     show_dev_id_in_dev_name: True
 
   gateway:

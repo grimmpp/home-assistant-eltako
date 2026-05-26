@@ -32,6 +32,7 @@ eltako:
   # optional section 'general_settings'
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
+                                # This general setting can be overwritten on a per-device basis
 
   # section 'gateway'
   # Currently only devices based on ESP2 protocol are supported. In future ESP3 protocol shall be extended. 
@@ -56,6 +57,7 @@ eltako:
       - id: 00-00-00-01           # address (HEX) 
         eep: M5-38-08             # Supported EEP telegrams: A5-38-08, M5-38-08
         name: FSR14_4x - 1        # optional: display name
+        fast_status_change: True  # Overwrite general setting for this device
         sender:                   # virtual switch in Home Assistant.
           id: 00-00-B0-01         # every sender needs it's own address which needs to be entered in PCT14 / actuator with function group 51 for FSR14.
           eep: A5-38-08   
