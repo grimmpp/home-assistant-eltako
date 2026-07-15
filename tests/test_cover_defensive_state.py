@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from unittest import mock
 
@@ -18,7 +19,13 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestDefensiveCoverState(unittest.TestCase):
     def setUp(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.last_sent_command = None
+
+    def tearDown(self):
+        asyncio.set_event_loop(None)
+        self.loop.close()
 
     def _capture_message(self, msg):
         self.last_sent_command = msg
