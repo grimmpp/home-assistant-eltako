@@ -21,6 +21,15 @@ from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TIL
 from . import get_gateway_from_hass, get_device_config_for_gateway
 import time
 
+
+def _coerce_position(value: Any) -> int | None:
+    """Return a cover position clamped to the Home Assistant range."""
+    try:
+        return max(0, min(100, int(value)))
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
@@ -82,42 +91,39 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
 
     def load_value_initially(self, latest_state:State):
-        # LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
-        # LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
-        try:
-            self._attr_current_cover_position = latest_state.attributes['current_position']
-            self._attr_current_cover_tilt_position = latest_state.attributes['current_tilt_position']
+        attrs = latest_state.attributes or {}
 
-            #if self._attr_current_cover_tilt_position == 0:
-            #    self._attr_current_cover_tilt_position = 0
-            if latest_state.state == STATE_OPEN:
-                self._attr_is_opening = False
-                self._attr_is_closing = False
-                self._attr_is_closed = False
-                self._attr_current_cover_position = 100
-                self._attr_current_cover_tilt_position = 100
-            elif latest_state.state == STATE_CLOSED:
-                self._attr_is_opening = False
-                self._attr_is_closing = False
-                self._attr_is_closed = True
-                self._attr_current_cover_position = 0
-                self._attr_current_cover_tilt_position = 0
-            elif latest_state.state == STATE_CLOSING:
-                self._attr_is_opening = False
-                self._attr_is_closing = True
-                self._attr_is_closed = False
-            elif latest_state.state == STATE_OPENING:
-                self._attr_is_opening = True
-                self._attr_is_closing = False
-                self._attr_is_closed = False
-            
-        except Exception as e:
-            self._attr_current_cover_position = None
-            self._attr_current_cover_tilt_position = None
-            self._attr_is_opening = None
-            self._attr_is_closing = None
-            self._attr_is_closed = None # means undefined state
-            # raise e
+        position = attrs.get('current_position')
+        if position is None:
+            position = attrs.get('current_cover_position')
+
+        tilt_position = attrs.get('current_tilt_position')
+        if tilt_position is None:
+            tilt_position = attrs.get('current_cover_tilt_position')
+
+        self._attr_current_cover_position = _coerce_position(position)
+        self._attr_current_cover_tilt_position = _coerce_position(tilt_position)
+
+        if latest_state.state == STATE_OPEN:
+            self._attr_is_opening = False
+            self._attr_is_closing = False
+            self._attr_is_closed = False
+            self._attr_current_cover_position = 100
+            self._attr_current_cover_tilt_position = 100
+        elif latest_state.state == STATE_CLOSED:
+            self._attr_is_opening = False
+            self._attr_is_closing = False
+            self._attr_is_closed = True
+            self._attr_current_cover_position = 0
+            self._attr_current_cover_tilt_position = 0
+        elif latest_state.state == STATE_CLOSING:
+            self._attr_is_opening = False
+            self._attr_is_closing = True
+            self._attr_is_closed = False
+        elif latest_state.state == STATE_OPENING:
+            self._attr_is_opening = True
+            self._attr_is_closing = False
+            self._attr_is_closed = False
         
         self.schedule_update_ha_state()
         LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [" 
@@ -186,9 +192,15 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             return
         
         address, _ = self._sender_id
-        position = kwargs[ATTR_POSITION]
+        position = _coerce_position(kwargs.get(ATTR_POSITION))
+        if position is None:
+            LOGGER.warning("[%s %s] Invalid target cover position: %s", Platform.COVER, str(self.dev_id), kwargs.get(ATTR_POSITION))
+            return
+
+        current_position = _coerce_position(self._attr_current_cover_position)
+        self._attr_current_cover_position = current_position
         
-        if position == self._attr_current_cover_position:
+        if position == current_position:
             return
         elif position == 100:
             direction = "up"
@@ -196,19 +208,22 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         elif position == 0:
             direction = "down"
             time = self._time_closes + 1
-        elif position > self._attr_current_cover_position:
+        elif current_position is None:
+            LOGGER.warning("[%s %s] Cannot set intermediate position %s because the current position is unknown.", Platform.COVER, str(self.dev_id), position)
+            return
+        elif position > current_position:
             direction = "up"
-            time = max(1,min(int(((position - self._attr_current_cover_position) / 100.0) * self._time_opens), 255))
+            time = max(1,min(int(((position - current_position) / 100.0) * self._time_opens), 255))
             # try to prevent covers moving completely up or down when time = 0
-        elif position < self._attr_current_cover_position:
+        else:
             direction = "down"
-            time = max(1,min(int(((self._attr_current_cover_position - position) / 100.0) * self._time_closes), 255))
+            time = max(1,min(int(((current_position - position) / 100.0) * self._time_closes), 255))
             # try to prevent covers moving completely up or down when time = 0
 
         if self._sender_eep == H5_3F_7F:
             if direction == "up":
                 command = 0x01
-            elif direction == "down":
+            else:
                 command = 0x02
             
             msg = H5_3F_7F(time, command, 1).encode_message(address)
@@ -222,7 +237,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             if direction == "up":
                 self._attr_is_opening = True
                 self._attr_is_closing = False
-            elif direction == "down":
+            else:
                 self._attr_is_closing = True
                 self._attr_is_opening = False
                 
@@ -294,6 +309,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
                     if self._time_tilts is not None:
+                        if self._attr_current_cover_tilt_position is None:
+                            self._attr_current_cover_tilt_position = 0
                         self._attr_current_cover_tilt_position = min(self._attr_current_cover_tilt_position + int(decoded.time / self._time_tilts * 100.0), 100)
 
                 else:  # down
@@ -305,6 +322,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
                     if self._time_tilts is not None:
+                        if self._attr_current_cover_tilt_position is None:
+                            self._attr_current_cover_tilt_position = 100
                         self._attr_current_cover_tilt_position = max(self._attr_current_cover_tilt_position - int(decoded.time / self._time_tilts * 100.0), 0)
 
                 if self._attr_current_cover_position == 0:
@@ -323,22 +342,34 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
 
     def set_cover_tilt_position(self, **kwargs: Any) -> None:
-        address, _ = self._sender_id
-        tilt_position = kwargs[ATTR_TILT_POSITION]
-        
-        if tilt_position == self._attr_current_cover_tilt_position:
+        if self._time_tilts is None:
             return
-        elif tilt_position > self._attr_current_cover_tilt_position:
+
+        address, _ = self._sender_id
+        tilt_position = _coerce_position(kwargs.get(ATTR_TILT_POSITION))
+        if tilt_position is None:
+            LOGGER.warning("[%s %s] Invalid target cover tilt position: %s", Platform.COVER, str(self.dev_id), kwargs.get(ATTR_TILT_POSITION))
+            return
+
+        current_tilt_position = _coerce_position(self._attr_current_cover_tilt_position)
+        self._attr_current_cover_tilt_position = current_tilt_position
+        if current_tilt_position is None:
+            LOGGER.warning("[%s %s] Cannot set tilt position %s because the current tilt position is unknown.", Platform.COVER, str(self.dev_id), tilt_position)
+            return
+        
+        if tilt_position == current_tilt_position:
+            return
+        elif tilt_position > current_tilt_position:
             direction = "up"
-            sleeptime = min((((tilt_position - self._attr_current_cover_tilt_position) / 100.0 * self._time_tilts / 10.0) ), 255.0)
-        elif tilt_position < self._attr_current_cover_tilt_position:
+            sleeptime = min((((tilt_position - current_tilt_position) / 100.0 * self._time_tilts / 10.0) ), 255.0)
+        else:
             direction = "down"
-            sleeptime = min((((self._attr_current_cover_tilt_position - tilt_position) / 100.0 * self._time_tilts / 10.0) ), 255.0)
+            sleeptime = min((((current_tilt_position - tilt_position) / 100.0 * self._time_tilts / 10.0) ), 255.0)
 
         if self._sender_eep == H5_3F_7F:
             if direction == "up":
                 command = 0x01
-            elif direction == "down":
+            else:
                 command = 0x02
             
             msg = H5_3F_7F(0, command, 1).encode_message(address)
@@ -353,6 +384,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             if direction == "up":
                 self._attr_is_opening = True
                 self._attr_is_closing = False
-            elif direction == "down":
+            else:
                 self._attr_is_closing = True
                 self._attr_is_opening = False
