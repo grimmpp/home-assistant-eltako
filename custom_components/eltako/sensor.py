@@ -914,9 +914,9 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             name="Received Messages per Session",
                             state_class=SensorStateClass.TOTAL_INCREASING,
                             # device_class=SensorDeviceClass.VOLUME,
-                            # native_unit_of_measurement="Messages", # => raises error message
-                            unit_of_measurement="count",
-                            suggested_unit_of_measurement="Messages",
+                            # No unit: "Messages" is not a valid unit of measurement and makes
+                            # Home Assistant refuse to add the entity. A unitless counter with
+                            # state_class TOTAL_INCREASING is valid.
                             icon="mdi:chart-line",
                         )
         )
