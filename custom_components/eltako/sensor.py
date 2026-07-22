@@ -460,8 +460,8 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
         try:
-            if 'unknown' == latest_state.state:
-                self._attr_is_on = None
+            if latest_state.state in ['unknown', 'unavailable']:
+                self._attr_native_value = None
             else:
                 if latest_state.attributes.get('state_class', None) == 'measurement':
                     if latest_state.state.count('.') + latest_state.state.count(',') == 1:
@@ -472,18 +472,18 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
                         self._attr_native_value = None
 
                 elif latest_state.attributes.get('state_class', None) == 'total_increasing':
-                    self._attr_native_value = int(latest_state.state)
+                    # meter readings are decimals (e.g. '5793.4' kWh), int() would raise here
+                    self._attr_native_value = float(latest_state.state)
 
                 elif latest_state.attributes.get('device_class', None) == 'device_class':
                     # e.g.: 2024-02-12T23:32:44+00:00
                     self._attr_native_value = datetime.strptime(latest_state.state, '%Y-%m-%dT%H:%M:%S%z:%f')
-            
+
         except Exception as e:
-            if hasattr(self, '_attr_is_on'):
-                self._attr_is_on = None
-            elif hasattr(self, '_attr_native_value'):
-                self._attr_native_value = None
-            raise e
+            self._attr_native_value = None
+            # do not re-raise: an unparsable stored state must not abort async_added_to_hass,
+            # otherwise the entity is never added and stays unavailable until the next restart
+            LOGGER.warning(f"[{self._attr_ha_platform} {self.dev_id}] Could not restore previous state '{latest_state.state}': {e}")
         
         self.schedule_update_ha_state()
 
