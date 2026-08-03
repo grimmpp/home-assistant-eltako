@@ -10,6 +10,7 @@ from homeassistant.const import Platform
 DOMAIN: Final = "eltako"
 DATA_ELTAKO: Final = "eltako"
 DATA_ENTITIES: Final = "entities"
+DATA_TELEGRAM_LOGGER: Final = "telegram_logger"
 ELTAKO_GATEWAY: Final = "gateway"
 ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "Eltako"
@@ -74,6 +75,49 @@ CONF_TIME_TILTS: Final = "time_tilts"
 CONF_INVERT_SIGNAL: Final = "invert_signal"
 CONF_VOC_TYPE_INDEXES: Final = "voc_type_indexes"
 CONF_AREA: Final = "area"
+
+### EnOcean telegram logging and analysis (section 'general_settings')
+CONF_LOG_ENOCEAN_TELEGRAMS: Final = "log_enocean_telegrams"
+CONF_TELEGRAM_LOG_FILENAME: Final = "telegram_log_filename"
+CONF_TELEGRAM_LOG_FORMAT: Final = "telegram_log_format"
+CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB: Final = "telegram_log_max_file_size_mb"
+CONF_TELEGRAM_LOG_BACKUP_COUNT: Final = "telegram_log_backup_count"
+CONF_TELEGRAM_LOG_INCLUDE_POLLING: Final = "telegram_log_include_polling"
+CONF_TELEGRAM_LOG_DECODE_EEP: Final = "telegram_log_decode_eep"
+CONF_TELEGRAM_LOG_BUFFER_SIZE: Final = "telegram_log_buffer_size"
+CONF_ENABLE_TELEGRAM_WEB_UI: Final = "enable_telegram_web_ui"
+
+
+class TelegramLogFormat(StrEnum):
+    """Serialization format of the telegram log file."""
+    JSONL = 'jsonl'     # one json object per line, best suited for analysis
+    CSV = 'csv'         # spreadsheet friendly
+
+
+class TelegramDirection(StrEnum):
+    """Direction of a recorded telegram seen from Home Assistant."""
+    INCOMING = 'incoming'
+    OUTGOING = 'outgoing'
+
+
+### Web UI (panel) for telegram analysis
+TELEGRAM_PANEL_URL_PATH: Final = "eltako-telegrams"
+TELEGRAM_PANEL_JS_FILE: Final = "eltako_telegram_log_panel.js"
+TELEGRAM_PANEL_JS_URL: Final = f"/eltako_telegram_log/{TELEGRAM_PANEL_JS_FILE}"
+TELEGRAM_PANEL_WEBCOMPONENT: Final = "eltako-telegram-log-panel"
+TELEGRAM_PANEL_TITLE: Final = "EnOcean Telegrams"
+TELEGRAM_PANEL_ICON: Final = "mdi:access-point-network"
+
+### Websocket commands of the telegram logger
+WS_TELEGRAM_LOG_INFO: Final = "eltako/telegram_log/info"
+WS_TELEGRAM_LOG_STATISTICS: Final = "eltako/telegram_log/statistics"
+WS_TELEGRAM_LOG_RECENT: Final = "eltako/telegram_log/recent"
+WS_TELEGRAM_LOG_SUBSCRIBE: Final = "eltako/telegram_log/subscribe"
+WS_TELEGRAM_LOG_CLEAR: Final = "eltako/telegram_log/clear"
+WS_TELEGRAM_LOG_REFRESH_DEVICES: Final = "eltako/telegram_log/refresh_devices"
+
+### Services of the telegram logger
+SERVICE_CLEAR_TELEGRAM_LOG: Final = "clear_telegram_log"
 
 class LANGUAGE_ABBREVIATION(StrEnum):
     LANG_ENGLISH = 'en'

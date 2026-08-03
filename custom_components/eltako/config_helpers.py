@@ -16,6 +16,15 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_ENABLE_TEACH_IN_BUTTONS: False,
     CONF_ENABLE_FRONTEND: False,
     CONF_FRONTEND_DEV_URL: "",
+    CONF_LOG_ENOCEAN_TELEGRAMS: False,
+    CONF_TELEGRAM_LOG_FILENAME: "",
+    CONF_TELEGRAM_LOG_FORMAT: TelegramLogFormat.JSONL.value,
+    CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB: 10,
+    CONF_TELEGRAM_LOG_BACKUP_COUNT: 3,
+    CONF_TELEGRAM_LOG_INCLUDE_POLLING: False,
+    CONF_TELEGRAM_LOG_DECODE_EEP: True,
+    CONF_TELEGRAM_LOG_BUFFER_SIZE: 500,
+    CONF_ENABLE_TELEGRAM_WEB_UI: True,
 }
 
 class DeviceConf(dict):
@@ -67,10 +76,12 @@ def get_device_conf(config: ConfigType, key: str, extra_keys:list[str]=[]) -> De
     return None
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
-    settings = DEFAULT_GENERAL_SETTINGS
+    # start with a copy of the defaults so that missing options are always available
+    # and the module level defaults cannot be modified by accident.
+    settings = dict(DEFAULT_GENERAL_SETTINGS)
     if hass and CONF_GERNERAL_SETTINGS in hass.data[DATA_ELTAKO][ELTAKO_CONFIG]:
-        settings = hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS]
-    
+        settings.update( hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS] )
+
     # LOGGER.debug(f"General Settings: {settings}")
 
     return settings

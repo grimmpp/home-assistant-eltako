@@ -2,6 +2,16 @@ eltako:
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
     show_dev_id_in_dev_name: True
+    # EnOcean telegram logging and analysis (see docs/telegram-analysis/readme.md)
+    log_enocean_telegrams: True                     # True: records all incoming and outgoing telegrams
+    telegram_log_filename: enocean_telegrams.jsonl  # if set, telegrams are written into this file (relative paths are located in the HA config folder)
+    telegram_log_format: jsonl                      # jsonl (default, best for analysis) or csv
+    telegram_log_max_file_size_mb: 10               # log file is rotated when this size is exceeded. Default: 10
+    telegram_log_backup_count: 3                    # number of rotated log files to be kept. Default: 3
+    telegram_log_include_polling: False             # True: bus polling telegrams (FAM14) are logged as well. Default: False
+    telegram_log_decode_eep: True                   # True: telegrams of known devices are decoded with their EEP. Default: True
+    telegram_log_buffer_size: 500                   # number of telegrams kept in memory for the live view. Default: 500
+    enable_telegram_web_ui: True                    # True: adds the 'EnOcean Telegrams' panel to the sidebar. Default: True
   gateway:
   - id: 0
     device_type: esp2-netowrk-reverse-bridge

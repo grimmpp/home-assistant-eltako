@@ -1,0 +1,6 @@
+clear_telegram_log:
+  name: Clear telegram log
+  description: >
+    Resets the in-memory statistics and the live buffer of the EnOcean telegram logger.
+    The telegram log file itself is not modified.
+    Only available if telegram recording is enabled (general_settings -> log_enocean_telegrams).

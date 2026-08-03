@@ -31,3 +31,9 @@ logger:
 To get the logs nicely displayed I can recommend to install and use the addon [log-viewer](https://github.com/hassio-addons/addon-log-viewer).
 
 Logs can also be found in  `/config/home-assistant.log` and displayed by using [File Editor](https://github.com/home-assistant/addons/tree/master/configurator).
+
+## Structured telegram log (for analysis)
+If you want to analyse the EnOcean traffic instead of reading log lines, use the dedicated
+[EnOcean Telegram Logging and Analysis](../telegram-analysis/readme.md). It writes all telegrams
+(including EEPs, decoded values and references to the Home Assistant entities) into a separate
+machine readable file and provides a web ui with device statistics and a live view.

@@ -22,6 +22,7 @@ from . import config_helpers
 from .gateway import *
 from .frontend.info_page_view import InfoPageView
 from .websocket import register_websockets
+from .enocean_logger import async_setup_telegram_logger, is_telegram_logging_enabled
 
 import home_assistant_eltako_frontend as eltako_frontend
 
@@ -47,6 +48,10 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
 
     LOGGER.info("f[{LOG_PREFIX_INIT}] Register websocket extension.")
     await register_websockets(hass, config_type)
+
+    # Recording, statistics and live view of all EnOcean telegrams
+    await async_setup_telegram_logger(hass, general_settings)
+    await async_register_telegram_log_panel(hass, general_settings)
 
     # hass.http.register_static_path(
     #     "/eltako",
@@ -123,6 +128,48 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Eltako Integration initiallized. ... loading device configuration")
 
     return True
+
+async def async_register_telegram_log_panel(hass: HomeAssistant, general_settings: dict) -> None:
+    """Register the web ui which shows device statistics and a live view of all telegrams.
+
+    The panel is part of this integration (no build step, no additional package) and is
+    only registered if telegram recording and the web ui are enabled.
+    """
+    if not general_settings.get(CONF_ENABLE_TELEGRAM_WEB_UI, True):
+        LOGGER.debug(f"[{LOG_PREFIX_INIT}] EnOcean telegram web ui is disabled.")
+        return
+
+    if not is_telegram_logging_enabled(general_settings):
+        LOGGER.debug(f"[{LOG_PREFIX_INIT}] EnOcean telegram web ui not registered because telegram "
+                     f"recording is disabled. (Enable it with '{CONF_LOG_ENOCEAN_TELEGRAMS}: True'.)")
+        return
+
+    try:
+        # only the panel itself is served as static file (not the whole frontend folder)
+        js_file_path = os.path.join(os.path.dirname(__file__), "frontend", TELEGRAM_PANEL_JS_FILE)
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(
+                TELEGRAM_PANEL_JS_URL,
+                path=js_file_path,
+                cache_headers=False,
+            )])
+
+        await panel_custom.async_register_panel(
+            hass=hass,
+            frontend_url_path=TELEGRAM_PANEL_URL_PATH,
+            webcomponent_name=TELEGRAM_PANEL_WEBCOMPONENT,
+            sidebar_title=TELEGRAM_PANEL_TITLE,
+            sidebar_icon=TELEGRAM_PANEL_ICON,
+            module_url=TELEGRAM_PANEL_JS_URL,
+            embed_iframe=False,
+            require_admin=True,
+        )
+
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Registered EnOcean telegram web ui under '/{TELEGRAM_PANEL_URL_PATH}'.")
+
+    except Exception as e:
+        LOGGER.error(f"[{LOG_PREFIX_INIT}] Cannot register EnOcean telegram web ui: {e}", exc_info=True)
+
 
 def print_subfolders(folder: str):
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] print subfolders of '{folder}':  \n  {os.listdir(folder)}")

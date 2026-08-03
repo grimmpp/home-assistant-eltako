@@ -21,5 +21,11 @@
       "invalid_gateway_path": "Invalid gateway path",
       "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
     }
+  },
+  "services": {
+    "clear_telegram_log": {
+      "name": "Clear telegram log",
+      "description": "Resets the statistics and the live buffer of the EnOcean telegram logger. The telegram log file is not modified."
+    }
   }
 }

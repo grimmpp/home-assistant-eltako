@@ -15,6 +15,13 @@
 * Connection state fixed: Display information about gateway connection was sometimes displayed incorrectly
 * added repeater mode selection field for gateways
 * added support for optional area field
+* added EnOcean telegram logging and analysis ([docs](docs/telegram-analysis/readme.md)) in own module `enocean_logger.py`
+  * new general settings: `log_enocean_telegrams`, `telegram_log_filename`, `telegram_log_format` (jsonl/csv), `telegram_log_max_file_size_mb`, `telegram_log_backup_count`, `telegram_log_include_polling`, `telegram_log_decode_eep`, `telegram_log_buffer_size`, `enable_telegram_web_ui`
+  * telegrams are recorded with EEP, decoded values, device name, area and references to the Home Assistant entities
+  * rotating log file (JSON lines or CSV) written in a separate thread
+  * per device statistics (counts, intervals, message types, first/last seen) and detection of devices which are not configured yet
+  * new web ui/panel `EnOcean Telegrams` with live view, device statistics, unknown devices and export (JSON/CSV)
+  * new service `eltako.clear_telegram_log` and websocket api `eltako/telegram_log/*`
 
 TODO: improve performance of controlling groups. (send only one group telegram instead of many indivitual commands)
 

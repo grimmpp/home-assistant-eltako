@@ -27,6 +27,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
+from .enocean_logger import get_telegram_logger
 
 import threading
 
@@ -172,6 +173,13 @@ class EnOceanGateway:
         """Received message from bus in HA loop. (Actions needs to run outside bus thread!)"""
         self._fire_received_message_count_event()
         self._fire_last_message_received_event()
+
+
+    def _record_telegram(self, msg: ESP2Message, direction: TelegramDirection) -> None:
+        """Hand over the telegram to the EnOcean telegram logger (if enabled)."""
+        telegram_logger = get_telegram_logger(self.hass)
+        if telegram_logger is not None:
+            telegram_logger.record_message(self, msg, direction.value)
 
     
     def _init_bus(self):
@@ -387,6 +395,9 @@ class EnOceanGateway:
             if isinstance(msg, ESP2Message):
                 LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
 
+                # record outgoing telegram for logging and analysis
+                self._record_telegram(msg, TelegramDirection.OUTGOING)
+
                 # put message on serial bus
                 # TODO: maybe it makes sense to filter for matching base id. currently all gateways try to send message but only those where base id matches do actually send. FAM14 and FGW14-USB will receive any message.
                 self.hass.create_task(
@@ -403,6 +414,11 @@ class EnOceanGateway:
         This is the callback function called by python-enocan whenever there
         is an incoming message.
         """
+
+        # record every incoming telegram (including bus polling) for logging and analysis.
+        # The telegram logger itself decides what is relevant and is called first so that
+        # nothing gets lost by the filters below.
+        self._record_telegram(message, TelegramDirection.INCOMING)
 
         if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
