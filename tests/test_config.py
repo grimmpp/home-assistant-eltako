@@ -38,7 +38,18 @@ class TestIdComparison(IsolatedAsyncioTestCase):
 
     async def test_config_example(self):
         config = await async_get_home_assistant_config(None, CONFIG_SCHEMA, get_ha_config)
-        pass
+        self.assertTrue(CONF_GATEWAY in config)
+
+        # The example configuration must be valid, otherwise Home Assistant would reject it.
+        # (async_get_home_assistant_config returns the config unvalidated if the domain exists.)
+        raw_config = await get_ha_config(None, DOMAIN)
+        validated = CONFIG_SCHEMA(raw_config)[DOMAIN]
+
+        # all documented general settings incl. telegram logging are validated and complete
+        general_settings = validated[CONF_GERNERAL_SETTINGS]
+        self.assertTrue(general_settings[CONF_LOG_ENOCEAN_TELEGRAMS])
+        self.assertEqual(general_settings[CONF_TELEGRAM_LOG_FORMAT], TelegramLogFormat.JSONL.value)
+        self.assertTrue(len(general_settings[CONF_TELEGRAM_LOG_FILENAME]) > 0)
 
 class TestDeviceConfig(TestCase):
 

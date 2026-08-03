@@ -2,6 +2,8 @@ eltako:
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
     show_dev_id_in_dev_name: True
+    enable-frontend: False      # True: registers the frontend of the package 'home-assistant-eltako-frontend'. Default: False
+    frontend-dev-url: ""        # url of a separately running frontend dev server, e.g. http://localhost:5173. Default: ""
     # EnOcean telegram logging and analysis (see docs/telegram-analysis/readme.md)
     log_enocean_telegrams: True                     # True: records all incoming and outgoing telegrams
     telegram_log_filename: enocean_telegrams.jsonl  # if set, telegrams are written into this file (relative paths are located in the HA config folder)
@@ -14,7 +16,7 @@ eltako:
     enable_telegram_web_ui: True                    # True: adds the 'EnOcean Telegrams' panel to the sidebar. Default: True
   gateway:
   - id: 0
-    device_type: esp2-netowrk-reverse-bridge
+    device_type: esp2-network-reverse-bridge
     address: homeassistant.local
     port: 12345
 
@@ -45,16 +47,39 @@ eltako:
       - id: ff-66-dd-81
         eep: A5-08-01
         name: Brighness and motion detection
+      # Metering actuators like FSR14M-2x report their power consumption additionally as sensor.
+      # Use the same address as for the switch/light entry of that channel.
+      - id: 00-00-00-0A
+        eep: A5-12-01     # automated meter reading - electricity
+        name: FSR14_4x - 10 (power)
+        meter_tariffs: [1]  # tariff registers to be read out (1..16). Default: [1]
+
+      ### ACTUATORS ###
+      # All actuators (light, switch, cover, climate) need two addresses:
+      #   id:        address of the actuator itself. Home Assistant listens to its status updates.
+      #              Bus devices (FSR14, FUD14, FSB14, FAE14, ... in a series 14 rack) use their local
+      #              bus address (00-00-00-XX = position on the bus, see PCT14). Wireless actuators
+      #              (FSR61, FUD61, ...) use their full EnOcean id.
+      #   sender.id: address Home Assistant sends commands with. Must be a free address out of the
+      #              base id range of the gateway (here: local range 00-00-B0-XX) and must be
+      #              registered in the actuator, e.g. with PCT14 or via the teach-in buttons.
+      #              See docs/lights-tutorial/readme.md and docs/teach_in_buttons/readme.md
+      # Preferred sender EEP for lights and switches is A5-38-08 (central command) because it
+      # transports absolute commands (on/off, dim value) instead of button presses.
+
       light:
-      - id: 00-00-00-01
-        eep: M5-38-08
+      # Eltako relay/switching actuator as light, e.g. FSR14-2x, FSR14-4x, FSR61
+      # PCT14: enter the sender id into function group 2 with function 51 (controlled via software)
+      - id: 00-00-00-01     # local bus address of the relay channel
+        eep: M5-38-08       # switching actuator: on/off only
         name: FSR14_4x - 1
         sender:
-          id: 00-00-B0-01
-          eep: A5-38-08
+          id: 00-00-B0-01   # one free sender address per channel
+          eep: A5-38-08     # central command
       - id: 00-00-00-02
         eep: M5-38-08
         name: FSR14_4x - 2
+        area: Kitchen       # optional: assigns the device to this area (is created if missing)
         sender:
           id: 00-00-B0-02
           eep: A5-38-08
@@ -70,11 +95,31 @@ eltako:
         sender:
           id: 00-00-B0-04
           eep: A5-38-08
+
+      # Eltako dimmer, e.g. FUD14, FUD14-800W, FUD61
+      # PCT14: enter the sender id into the function group of the 'dimming controller' function
       - id: 00-00-00-05
-        eep: A5-38-08
+        eep: A5-38-08       # dimmable actuator: on/off + brightness
         name: FUD14 - 5
         sender:
           id: 00-00-B0-05
+          eep: A5-38-08
+
+      switch:
+      # Same actuators as above but represented as switch instead of light in Home Assistant.
+      # Use it for sockets, pumps, ventilation, ... . Supported EEPs: M5-38-08, F6-02-01, F6-02-02
+      - id: 00-00-00-0A
+        eep: M5-38-08
+        name: FSR14_4x - 10 (socket)
+        area: Living Room
+        sender:
+          id: 00-00-B0-0A
+          eep: A5-38-08     # preferred. F6-02-01/F6-02-02 (rocker switch) is supported as well
+      - id: 00-00-00-0B
+        eep: M5-38-08
+        name: FSR14_4x - 11 (ventilation)
+        sender:
+          id: 00-00-B0-0B
           eep: A5-38-08
       binary_sensor:
         - id: ff-bb-0a-1b
@@ -95,46 +140,67 @@ eltako:
           eep: A5-08-01
           name: Occupancy Sensor
       cover:
+      # Eltako blind/shutter actuator, e.g. FSB14, FSB61, FSB71, FJ62
+      # The actuator only reports its runtime, therefore the travel times must be configured here
+      # (take the values from PCT14) so that Home Assistant can calculate the position.
       - id: 00-00-00-06
-        eep: G5-3F-7F
+        eep: G5-3F-7F       # cover actuator (only supported EEP)
         name: FSB14 - 6
         sender:
           id: 00-00-B0-06
-          eep: H5-3F-7F
-        device_class: shutter
-        time_closes: 24
-        time_opens: 25
+          eep: H5-3F-7F     # cover command (only supported sender EEP)
+        device_class: shutter   # shutter, blind, awning, curtain, ... . Changes icon and wording in HA
+        time_closes: 24     # seconds for closing completely (1..255)
+        time_opens: 25      # seconds for opening completely (1..255)
       - id: 00-00-00-07
         eep: G5-3F-7F
         name: FSB14 - 7
+        area: Bedroom
         sender:
           id: 00-00-B0-07
           eep: H5-3F-7F
         device_class: shutter
         time_closes: 24
         time_opens: 25
+        time_tilts: 5       # optional: runtime of a complete tilt in tenths of a second (1..255).
+                            # Only if set, tilt position is supported/displayed in Home Assistant.
+
       climate:
-      - id: 00-00-00-08
-        eep: A5-10-06
+      # Eltako heating and cooling actuator, e.g. FAE14SSR, FAE14LPR, FHK14, F4HK14, F2L14, FHK61, FME14
+      # PCT14: 'operating state' must be enabled, the sender id below belongs into function group 3
+      # (Home Assistant climate panel), the room temperature sensor into function group 1.
+      # See docs/heating-and-cooling/readme.md for the complete setup.
+      - id: 00-00-00-08     # address of the heating actuator
+        eep: A5-10-06       # temperature sensor and controller (only supported EEP)
         name: FAE14SSR - 8
-        temperature_unit: K
-        sender:
+        temperature_unit: K   # unit sent by the actuator/thermostat: "°C", "°F" or K. Default: "°C"
+        min_target_temperature: 17    # lower limit of the climate panel. Default: 17
+        max_target_temperature: 25    # upper limit of the climate panel. Default: 25
+        sender:               # virtual temperature controller of Home Assistant
           id: 00-00-B0-08
           eep: A5-10-06
-        thermostat:
+        thermostat:           # optional: physical thermostat (e.g. FUTH) to be kept in sync
           id: FF-BB-80-81
           eep: A5-10-06
-        cooling_mode:
-          sensor:
-            id: FF-BB-12-12
-            switch_button: 0x50
+        cooling_mode:         # optional: without this section only heating is supported
+          sensor:             # switch which reports that the system runs in cooling mode.
+            id: FF-BB-12-12   # must also be configured as binary_sensor
+            switch_button: 0x50   # only for rocker switches: 0x70 top right, 0x50 bottom right,
+                                  # 0x30 top left, 0x10 bottom left
       - id: 00-00-00-09
         eep: A5-10-06
         name: FAE14SSR - 9
         temperature_unit: K
+        area: Bathroom
         sender:
           id: 00-00-B0-09
           eep: A5-10-06
+        room_sensor: sensor.eltako_ff_aa_dd_81_temperature   # optional: entity_id of any HA sensor
+                            # providing the current room temperature. Use it if no EnOcean room
+                            # sensor is registered in the actuator (function group 1).
+        off_temperature: 8  # optional: target temperature which is sent for hvac mode 'off'
+                            # (anti-frost). If set, on/off is switched by sending this temperature
+                            # instead of button telegrams, so the state can be read back.
 
 logger:
   default: info
