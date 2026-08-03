@@ -76,14 +76,9 @@ class MetadataTest(unittest.TestCase):
         with open(requirements_txt_fn, 'r', encoding="utf-8") as f:
             requirements_txt = f.read()
 
-        dynamic_requirements = ['home_assistant_eltako_frontend']
-        dynamic_requirements_count = 0
+        # every requirement of the integration must be listed in requirements.txt as well
         for r in manifest['requirements']:
-            if 'home_assistant_eltako_frontend' not in r:
-                self.assertTrue(r in requirements_txt, msg=f"{r} not in manifest")
-            else:
-                dynamic_requirements_count =+ 1
-        self.assertEqual(len(dynamic_requirements), dynamic_requirements_count)
+            self.assertTrue(r in requirements_txt, msg=f"{r} not in requirements.txt")
 
 
     def test_eltako14bus_required_and_installed_is_the_same(self):

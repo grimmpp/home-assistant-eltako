@@ -581,9 +581,14 @@ class EnOceanTelegramLogger:
             except Exception:   # noqa: BLE001
                 pass
 
-        # bus messages are addressed by the position of the actuator on the bus
+        # Bus messages (polling, discovery, memory) are addressed by the position of the actuator
+        # on the bus instead of an EnOcean address. They are counted under a synthetic address so
+        # that the sum of the per address statistics matches the total number of telegrams.
         if isinstance(getattr(telegram, 'address', None), int):
             record['bus_address'] = telegram.address
+            if record['address'] is None:
+                record['address'] = f"bus {telegram.address}"
+                record['role'] = 'bus_message'
 
         if isinstance(telegram, (EltakoDiscoveryRequest, EltakoDiscoveryReply, EltakoMemoryRequest, EltakoMemoryResponse)):
             for attribute in ('reported_address', 'reported_size', 'memory_size', 'model', 'is_fam', 'row'):

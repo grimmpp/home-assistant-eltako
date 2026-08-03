@@ -38,9 +38,15 @@ CONF_SENDER: Final = "sender"
 CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"
 CONF_SHOW_DEV_ID_IN_DEV_NAME: Final = "show_dev_id_in_dev_name"
-CONF_ENABLE_FRONTEND: Final = "enable-frontend"
-CONF_FRONTEND_DEV_URL: Final = "frontend-dev-url"
+CONF_ENABLE_FRONTEND: Final = "enable_frontend"
 CONF_ENABLE_TEACH_IN_BUTTONS: Final = "enable_teach_in_buttons"
+
+### Deprecated general settings. They are still accepted so that existing configurations
+### keep working, but they are ignored. (See config_helpers.check_for_deprecated_settings)
+CONF_DEPRECATED_ENABLE_FRONTEND: Final = "enable-frontend"      # replaced by CONF_ENABLE_FRONTEND
+CONF_DEPRECATED_FRONTEND_DEV_URL: Final = "frontend-dev-url"    # frontend is part of the integration now
+CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI: Final = "enable_telegram_web_ui"    # part of the frontend now
+
 CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
 GATEWAY_DEFAULT_NAME: Final = "EnOcean Gateway"
 OLD_GATEWAY_DEFAULT_NAME: Final = "EnOcean ESP2 Gateway"
@@ -85,7 +91,6 @@ CONF_TELEGRAM_LOG_BACKUP_COUNT: Final = "telegram_log_backup_count"
 CONF_TELEGRAM_LOG_INCLUDE_POLLING: Final = "telegram_log_include_polling"
 CONF_TELEGRAM_LOG_DECODE_EEP: Final = "telegram_log_decode_eep"
 CONF_TELEGRAM_LOG_BUFFER_SIZE: Final = "telegram_log_buffer_size"
-CONF_ENABLE_TELEGRAM_WEB_UI: Final = "enable_telegram_web_ui"
 
 
 class TelegramLogFormat(StrEnum):
@@ -100,15 +105,18 @@ class TelegramDirection(StrEnum):
     OUTGOING = 'outgoing'
 
 
-### Web UI (panel) for telegram analysis
-TELEGRAM_PANEL_URL_PATH: Final = "eltako-telegrams"
-TELEGRAM_PANEL_JS_FILE: Final = "eltako_telegram_log_panel.js"
-TELEGRAM_PANEL_JS_URL: Final = f"/eltako_telegram_log/{TELEGRAM_PANEL_JS_FILE}"
-TELEGRAM_PANEL_WEBCOMPONENT: Final = "eltako-telegram-log-panel"
-TELEGRAM_PANEL_TITLE: Final = "EnOcean Telegrams"
-TELEGRAM_PANEL_ICON: Final = "mdi:access-point-network"
+### Web UI (panel) of the integration. The frontend is part of this integration
+### (custom_components/eltako/frontend) and contains all sub pages (overview, telegram
+### logging, device statistics, about, ...).
+PANEL_URL_PATH: Final = "eltako"                    # sidebar/url path: /eltako
+PANEL_TITLE: Final = "Eltako"
+PANEL_ICON: Final = "mdi:bus-electric"
+PANEL_WEBCOMPONENT: Final = "eltako-panel"
+PANEL_STATIC_URL: Final = "/eltako_frontend"        # url the frontend folder is served under
+PANEL_JS_FILE: Final = "eltako-panel.js"            # entry point of the frontend
 
-### Websocket commands of the telegram logger
+### Websocket commands
+WS_INTEGRATION_INFO: Final = "eltako/integration_info"
 WS_TELEGRAM_LOG_INFO: Final = "eltako/telegram_log/info"
 WS_TELEGRAM_LOG_STATISTICS: Final = "eltako/telegram_log/statistics"
 WS_TELEGRAM_LOG_RECENT: Final = "eltako/telegram_log/recent"

@@ -9,6 +9,7 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 from tests.mocks import *
 
 from custom_components.eltako.const import *
+from custom_components.eltako import config_helpers
 from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
 from custom_components.eltako.enocean_logger import (
     EnOceanTelegramLogger,
@@ -21,7 +22,7 @@ from custom_components.eltako.enocean_logger import (
 from custom_components.eltako.schema import CONFIG_SCHEMA
 
 from eltakobus.eep import A5_04_02, F6_02_01
-from eltakobus.message import EltakoPoll, RPSMessage, Regular4BSMessage, TeachIn4BSMessage2
+from eltakobus.message import EltakoDiscoveryRequest, EltakoPoll, RPSMessage, Regular4BSMessage, TeachIn4BSMessage2
 from eltakobus.util import AddressExpression
 
 
@@ -83,7 +84,6 @@ class TestGeneralSettingsSchema(TestCase):
         self.assertFalse(config[CONF_TELEGRAM_LOG_INCLUDE_POLLING])
         self.assertTrue(config[CONF_TELEGRAM_LOG_DECODE_EEP])
         self.assertEqual(config[CONF_TELEGRAM_LOG_BUFFER_SIZE], 500)
-        self.assertTrue(config[CONF_ENABLE_TELEGRAM_WEB_UI])
 
         # all schema keys need a default in DEFAULT_GENERAL_SETTINGS as well
         for key in config.keys():
@@ -126,6 +126,80 @@ class TestJsonSafeConversion(TestCase):
 
         # json.dumps must not fall back to the default= handler
         json.dumps(converted)
+
+
+class TestFrontendSettings(TestCase):
+    """The web ui is controlled by one single option, deprecated ones still work."""
+
+    def test_frontend_disabled_by_default(self):
+        self.assertFalse(config_helpers.is_frontend_enabled(get_general_settings()))
+
+    def test_frontend_enabled(self):
+        self.assertTrue(config_helpers.is_frontend_enabled(get_general_settings(**{CONF_ENABLE_FRONTEND: True})))
+
+    def test_deprecated_option_still_enables_the_frontend(self):
+        settings = get_general_settings()
+        settings[CONF_DEPRECATED_ENABLE_FRONTEND] = True
+
+        self.assertTrue(config_helpers.is_frontend_enabled(settings))
+
+    def test_deprecated_options_are_reported(self):
+        settings = get_general_settings(**{CONF_ENABLE_FRONTEND: True})
+        self.assertEqual(config_helpers.log_deprecated_general_settings(settings), [])
+
+        settings[CONF_DEPRECATED_ENABLE_FRONTEND] = True
+        settings[CONF_DEPRECATED_FRONTEND_DEV_URL] = "http://localhost:5173"
+        settings[CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI] = True
+
+        self.assertEqual(sorted(config_helpers.log_deprecated_general_settings(settings)),
+                         sorted([CONF_DEPRECATED_ENABLE_FRONTEND, CONF_DEPRECATED_FRONTEND_DEV_URL,
+                                 CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI]))
+
+    def test_deprecated_options_do_not_break_the_configuration(self):
+        """Existing configurations with the old option names must still be valid."""
+        config = CONFIG_SCHEMA({DOMAIN: {CONF_GERNERAL_SETTINGS: {
+            CONF_DEPRECATED_ENABLE_FRONTEND: True,
+            CONF_DEPRECATED_FRONTEND_DEV_URL: "http://localhost:5173",
+            CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI: False,
+        }}})[DOMAIN][CONF_GERNERAL_SETTINGS]
+
+        self.assertTrue(config_helpers.is_frontend_enabled(config))
+        # the new option is not set, so its default is used
+        self.assertFalse(config[CONF_ENABLE_FRONTEND])
+
+    FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                'custom_components', 'eltako', 'frontend')
+
+    def test_frontend_files_exist(self):
+        self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, PANEL_JS_FILE)))
+        for module in ['lib/api.js', 'lib/utils.js', 'lib/styles.js',
+                       'pages/overview.js', 'pages/telegrams.js', 'pages/devices.js',
+                       'pages/unknown.js', 'pages/about.js']:
+            self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, *module.split('/'))), msg=module)
+
+        # the frontend folder is served as static path, it must not contain any python code
+        for root, _dirs, files in os.walk(self.FRONTEND_DIR):
+            for file in files:
+                self.assertFalse(file.endswith('.py'), msg=f"{os.path.join(root, file)} is not frontend code")
+
+    def test_frontend_files_are_not_excluded_by_gitignore(self):
+        """The frontend is shipped with the integration. Rules like 'lib/' must not exclude it."""
+        import shutil
+        import subprocess
+
+        if shutil.which('git') is None:      # pragma: no cover - git is not available
+            self.skipTest("git is not available")
+
+        frontend_files = [os.path.join(root, file)
+                          for root, _dirs, files in os.walk(self.FRONTEND_DIR)
+                          for file in files if file.endswith('.js')]
+        self.assertTrue(len(frontend_files) > 5)
+
+        # 'git check-ignore' returns the files which would NOT be committed
+        result = subprocess.run(['git', 'check-ignore', *frontend_files],
+                                cwd=os.path.dirname(self.FRONTEND_DIR), capture_output=True, text=True)
+        ignored = [line for line in result.stdout.splitlines() if line.strip()]
+        self.assertEqual(ignored, [], msg=f"These frontend files are excluded by .gitignore: {ignored}")
 
 
 class TestDecodedEepToDict(TestCase):
@@ -250,6 +324,21 @@ class TestTelegramRecording(TestCase):
         self.assertEqual(len(telegrams), 1)
         self.assertEqual(telegrams[0]['msg_type'], 'EltakoPoll')
         self.assertEqual(telegrams[0]['bus_address'], 3)
+
+    def test_bus_messages_are_counted_as_well(self):
+        """Bus internal telegrams have no EnOcean address but must not get lost in the statistics."""
+        record = self.record(EltakoDiscoveryRequest(8))
+
+        self.assertEqual(record['bus_address'], 8)
+        self.assertEqual(record['address'], 'bus 8')
+        self.assertEqual(record['role'], 'bus_message')
+        self.assertFalse(record['known'])
+
+        statistics = self.logger.get_statistics()
+        self.assertEqual(statistics['summary']['total_count'], 1)
+        self.assertEqual(statistics['summary']['device_count'], 1)
+        self.assertEqual(statistics['devices'][0]['address'], 'bus 8')
+        self.assertEqual(statistics['devices'][0]['role'], 'bus_message')
 
     def test_statistics(self):
         for _ in range(3):

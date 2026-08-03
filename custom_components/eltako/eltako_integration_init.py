@@ -12,7 +12,6 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.components import panel_custom, websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
-from importlib.resources import files
 
 
 from .const import *
@@ -20,11 +19,8 @@ from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_PORT
 from .schema import CONFIG_SCHEMA
 from . import config_helpers
 from .gateway import *
-from .frontend.info_page_view import InfoPageView
 from .websocket import register_websockets
 from .enocean_logger import async_setup_telegram_logger, is_telegram_logging_enabled
-
-import home_assistant_eltako_frontend as eltako_frontend
 
 LOG_PREFIX_INIT = "Eltako Integration Setup"
 
@@ -45,130 +41,62 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     hass.data[DATA_ELTAKO] = hass.data.setdefault(DATA_ELTAKO, {})
     hass.data[DATA_ELTAKO][ELTAKO_CONFIG] = config
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
+    config_helpers.log_deprecated_general_settings(general_settings)
 
     LOGGER.info("f[{LOG_PREFIX_INIT}] Register websocket extension.")
     await register_websockets(hass, config_type)
 
     # Recording, statistics and live view of all EnOcean telegrams
     await async_setup_telegram_logger(hass, general_settings)
-    await async_register_telegram_log_panel(hass, general_settings)
 
-    # hass.http.register_static_path(
-    #     "/eltako",
-    #     # hass.config.path("custom_components/eltako/frontend/index.html"),
-    #     os.path.join(os.path.dirname(__file__), "frontend"),
-    #     cache_headers=False,
-    # )
-
-    # hass.http.register_view(InfoPageView())
-
-    # # Register the sidebar panel
-    # hass.components.frontend.async_register_built_in_panel(
-    #     component_name="iframe",  # Use "iframe" to embed the custom view
-    #     sidebar_title="Eltako",  # Title shown in the sidebar
-    #     sidebar_icon="mdi:bus-electric",  # Icon for the sidebar
-    #     frontend_url_path="",  # URL path for the sidebar
-    #     config={
-    #         "url": "/eltako"  # Path to your custom view
-    #     },
-    #     require_admin=True  # Whether the panel requires admin privileges
-    # )
-    
-    if general_settings[CONF_ENABLE_FRONTEND]:
-        LOGGER.debug(f"[{LOG_PREFIX_INIT}] Enable and register frontend.")
-
-        if len(general_settings[CONF_FRONTEND_DEV_URL]) > 0:
-            LOGGER.debug(f"[{LOG_PREFIX_INIT}] Link frontend of dev server: {general_settings[CONF_FRONTEND_DEV_URL]}")
-
-            # Use separately running dev server
-            hass.components.frontend.async_register_built_in_panel(
-                component_name="iframe",  # Use iframe to embed the view
-                sidebar_title="Eltako",  # Title in the sidebar
-                sidebar_icon="mdi:bus-electric", # mdi:view-dashboard",  # Icon for the sidebar
-                frontend_url_path="eltako",  # URL in the sidebar
-                
-                config={
-                    # "url": "http://localhost:5173"  # URL served by the view
-                    "url": general_settings[CONF_FRONTEND_DEV_URL]  # URL served by the view
-                },
-                require_admin=True,
-            )
-
-        else:
-            LOGGER.debug(f"[{LOG_PREFIX_INIT}] Register frontend and load from package 'home-assistant-eltako-frontend'.")
-
-            static_path = str(files("home_assistant_eltako_frontend") / "static")
-            LOGGER.debug(f"[{LOG_PREFIX_INIT}] Load static path from resource_filename: {static_path}")
-
-            # Include frontend from library
-            await hass.http.async_register_static_paths([
-                StaticPathConfig(
-                    "/eltako",
-                    path=static_path,
-                    cache_headers=False
-                )])
-            
-            LOGGER.debug(f"[{LOG_PREFIX_INIT}] Register webcomponent '{eltako_frontend.webcomponent_name}' under '/eltako' with js module '{eltako_frontend.module_url}'")
-
-            await panel_custom.async_register_panel(
-                hass=hass,
-                frontend_url_path="eltako",
-                webcomponent_name=eltako_frontend.webcomponent_name,
-                sidebar_title="eltako",
-                sidebar_icon="mdi:bus-electric",
-                module_url=eltako_frontend.module_url, 
-                config={
-                    "url": "/eltako"  # Path to your custom view
-                },
-                embed_iframe=False,
-                require_admin=True,
-                # config_panel_domain=DOMAIN,
-            )
+    # Web ui of the integration incl. all its sub pages (overview, telegram log, about, ...)
+    await async_register_frontend(hass, general_settings)
 
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Eltako Integration initiallized. ... loading device configuration")
 
     return True
 
-async def async_register_telegram_log_panel(hass: HomeAssistant, general_settings: dict) -> None:
-    """Register the web ui which shows device statistics and a live view of all telegrams.
+async def async_register_frontend(hass: HomeAssistant, general_settings: dict) -> None:
+    """Register the web ui of this integration.
 
-    The panel is part of this integration (no build step, no additional package) and is
-    only registered if telegram recording and the web ui are enabled.
+    The frontend is part of the integration (folder 'frontend', plain javascript modules,
+    no build step and no additional package). It contains all sub pages: overview,
+    EnOcean telegram log, device statistics, unknown devices and about.
     """
-    if not general_settings.get(CONF_ENABLE_TELEGRAM_WEB_UI, True):
-        LOGGER.debug(f"[{LOG_PREFIX_INIT}] EnOcean telegram web ui is disabled.")
-        return
-
-    if not is_telegram_logging_enabled(general_settings):
-        LOGGER.debug(f"[{LOG_PREFIX_INIT}] EnOcean telegram web ui not registered because telegram "
-                     f"recording is disabled. (Enable it with '{CONF_LOG_ENOCEAN_TELEGRAMS}: True'.)")
+    if not config_helpers.is_frontend_enabled(general_settings):
+        LOGGER.debug(f"[{LOG_PREFIX_INIT}] Web ui is disabled. "
+                     f"(Enable it with '{CONF_ENABLE_FRONTEND}: True' in '{CONF_GERNERAL_SETTINGS}'.)")
         return
 
     try:
-        # only the panel itself is served as static file (not the whole frontend folder)
-        js_file_path = os.path.join(os.path.dirname(__file__), "frontend", TELEGRAM_PANEL_JS_FILE)
+        # The folder contains frontend code only, therefore it can be served completely.
+        static_path = os.path.join(os.path.dirname(__file__), "frontend")
         await hass.http.async_register_static_paths([
             StaticPathConfig(
-                TELEGRAM_PANEL_JS_URL,
-                path=js_file_path,
+                PANEL_STATIC_URL,
+                path=static_path,
                 cache_headers=False,
             )])
 
         await panel_custom.async_register_panel(
             hass=hass,
-            frontend_url_path=TELEGRAM_PANEL_URL_PATH,
-            webcomponent_name=TELEGRAM_PANEL_WEBCOMPONENT,
-            sidebar_title=TELEGRAM_PANEL_TITLE,
-            sidebar_icon=TELEGRAM_PANEL_ICON,
-            module_url=TELEGRAM_PANEL_JS_URL,
+            frontend_url_path=PANEL_URL_PATH,
+            webcomponent_name=PANEL_WEBCOMPONENT,
+            sidebar_title=PANEL_TITLE,
+            sidebar_icon=PANEL_ICON,
+            module_url=f"{PANEL_STATIC_URL}/{PANEL_JS_FILE}",
             embed_iframe=False,
             require_admin=True,
         )
 
-        LOGGER.info(f"[{LOG_PREFIX_INIT}] Registered EnOcean telegram web ui under '/{TELEGRAM_PANEL_URL_PATH}'.")
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Registered web ui under '/{PANEL_URL_PATH}'.")
+
+        if not is_telegram_logging_enabled(general_settings):
+            LOGGER.info(f"[{LOG_PREFIX_INIT}] Telegram recording is disabled. The telegram pages of the "
+                        f"web ui stay empty until '{CONF_LOG_ENOCEAN_TELEGRAMS}: True' is configured.")
 
     except Exception as e:
-        LOGGER.error(f"[{LOG_PREFIX_INIT}] Cannot register EnOcean telegram web ui: {e}", exc_info=True)
+        LOGGER.error(f"[{LOG_PREFIX_INIT}] Cannot register web ui: {e}", exc_info=True)
 
 
 def print_subfolders(folder: str):

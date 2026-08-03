@@ -80,8 +80,9 @@ class GeneralSettings(EltakoPlatformSchema):
     ENTITY_SCHEMA = vol.Schema({
             vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
             vol.Optional(CONF_SHOW_DEV_ID_IN_DEV_NAME, default=False): cv.boolean,
+
+            # Web ui / panel of the integration incl. all its sub pages
             vol.Optional(CONF_ENABLE_FRONTEND, default=False): cv.boolean,
-            vol.Optional(CONF_FRONTEND_DEV_URL, default=""): cv.string,
 
             # EnOcean telegram logging and analysis
             vol.Optional(CONF_LOG_ENOCEAN_TELEGRAMS, default=False): cv.boolean,
@@ -92,7 +93,12 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_TELEGRAM_LOG_INCLUDE_POLLING, default=False): cv.boolean,
             vol.Optional(CONF_TELEGRAM_LOG_DECODE_EEP, default=True): cv.boolean,
             vol.Optional(CONF_TELEGRAM_LOG_BUFFER_SIZE, default=500): vol.All(vol.Coerce(int), vol.Range(min=0, max=100000)),
-            vol.Optional(CONF_ENABLE_TELEGRAM_WEB_UI, default=True): cv.boolean,
+
+            # deprecated options: still accepted so that existing configurations do not break,
+            # but they have no effect anymore. A warning is logged during setup.
+            vol.Optional(CONF_DEPRECATED_ENABLE_FRONTEND): cv.boolean,
+            vol.Optional(CONF_DEPRECATED_FRONTEND_DEV_URL): cv.string,
+            vol.Optional(CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI): cv.boolean,
     })
     
     @classmethod

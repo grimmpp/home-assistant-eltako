@@ -28,7 +28,7 @@ eltako:
     telegram_log_include_polling: False             # True: log bus polling telegrams (FAM14) as well
     telegram_log_decode_eep: True                   # decode telegrams of known devices with their EEP
     telegram_log_buffer_size: 500                   # telegrams kept in memory for the live view
-    enable_telegram_web_ui: True                    # adds the 'EnOcean Telegrams' panel to the sidebar
+    enable_frontend: True                           # web ui with live view, statistics and unknown devices
 ```
 
 | Option | Default | Description |
@@ -41,7 +41,7 @@ eltako:
 | `telegram_log_include_polling` | `False` | Bus gateways (FAM14) poll their actuators permanently. Those telegrams are dropped by default because they would flood the log. |
 | `telegram_log_decode_eep` | `True` | Decodes telegrams of configured devices with their EEP and stores the decoded values (e.g. temperature, humidity, button). |
 | `telegram_log_buffer_size` | `500` | Size of the in-memory ring buffer which feeds the live view. `0` disables buffering (file logging and statistics still work). |
-| `enable_telegram_web_ui` | `True` | Registers the panel `EnOcean Telegrams` in the sidebar (admin only). Only registered if recording is enabled. |
+| `enable_frontend` | `False` | Adds the `Eltako` panel to the sidebar. It contains the live view, the device statistics and the unknown devices. See [Web UI](../web-ui/readme.md). |
 
 > A restart of Home Assistant is required after changing these settings.
 
@@ -50,24 +50,23 @@ serial communication is slowed down by disk i/o.
 
 ## Web UI
 
-If recording is enabled, the sidebar contains the panel **EnOcean Telegrams** (visible for admins only)
-with four views:
+With `enable_frontend: True` the sidebar contains the panel **Eltako** (visible for admins only). Three of
+its pages belong to the telegram analysis:
 
 * **Live telegrams** – all telegrams as they arrive, including direction, gateway, address, device name,
   entity ids, EEP, message type, raw data and decoded values. Can be filtered (address, device, EEP,
   entity, data), restricted to one direction or to unknown devices, and paused. A click on a row shows
-  the complete raw record.
+  the complete raw record. `Export CSV` downloads the filtered view, `Clear` resets statistics and buffer
+  (same as the service `eltako.clear_telegram_log`).
 * **Device statistics** – one row per EnOcean address: number of telegrams (incoming/outgoing),
   average/minimum/maximum interval between two telegrams, first/last time seen, message types, area,
   platform, entity ids and the last decoded values. Sortable by clicking a column header.
+  `Refresh known devices` rebuilds the list of known devices after configuration changes.
 * **Unknown devices** – addresses which sent telegrams but are not configured in `configuration.yaml`,
-  including a guessed EEP and a ready to use yaml snippet.
-* **Info** – current status of the logger (file, rotation, counters, error counters) and the
-  configuration reference.
+  including the EEP (from a teach-in telegram or guessed) and a ready to use yaml snippet.
 
-`Export JSON` / `Export CSV` download the current view, `Clear` resets statistics and buffer
-(same as the service `eltako.clear_telegram_log`), `Refresh devices` rebuilds the list of known devices
-after configuration changes.
+The remaining pages (**Overview** and **About**) describe the integration itself. All pages and the
+websocket api behind them are documented in [Web UI](../web-ui/readme.md).
 
 ## Unknown devices
 

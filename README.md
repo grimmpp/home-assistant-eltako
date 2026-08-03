@@ -68,7 +68,8 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
   * H5-3F-7F (cover)
 * [Send Message Service](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/service-send-message/readme.md) Sends any EnOcean Message. Can be used for [automatinos in Home Assistant](https://www.home-assistant.io/getting-started/automation/) so that none-EnOcean and EnOcean deviecs can be combined. 
   * Not supported EEPs: A5-09-0C (Air Quality), A5-38-08 (Central Command)
-* [EnOcean Telegram Logging and Analysis](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/telegram-analysis/readme.md) Records all telegrams (incl. EEPs and entity references) into a file and provides a web ui with device statistics and a live view of all detected telegrams.
+* [EnOcean Telegram Logging and Analysis](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/telegram-analysis/readme.md) Records all telegrams (incl. EEPs and entity references) into a file and detects devices which are not configured yet.
+* [Web UI](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/web-ui/readme.md) Own panel in the sidebar with overview of all gateways, live view of all telegrams, device statistics, unknown devices and information about the integration. It is part of the integration - no additional package required.
  
 [**Gateway**](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways/readme.md) (See also [how to use gateways](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateway_usage/readme.md) and [multiple gateway support](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/multiple-gateway-support/readme.md))
   * **Eltako FAM14** and Eltako **FGW14-USB** (based on ESP2, rs485 bus and baud rate 57600, uses library [eltako14bus](https://github.com/grimmpp/eltako14bus)) 
@@ -129,6 +130,7 @@ python -m unittest discover tests -v
 * [How to detect Switch Signals and react on thoese in Home Assistant](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/rocker_switch/readme.md)
 * [How to configure heating and cooling](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/heating-and-cooling/readme.md)
 * [How to log and analyse EnOcean telegrams](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/telegram-analysis/readme.md)
+* [Web UI of the integration](https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/web-ui/readme.md)
 
 
 # Dependencies

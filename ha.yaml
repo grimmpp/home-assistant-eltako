@@ -2,8 +2,8 @@ eltako:
   general_settings:
     fast_status_change: False   # True: Changes status in HA immediately without waiting for actuator response. Default: False
     show_dev_id_in_dev_name: True
-    enable-frontend: False      # True: registers the frontend of the package 'home-assistant-eltako-frontend'. Default: False
-    frontend-dev-url: ""        # url of a separately running frontend dev server, e.g. http://localhost:5173. Default: ""
+    enable_frontend: True       # True: adds the 'Eltako' panel with all its pages (overview, telegram log,
+                                # device statistics, unknown devices, about) to the sidebar. Default: False
     # EnOcean telegram logging and analysis (see docs/telegram-analysis/readme.md)
     log_enocean_telegrams: True                     # True: records all incoming and outgoing telegrams
     telegram_log_filename: enocean_telegrams.jsonl  # if set, telegrams are written into this file (relative paths are located in the HA config folder)
@@ -13,7 +13,6 @@ eltako:
     telegram_log_include_polling: False             # True: bus polling telegrams (FAM14) are logged as well. Default: False
     telegram_log_decode_eep: True                   # True: telegrams of known devices are decoded with their EEP. Default: True
     telegram_log_buffer_size: 500                   # number of telegrams kept in memory for the live view. Default: 500
-    enable_telegram_web_ui: True                    # True: adds the 'EnOcean Telegrams' panel to the sidebar. Default: True
   gateway:
   - id: 0
     device_type: esp2-network-reverse-bridge

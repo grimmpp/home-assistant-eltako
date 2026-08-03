@@ -15,7 +15,6 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
     CONF_ENABLE_TEACH_IN_BUTTONS: False,
     CONF_ENABLE_FRONTEND: False,
-    CONF_FRONTEND_DEV_URL: "",
     CONF_LOG_ENOCEAN_TELEGRAMS: False,
     CONF_TELEGRAM_LOG_FILENAME: "",
     CONF_TELEGRAM_LOG_FORMAT: TelegramLogFormat.JSONL.value,
@@ -24,7 +23,13 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_TELEGRAM_LOG_INCLUDE_POLLING: False,
     CONF_TELEGRAM_LOG_DECODE_EEP: True,
     CONF_TELEGRAM_LOG_BUFFER_SIZE: 500,
-    CONF_ENABLE_TELEGRAM_WEB_UI: True,
+}
+
+# deprecated option -> replacement (None means the option is not needed anymore)
+DEPRECATED_GENERAL_SETTINGS = {
+    CONF_DEPRECATED_ENABLE_FRONTEND: CONF_ENABLE_FRONTEND,
+    CONF_DEPRECATED_FRONTEND_DEV_URL: None,
+    CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI: CONF_ENABLE_FRONTEND,
 }
 
 class DeviceConf(dict):
@@ -85,6 +90,29 @@ def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     # LOGGER.debug(f"General Settings: {settings}")
 
     return settings
+
+
+def is_frontend_enabled(general_settings: dict) -> bool:
+    """Return True if the web ui of the integration (incl. all its sub pages) is enabled."""
+    if general_settings.get(CONF_ENABLE_FRONTEND, False):
+        return True
+    # backwards compatibility for the former option name 'enable-frontend'
+    return bool(general_settings.get(CONF_DEPRECATED_ENABLE_FRONTEND, False))
+
+
+def log_deprecated_general_settings(general_settings: dict) -> list[str]:
+    """Log a warning for every deprecated general setting and return the ones which were found."""
+    found = []
+    for deprecated, replacement in DEPRECATED_GENERAL_SETTINGS.items():
+        if deprecated not in general_settings:
+            continue
+        found.append(deprecated)
+        if replacement:
+            LOGGER.warning(f"General setting '{deprecated}' is deprecated. Please use '{replacement}' instead.")
+        else:
+            LOGGER.warning(f"General setting '{deprecated}' is deprecated and has no effect anymore. "
+                           f"Please remove it from your configuration.")
+    return found
 
 
 async def async_get_gateway_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:

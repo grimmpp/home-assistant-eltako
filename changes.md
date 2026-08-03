@@ -15,12 +15,18 @@
 * Connection state fixed: Display information about gateway connection was sometimes displayed incorrectly
 * added repeater mode selection field for gateways
 * added support for optional area field
+* frontend/web ui is now part of the integration ([docs](docs/web-ui/readme.md))
+  * removed dependency to the separate package `home_assistant_eltako_frontend`
+  * frontend code (plain javascript modules, no build step) lives in `custom_components/eltako/frontend`, backend code stays in the python modules
+  * panel with sub pages: overview (gateways, devices, entities), live telegrams, device statistics, unknown devices and about
+  * `general_settings` cleaned up: `enable_frontend` is the only option for the web ui. Deprecated and ignored: `enable-frontend` (old name, still enables the frontend), `frontend-dev-url`, `enable_telegram_web_ui`
+  * new websocket command `eltako/integration_info`
 * added EnOcean telegram logging and analysis ([docs](docs/telegram-analysis/readme.md)) in own module `enocean_logger.py`
-  * new general settings: `log_enocean_telegrams`, `telegram_log_filename`, `telegram_log_format` (jsonl/csv), `telegram_log_max_file_size_mb`, `telegram_log_backup_count`, `telegram_log_include_polling`, `telegram_log_decode_eep`, `telegram_log_buffer_size`, `enable_telegram_web_ui`
+  * new general settings: `log_enocean_telegrams`, `telegram_log_filename`, `telegram_log_format` (jsonl/csv), `telegram_log_max_file_size_mb`, `telegram_log_backup_count`, `telegram_log_include_polling`, `telegram_log_decode_eep`, `telegram_log_buffer_size`
   * telegrams are recorded with EEP, decoded values, device name, area and references to the Home Assistant entities
   * rotating log file (JSON lines or CSV) written in a separate thread
   * per device statistics (counts, intervals, message types, first/last seen) and detection of devices which are not configured yet
-  * new web ui/panel `EnOcean Telegrams` with live view, device statistics, unknown devices and export (JSON/CSV)
+  * live view, device statistics and detection of unconfigured devices are available in the web ui (see above)
   * new service `eltako.clear_telegram_log` and websocket api `eltako/telegram_log/*`
 
 TODO: improve performance of controlling groups. (send only one group telegram instead of many indivitual commands)
