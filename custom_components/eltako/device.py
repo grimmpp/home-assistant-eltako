@@ -48,7 +48,10 @@ class EltakoEntity(Entity):
 
         self.description_key = description_key
         self._attr_unique_id = config_helpers.get_device_id(gateway.dev_id, self.dev_id, self._get_description_key())
-        self.entity_id = f"{self._attr_ha_platform}.{self._attr_unique_id}"
+        # The unique id is the identity in the entity registry and must not be changed. It can
+        # however end with '_' (e.g. gateway entities without description key), which is not a
+        # valid object id, so it is only sanitized for the entity id.
+        self.entity_id = f"{self._attr_ha_platform}.{config_helpers.sanitize_object_id(self._attr_unique_id)}"
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Added entity {self.dev_name} ({type(self).__name__}).")
 
@@ -105,7 +108,14 @@ class EltakoEntity(Entity):
             if is_value_available is None:
                 latest_state:State = await self.async_get_last_state()
                 if latest_state is not None:
-                    self.load_value_initially(latest_state)
+                    try:
+                        self.load_value_initially(latest_state)
+                    except Exception as e:
+                        # Restoring the last state must never prevent the entity from being added.
+                        # Otherwise Home Assistant aborts the registration and the entity stays
+                        # unavailable until the next restart. (e.g. attributes of the old state are missing)
+                        LOGGER.warning(f"[{self._attr_ha_platform} {self.dev_id}] Cannot restore last state "
+                                       f"'{latest_state.state}' of {self.dev_name}: {e}", exc_info=True)
 
     def _assign_device_to_area(self, area_name: str) -> None:
         """Ensure the configured area exists and link this entity's device to it."""

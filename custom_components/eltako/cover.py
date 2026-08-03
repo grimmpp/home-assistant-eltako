@@ -86,11 +86,11 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         # LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
         # LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
         try:
-            self._attr_current_cover_position = latest_state.attributes['current_position']
-            self._attr_current_cover_tilt_position = latest_state.attributes['current_tilt_position']
+            # The attributes are not available if the cover was unavailable or unknown before the
+            # restart. The state below is authoritative anyway, so a missing position is no error.
+            self._attr_current_cover_position = latest_state.attributes.get('current_position')
+            self._attr_current_cover_tilt_position = latest_state.attributes.get('current_tilt_position')
 
-            #if self._attr_current_cover_tilt_position == 0:
-            #    self._attr_current_cover_tilt_position = 0
             if latest_state.state == STATE_OPEN:
                 self._attr_is_opening = False
                 self._attr_is_closing = False
@@ -118,8 +118,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             self._attr_is_opening = None
             self._attr_is_closing = None
             self._attr_is_closed = None # means undefined state
-            raise e
-        
+            LOGGER.warning(f"[cover {self.dev_id}] Cannot restore last state '{latest_state.state}': {e}")
+
+
         self.schedule_update_ha_state()
         LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [" 
                      + f"is_opening: {self.is_opening}, "

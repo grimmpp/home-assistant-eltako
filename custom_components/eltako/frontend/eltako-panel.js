@@ -279,10 +279,8 @@ class EltakoPanel extends HTMLElement {
     this.shadowRoot.getElementById("nav").innerHTML = `
       <div class="brand">
         ${icon("mdi:bus-electric", "◉")}
-        <div>
-          <div class="brand-title">Eltako</div>
-          <div class="brand-version">${info.version ? `v${escapeHtml(info.version)}` : "EnOcean integration"}</div>
-        </div>
+        <span class="brand-title">Eltako</span>
+        <span class="brand-version">${info.version ? `v${escapeHtml(info.version)}` : "EnOcean"}</span>
       </div>
       ${PAGES.map((page) => {
         const badge = page.badge ? page.badge(context) : null;
@@ -292,8 +290,7 @@ class EltakoPanel extends HTMLElement {
             <span>${escapeHtml(page.title)}</span>
             ${badge ? `<span class="badge">${escapeHtml(badge)}</span>` : ""}
           </a>`;
-      }).join("")}
-      <div class="nav-footer">Home Assistant Eltako<br />EnOcean / Baureihe 14</div>`;
+      }).join("")}`;
   }
 
   _renderHead() {

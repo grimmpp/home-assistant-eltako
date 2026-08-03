@@ -67,6 +67,8 @@ export const page = {
         ${card("Addresses seen", formatNumber(summary.device_count))}
         ${card("Known", formatNumber(summary.known_device_count), "good")}
         ${card("Unknown", formatNumber(summary.unknown_device_count), summary.unknown_device_count ? "warn" : "")}
+        ${summary.bus_message_count ? card("Bus messages", formatNumber(summary.bus_message_count), "",
+                                           "polling / discovery, no EnOcean address") : ""}
         ${card("Telegrams", formatNumber(summary.total_count))}
         ${card("Telegrams / min", formatNumber(summary.telegrams_per_minute))}
         ${card("Filtered polling", formatNumber(summary.filtered_count))}

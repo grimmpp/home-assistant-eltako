@@ -868,13 +868,17 @@ class EnOceanTelegramLogger:
 
         devices.sort(key=lambda d: d['count'], reverse=True)
         known_devices = [d for d in devices if d['known']]
-        unknown_devices = [d for d in devices if not d['known']]
+        # bus internal messages have no EnOcean address, they are neither a known nor an
+        # unknown device and cannot be added to the configuration
+        bus_messages = [d for d in devices if d.get('role') == 'bus_message']
+        unknown_devices = [d for d in devices if not d['known'] and d.get('role') != 'bus_message']
 
         info = self.get_info()
         info.update({
             'device_count': len(devices),
             'known_device_count': len(known_devices),
             'unknown_device_count': len(unknown_devices),
+            'bus_message_count': len(bus_messages),
             'count_by_gateway': {str(k): v for k, v in count_by_gateway.items()},
             'count_by_msg_type': count_by_msg_type,
         })

@@ -1,3 +1,5 @@
+import re
+
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -247,6 +249,51 @@ def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:
         id += f"{description_key.replace(' ', "_").replace('-', '_')}"
 
     return id.lower()
+
+
+def sanitize_object_id(id: str) -> str:
+    """Make an identifier usable as object id of an entity id.
+
+    Home Assistant does not accept leading/trailing or repeated underscores.
+    """
+    result = re.sub('_+', '_', id).strip('_')
+    return result if result else DOMAIN
+
+
+def remove_duplicate_devices(config: dict, log: bool = True) -> dict[str, list[str]]:
+    """Remove device configurations which are declared more than once and report them.
+
+    Wireless devices are gateway independent: their entities listen to telegrams of all
+    gateways and their unique id does not contain the gateway id. Configuring such a device
+    for two gateways would therefore create two entities with the same unique id, which
+    Home Assistant rejects with 'Platform eltako does not generate unique IDs'.
+    The first declaration wins, all later ones are dropped.
+    """
+    occurrences: dict[str, list[str]] = {}
+
+    for gateway_config in config.get(CONF_GATEWAY, []) or []:
+        gateway_id = gateway_config.get(CONF_ID)
+        for platform, devices in (gateway_config.get(CONF_DEVICES, {}) or {}).items():
+            if not devices:
+                continue
+            for device in list(devices):
+                dev_id = device.get(CONF_ID)
+                if not dev_id:
+                    continue
+                key = f"{platform}/{str(dev_id).upper()}"
+                if key in occurrences:
+                    devices.remove(device)      # keep the first declaration only
+                occurrences.setdefault(key, []).append(f"gateway {gateway_id}")
+
+    duplicates = {key: sources for key, sources in occurrences.items() if len(sources) > 1}
+    if log:
+        for key, sources in duplicates.items():
+            platform, dev_id = key.split('/', 1)
+            LOGGER.warning(f"Device '{dev_id}' is configured {len(sources)} times as {platform} "
+                           f"({', '.join(sources)}). Entities of wireless devices are shared by all "
+                           f"gateways, so only the declaration of {sources[0]} is used. "
+                           f"Please remove the duplicates from your configuration.")
+    return duplicates
 
 
 def get_bus_event_type(gateway_id: int, function_id: str, source_id: AddressExpression | bytes=None, description_key:str=None) -> str:

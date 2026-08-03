@@ -15,6 +15,11 @@
 * Connection state fixed: Display information about gateway connection was sometimes displayed incorrectly
 * added repeater mode selection field for gateways
 * added support for optional area field
+* Bugfixes found on a live installation
+  * covers were not added at all (`Error adding entity cover...`, entity stayed unavailable) when the restored state had no `current_position` attribute. Restoring a state can no longer prevent an entity from being registered - it is now caught centrally in `device.py` and logged as a warning.
+  * priority selection of climate devices got an entity id of the `climate` domain although it belongs to the `select` platform (collided with the climate entity of the same device, would break in HA 2027.5)
+  * gateway entities without description key produced an invalid entity id ending with `_` (e.g. `select.eltako_gw_0_`). The entity id is sanitized now, the unique id (identity in the entity registry) stays unchanged.
+  * devices which are declared for more than one gateway created entities with duplicated unique ids which Home Assistant rejected with `Platform eltako does not generate unique IDs`. Duplicates are now dropped deliberately (first declaration wins) and reported with a clear warning naming the address and the gateways.
 * frontend/web ui is now part of the integration ([docs](docs/web-ui/readme.md))
   * removed dependency to the separate package `home_assistant_eltako_frontend`
   * frontend code (plain javascript modules, no build step) lives in `custom_components/eltako/frontend`, backend code stays in the python modules

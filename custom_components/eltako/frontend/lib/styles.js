@@ -16,43 +16,47 @@ export const STYLES = `
   }
 
   /* ---------------------------------------------------------------- layout */
-  .shell { display: flex; height: 100%; }
+  /* The navigation is a horizontal bar on top so that the content can use the full width. */
+  .shell { display: flex; flex-direction: column; height: 100%; }
   nav {
-    flex: 0 0 216px; box-sizing: border-box; padding: 14px 10px;
-    border-right: 1px solid var(--eltako-border); background: var(--eltako-card);
-    display: flex; flex-direction: column; gap: 2px; overflow-y: auto;
+    flex: 0 0 auto; box-sizing: border-box; display: flex; align-items: center; gap: 4px;
+    flex-wrap: wrap; padding: 8px 16px; background: var(--eltako-card);
+    border-bottom: 1px solid var(--eltako-border);
   }
-  nav .brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 14px; }
-  nav .brand-title { font-size: 1.05rem; font-weight: 500; line-height: 1.15; }
+  nav .brand {
+    display: flex; align-items: baseline; gap: 8px; margin-right: 10px; padding-right: 14px;
+    border-right: 1px solid var(--eltako-border); align-self: stretch;
+  }
+  nav .brand ha-icon, nav .brand .glyph { align-self: center; }
+  nav .brand-title { font-size: 1rem; font-weight: 500; }
   nav .brand-version { font-size: .7rem; color: var(--eltako-muted); }
   nav a {
-    display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px;
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px;
     color: var(--primary-text-color); text-decoration: none; cursor: pointer; font-size: .9rem;
+    white-space: nowrap;
   }
   nav a:hover { background: var(--secondary-background-color, rgba(127,127,127,.1)); }
   nav a.active { background: color-mix(in srgb, var(--primary-color, #03a9f4) 16%, transparent);
                  color: var(--primary-color, #03a9f4); font-weight: 500; }
   nav a .badge {
-    margin-left: auto; font-size: .7rem; padding: 1px 7px; border-radius: 10px;
+    font-size: .7rem; padding: 1px 7px; border-radius: 10px;
     background: var(--label-badge-yellow, #f9a825); color: #212121;
   }
-  nav .nav-footer { margin-top: auto; padding: 10px 12px 0; font-size: .7rem; color: var(--eltako-muted); }
   nav ha-icon, nav .glyph { --mdc-icon-size: 20px; width: 20px; text-align: center; flex: 0 0 20px; }
 
-  main { flex: 1 1 auto; overflow-y: auto; padding: 18px 20px 40px; box-sizing: border-box; }
+  main { flex: 1 1 auto; overflow-y: auto; padding: 16px 20px 40px; box-sizing: border-box; }
   header.page-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline;
                      justify-content: space-between; margin-bottom: 16px; }
   header.page-head h1 { margin: 0; font-size: 1.35rem; font-weight: 500; }
   header.page-head .page-subtitle { font-size: .82rem; color: var(--eltako-muted); margin-top: 3px; }
   .head-status { display: flex; flex-wrap: wrap; gap: 6px; }
 
-  @media (max-width: 780px) {
-    .shell { flex-direction: column; }
-    nav { flex: none; width: 100%; border-right: none; border-bottom: 1px solid var(--eltako-border);
-          flex-direction: row; overflow-x: auto; align-items: center; padding: 8px; }
-    nav .brand, nav .nav-footer { display: none; }
-    nav a { white-space: nowrap; }
-    main { padding: 14px; }
+  @media (max-width: 640px) {
+    nav { flex-wrap: nowrap; overflow-x: auto; padding: 6px 10px; }
+    nav .brand { display: none; }
+    nav a span:not(.badge) { display: none; }   /* icons only, keeps the bar on one line */
+    nav a.active span:not(.badge) { display: inline; }
+    main { padding: 14px 14px 32px; }
   }
 
   /* ---------------------------------------------------------------- pieces */

@@ -42,6 +42,7 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     hass.data[DATA_ELTAKO][ELTAKO_CONFIG] = config
     general_settings = config_helpers.get_general_settings_from_configuration(hass)
     config_helpers.log_deprecated_general_settings(general_settings)
+    config_helpers.remove_duplicate_devices(config)
 
     LOGGER.info("f[{LOG_PREFIX_INIT}] Register websocket extension.")
     await register_websockets(hass, config_type)
@@ -193,6 +194,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not config_helpers.config_check_gateway(config):
         raise Exception(f"[{LOG_PREFIX_INIT}] Gateway Ids are not unique.")
 
+
+    # devices which are declared for more than one gateway would result in entities with
+    # duplicated unique ids. (Already reported during async_setup, therefore no logging here.)
+    config_helpers.remove_duplicate_devices(config, log=False)
 
     # set config for global access
     eltako_data = hass.data.setdefault(DATA_ELTAKO, {})

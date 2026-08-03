@@ -34,9 +34,12 @@ async def async_setup_entry(
 
     entities: list[EltakoEntity] = []
     
-    platform = Platform.CLIMATE
-    if platform in config:
-        for entity_config in config[platform]:
+    # The configuration of the priority selection is part of the climate section, but the
+    # entities themselves belong to the select platform. (Otherwise they would get an entity id
+    # of the climate domain which collides with the climate entity of the same device.)
+    config_platform = Platform.CLIMATE
+    if config_platform in config:
+        for entity_config in config[config_platform]:
             try:
                 dev_config = DeviceConf(entity_config, [CONF_ROOM_THERMOSTAT])
                 thermostat = dev_config.get(CONF_ROOM_THERMOSTAT)
@@ -44,12 +47,12 @@ async def async_setup_entry(
                 # Priority selection is only meaningful when a physical thermostat
                 # competes with the HA software controller.
                 if thermostat:
-                    entities.append(ClimatePriority(platform, gateway, dev_config.id, dev_config.name, dev_config.eep))
+                    entities.append(ClimatePriority(Platform.SELECT, gateway, dev_config.id, dev_config.name, dev_config.eep))
 
             except Exception as e:
-                LOGGER.warning("[%s %s] Could not load configuration", platform, str(dev_config.id))
+                LOGGER.warning("[%s %s] Could not load configuration", config_platform, str(dev_config.id))
                 LOGGER.critical(e, exc_info=True)
-        
+
     # add for every gateway
     platform = Platform.SELECT
     entities.append(RepeaterMode(platform, gateway))

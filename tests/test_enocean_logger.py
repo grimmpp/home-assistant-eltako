@@ -340,6 +340,11 @@ class TestTelegramRecording(TestCase):
         self.assertEqual(statistics['devices'][0]['address'], 'bus 8')
         self.assertEqual(statistics['devices'][0]['role'], 'bus_message')
 
+        # they are counted separately: neither a known nor a configurable unknown device
+        self.assertEqual(statistics['summary']['bus_message_count'], 1)
+        self.assertEqual(statistics['summary']['unknown_device_count'], 0)
+        self.assertEqual(statistics['summary']['known_device_count'], 0)
+
     def test_statistics(self):
         for _ in range(3):
             self.record(Regular4BSMessage(address=b'\xFF\xAA\xDD\x81', status=0x00, data=b'\x00\x7D\x7D\x0A'))
