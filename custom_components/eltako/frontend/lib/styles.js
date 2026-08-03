@@ -17,7 +17,7 @@ export const STYLES = `
 
   /* ---------------------------------------------------------------- layout */
   /* The navigation is a horizontal bar on top so that the content can use the full width. */
-  .shell { display: flex; flex-direction: column; height: 100%; }
+  .shell { display: flex; flex-direction: column; height: 100%; position: relative; }
   nav {
     flex: 0 0 auto; box-sizing: border-box; display: flex; align-items: center; gap: 4px;
     flex-wrap: wrap; padding: 8px 16px; background: var(--eltako-card);
@@ -126,8 +126,65 @@ export const STYLES = `
   .dir.outgoing { color: var(--primary-color, #03a9f4); }
   .unknown-row { background: color-mix(in srgb, var(--label-badge-yellow, #f9a825) 12%, transparent); }
   .tag { font-size: .7rem; padding: 1px 7px; border-radius: 10px; white-space: nowrap; }
+  .tag.taught { background: var(--label-badge-green, #43a047); color: #fff; }
   .tag.unknown { background: var(--label-badge-yellow, #f9a825); color: #212121; }
   .tag.role { background: var(--secondary-background-color, rgba(127,127,127,.15)); color: var(--eltako-muted); }
+  .tag.source-yaml { background: var(--secondary-background-color, rgba(127,127,127,.15)); color: var(--eltako-muted); }
+  .tag.source-ui { background: color-mix(in srgb, var(--primary-color, #03a9f4) 20%, transparent);
+                   color: var(--primary-color, #03a9f4); }
+  /* group rows in eltako brand blue instead of grey */
+  tr.bus-device-row td { background: color-mix(in srgb, #005ca9 16%, transparent);
+                         font-size: .8rem; padding-top: 9px; padding-bottom: 9px; }
+  /* rows which react on a click (relation highlighting) show it */
+  tbody tr[data-address] { cursor: pointer; }
+
+  /* relation highlighting: the clicked row and everything taught in with it. One frame
+     around the whole row (outline, so the collapsed cell borders play no role) instead of
+     per-cell markers - no dividers inside the marked row. */
+  tbody tr.relation-origin { outline: 2px solid #005ca9; outline-offset: -2px; }
+  tbody tr.relation-origin td { background: color-mix(in srgb, #005ca9 20%, transparent);
+                                border-bottom-color: transparent; }
+  tbody tr.relation-target { outline: 2px solid var(--label-badge-green, #43a047); outline-offset: -2px; }
+  tbody tr.relation-target td { background: color-mix(in srgb, var(--label-badge-green, #43a047) 22%, transparent);
+                                border-bottom-color: transparent; }
+  tr.bus-device-row .hint-inline, .hint-inline { font-size: .74rem; color: var(--eltako-muted); margin-left: 8px; }
+  tr.channel-row td:first-child { padding-left: 20px; }
+  tr.taught-in-row td { padding-left: 20px; background: color-mix(in srgb, var(--label-badge-green, #43a047) 6%, transparent); }
+  tr.taught-in-row .chip { margin: 2px 4px 2px 0; }
+  .tree { color: var(--eltako-muted); margin-right: 6px; }
+  .bus-heading { font-size: .9rem; font-weight: 500; margin: 16px 0 8px; color: var(--eltako-muted); }
+  tr.linked td:first-child { box-shadow: inset 3px 0 0 var(--primary-color, #03a9f4); }
+  .stale { color: var(--label-badge-yellow, #f9a825); }
+
+  /* side panel with the memory content (taught-in senders) of a bus device. It lives in
+     #drawer-outlet of the shell (not in the scrolling <main>), so it overlays the page on
+     the right and slides in - it never scrolls away with the table. */
+  @keyframes eltako-drawer-in {
+    from { transform: translateX(110%); }
+    to   { transform: none; }
+  }
+  .detail-drawer {
+    position: absolute; top: 64px; right: 12px; bottom: 12px; width: min(400px, 85vw);
+    overflow-y: auto; z-index: 6; padding: 16px; box-sizing: border-box;
+    background: var(--card-background-color, var(--eltako-card, #fff));
+    border: 1px solid var(--divider-color, rgba(127,127,127,.3)); border-radius: 12px;
+    box-shadow: -6px 0 24px rgba(0,0,0,.25);
+    animation: eltako-drawer-in .25s ease-out;
+  }
+  .detail-drawer h3 { margin: 0 0 4px; }
+  .detail-drawer .sensor-line { padding: 8px 0; border-bottom: 1px solid var(--divider-color, rgba(127,127,127,.2)); }
+  .detail-drawer .sensor-line:last-child { border-bottom: none; }
+  .detail-drawer .sensor-line .hint { margin-top: 2px; }
+
+  /* a row flashes blue when a telegram of that device is received */
+  @keyframes eltako-telegram-flash {
+    0%   { background-color: color-mix(in srgb, var(--info-color, #039be5) 55%, transparent); }
+    35%  { background-color: color-mix(in srgb, var(--info-color, #039be5) 40%, transparent); }
+    100% { background-color: transparent; }
+  }
+  tbody tr.telegram-flash { animation: eltako-telegram-flash 1.4s ease-out; }
+  tbody tr.telegram-flash td:first-child { box-shadow: inset 3px 0 0 var(--info-color, #039be5); }
+  td.actions { white-space: nowrap; display: flex; gap: 6px; align-items: center; }
   .decoded { max-width: 320px; white-space: normal; }
   .kv { display: inline-block; margin-right: 6px; font-size: .75rem; }
   .kv i { color: var(--eltako-muted); font-style: normal; margin-right: 3px; }

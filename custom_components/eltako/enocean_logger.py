@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import logging
 import io
 import itertools
 import json
@@ -64,6 +65,26 @@ if TYPE_CHECKING:
 
 
 LOG_PREFIX_TELEGRAM_LOGGER = "Telegram Logger"
+
+# Own logger for the telegrams so that its level can be configured independently of the
+# integration (logger: logs: eltako.telegrams: debug).
+TELEGRAM_LOGGER = logging.getLogger(TELEGRAM_LOGGER_NAME)
+
+LOG_LEVEL_VALUES = {
+    TelegramLogLevel.DEBUG.value: logging.DEBUG,
+    TelegramLogLevel.INFO.value: logging.INFO,
+    TelegramLogLevel.WARNING.value: logging.WARNING,
+}
+
+# telegram category -> setting which defines its log level
+LOG_LEVEL_SETTINGS = {
+    'incoming': CONF_LOG_LEVEL_INCOMING,
+    'outgoing': CONF_LOG_LEVEL_OUTGOING,
+    'unknown': CONF_LOG_LEVEL_UNKNOWN_DEVICES,
+    'bus': CONF_LOG_LEVEL_BUS_MESSAGES,
+    'polling': CONF_LOG_LEVEL_POLLING,
+    'decode_error': CONF_LOG_LEVEL_DECODE_ERRORS,
+}
 
 # message types which are pure bus house keeping and usually not interesting for an analysis
 POLLING_MESSAGE_TYPES = (EltakoPoll, EltakoPollForced, EltakoTimeout)
@@ -122,6 +143,29 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(k): _json_safe(v) for k, v in value.items()}
     return str(value)
+
+
+def resolve_addresses(gateway: "EnOceanGateway", telegram: ESP2Message) -> tuple[str | None, str | None]:
+    """Return (external address, local bus address) of a telegram.
+
+    Devices connected to a bus gateway use addresses relative to the base id of the gateway.
+    The external address is the address other EnOcean devices see.
+
+    Shared by the telegram logger and the device activity tracker so that both use the very
+    same address for one telegram.
+    """
+    raw_address = getattr(telegram, 'address', None)
+    if not isinstance(raw_address, (bytes, bytearray)) or len(raw_address) != 4:
+        return None, None
+
+    address = AddressExpression((bytes(raw_address), None))
+    if address.is_local_address():
+        base_id = getattr(gateway, 'base_id', None)
+        if base_id is not None and int.from_bytes(base_id[0], 'big') != 0:
+            return b2s(address.add(base_id)), b2s(address)
+        return b2s(address), b2s(address)
+
+    return b2s(address), None
 
 
 def decoded_eep_to_dict(decoded: Any) -> dict:
@@ -401,6 +445,17 @@ class EnOceanTelegramLogger:
         self.filename: str = str(general_settings.get(CONF_TELEGRAM_LOG_FILENAME, "") or "").strip()
         self.buffer_size: int = int(general_settings.get(CONF_TELEGRAM_LOG_BUFFER_SIZE, 500))
 
+        # log level per telegram category (None = do not log)
+        self.log_levels: dict[str, int | None] = {
+            category: LOG_LEVEL_VALUES.get(str(general_settings.get(setting, TelegramLogLevel.OFF.value)))
+            for category, setting in LOG_LEVEL_SETTINGS.items()
+        }
+        self._lowest_log_level = min([level for level in self.log_levels.values() if level is not None],
+                                     default=None)
+        if self._lowest_log_level is not None:
+            # make sure the messages are not dropped because the logger inherits a higher level
+            TELEGRAM_LOGGER.setLevel(min(TELEGRAM_LOGGER.level or logging.CRITICAL, self._lowest_log_level))
+
         self.file_path: str | None = None
         self._writer: TelegramFileWriter | None = None
 
@@ -484,11 +539,18 @@ class EnOceanTelegramLogger:
     def record_message(self, gateway: "EnOceanGateway", msg: ESP2Message, direction: str) -> None:
         """Record one telegram. Can be called from any thread (e.g. the serial bus thread)."""
         try:
-            if not self.include_polling and isinstance(msg, POLLING_MESSAGE_TYPES):
-                self._filtered_count += 1
-                return
+            if isinstance(msg, POLLING_MESSAGE_TYPES):
+                # The polling telegrams are the list of bus positions the gateway knows, so
+                # their information is collected even when they are not recorded.
+                self._note_bus_member(gateway, msg)
+                # polling is logged without building a whole record, it can be very frequent
+                self._log_polling(gateway, msg)
+                if not self.include_polling:
+                    self._filtered_count += 1
+                    return
 
             record = self._create_record(gateway, msg, direction)
+            telegram_for_bus = prettify(msg) if type(msg) is ESP2Message else msg
 
             monotonic = time.monotonic()
             with self._lock:
@@ -511,11 +573,103 @@ class EnOceanTelegramLogger:
             if self._writer:
                 self._writer.submit(record)
 
+            self._note_bus_member(gateway, telegram_for_bus, record)
+            self._log_record(record)
             self._notify_subscribers_threadsafe(record)
 
         except Exception as e:  # noqa: BLE001 - logging must never break the bus
             self._error_count += 1
             LOGGER.error(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot record telegram: {e}", exc_info=True)
+
+    ### bus members (see bus_members.py)
+
+    def _note_bus_member(self, gateway: "EnOceanGateway", telegram, record: dict = None) -> None:
+        """Feed everything which reveals a bus position into the bus member registry."""
+        from .bus_members import get_registry
+
+        registry = get_registry(self.hass)
+        if registry is None:
+            return
+
+        try:
+            if isinstance(telegram, POLLING_MESSAGE_TYPES):
+                address = getattr(telegram, 'address', None)
+                if isinstance(address, int):
+                    registry.note_polled(gateway, address)
+                return
+
+            if isinstance(telegram, EltakoDiscoveryReply):
+                registry.note_discovery_reply(gateway, telegram)
+                return
+
+            if isinstance(telegram, EltakoMemoryResponse):
+                registry.note_memory_response(gateway, telegram)
+                return
+
+            # a status answer of a bus device carries its position as local address
+            if record and record.get('local_address'):
+                parts = str(record['local_address']).split('-')
+                if len(parts) == 4 and parts[:3] == ['00', '00', '00']:
+                    registry.note_answer(gateway, int(parts[3], 16), record.get('address'))
+        except Exception as e:  # noqa: BLE001 - must never break the recording
+            LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot note bus member: {e}")
+
+    ### logging into the home assistant log
+
+    def _log_polling(self, gateway: "EnOceanGateway", msg: ESP2Message) -> None:
+        level = self.log_levels.get('polling')
+        if level is None:
+            return
+        TELEGRAM_LOGGER.log(level, "polling  gw=%s %s", getattr(gateway, 'dev_id', '?'), msg)
+
+    def _category_of(self, record: dict) -> str:
+        if record.get('role') == 'bus_message' or record.get('bus_address') is not None:
+            return 'bus'
+        if record.get('direction') == TelegramDirection.OUTGOING.value:
+            return 'outgoing'
+        if not record.get('known'):
+            return 'unknown'
+        return 'incoming'
+
+    def _log_record(self, record: dict) -> None:
+        """One log line per telegram, if its category is configured to be logged."""
+        if self._lowest_log_level is None:
+            return
+
+        level = self.log_levels.get(self._category_of(record))
+        if level is not None:
+            TELEGRAM_LOGGER.log(level, "%s", self._format_record(record))
+
+        # a known device whose telegram could not be decoded points to a wrong EEP
+        decode_level = self.log_levels.get('decode_error')
+        if decode_level is not None and record.get('eep') and record.get('decoded') is None \
+                and record.get('role') != 'bus_message':
+            TELEGRAM_LOGGER.log(decode_level,
+                                "decode error: %s (%s) could not be decoded with %s - wrong EEP configured? data=%s",
+                                record.get('address'), record.get('device_name') or 'unknown device',
+                                record.get('eep'), record.get('data'))
+
+    def _format_record(self, record: dict) -> str:
+        direction = 'out' if record.get('direction') == TelegramDirection.OUTGOING.value else 'in '
+        parts = [
+            f"{direction} gw={record.get('gateway_id')}",
+            f"{record.get('msg_type')}",
+            f"{record.get('address') or record.get('bus_address')}",
+        ]
+        if record.get('known'):
+            parts.append(f"'{record.get('device_name')}'")
+            if record.get('eep'):
+                parts.append(record['eep'])
+        else:
+            parts.append("UNKNOWN device")
+        if record.get('data'):
+            parts.append(f"data={record['data']}")
+        if record.get('decoded'):
+            values = ", ".join(f"{key}={value}" for key, value in list(record['decoded'].items())[:4])
+            parts.append(f"[{values}]")
+        if record.get('entity_ids'):
+            parts.append(f"-> {', '.join(record['entity_ids'][:3])}")
+        return "  ".join(str(part) for part in parts)
 
     def _create_record(self, gateway: "EnOceanGateway", msg: ESP2Message, direction: str) -> dict:
         telegram = prettify(msg) if type(msg) is ESP2Message else msg
@@ -613,23 +767,8 @@ class EnOceanTelegramLogger:
             return None
 
     def _resolve_addresses(self, gateway: "EnOceanGateway", telegram: ESP2Message) -> tuple[str | None, str | None]:
-        """Return (external address, local bus address).
-
-        Devices connected to a bus gateway use addresses relative to the base id of
-        the gateway. The external address is the address other EnOcean devices see.
-        """
-        raw_address = getattr(telegram, 'address', None)
-        if not isinstance(raw_address, (bytes, bytearray)) or len(raw_address) != 4:
-            return None, None
-
-        address = AddressExpression((bytes(raw_address), None))
-        if address.is_local_address():
-            base_id = getattr(gateway, 'base_id', None)
-            if base_id is not None and int.from_bytes(base_id[0], 'big') != 0:
-                return b2s(address.add(base_id)), b2s(address)
-            return b2s(address), b2s(address)
-
-        return b2s(address), None
+        """Delegates to the shared resolver (also used by the device activity tracker)."""
+        return resolve_addresses(gateway, telegram)
 
     ### known devices
 
@@ -858,6 +997,8 @@ class EnOceanTelegramLogger:
             'decode_error_count': self._decode_error_count,
             'telegrams_per_minute': telegrams_per_minute,
             'known_address_count': len(self._device_map),
+            'log_levels': {category: logging.getLevelName(level) if level else 'off'
+                           for category, level in self.log_levels.items()},
         }
 
     def get_statistics(self) -> dict:

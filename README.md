@@ -82,7 +82,7 @@ Elatko devices are exemplarily mentioned. You can find [here](https://www.eltako
 
 # Installation and Configuration
 
-While this is not integrated into home assistant's repositories. You need to install first [Home Assistant Commuinty Sore (HACS)](https://hacs.xyz/) in order to install custom components. After that you need to do the following steps:
+While this is not integrated into home assistant's repositories. You need to install first [Home Assistant Community Store (HACS)](https://hacs.xyz/) in order to install custom components. After that you need to do the following steps:
 1. **Install repo via HACS**: 
   
    Click on the button below to automatically navigate to the repository within HACS, add and download it.

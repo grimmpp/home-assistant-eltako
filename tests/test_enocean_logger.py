@@ -538,3 +538,112 @@ class TestTelegramLoggerSetup(IsolatedAsyncioTestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestTelegramLogLevels(TestCase):
+    """Each telegram category can be logged at its own level."""
+
+    def setUp(self):
+        self.gateway = GatewayMock(base_id=AddressExpression.parse('FF-AA-80-00'))
+        self.hass = HassDataMock(config={
+            CONF_GATEWAY: [{
+                CONF_ID: self.gateway.dev_id, CONF_BASE_ID: 'FF-AA-80-00',
+                CONF_DEVICES: {'sensor': [{CONF_ID: 'FF-AA-DD-81', CONF_EEP: 'A5-04-02',
+                                           CONF_NAME: 'Temp Sensor'}]},
+            }],
+        })
+        self.gateway.hass = self.hass
+
+    def create_logger(self, **levels) -> EnOceanTelegramLogger:
+        logger = EnOceanTelegramLogger(self.hass, get_general_settings(**{
+            CONF_LOG_ENOCEAN_TELEGRAMS: True, **levels}))
+        logger.refresh_device_map()
+        return logger
+
+    def test_nothing_is_logged_by_default(self):
+        logger = self.create_logger()
+
+        self.assertIsNone(logger._lowest_log_level)
+        self.assertTrue(all(level is None for level in logger.log_levels.values()))
+
+    def test_levels_are_translated(self):
+        import logging
+
+        logger = self.create_logger(**{CONF_LOG_LEVEL_INCOMING: 'info',
+                                       CONF_LOG_LEVEL_UNKNOWN_DEVICES: 'warning',
+                                       CONF_LOG_LEVEL_POLLING: 'debug'})
+
+        self.assertEqual(logger.log_levels['incoming'], logging.INFO)
+        self.assertEqual(logger.log_levels['unknown'], logging.WARNING)
+        self.assertEqual(logger.log_levels['polling'], logging.DEBUG)
+        self.assertIsNone(logger.log_levels['outgoing'])
+        self.assertEqual(logger._lowest_log_level, logging.DEBUG)
+
+    def test_category_of_telegrams(self):
+        logger = self.create_logger()
+
+        self.assertEqual(logger._category_of({'known': True, 'direction': 'incoming'}), 'incoming')
+        self.assertEqual(logger._category_of({'known': False, 'direction': 'incoming'}), 'unknown')
+        self.assertEqual(logger._category_of({'known': True, 'direction': 'outgoing'}), 'outgoing')
+        self.assertEqual(logger._category_of({'role': 'bus_message', 'direction': 'incoming'}), 'bus')
+
+    def test_unknown_device_is_logged_with_its_level(self):
+        logger = self.create_logger(**{CONF_LOG_LEVEL_UNKNOWN_DEVICES: 'warning'})
+
+        with self.assertLogs('eltako.telegrams', level='WARNING') as captured:
+            logger.record_message(self.gateway, RPSMessage(address=b'\x81\x04\xE5\x54', status=0x30,
+                                                           data=b'\x10'), 'incoming')
+
+        self.assertIn('UNKNOWN device', captured.output[0])
+        self.assertIn('81-04-E5-54', captured.output[0])
+
+    def test_known_device_is_logged_with_decoded_values(self):
+        logger = self.create_logger(**{CONF_LOG_LEVEL_INCOMING: 'info'})
+
+        with self.assertLogs('eltako.telegrams', level='INFO') as captured:
+            logger.record_message(self.gateway, Regular4BSMessage(address=b'\xFF\xAA\xDD\x81', status=0x00,
+                                                                  data=b'\x00\x7D\x7D\x0A'), 'incoming')
+
+        self.assertIn('Temp Sensor', captured.output[0])
+        self.assertIn('current_temperature', captured.output[0])
+
+    def test_polling_is_logged_even_when_it_is_filtered_from_the_recording(self):
+        """Polling floods the log, so it is logged without being buffered."""
+        logger = self.create_logger(**{CONF_LOG_LEVEL_POLLING: 'debug'})
+
+        with self.assertLogs('eltako.telegrams', level='DEBUG') as captured:
+            logger.record_message(self.gateway, EltakoPoll(3), 'incoming')
+
+        self.assertIn('polling', captured.output[0])
+        self.assertEqual(logger.get_recent_telegrams(), [])     # not buffered
+
+    def test_decode_error_points_to_a_wrong_eep(self):
+        logger = self.create_logger(**{CONF_LOG_LEVEL_DECODE_ERRORS: 'warning'})
+
+        with self.assertLogs('eltako.telegrams', level='WARNING') as captured:
+            # an RPS telegram cannot be decoded with the configured A5-04-02
+            logger.record_message(self.gateway, RPSMessage(address=b'\xFF\xAA\xDD\x81', status=0x30,
+                                                           data=b'\x10'), 'incoming')
+
+        self.assertIn('wrong EEP', captured.output[0])
+
+    def test_categories_which_are_off_are_not_logged(self):
+        import logging
+
+        logger = self.create_logger(**{CONF_LOG_LEVEL_UNKNOWN_DEVICES: 'warning'})
+        telegram_logger = logging.getLogger('eltako.telegrams')
+
+        with self.assertLogs('eltako.telegrams', level='DEBUG') as captured:
+            telegram_logger.debug("marker")     # so that assertLogs has at least one record
+            logger.record_message(self.gateway, Regular4BSMessage(address=b'\xFF\xAA\xDD\x81', status=0x00,
+                                                                  data=b'\x00\x7D\x7D\x0A'), 'incoming')
+
+        self.assertEqual(len(captured.output), 1)    # only the marker, incoming is 'off'
+
+    def test_levels_are_reported_in_the_info(self):
+        logger = self.create_logger(**{CONF_LOG_LEVEL_INCOMING: 'info'})
+
+        levels = logger.get_info()['log_levels']
+
+        self.assertEqual(levels['incoming'], 'INFO')
+        self.assertEqual(levels['outgoing'], 'off')

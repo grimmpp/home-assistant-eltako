@@ -11,6 +11,16 @@ DOMAIN: Final = "eltako"
 DATA_ELTAKO: Final = "eltako"
 DATA_ENTITIES: Final = "entities"
 DATA_TELEGRAM_LOGGER: Final = "telegram_logger"
+DATA_DEVICE_ACTIVITY: Final = "device_activity"
+DATA_SETTINGS_OVERRIDES: Final = "settings_overrides"
+DATA_SETTINGS_STORE: Final = "settings_store"
+# NOTE: keys must not start with "gateway" - the gateway objects themselves are stored under
+# "gateway_<id>" and are collected by prefix in several places.
+DATA_UI_GATEWAYS: Final = "ui_gateway_definitions"
+DATA_GATEWAY_STORE: Final = "ui_gateway_store"
+DATA_BUS_MEMBERS: Final = "bus_members"
+DATA_PORT_FINGERPRINTS: Final = "port_fingerprints"
+DATA_PORT_FINGERPRINT_STORE: Final = "port_fingerprint_store"
 ELTAKO_GATEWAY: Final = "gateway"
 ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "Eltako"
@@ -92,6 +102,35 @@ CONF_TELEGRAM_LOG_INCLUDE_POLLING: Final = "telegram_log_include_polling"
 CONF_TELEGRAM_LOG_DECODE_EEP: Final = "telegram_log_decode_eep"
 CONF_TELEGRAM_LOG_BUFFER_SIZE: Final = "telegram_log_buffer_size"
 
+### Log levels per telegram category. They control what ends up in the Home Assistant log
+### (logger 'eltako.telegrams'), independent of the telegram log file.
+CONF_LOG_LEVEL_INCOMING: Final = "log_level_incoming"
+CONF_LOG_LEVEL_OUTGOING: Final = "log_level_outgoing"
+CONF_LOG_LEVEL_UNKNOWN_DEVICES: Final = "log_level_unknown_devices"
+CONF_LOG_LEVEL_BUS_MESSAGES: Final = "log_level_bus_messages"
+CONF_LOG_LEVEL_POLLING: Final = "log_level_polling"
+CONF_LOG_LEVEL_DECODE_ERRORS: Final = "log_level_decode_errors"
+
+TELEGRAM_LOGGER_NAME: Final = f"{DOMAIN}.telegrams"
+
+
+class TelegramLogLevel(StrEnum):
+    """Log level of one telegram category. 'off' means: do not log this category."""
+    OFF = 'off'
+    DEBUG = 'debug'
+    INFO = 'info'
+    WARNING = 'warning'
+
+
+### Groups of the general settings (used to structure the web ui)
+SETTING_GROUPS: Final = [
+    ('general', "General", "Behaviour of the integration and its entities."),
+    ('web_ui', "Web UI", "This user interface."),
+    ('telegram_log', "Telegram recording", "Live view, statistics and the telegram log file."),
+    ('log_levels', "Log levels of telegrams", "What is written into the Home Assistant log "
+     "(logger 'eltako.telegrams'). Use this to follow specific telegrams without flooding the log."),
+]
+
 
 class TelegramLogFormat(StrEnum):
     """Serialization format of the telegram log file."""
@@ -110,13 +149,38 @@ class TelegramDirection(StrEnum):
 ### logging, device statistics, about, ...).
 PANEL_URL_PATH: Final = "eltako"                    # sidebar/url path: /eltako
 PANEL_TITLE: Final = "Eltako"
-PANEL_ICON: Final = "mdi:bus-electric"
+PANEL_ICON: Final = "mdi:access-point-network"   # radio/telegrams fit EnOcean better than a bus
 PANEL_WEBCOMPONENT: Final = "eltako-panel"
 PANEL_STATIC_URL: Final = "/eltako_frontend"        # url the frontend folder is served under
 PANEL_JS_FILE: Final = "eltako-panel.js"            # entry point of the frontend
 
+### Devices which are created through the web ui (stored in the options of the config entry)
+CONF_UI_DEVICES: Final = "ui_devices"
+
 ### Websocket commands
 WS_INTEGRATION_INFO: Final = "eltako/integration_info"
+WS_DEVICE_FORM: Final = "eltako/devices/form"
+WS_DEVICE_LIST: Final = "eltako/devices/list"
+WS_DEVICE_ADD: Final = "eltako/devices/add"
+WS_DEVICE_UPDATE: Final = "eltako/devices/update"
+WS_DEVICE_REMOVE: Final = "eltako/devices/remove"
+WS_DEVICE_ACTIVITY: Final = "eltako/devices/activity"
+WS_DEVICE_ACTIVITY_CLEAR: Final = "eltako/devices/activity_clear"
+WS_SETTINGS_GET: Final = "eltako/settings/get"
+WS_SETTINGS_SET: Final = "eltako/settings/set"
+WS_SETTINGS_RESET: Final = "eltako/settings/reset"
+WS_GATEWAY_SCAN: Final = "eltako/gateways/scan"
+WS_GATEWAY_FORM: Final = "eltako/gateways/form"
+WS_GATEWAY_ADD: Final = "eltako/gateways/add"
+WS_GATEWAY_REMOVE: Final = "eltako/gateways/remove"
+WS_BUS_MEMBERS: Final = "eltako/bus/members"
+WS_BUS_READ_MEMORY: Final = "eltako/bus/read_memory"
+WS_BUS_TEACH_IN_SENDERS: Final = "eltako/bus/teach_in_senders"
+WS_SEND_TELEGRAM: Final = "eltako/send_telegram"
+WS_SEND_TELEGRAM_FORM: Final = "eltako/send_telegram_form"
+
+### source of a config flow which was started from the web ui
+SOURCE_UI_GATEWAY: Final = "ui_gateway"
 WS_TELEGRAM_LOG_INFO: Final = "eltako/telegram_log/info"
 WS_TELEGRAM_LOG_STATISTICS: Final = "eltako/telegram_log/statistics"
 WS_TELEGRAM_LOG_RECENT: Final = "eltako/telegram_log/recent"

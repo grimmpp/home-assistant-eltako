@@ -14,12 +14,13 @@ import { STYLES } from "./lib/styles.js";
 import { escapeHtml, icon } from "./lib/utils.js";
 
 import { page as overviewPage } from "./pages/overview.js";
+import { page as devicesConfigPage } from "./pages/devices_config.js";
 import { page as telegramsPage } from "./pages/telegrams.js";
-import { page as devicesPage } from "./pages/devices.js";
+import { page as statisticsPage } from "./pages/devices.js";
 import { page as unknownPage } from "./pages/unknown.js";
 import { page as aboutPage } from "./pages/about.js";
 
-const PAGES = [overviewPage, telegramsPage, devicesPage, unknownPage, aboutPage];
+const PAGES = [overviewPage, devicesConfigPage, telegramsPage, statisticsPage, unknownPage, aboutPage];
 const DEFAULT_PAGE = overviewPage.id;
 const MAX_LIVE_TELEGRAMS = 500;
 
@@ -46,9 +47,33 @@ class EltakoPanel extends HTMLElement {
       paused: false,
       telegramFilter: "",
       directionFilter: "all",
+      gatewayFilter: "all",
       onlyUnknown: false,
       deviceFilter: "",
       onlyUnknownDevices: false,
+      // device configuration page
+      deviceForm: null,
+      configuredDevices: [],
+      configFilter: "",
+      configSort: "address",
+      deviceView: "hierarchy",
+      configSortDescending: false,
+      onlySilent: false,
+      // settings on the about page
+      settingsForm: null,
+      settingsError: null,
+      settingsMessage: null,
+      // usb/serial port scan
+      portScan: null,
+      busMembers: null,
+      gatewayForm: null,
+      gatewayEditor: null,
+      gatewayError: null,
+      gatewayMessage: null,
+      portScanRunning: false,
+      editor: null,
+      pendingNewDevice: null,
+      pendingNewGateway: null,
       deviceSort: "count",
       deviceSortDescending: true,
       unknownFilter: "",
@@ -127,6 +152,9 @@ class EltakoPanel extends HTMLElement {
 
     if (page.refreshMs) {
       this._refreshTimer = setInterval(async () => {
+        // While a form is open the periodic refresh must not re-render the content -
+        // it would wipe everything the user has typed (e.g. the name of a new gateway).
+        if (this.state.editor || this.state.gatewayEditor || this.state.sendForm) return;
         if (page.load) await page.load(this._context());
         this._render();
       }, page.refreshMs);
@@ -200,6 +228,7 @@ class EltakoPanel extends HTMLElement {
       hass: this._hass,
       api: this._api,
       state: this.state,
+      root: this.shadowRoot,
       loadIntegrationInfo: () => this.loadIntegrationInfo(),
       loadLogInfo: () => this.loadLogInfo(),
       loadStatistics: () => this.loadStatistics(),
@@ -241,7 +270,7 @@ class EltakoPanel extends HTMLElement {
 
   _renderShell() {
     this.shadowRoot.innerHTML = `
-      <style>${STYLES}</style>
+      <style>${STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
       <div class="shell">
         <nav id="nav"></nav>
         <main>
@@ -255,6 +284,7 @@ class EltakoPanel extends HTMLElement {
           <section class="toolbar" id="toolbar"></section>
           <section id="content"><div class="empty">Loading&hellip;</div></section>
         </main>
+        <div id="drawer-outlet"></div>
       </div>`;
 
     this.shadowRoot.getElementById("nav").addEventListener("click", (event) => {
@@ -278,7 +308,7 @@ class EltakoPanel extends HTMLElement {
     const context = this._context();
     this.shadowRoot.getElementById("nav").innerHTML = `
       <div class="brand">
-        ${icon("mdi:bus-electric", "◉")}
+        ${icon("mdi:access-point-network", "◉")}
         <span class="brand-title">Eltako</span>
         <span class="brand-version">${info.version ? `v${escapeHtml(info.version)}` : "EnOcean"}</span>
       </div>
@@ -329,6 +359,12 @@ class EltakoPanel extends HTMLElement {
 
     try {
       content.innerHTML = page.render(this._context());
+      // side panels (e.g. the memory content of a bus device) overlay the page instead of
+      // scrolling with it: they are moved out of the scrolling <main> into the shell.
+      // position:fixed is no option - ancestors of the panel in home assistant use css
+      // transforms, which turn "fixed" into "absolute inside that ancestor".
+      const outlet = this.shadowRoot.getElementById("drawer-outlet");
+      if (outlet) outlet.replaceChildren(...content.querySelectorAll("aside.detail-drawer"));
       if (page.afterRender) page.afterRender(this._context(), this.shadowRoot);
     } catch (err) {
       content.innerHTML = `<div class="notice warn"><h3>Cannot display this page</h3>

@@ -62,6 +62,10 @@ class GatewayMock(EnOceanGateway):
 
         self._bus = EltakoBusMock()
 
+        # test_gateway.py replaces EnOceanGateway._init_bus for the whole process, so the
+        # attributes which are normally initialized there have to be provided here.
+        self._received_message_count = 0
+
     def set_status_changed_handler(self):
         pass
 

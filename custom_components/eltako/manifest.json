@@ -11,5 +11,5 @@
   "issue_tracker": "https://github.com/grimmpp/home-assistant-eltako/issues",
   "loggers": ["eltako"],
   "requirements": ["eltako14bus==0.0.82", "enocean>=0.60.1", "StrEnum", "esp2-gateway-adapter==0.2.21"],
-  "version": "2.0.0" 
+  "version": "2.2.0"
 }

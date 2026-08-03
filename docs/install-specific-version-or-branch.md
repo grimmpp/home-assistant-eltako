@@ -14,3 +14,5 @@ This documentation tells you how you can install e.g. a specific branch of this 
 7. Wait until Home Assistant is restarted. DONE!
 
 Hint: Your can past into "Terminal & SSH" by using key combination: `SHIFT + STRG + V`
+
+<img src="./gateways/HA_install_feature-branch.png" height=600>

@@ -25,6 +25,12 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_TELEGRAM_LOG_INCLUDE_POLLING: False,
     CONF_TELEGRAM_LOG_DECODE_EEP: True,
     CONF_TELEGRAM_LOG_BUFFER_SIZE: 500,
+    CONF_LOG_LEVEL_INCOMING: TelegramLogLevel.OFF.value,
+    CONF_LOG_LEVEL_OUTGOING: TelegramLogLevel.OFF.value,
+    CONF_LOG_LEVEL_UNKNOWN_DEVICES: TelegramLogLevel.OFF.value,
+    CONF_LOG_LEVEL_BUS_MESSAGES: TelegramLogLevel.OFF.value,
+    CONF_LOG_LEVEL_POLLING: TelegramLogLevel.OFF.value,
+    CONF_LOG_LEVEL_DECODE_ERRORS: TelegramLogLevel.OFF.value,
 }
 
 # deprecated option -> replacement (None means the option is not needed anymore)
@@ -88,6 +94,12 @@ def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
     settings = dict(DEFAULT_GENERAL_SETTINGS)
     if hass and CONF_GERNERAL_SETTINGS in hass.data[DATA_ELTAKO][ELTAKO_CONFIG]:
         settings.update( hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS] )
+
+    # Settings which were changed in the web ui override the yaml on purpose, so that the
+    # integration can be configured without writing yaml. (See general_settings.py)
+    if hass:
+        overrides = (hass.data.get(DATA_ELTAKO, {}) or {}).get(DATA_SETTINGS_OVERRIDES, {}) or {}
+        settings.update(overrides)
 
     # LOGGER.debug(f"General Settings: {settings}")
 
@@ -153,13 +165,36 @@ async def async_get_gateway_config_serial_port(hass: HomeAssistant, CONFIG_SCHEM
     return None
 
 async def async_get_home_assistant_config(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config) -> dict:
+    """Configuration of the integration: 'configuration.yaml' plus gateways created in the ui.
+
+    Every consumer (config flow, gateway setup, device lookup, web ui) uses this function, so
+    all of them see the same complete picture. Gateways of the yaml win, see gateway_config.py.
+    """
     _conf = await get_integration_config(hass, DOMAIN)
     if not _conf or DOMAIN not in _conf:
-        LOGGER.warning("No `eltako:` key found in configuration.yaml.")
-        # generate defaults
-        return CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
+        # no eltako section at all - the integration can be configured completely in the ui
+        LOGGER.debug("No `eltako:` key found in configuration.yaml. Using defaults.")
+        config = CONFIG_SCHEMA({DOMAIN: {}})[DOMAIN]
     else:
-        return _conf[DOMAIN]
+        config = _conf[DOMAIN]
+
+    return add_ui_gateways_to_config(hass, config)
+
+
+def add_ui_gateways_to_config(hass: HomeAssistant, config: dict) -> dict:
+    """Merge the gateways which were created in the user interface into the configuration."""
+    if hass is None:
+        return config
+
+    ui_gateways = (getattr(hass, 'data', None) or {}).get(DATA_ELTAKO, {}).get(DATA_UI_GATEWAYS, [])
+    if not ui_gateways:
+        return config
+
+    from .gateway_config import merge_gateways
+
+    merged = dict(config)
+    merged[CONF_GATEWAY] = merge_gateways(config.get(CONF_GATEWAY, []) or [], ui_gateways)
+    return merged
     
 def get_device_config(config: dict, id: int) -> dict:
     gateways = config[CONF_GATEWAY]
@@ -329,6 +364,22 @@ def convert_button_abbreviation(buttons:list[str]) -> list[str]:
 def button_abbreviation_to_str(buttons:list[str]) -> list[str]:
     return ', '.join(convert_button_abbreviation(buttons))
 
+def address_to_str(value) -> str | int | None:
+    """Convert an address like field of a telegram into a string.
+
+    Bus messages (discovery, memory, polling) report the position on the bus as int instead of
+    an EnOcean address. b2s() cannot handle that and raises a TypeError, so every field which
+    can be either has to go through this function.
+    """
+    if value is None:
+        return None
+    if isinstance(value, (bytes, bytearray, AddressExpression)):
+        return b2s(value)
+    if isinstance(value, int):
+        return value
+    return str(value)
+
+
 def telegram2json(telegram: EltakoMessage, local_telegram: EltakoMessage = None) -> dict:
     result = {}
     result['msg_type'] = telegram.__class__.__name__
@@ -337,12 +388,14 @@ def telegram2json(telegram: EltakoMessage, local_telegram: EltakoMessage = None)
         else: result['address'] = b2s(telegram.address)
     if hasattr(telegram, 'org'): result['org'] = telegram.org
     if hasattr(telegram, 'is_request'): result['is_request'] = telegram.is_request
-    if hasattr(telegram, 'data'): result['data'] = b2s(telegram.data)
-    if hasattr(telegram, 'payload'): result['payload'] = b2s(telegram.payload)
-    if hasattr(telegram, 'reported_address'): result['reported_address'] = b2s(telegram.reported_address)
+    if hasattr(telegram, 'data'): result['data'] = address_to_str(telegram.data)
+    if hasattr(telegram, 'payload'): result['payload'] = address_to_str(telegram.payload)
+    # Bus messages report the position on the bus as int instead of an EnOcean address.
+    # b2s() would raise a TypeError for those, which used to kill the serial reader thread.
+    if hasattr(telegram, 'reported_address'): result['reported_address'] = address_to_str(telegram.reported_address)
     if hasattr(telegram, 'reported_size'): result['reported_size'] = telegram.reported_size
     if hasattr(telegram, 'memory_size'): result['memory_size'] = telegram.memory_size
-    if hasattr(telegram, 'model'): result['model'] = b2s(telegram.model)
+    if hasattr(telegram, 'model'): result['model'] = address_to_str(telegram.model)
     if hasattr(telegram, 'is_fam'): result['is_fam'] = telegram.is_fam
     if hasattr(telegram, 'row'): result['row'] = telegram.row
 

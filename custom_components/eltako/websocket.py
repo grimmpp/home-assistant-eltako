@@ -1,7 +1,9 @@
 """Websocket api of the Eltako integration. It is used by the web ui (folder 'frontend')."""
 
+import inspect
 import json
 import os
+import re
 
 import voluptuous as vol
 
@@ -22,6 +24,8 @@ async def register_websockets(hass: HomeAssistant, config: ConfigEntry):
     websocket_api.async_register_command(hass, ws_usb_ports)
     websocket_api.async_register_command(hass, ws_configured_gateways)
     websocket_api.async_register_command(hass, ws_integration_info)
+    websocket_api.async_register_command(hass, ws_send_telegram_form)
+    websocket_api.async_register_command(hass, ws_send_telegram)
 
 
 def _get_manifest_info():
@@ -36,32 +40,54 @@ def _get_manifest_info():
 
     return response
 
+def get_gateways(hass: HomeAssistant) -> list[EnOceanGateway]:
+    """All gateway objects of the integration.
+
+    The gateways are stored as "gateway_<id>" in hass.data, but other data lives there too,
+    so the type is checked instead of guessing by the name of the key.
+    """
+    return [value for value in (hass.data.get(DATA_ELTAKO, {}) or {}).values()
+            if isinstance(value, EnOceanGateway)]
+
+
 def _get_configured_gateways(hass: HomeAssistant):
     result = []
-    for k in hass.data[DATA_ELTAKO]:
-        if k.startswith('gateway'):
-            gw:EnOceanGateway = hass.data[DATA_ELTAKO][k]
-            result.append({
-                "name": gw.dev_name,
-                "id": gw.dev_id,
-                "type": _gateway_type(gw),
-                "config_entry_id": gw.config_entry_id,
-                "unique_id": gw.unique_id,
-                "baud_rate": gw.baud_rate,
-                "serial_path": gw.serial_path,
-                "base_id": b2s(gw.base_id),
-                "model": gw.model,
-                "auto_reconnect": gw.is_auto_reconnect_enabled,
-                "message_delay": gw.message_delay,
-                "native_protocol": gw.native_protocol,
-                "connected": _is_gateway_connected(gw),
-            })
-    return result
+    for gw in get_gateways(hass):
+        result.append({
+            "name": gw.dev_name,
+            "id": gw.dev_id,
+            "type": _gateway_type(gw),
+            "config_entry_id": gw.config_entry_id,
+            "unique_id": gw.unique_id,
+            "baud_rate": gw.baud_rate,
+            "serial_path": gw.serial_path,
+            "base_id": b2s(gw.base_id),
+            "model": gw.model,
+            "auto_reconnect": gw.is_auto_reconnect_enabled,
+            "message_delay": gw.message_delay,
+            "native_protocol": gw.native_protocol,
+            "connected": _is_gateway_connected(gw),
+            "ha_device_id": _get_gateway_ha_device_id(hass, gw),
+        })
+    return sorted(result, key=lambda gateway: gateway["id"])
 
 
 def _gateway_type(gateway: EnOceanGateway) -> str:
     dev_type = gateway.dev_type
     return getattr(dev_type, 'value', str(dev_type))
+
+
+def _get_gateway_ha_device_id(hass: HomeAssistant, gateway: EnOceanGateway) -> str | None:
+    """Device id of the gateway in the Home Assistant device registry.
+
+    Gateways register their device with identifiers={(DOMAIN, serial_path)}, see
+    gateway._register_device().
+    """
+    try:
+        device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, gateway.serial_path)})
+        return device.id if device else None
+    except Exception:   # noqa: BLE001 - registry not available (e.g. in tests)
+        return None
 
 
 def _is_gateway_connected(gateway: EnOceanGateway) -> bool | None:
@@ -145,6 +171,150 @@ async def ws_configured_gateways(hass: HomeAssistant, connection, msg):
 
     # Send the response back
     connection.send_message(websocket_api.result_message(msg['id'], response))
+
+
+### sending arbitrary telegrams ------------------------------------------------------------
+
+def get_eep_descriptors() -> list[dict]:
+    """All EEPs of the eltakobus library with the fields of their constructor.
+
+    The web ui builds the input fields of the send form from this list. The description is
+    the same one the device form uses, so the dropdowns of both forms read identically.
+    """
+    from eltakobus.eep import EEP
+
+    from .device_config import describe_eep
+
+    result = []
+    def walk(cls):
+        for sub in cls.__subclasses__():
+            eep_string = getattr(sub, 'eep_string', None)
+            if eep_string:
+                fields = CENTRAL_COMMAND_FIELDS if eep_string == 'A5-38-08' else \
+                    [param.name for param in inspect.signature(sub.__init__).parameters.values()
+                     if param.name != 'self' and param.kind == param.POSITIONAL_OR_KEYWORD]
+                result.append({'eep': eep_string, 'fields': list(fields),
+                               'description': describe_eep(eep_string)})
+            walk(sub)
+    walk(EEP)
+    return sorted(result, key=lambda descriptor: descriptor['eep'])
+
+
+# A5-38-08 (central command) takes nested objects in its constructor - the form offers the
+# flat fields of both variants instead: command 1 switches, command 2 dims.
+CENTRAL_COMMAND_FIELDS = ['command', 'switching_command', 'time', 'delay_or_duration', 'lock',
+                          'dimming_value', 'ramping_time', 'dimming_range', 'store_final_value',
+                          'learn_button']
+
+
+def _build_central_command(sender, fields: dict, coerce):
+    from eltakobus.eep import A5_38_08, CentralCommandDimming, CentralCommandSwitching
+
+    value = lambda name, default=0: coerce((fields or {}).get(name, default))  # noqa: E731
+    if value('command', 1) == 2:
+        dimming = CentralCommandDimming(value('dimming_value'), value('ramping_time'),
+                                        value('learn_button'), value('dimming_range', 1),
+                                        value('store_final_value'), value('switching_command', 1))
+        return A5_38_08(2, dimming=dimming).encode_message(sender[0])
+    switching = CentralCommandSwitching(value('time'), value('learn_button'), value('lock'),
+                                        value('delay_or_duration'), value('switching_command'))
+    return A5_38_08(1, switching=switching).encode_message(sender[0])
+
+
+def parse_raw_esp2(raw: str):
+    """An arbitrary ESP2 telegram from a hex string.
+
+    Accepts the 11 body bytes or the full 14 byte frame (a5 5a + body + checksum, the
+    checksum is validated then). Whitespace and separators are ignored.
+    """
+    from eltakobus.message import ESP2Message
+
+    data = bytes.fromhex(re.sub(r'[^0-9A-Fa-f]', '', raw or ''))
+    if len(data) == 14:
+        return ESP2Message.parse(data)
+    if len(data) == 11:
+        return ESP2Message(data)
+    raise ValueError(f"An ESP2 telegram has 11 body bytes or 14 frame bytes "
+                     f"(A5 5A + body + checksum) - got {len(data)} bytes.")
+
+
+def build_eep_telegram(sender_id: str, eep: str, fields: dict):
+    """A telegram built from an EEP and its field values (like the send_message service)."""
+    from eltakobus.eep import EEP
+    from eltakobus.util import AddressExpression
+
+    sender = AddressExpression.parse(sender_id)
+    eep_class = EEP.find(eep)
+
+    def coerce(value):
+        if isinstance(value, str):
+            text = value.strip()
+            try:
+                return int(text, 0)     # also accepts 0x.. input
+            except ValueError:
+                try:
+                    return float(text)
+                except ValueError:
+                    return text
+        return value
+
+    if eep_class.eep_string == 'A5-38-08':
+        return _build_central_command(sender, fields, coerce)
+
+    args = {}
+    for param in inspect.signature(eep_class.__init__).parameters.values():
+        if param.name == 'self' or param.kind != param.POSITIONAL_OR_KEYWORD:
+            continue
+        args[param.name] = coerce((fields or {}).get(param.name, 0))
+    return eep_class(**args).encode_message(sender[0])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_SEND_TELEGRAM_FORM})
+@websocket_api.async_response
+async def ws_send_telegram_form(hass: HomeAssistant, connection, msg):
+    connection.send_result(msg['id'], {
+        'gateways': _get_configured_gateways(hass),
+        'eeps': get_eep_descriptors(),
+    })
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_SEND_TELEGRAM,
+    vol.Required('gateway_id'): vol.Coerce(int),
+    vol.Optional('raw'): str,
+    vol.Optional('sender_id'): str,
+    vol.Optional('eep'): str,
+    vol.Optional('fields'): dict,
+})
+@websocket_api.async_response
+async def ws_send_telegram(hass: HomeAssistant, connection, msg):
+    """Send an arbitrary EnOcean telegram through one of the gateways.
+
+    Either as raw ESP2 hex (completely arbitrary) or built from an EEP with its field
+    values - the same way the send_message service of the gateways works.
+    """
+    gateway = next((gw for gw in get_gateways(hass) if gw.dev_id == msg['gateway_id']), None)
+    if gateway is None:
+        connection.send_error(msg['id'], 'unknown_gateway', f"No gateway with id {msg['gateway_id']}")
+        return
+
+    try:
+        if msg.get('raw'):
+            telegram = parse_raw_esp2(msg['raw'])
+        elif msg.get('eep') and msg.get('sender_id'):
+            telegram = build_eep_telegram(msg['sender_id'], msg['eep'], msg.get('fields'))
+        else:
+            raise ValueError("Either 'raw' or 'sender_id' + 'eep' must be given.")
+        gateway.send_message(telegram)
+    except Exception as e:  # noqa: BLE001 - the message of the library explains the problem
+        connection.send_error(msg['id'], 'send_failed', str(e))
+        return
+
+    LOGGER.info(f"[Websocket] Sent telegram via gateway {gateway.dev_id}: {telegram}")
+    connection.send_result(msg['id'], {'sent': True, 'telegram': str(telegram),
+                                       'hex': telegram.serialize().hex()})
 
 
 @websocket_api.require_admin

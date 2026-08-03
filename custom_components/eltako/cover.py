@@ -8,7 +8,7 @@ from eltakobus.eep import *
 
 from homeassistant import config_entries
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature, ATTR_POSITION, ATTR_TILT_POSITION
-from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING
+from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
@@ -111,7 +111,12 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 self._attr_is_opening = True
                 self._attr_is_closing = False
                 self._attr_is_closed = False
-            
+            elif latest_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                # nothing to restore. The cover reports its position with its next telegram.
+                LOGGER.debug(f"[cover {self.dev_id}] No state to restore ('{latest_state.state}').")
+            else:
+                LOGGER.warning(f"[cover {self.dev_id}] Cannot restore unexpected state '{latest_state.state}'.")
+
         except Exception as e:
             self._attr_current_cover_position = None
             self._attr_current_cover_tilt_position = None
@@ -126,7 +131,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                      + f"is_opening: {self.is_opening}, "
                      + f"is_closing: {self.is_closing}, "
                      + f"is_closed: {self.is_closed}, "
-                     + f"current_possition: {self._attr_current_cover_position}, "
+                     + f"current_position: {self._attr_current_cover_position}, "
                      + f"current_tilt_position: {self._attr_current_cover_tilt_position}, "
                      + f"state: {self.state}]")
 

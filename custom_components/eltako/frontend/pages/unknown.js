@@ -30,6 +30,21 @@ export const page = {
     await Promise.all([ctx.loadLogInfo(), ctx.loadStatistics()]);
   },
 
+  /** Flash the row of an unknown device when it sends - immediate feedback on a button press. */
+  onTelegram(ctx, telegram) {
+    const root = ctx.root;
+    if (!root || !telegram.address || telegram.known) return;
+
+    const escaped = String(telegram.address).replace(/"/g, "");
+    root.querySelectorAll(`tr[data-address="${escaped}"]`).forEach((row) => {
+      row.classList.remove("telegram-flash");
+      void row.offsetWidth;
+      row.classList.add("telegram-flash");
+      clearTimeout(row._flashTimer);
+      row._flashTimer = setTimeout(() => row.classList.remove("telegram-flash"), 1400);
+    });
+  },
+
   badge(ctx) {
     const count = this._unknown(ctx).length;
     return count ? String(count) : null;
@@ -72,7 +87,7 @@ export const page = {
         ? { eep: device.teach_in_profile, source: "from 4BS teach-in telegram" }
         : guessEep(device);
       return `
-        <tr>
+        <tr data-address="${escapeHtml(device.address)}">
           <td class="mono">${escapeHtml(device.address)}</td>
           <td class="num">${formatNumber(device.count)}</td>
           <td>${escapeHtml(Object.keys(device.msg_types || {}).join(", "))}</td>
@@ -80,7 +95,12 @@ export const page = {
           <td class="mono">${escapeHtml(guess.eep || "?")}
             ${guess.source ? `<span class="hint">${escapeHtml(guess.source)}</span>` : ""}</td>
           <td class="mono">${formatTime(device.last_seen)}</td>
-          <td><button class="action small" data-yaml="${encodeURIComponent(this._yamlSnippet(device))}">copy yaml</button></td>
+          <td class="actions">
+            <button class="action small primary"
+                    data-add="${escapeHtml(device.address)}|${escapeHtml(guess.eep || "")}|${escapeHtml(platformHint(guess.eep))}"
+                    >+ add device</button>
+            <button class="action small" data-yaml="${encodeURIComponent(this._yamlSnippet(device))}">copy yaml</button>
+          </td>
         </tr>`;
     }).join("");
 
@@ -105,6 +125,20 @@ export const page = {
   },
 
   afterRender(ctx, root) {
+    // hand the device over to the device page which opens the form prefilled
+    root.querySelectorAll("button[data-add]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const [address, eep, platform] = button.dataset.add.split("|");
+        ctx.state.pendingNewDevice = {
+          address,
+          eep: eep || "",
+          platform: platform || "binary_sensor",
+          name: `Device ${address}`,
+        };
+        ctx.navigate("devices");
+      });
+    });
+
     root.querySelectorAll("button[data-yaml]").forEach((button) => {
       button.addEventListener("click", () => {
         navigator.clipboard.writeText(decodeURIComponent(button.dataset.yaml));

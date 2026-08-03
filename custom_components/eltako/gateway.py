@@ -27,9 +27,14 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-from .enocean_logger import get_telegram_logger
+from .enocean_logger import POLLING_MESSAGE_TYPES, get_telegram_logger, resolve_addresses
+from .device_activity import get_activity_tracker
 
 import threading
+
+# The base id request of a FAM14 locks the bus and disables the receive callback while it runs.
+# If it does not answer, reception stays blocked - so it must not wait forever.
+BASE_ID_REQUEST_TIMEOUT = 20
 
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
@@ -94,6 +99,10 @@ class EnOceanGateway:
 
         self._reading_memory_of_devices_is_running = threading.Event()
 
+        # guards the base id/version query, see query_for_base_id_and_version()
+        self._base_id_query_lock = asyncio.Lock()
+        self._base_id_query_done = False
+
         self._init_bus()
 
         self._register_device()
@@ -106,14 +115,47 @@ class EnOceanGateway:
         self._reading_memory_of_devices_is_running.clear()
 
     async def query_for_base_id_and_version(self, connected):
-        if connected:
-            if not GatewayDeviceType.is_esp2_gateway(self.dev_type) or self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-                LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
-                await self._bus.send_base_id_request()
-                await self._bus.send_version_request()
+        """Ask the gateway for its base id and version once per connection.
 
-            # elif self.dev_type == GatewayDeviceType.GatewayEltakoFAM14:
-            #     await asyncio.to_thread(asyncio.run, self.get_fam14_base_id())
+        This must not run twice in parallel: reading the base id of a FAM14 locks the bus and
+        switches the receive callback off for the duration of the request
+        (see eltakobus.serial.request_fam14_base_id). Both are only restored in its `finally`
+        block, so a second concurrent request deadlocks and leaves the callback disabled -
+        which silently stops *all* telegram reception.
+
+        The connection state event can fire more than once for one connection, therefore the
+        query is guarded by a lock and a flag.
+        """
+        if not connected:
+            self._base_id_query_done = False     # query again after a reconnect
+            return
+
+        if GatewayDeviceType.is_esp2_gateway(self.dev_type) and self.dev_type != GatewayDeviceType.GatewayEltakoFAM14:
+            return
+
+        if self._base_id_query_done or self._base_id_query_lock.locked():
+            LOGGER.debug("[Gateway] [Id: %d] Base id/version query already done or running - skipped.",
+                         self.dev_id)
+            return
+
+        async with self._base_id_query_lock:
+            if self._base_id_query_done:
+                return
+            self._base_id_query_done = True
+
+            LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
+            try:
+                await asyncio.wait_for(self._bus.send_base_id_request(), timeout=BASE_ID_REQUEST_TIMEOUT)
+                await asyncio.wait_for(self._bus.send_version_request(), timeout=BASE_ID_REQUEST_TIMEOUT)
+            except asyncio.TimeoutError:
+                self._base_id_query_done = False
+                LOGGER.warning("[Gateway] [Id: %d] Base id/version request did not answer within %d s. "
+                               "Telegram reception can be blocked in this state - use the "
+                               "'serial reconnection' button of the gateway to recover.",
+                               self.dev_id, BASE_ID_REQUEST_TIMEOUT)
+            except Exception as e:  # noqa: BLE001
+                self._base_id_query_done = False
+                LOGGER.warning("[Gateway] [Id: %d] Cannot query base id/version: %s", self.dev_id, e)
 
 
 
@@ -176,10 +218,30 @@ class EnOceanGateway:
 
 
     def _record_telegram(self, msg: ESP2Message, direction: TelegramDirection) -> None:
-        """Hand over the telegram to the EnOcean telegram logger (if enabled)."""
+        """Hand over the telegram to the telegram logger and the device activity tracker.
+
+        The activity tracker runs independently of the telegram logging setting because its
+        long term information (has this device ever reported? how often?) is needed exactly
+        when something does not work.
+        """
         telegram_logger = get_telegram_logger(self.hass)
         if telegram_logger is not None:
             telegram_logger.record_message(self, msg, direction.value)
+
+        activity_tracker = get_activity_tracker(self.hass)
+        if activity_tracker is not None:
+            try:
+                telegram = prettify(msg) if type(msg) is ESP2Message else msg
+                if isinstance(telegram, POLLING_MESSAGE_TYPES):
+                    return
+                address, _local_address = resolve_addresses(self, telegram)
+                if address:
+                    data = getattr(telegram, 'data', None)
+                    activity_tracker.record(
+                        address, direction.value, type(telegram).__name__, gateway=self,
+                        data=b2s(bytes(data)) if isinstance(data, (bytes, bytearray)) else None)
+            except Exception as e:  # noqa: BLE001 - tracking must never break the bus
+                LOGGER.debug("[Gateway] [Id: %s] Cannot track device activity: %s", self.dev_id, e)
 
     
     def _init_bus(self):
@@ -413,7 +475,20 @@ class EnOceanGateway:
 
         This is the callback function called by python-enocan whenever there
         is an incoming message.
+
+        This function runs in the serial reader thread of the library. An exception escaping
+        from here kills that thread (see eltakobus.serial.run) - the connection then looks
+        active while no telegram is received anymore. Therefore everything is wrapped.
         """
+        try:
+            self._handle_received_message(message)
+        except Exception as e:  # noqa: BLE001 - the reader thread must survive anything
+            LOGGER.error("[Gateway] [Id: %s] Error while handling received message %s: %s",
+                         self.dev_id, message, e, exc_info=True)
+
+
+    def _handle_received_message(self, message:ESP2Message):
+        """Process one received telegram. Never call directly, see the callback above."""
 
         # record every incoming telegram (including bus polling) for logging and analysis.
         # The telegram logger itself decides what is relevant and is called first so that
@@ -434,7 +509,6 @@ class EnOceanGateway:
             # received repeater mode
             if message.body[:2] == b'\x8b\x99':
                 LOGGER.debug("[Gateway] [Id: %d] Received Repeater mode: Filter %s, Repeater Level %s", self.dev_id, b2s(message.body[2:3]), b2s(message.body[3:4]))
-                self._attr_base_id = AddressExpression( (message.body[2:6], None) )
                 self._fire_repeater_mode_change_handlers( int.from_bytes(message.body[3:4]) )
 
             # only send messages to HA when base id is known
@@ -449,11 +523,14 @@ class EnOceanGateway:
                     global_msg = prettify(message)
                     # do not change discovery and memory message addresses, base id will be sent upfront so that the receive known to whom the message belong
                     if type(message) in [EltakoWrappedRPS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage, EltakoMessage]:
-                        address = AddressExpression((message.body[6:10], None))
+                        # The address is the last 4 bytes before the status byte of the 11 byte body.
+                        address = AddressExpression((message.body[-5:-1], None))
                         if address.is_local_address():
                             local_message = message
                             address = address.add(self.base_id)
-                            global_msg = prettify(ESP2Message( message.body[:8] + address[0] + message.body[12:] ))
+                            body = bytearray(message.body)
+                            body[-5:-1] = bytearray(address[0])
+                            global_msg = prettify(ESP2Message( bytes(body) ))
 
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
                     dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})

@@ -62,13 +62,37 @@ class TestCoverStateRestoration(TestCase):
                            'shutter', 24, 25, None)
 
     def test_restoring_without_position_attributes_does_not_raise(self):
-        """This aborted the registration of the cover entities on a real installation."""
+        """This aborted the registration of the cover entities on a real installation.
+
+        Reported in https://github.com/grimmpp/home-assistant-eltako/pull/141:
+        KeyError: 'current_position' in load_value_initially().
+        """
         cover = self.create_cover()
 
         # state of a cover which was unavailable before the restart -> no attributes at all
         cover.load_value_initially(LatestStateMock('unknown', {}))
 
         self.assertIsNone(cover.current_cover_position)
+
+    def test_restoring_state_unavailable_is_logged_as_debug(self):
+        """'unavailable' is a normal state after a restart and must not warn."""
+        cover = self.create_cover()
+
+        with self.assertLogs(LOGGER, level='DEBUG') as logs:
+            cover.load_value_initially(LatestStateMock('unavailable', {}))
+
+        self.assertIsNone(cover.current_cover_position)
+        self.assertFalse([m for m in logs.output if m.startswith('WARNING')])
+
+    def test_restoring_unexpected_state_warns_but_does_not_raise(self):
+        cover = self.create_cover()
+
+        with self.assertLogs(LOGGER, level='WARNING') as logs:
+            cover.load_value_initially(LatestStateMock('bla', {}))
+
+        self.assertIn("Cannot restore unexpected state 'bla'", logs.output[0])
+        self.assertIsNone(cover.current_cover_position)
+        self.assertIsNone(cover.is_closed)   # undefined state
 
     def test_restoring_state_open_without_attributes(self):
         cover = self.create_cover()

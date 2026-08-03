@@ -12,6 +12,7 @@ from homeassistant.helpers.selector import selector
 
 from . import gateway
 from . import config_helpers
+from . import gateway_config
 from .const import *
 from .schema import CONFIG_SCHEMA
 
@@ -36,13 +37,102 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return False
 
     async def async_step_user(self, user_input=None):
-        """Handle an Eltako config flow start."""
-        # is called when adding a new gateway
+        """Entry point: let the user choose between an existing and a new gateway.
+
+        Existing means: declared in configuration.yaml (or created earlier in the web ui) but
+        not set up in Home Assistant yet. New means: define it here - no yaml needed.
+        """
         LOGGER.debug("[%s] config_flow user step started.", LOGGER_PREFIX_CONFIG_FLOW)
-        return await self.async_step_detect()
+
+        available = await self._async_get_available_gateways()
+        if not available:
+            # nothing to choose from, go straight to the wizard
+            return await self.async_step_new_gateway()
+
+        return self.async_show_menu(
+            step_id="user",
+            menu_options={
+                "detect": "Set up a gateway of my configuration",
+                "new_gateway": "Add a new gateway (no configuration.yaml needed)",
+            },
+        )
+
+    async def async_step_ui_gateway(self, data: dict):
+        """A gateway was created in the web ui - create its config entry directly."""
+        LOGGER.debug("[%s] Creating entry for gateway created in the web ui: %s",
+                     LOGGER_PREFIX_CONFIG_FLOW, data.get(CONF_GATEWAY_DESCRIPTION))
+        await self.async_set_unique_id(str(data.get(CONF_GATEWAY_DESCRIPTION)))
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(title=data[CONF_GATEWAY_DESCRIPTION], data=data)
+
+    async def _async_get_available_gateways(self) -> list[str]:
+        """Gateway descriptions which are configured but not set up in Home Assistant yet."""
+        g_list_dict = await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA)
+        self.hass.data.setdefault(DATA_ELTAKO, {})
+        return [description for description in g_list_dict.values()
+                if description not in self.hass.data[DATA_ELTAKO]
+                and 'gateway_' + str(config_helpers.get_id_from_gateway_name(description)) not in self.hass.data[DATA_ELTAKO]]
+
+    async def async_step_new_gateway(self, user_input=None):
+        """Define a completely new gateway. This does not need configuration.yaml at all."""
+        errors = {}
+        config = await config_helpers.async_get_home_assistant_config(self.hass, CONFIG_SCHEMA)
+
+        if user_input is not None:
+            gateway_data = {
+                CONF_ID: int(user_input[CONF_ID]),
+                CONF_DEVICE_TYPE: user_input[CONF_DEVICE_TYPE],
+                CONF_NAME: user_input.get(CONF_NAME) or "",
+                CONF_BASE_ID: user_input.get(CONF_BASE_ID) or '00-00-00-00',
+            }
+            connection = (user_input.get(CONF_SERIAL_PATH) or "").strip()
+            device_type = gateway.GatewayDeviceType.find(user_input[CONF_DEVICE_TYPE])
+            if device_type is not None and gateway.GatewayDeviceType.is_lan_gateway(device_type) \
+                    and device_type != gateway.GatewayDeviceType.VirtualNetworkAdapter:
+                gateway_data[CONF_GATEWAY_ADDRESS] = connection
+            else:
+                gateway_data[CONF_SERIAL_PATH] = connection
+
+            try:
+                validated = await gateway_config.async_add_gateway(self.hass, gateway_data)
+            except vol.Invalid as e:
+                LOGGER.warning("[%s] Cannot add gateway: %s", LOGGER_PREFIX_CONFIG_FLOW, e)
+                errors['base'] = 'invalid_gateway'
+                self.context['last_error'] = str(e)
+            else:
+                description = gateway_config.get_description(validated)
+                await self.async_set_unique_id(description)
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(title=description, data={
+                    CONF_GATEWAY_DESCRIPTION: description,
+                    CONF_SERIAL_PATH: gateway_config.get_serial_path(validated),
+                })
+
+        # suggest the free serial ports of the scan, but allow any input
+        from .gateway_scan import scan_serial_ports
+        ports = await self.hass.async_add_executor_job(scan_serial_ports)
+        port_hints = ", ".join(port['device'] for port in ports) or "no serial port found"
+
+        return self.async_show_form(
+            step_id="new_gateway",
+            data_schema=vol.Schema({
+                vol.Required(CONF_DEVICE_TYPE, default=gateway.GatewayDeviceType.GatewayEltakoFGW14USB.value):
+                    vol.In(sorted({t.value for t in gateway.GatewayDeviceType})),
+                vol.Required(CONF_SERIAL_PATH, description={'suggested_value': ports[0]['device'] if ports else ''}): str,
+                vol.Required(CONF_ID, default=gateway_config.get_next_free_id(self.hass, config)): int,
+                vol.Optional(CONF_NAME, default=""): str,
+                vol.Optional(CONF_BASE_ID, default='00-00-00-00'): str,
+            }),
+            errors=errors,
+            description_placeholders={
+                'ports': port_hints,
+                'error': self.context.get('last_error', ''),
+            },
+        )
 
     async def async_step_detect(self, user_input=None):
-        """Propose a list of detected gateways."""
+
+        """Propose a list of gateways which are configured but not set up yet."""
         LOGGER.debug("[%s] config_flow detect step started.", LOGGER_PREFIX_CONFIG_FLOW)
         return await self.manual_selection_routine(user_input)
         

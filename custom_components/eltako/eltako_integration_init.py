@@ -3,7 +3,7 @@ import os
 
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME
+from homeassistant.const import CONF_ID, CONF_NAME
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.dispatcher import dispatcher_connect
 from homeassistant.helpers.reload import async_reload_integration_platforms
@@ -21,6 +21,12 @@ from . import config_helpers
 from .gateway import *
 from .websocket import register_websockets
 from .enocean_logger import async_setup_telegram_logger, is_telegram_logging_enabled
+from . import device_config
+from . import device_activity
+from . import general_settings
+from . import gateway_scan
+from . import gateway_config
+from . import bus_members
 
 LOG_PREFIX_INIT = "Eltako Integration Setup"
 
@@ -34,24 +40,42 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     # Migrage existing gateway configs / ESP2 was removed in the name
     migrate_old_gateway_descriptions(hass)
 
+    # Gateways which were created in the web ui. Must be loaded before the configuration is
+    # read, because they are merged into it.
+    await gateway_config.async_load_ui_gateways(hass)
+
     # Read the config
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] Load Config")
     config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] Config: {config}")
     hass.data[DATA_ELTAKO] = hass.data.setdefault(DATA_ELTAKO, {})
     hass.data[DATA_ELTAKO][ELTAKO_CONFIG] = config
-    general_settings = config_helpers.get_general_settings_from_configuration(hass)
-    config_helpers.log_deprecated_general_settings(general_settings)
+
+    # Settings which were changed in the web ui. Must be loaded before the settings are read.
+    await general_settings.async_load_overrides(hass)
+
+    general_settings_values = config_helpers.get_general_settings_from_configuration(hass)
+    config_helpers.log_deprecated_general_settings(general_settings_values)
     config_helpers.remove_duplicate_devices(config)
 
     LOGGER.info("f[{LOG_PREFIX_INIT}] Register websocket extension.")
     await register_websockets(hass, config_type)
+    device_config.register_websocket_commands(hass)
+    general_settings.register_websocket_commands(hass)
+    gateway_scan.register_websocket_commands(hass)
+    gateway_config.register_websocket_commands(hass)
+
+    # Devices on the RS485 bus, detected passively from the traffic
+    bus_members.setup_registry(hass)
+
+    # Long term activity of all EnOcean addresses (independent of the telegram logging)
+    await device_activity.async_setup_activity_tracker(hass)
 
     # Recording, statistics and live view of all EnOcean telegrams
-    await async_setup_telegram_logger(hass, general_settings)
+    await async_setup_telegram_logger(hass, general_settings_values)
 
     # Web ui of the integration incl. all its sub pages (overview, telegram log, about, ...)
-    await async_register_frontend(hass, general_settings)
+    await async_register_frontend(hass, general_settings_values)
 
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Eltako Integration initiallized. ... loading device configuration")
 
@@ -173,7 +197,12 @@ def unload_gateway(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 
 
 def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry, gateway: EnOceanGateway) -> ConfigType:
-    return config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
+    """Devices of this gateway from 'configuration.yaml' and from the web ui.
+
+    All platforms use this function, so both sources are always treated equally.
+    """
+    yaml_devices = config_helpers.get_device_config(hass.data[DATA_ELTAKO][ELTAKO_CONFIG], gateway.dev_id)
+    return device_config.get_merged_device_config(hass, config_entry, yaml_devices)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -183,8 +212,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # Check domain
     if config_entry.domain != DOMAIN:
-        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, received configuration entry of wrong domain '%s' (expected: '')!", config_entry.domain, DOMAIN)
-        return
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, received configuration entry of wrong domain "
+                       f"'{config_entry.domain}' (expected: '{DOMAIN}')!")
+        return False
 
     
     # Read the config
@@ -210,13 +240,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # Initialise the gateway
     # get base_id from user input
     if CONF_GATEWAY_DESCRIPTION not in config_entry.data.keys():
-        LOGGER.warning("[{LOG_PREFIX}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
-        return
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, device information for gateway is not available. Try to delete and recreate the gateway.")
+        return False
     gateway_description = config_entry.data[CONF_GATEWAY_DESCRIPTION]    # from user input
 
     if not ('(' in gateway_description and ')' in gateway_description):
-        LOGGER.warning("[{LOG_PREFIX}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
-        return
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
+        return False
     
     gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
 
@@ -224,12 +254,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
     if not gateway_config:
         LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
-        return
+        return False
     
     # get serial path info
     if CONF_SERIAL_PATH not in config_entry.data.keys():
-        LOGGER.warning("[{LOG_PREFIX}] Ooops, no information about serial path available for gateway.")
-        return
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no information about serial path available for gateway.")
+        return False
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams
@@ -242,6 +272,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             raise Exception(f"[{LOG_PREFIX_INIT}] Missing field '{CONF_GATEWAY_ADDRESS}' for LAN Gateway (id: {gateway_id})")
 
     general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = True # GatewayDeviceType.is_transceiver(gateway_device_type) # should only be disabled for decentral gateways
+
+    # The kernel renumbers /dev/ttyUSB* when sticks are re-plugged. If the configured port is
+    # gone, follow the stick by its usb serial number so that reception does not silently die.
+    if not GatewayDeviceType.is_lan_gateway(gateway_device_type):
+        gateway_serial_path = await gateway_scan.async_resolve_serial_path(
+            hass, gateway_id, gateway_device_type, gateway_serial_path)
 
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Initializes Gateway Device '{gateway_description}'")
     gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
@@ -258,20 +294,74 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
 
     
+    # gateways query their base id from the hardware after the connection is up - persist
+    # the answer for gateways created in the web ui, so nobody has to know the base id upfront
+    async def _persist_reported_base_id(base_id):
+        try:
+            await gateway_config.async_update_gateway_base_id(hass, gateway.dev_id, b2s(base_id[0]))
+        except Exception as e:  # noqa: BLE001 - persisting is a convenience, never break reception
+            LOGGER.warning(f"[{LOG_PREFIX_INIT}] Cannot store the reported base id: {e}")
+    gateway.add_base_id_change_handler(_persist_reported_base_id)
+
     await gateway.async_setup()
     set_gateway_to_hass(hass, gateway)
 
     hass.data[DATA_ELTAKO][DATA_ENTITIES] = {}
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
+    # Devices created in the web ui are stored in the options of this entry. Reloading on
+    # change makes them appear (or disappear) without restarting Home Assistant.
+    config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
 
     return True
 
+
+async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Reload the gateway when its options (e.g. devices created in the web ui) changed."""
+    LOGGER.debug(f"[{LOG_PREFIX_INIT}] Options of {config_entry.title} changed. Reload gateway.")
+    await hass.config_entries.async_reload(config_entry.entry_id)
+
+
+async def async_remove_config_entry_device(hass: HomeAssistant, config_entry: ConfigEntry,
+                                           device_entry: dr.DeviceEntry) -> bool:
+    """Allow deleting a device in the Home Assistant ui.
+
+    Devices which were created in the web ui are removed from the configuration as well.
+    Devices of 'configuration.yaml' cannot be deleted here - they would come back with the
+    next reload, so the user is pointed to the yaml instead. Left over devices (their
+    configuration is already gone) can always be removed.
+    """
+    addresses = {identifier for domain, identifier in device_entry.identifiers if domain == DOMAIN}
+
+    yaml_devices = config_helpers.get_device_config(
+        hass.data[DATA_ELTAKO][ELTAKO_CONFIG], config_helpers.get_id_from_gateway_name(
+            config_entry.data[CONF_GATEWAY_DESCRIPTION]))
+    for platform, devices in (yaml_devices or {}).items():
+        for device in devices or []:
+            if str(device.get(CONF_ID, '')).upper() in {a.upper() for a in addresses}:
+                LOGGER.warning(f"[{LOG_PREFIX_INIT}] Device {addresses} is declared in configuration.yaml "
+                               f"as {platform} and cannot be deleted here. Please remove it from the yaml.")
+                return False
+
+    ui_devices = device_config.get_ui_devices(config_entry)
+    for platform, devices in ui_devices.items():
+        for device in list(devices):
+            if str(device.get(CONF_ID, '')).upper() in {a.upper() for a in addresses}:
+                await device_config.async_remove_ui_device(hass, config_entry, platform, device[CONF_ID])
+                LOGGER.info(f"[{LOG_PREFIX_INIT}] Removed device {addresses} from the web ui configuration.")
+                return True
+
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Removed left over device {addresses}.")
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
 
+    # The platforms need to be unloaded as well, otherwise a reload would add all entities
+    # a second time.
+    unload_ok = await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+
     unload_gateway(hass, config_entry)
 
-    return True
+    return unload_ok

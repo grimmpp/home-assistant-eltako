@@ -13,11 +13,11 @@ const CSV_COLUMNS = [
 ];
 
 export const page = {
-  id: "devices",
-  title: "Device statistics",
+  id: "statistics",
+  title: "Statistics",
   subtitle: "Telegram statistics per EnOcean address incl. EEP and entity references",
-  icon: "mdi:table-large",
-  glyph: "▤",
+  icon: "mdi:chart-box-outline",
+  glyph: "▥",
   needsRecording: true,
   refreshMs: 5000,
 
@@ -84,6 +84,15 @@ export const page = {
     const sortableHeader = (column, label, extraClass = "") =>
       `<th data-sort="${column}" class="${extraClass} ${ctx.state.deviceSort === column ? "sorted" : ""}">${label}</th>`;
 
+    // current state of an entity - hass.states is pushed into the panel by home assistant,
+    // so the value is as live as the 5 s refresh of this page
+    const stateOf = (entityId) => {
+      const state = (((ctx.hass || {}).states || {})[entityId]) || null;
+      if (!state) return "";
+      const unit = (state.attributes || {}).unit_of_measurement;
+      return `${state.state}${unit ? ` ${unit}` : ""}`;
+    };
+
     const rows = devices.map((device) => `
       <tr class="${device.known ? "" : "unknown-row"}">
         <td class="mono">${escapeHtml(device.address)}
@@ -91,7 +100,9 @@ export const page = {
             ? `<span class="hint">bus ${escapeHtml(device.local_address)}</span>` : ""}</td>
         <td>${device.known ? escapeHtml(device.name || "") : `<span class="tag unknown">unknown</span>`}
           ${device.role && device.role !== "device" ? `<span class="tag role">${escapeHtml(device.role)}</span>` : ""}
-          ${(device.entity_ids || []).length ? `<span class="hint">${escapeHtml(device.entity_ids.join(", "))}</span>` : ""}</td>
+          ${(device.entity_ids || []).map((entityId) => `
+            <span class="hint">${escapeHtml(entityId)}${stateOf(entityId)
+              ? ` = <b>${escapeHtml(stateOf(entityId))}</b>` : ""}</span>`).join("")}</td>
         <td class="mono">${escapeHtml(device.eep || device.teach_in_profile || "-")}</td>
         <td>${escapeHtml((device.platforms || []).join(", ") || "-")}</td>
         <td>${escapeHtml(device.area || "-")}</td>

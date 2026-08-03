@@ -94,6 +94,14 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_TELEGRAM_LOG_DECODE_EEP, default=True): cv.boolean,
             vol.Optional(CONF_TELEGRAM_LOG_BUFFER_SIZE, default=500): vol.All(vol.Coerce(int), vol.Range(min=0, max=100000)),
 
+            # log levels per telegram category
+            vol.Optional(CONF_LOG_LEVEL_INCOMING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_OUTGOING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_UNKNOWN_DEVICES, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_BUS_MESSAGES, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_POLLING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_DECODE_ERRORS, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+
             # deprecated options: still accepted so that existing configurations do not break,
             # but they have no effect anymore. A warning is logged during setup.
             vol.Optional(CONF_DEPRECATED_ENABLE_FRONTEND): cv.boolean,

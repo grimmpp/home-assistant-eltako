@@ -242,8 +242,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
             self._attr_hvac_mode = None
             self._attr_current_temperature = None
             self._attr_target_temperature = None
-            raise e
-        
+            LOGGER.warning(f"[climate {self.dev_id}] Cannot restore last state '{latest_state.state}': {e}")
+
         self.schedule_update_ha_state()
 
         LOGGER.debug(f"[climate {self.dev_id}] value initially loaded: [state: {self.state}, modes: [{self.hvac_modes}], current temp: {self.current_temperature}, target temp: {self.target_temperature}]")

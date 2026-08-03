@@ -8,6 +8,9 @@
   * [Supported Messages Types (EEP) and Devices (on Landing Page)](../README.md)
   * [Supported Gateways](./gateways/readme.md)
 
+* **Getting Started**
+  * [Example Setup: Wiring and Teach-In of Series 14 Devices](./01_getting_started/readme.md)
+
 * **Installation**
   * [Basic Installation Instruction (on main page)](../README.md)
   * [Manual Installation or Installation of a Specific Version/Git-Branch](./install-specific-version-or-branch.md)
