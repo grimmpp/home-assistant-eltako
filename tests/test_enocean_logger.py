@@ -383,6 +383,54 @@ class TestTelegramRecording(TestCase):
         self.assertEqual(statistics['teach_in_count'], 1)
         self.assertEqual(statistics['teach_in_profile'], 'A5-04-02')
 
+    def test_telegram_of_a_taught_in_device_is_decoded_although_it_is_not_configured(self):
+        """The profile of a teach-in telegram is remembered so that the values are shown."""
+        teach_in = self.record(TeachIn4BSMessage2(address=b'\x11\x22\x33\x44', status=0x00,
+                                                  data=bytes((0x10, 0x10, 0x0B, 0x00))))
+        # the teach-in telegram itself carries the profile instead of values
+        self.assertNotIn('decoded', teach_in)
+
+        record = self.record(Regular4BSMessage(address=b'\x11\x22\x33\x44', status=0x00, data=b'\x00\x7D\x7D\x0A'))
+
+        self.assertFalse(record['known'])
+        self.assertIsNone(record['eep'])
+        self.assertEqual(record['decoded_eep'], 'A5-04-02')
+        self.assertEqual(record['decoded_source'], 'teach_in')
+        self.assertAlmostEqual(record['decoded']['current_temperature'], 20.0, places=1)
+        self.assertAlmostEqual(record['decoded']['humidity'], 50.0, places=1)
+
+    def test_configured_eep_wins_over_a_teach_in_profile(self):
+        teach_in = self.record(TeachIn4BSMessage2(address=b'\xFF\xAA\xDD\x81', status=0x00,
+                                                  data=bytes((0x07, 0x28, 0x0B, 0x00))))
+        # a teach-in telegram carries the profile, decoding it as sensor data would be nonsense
+        self.assertNotIn('decoded', teach_in)
+
+        record = self.record(Regular4BSMessage(address=b'\xFF\xAA\xDD\x81', status=0x00, data=b'\x00\x7D\x7D\x0A'))
+
+        self.assertEqual(record['decoded_eep'], 'A5-04-02')
+        self.assertEqual(record['decoded_source'], 'device')
+
+    def test_a_wrong_teach_in_profile_is_not_counted_as_a_decode_error(self):
+        """A remembered profile is a guess - only a configured EEP which does not fit is an error."""
+        self.record(TeachIn4BSMessage2(address=b'\x11\x22\x33\x44', status=0x00,
+                                       data=bytes((0x10, 0x10, 0x0B, 0x00))))
+
+        record = self.record(RPSMessage(address=b'\x11\x22\x33\x44', status=0x30, data=b'\x10'))
+
+        self.assertIsNone(record['decoded'])
+        self.assertEqual(self.logger.get_info()['decode_error_count'], 0)
+
+    def test_decoding_can_be_switched_off(self):
+        logger = EnOceanTelegramLogger(self.hass, get_general_settings(**{
+            CONF_LOG_ENOCEAN_TELEGRAMS: True,
+            CONF_TELEGRAM_LOG_DECODE_EEP: False,
+        }))
+        logger.refresh_device_map()
+        logger.record_message(self.gateway, Regular4BSMessage(address=b'\xFF\xAA\xDD\x81', status=0x00,
+                                                              data=b'\x00\x7D\x7D\x0A'), 'incoming')
+
+        self.assertNotIn('decoded', logger.get_recent_telegrams()[-1])
+
     def test_clear(self):
         self.record(RPSMessage(address=b'\x12\x34\x56\x78', status=0x30, data=b'\x10'))
         self.assertEqual(self.logger.get_info()['total_count'], 1)

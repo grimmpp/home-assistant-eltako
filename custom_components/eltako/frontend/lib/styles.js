@@ -188,6 +188,7 @@ export const STYLES = `
   .decoded { max-width: 320px; white-space: normal; }
   .kv { display: inline-block; margin-right: 6px; font-size: .75rem; }
   .kv i { color: var(--eltako-muted); font-style: normal; margin-right: 3px; }
+  .kv.more { color: var(--eltako-muted); }
   tr.detail { display: none; }
   tr.detail.visible { display: table-row; }
   tr.detail pre { margin: 0; font-size: .72rem; overflow-x: auto; }

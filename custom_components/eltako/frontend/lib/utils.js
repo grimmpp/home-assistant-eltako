@@ -53,15 +53,38 @@ export function formatDuration(fromIsoString) {
   return `${seconds} s`;
 }
 
-/** Values of a decoded EEP as compact key/value chips. */
-export function formatDecoded(decoded, limit = 6) {
+/** One value of a decoded EEP as readable text. */
+export function formatDecodedValue(value) {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  if (typeof value === "number") return String(Number.isInteger(value) ? value : Math.round(value * 100) / 100);
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+/** All values of a decoded EEP as one searchable string, e.g. for the filter. */
+export function decodedToText(decoded) {
   if (!decoded || typeof decoded !== "object") return "";
   return Object.entries(decoded)
-    .filter(([key, value]) => value !== null && value !== undefined && value !== false && key !== "eep_string")
-    .slice(0, limit)
-    .map(([key, value]) => `<span class="kv"><i>${escapeHtml(key)}</i>${escapeHtml(
-      typeof value === "object" ? JSON.stringify(value) : value)}</span>`)
+    .filter(([key]) => key !== "eep_string")
+    .map(([key, value]) => `${key}=${formatDecodedValue(value)}`)
     .join(" ");
+}
+
+/**
+ * Values of a decoded EEP as compact key/value chips. Values which are `false` are hidden
+ * by default to keep overview tables short - pass `skipFalse: false` to show them.
+ */
+export function formatDecoded(decoded, limit = 6, { skipFalse = true } = {}) {
+  if (!decoded || typeof decoded !== "object") return "";
+  const entries = Object.entries(decoded)
+    .filter(([key, value]) => key !== "eep_string" && value !== null && value !== undefined &&
+      !(skipFalse && value === false));
+  const chips = entries
+    .slice(0, limit)
+    .map(([key, value]) => `<span class="kv"><i>${escapeHtml(key)}</i>${escapeHtml(formatDecodedValue(value))}</span>`)
+    .join(" ");
+  return entries.length > limit ? `${chips} <span class="kv more">+${entries.length - limit}</span>` : chips;
 }
 
 export function basename(path) {

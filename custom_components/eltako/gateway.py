@@ -28,6 +28,7 @@ from homeassistant.config_entries import ConfigEntry
 from .const import *
 from . import config_helpers
 from .enocean_logger import POLLING_MESSAGE_TYPES, get_telegram_logger, resolve_addresses
+from .bus_members import note_telegram
 from .device_activity import get_activity_tracker
 
 import threading
@@ -218,20 +219,29 @@ class EnOceanGateway:
 
 
     def _record_telegram(self, msg: ESP2Message, direction: TelegramDirection) -> None:
-        """Hand over the telegram to the telegram logger and the device activity tracker.
+        """Hand over the telegram to the telegram logger, the bus member registry and the
+        device activity tracker.
 
-        The activity tracker runs independently of the telegram logging setting because its
-        long term information (has this device ever reported? how often?) is needed exactly
-        when something does not work.
+        The bus member registry and the activity tracker run independently of the telegram
+        logging setting: the bus member registry holds the channel layout of multi channel
+        devices, and the long term information of the tracker (has this device ever reported?
+        how often?) is needed exactly when something does not work.
         """
         telegram_logger = get_telegram_logger(self.hass)
         if telegram_logger is not None:
             telegram_logger.record_message(self, msg, direction.value)
 
+        try:
+            telegram = prettify(msg) if type(msg) is ESP2Message else msg
+        except Exception as e:  # noqa: BLE001 - a telegram which cannot be parsed must not break the bus
+            LOGGER.debug("[Gateway] [Id: %s] Cannot prettify telegram: %s", self.dev_id, e)
+            return
+
+        note_telegram(self.hass, self, telegram)
+
         activity_tracker = get_activity_tracker(self.hass)
         if activity_tracker is not None:
             try:
-                telegram = prettify(msg) if type(msg) is ESP2Message else msg
                 if isinstance(telegram, POLLING_MESSAGE_TYPES):
                     return
                 address, _local_address = resolve_addresses(self, telegram)

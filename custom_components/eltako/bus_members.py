@@ -22,14 +22,17 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.storage import Store
 
+from eltakobus.message import EltakoDiscoveryReply, EltakoMemoryResponse
 from eltakobus.util import b2s
 
 from .const import *
@@ -38,6 +41,17 @@ if TYPE_CHECKING:
     from .gateway import EnOceanGateway
 
 LOG_PREFIX_BUS = "Bus Members"
+
+# Reading the memory of every bus device locks the bus for minutes, so the result is
+# persisted: after a restart the taught-in senders are known without scanning again.
+STORAGE_KEY = f"{DOMAIN}_bus_members"
+STORAGE_VERSION = 1
+
+# writes are debounced - a scan produces a memory response per row
+SAVE_DELAY_SECONDS = 30
+
+# a memory image which was not confirmed by a discovery reply for this long is dropped
+MAX_AGE_DAYS = 365
 
 
 def _build_model_map() -> dict:
@@ -140,13 +154,21 @@ def _utc_now_iso() -> str:
 class BusMemberRegistry:
     """Bus positions per gateway, collected from the traffic."""
 
-    def __init__(self):
+    def __init__(self, hass: HomeAssistant = None):
+        self.hass = hass
         # gateway id -> bus address -> information
         self._members: dict[int, dict[int, dict]] = {}
         # raw data collected during a memory scan (not part of the json members)
         self._replies: dict[tuple[int, int], object] = {}         # discovery reply objects
         self._memory: dict[tuple[int, int], dict[int, bytes]] = {}  # memory rows per device
         self._last_discovery: dict[int, int] = {}                 # gateway -> last discovered position
+
+        # (model, memory size) of the device a memory image belongs to. Survives a restart,
+        # so a restored image can be validated against the next discovery reply - the reply
+        # objects themselves are not serializable.
+        self._signatures: dict[tuple[int, int], tuple] = {}
+        self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY) if hass is not None else None
+        self._unsubscribe = None
 
     def _entry(self, gateway_id: int, bus_address: int) -> dict:
         members = self._members.setdefault(gateway_id, {})
@@ -165,6 +187,119 @@ class BusMemberRegistry:
             'is_fam': None,
             'external_address': None,
         })
+
+    ### persistence
+
+    @staticmethod
+    def _storage_id(gateway_id: int, bus_address: int) -> str:
+        return f"{gateway_id}:{bus_address}"
+
+    async def async_load(self) -> None:
+        """Restore the memory images of the last scan.
+
+        Only the result of a memory scan is restored - the passively collected counters
+        (polling, answers) describe the current session and are deliberately not persisted.
+        """
+        if self._store is None:
+            return
+
+        try:
+            stored = await self._store.async_load()
+        except Exception as e:  # noqa: BLE001 - a broken store must not prevent the setup
+            LOGGER.warning(f"[{LOG_PREFIX_BUS}] Cannot load persisted memory images: {e}")
+            stored = None
+
+        devices = (stored or {}).get('devices')
+        if isinstance(devices, dict):
+            threshold = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
+            restored = 0
+            for storage_id, device in devices.items():
+                if not isinstance(device, dict):
+                    continue
+                try:
+                    gateway_id, bus_address = (int(part) for part in str(storage_id).split(':', 1))
+                except ValueError:
+                    continue
+
+                scanned_at = device.get('scanned_at')
+                try:
+                    if scanned_at and datetime.fromisoformat(scanned_at) < threshold:
+                        continue
+                except ValueError:
+                    pass
+
+                entry = self._entry(gateway_id, bus_address)
+                entry['model'] = device.get('model')
+                entry['device_class'] = device.get('device_class')
+                entry['model_candidates'] = device.get('model_candidates')
+                entry['size'] = device.get('size')
+                entry['memory_size'] = device.get('memory_size')
+                entry['is_fam'] = device.get('is_fam')
+                entry['taught_in'] = device.get('taught_in') or []
+                entry['taught_in_dirty'] = False
+                entry['scanned_at'] = scanned_at
+                # the position was restored, not seen in this session
+                entry['last_seen'] = None
+                entry['first_seen'] = device.get('first_seen') or entry['first_seen']
+
+                rows = {}
+                for line, value in (device.get('memory') or {}).items():
+                    try:
+                        rows[int(line)] = bytes.fromhex(value)
+                    except (TypeError, ValueError):
+                        continue
+                if rows:
+                    self._memory[(gateway_id, bus_address)] = rows
+                entry['memory_rows_read'] = len(rows)
+
+                self._signatures[(gateway_id, bus_address)] = (device.get('model'), device.get('memory_size'))
+                restored += 1
+
+            LOGGER.debug(f"[{LOG_PREFIX_BUS}] Restored the memory image of {restored} bus position(s).")
+
+        self._unsubscribe = self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._async_on_stop)
+
+    @callback
+    def _async_on_stop(self, event) -> None:
+        self._schedule_save(delay=0)
+
+    def unload(self) -> None:
+        if self._unsubscribe:
+            try:
+                self._unsubscribe()
+            except Exception:   # noqa: BLE001
+                pass
+            self._unsubscribe = None
+        self._schedule_save(delay=0)
+
+    def _schedule_save(self, delay: int = SAVE_DELAY_SECONDS) -> None:
+        if self._store is None:
+            return
+        try:
+            self._store.async_delay_save(self._data_to_save, delay)
+        except Exception as e:  # noqa: BLE001 - persisting must never break the bus
+            LOGGER.debug(f"[{LOG_PREFIX_BUS}] Cannot schedule save of memory images: {e}")
+
+    def _data_to_save(self) -> dict:
+        """Only positions with a memory image are worth persisting."""
+        devices = {}
+        for (gateway_id, bus_address), rows in self._memory.items():
+            entry = self._members.get(gateway_id, {}).get(bus_address)
+            if entry is None or not rows:
+                continue
+            devices[self._storage_id(gateway_id, bus_address)] = {
+                'model': entry.get('model'),
+                'device_class': entry.get('device_class'),
+                'model_candidates': entry.get('model_candidates'),
+                'size': entry.get('size'),
+                'memory_size': entry.get('memory_size'),
+                'is_fam': entry.get('is_fam'),
+                'first_seen': entry.get('first_seen'),
+                'scanned_at': entry.get('scanned_at'),
+                'taught_in': entry.get('taught_in') or [],
+                'memory': {str(line): value.hex() for line, value in sorted(rows.items())},
+            }
+        return {'devices': devices}
 
     ### collecting
 
@@ -201,17 +336,28 @@ class BusMemberRegistry:
         # time. The memory image collected by a scan therefore only starts fresh when the
         # device behind the position actually changed - otherwise the image of positions
         # 1..n would be wiped again right after the scan by the routine enumeration.
+        #
+        # The comparison runs against the stored (model, memory size) signature and not
+        # against the previous reply object, because the signature is persisted: after a
+        # restart the reply objects are gone, and comparing against them would discard the
+        # restored memory image on the very first routine enumeration.
         gateway_id = getattr(gateway, 'dev_id', -1)
-        previous = self._replies.get((gateway_id, bus_address))
-        device_changed = (previous is None
-                          or getattr(previous, 'model', None) != model
-                          or getattr(previous, 'memory_size', None) != getattr(telegram, 'memory_size', None))
+        signature = (b2s(bytes(model)) if isinstance(model, (bytes, bytearray)) else None,
+                     getattr(telegram, 'memory_size', None))
+        previous_signature = self._signatures.get((gateway_id, bus_address))
+        device_changed = previous_signature is not None and previous_signature != signature
+
         self._replies[(gateway_id, bus_address)] = telegram
+        self._signatures[(gateway_id, bus_address)] = signature
         if device_changed:
             self._memory[(gateway_id, bus_address)] = {}
             entry['memory_rows_read'] = 0
             entry.pop('taught_in', None)
+            entry.pop('scanned_at', None)
             entry['taught_in_dirty'] = False
+            LOGGER.debug(f"[{LOG_PREFIX_BUS}] Position {bus_address} of gateway {gateway_id} changed "
+                         f"({previous_signature} -> {signature}), memory image discarded.")
+            self._schedule_save()
         self._last_discovery[gateway_id] = bus_address
         if isinstance(model, (bytes, bytearray)):
             entry['model'] = b2s(bytes(model))
@@ -332,8 +478,11 @@ class BusMemberRegistry:
                     })
                 entry['taught_in'] = taught_in
                 entry['taught_in_dirty'] = False
+                entry['scanned_at'] = _utc_now_iso()
                 LOGGER.debug(f"[{LOG_PREFIX_BUS}] Position {bus_address} of gateway {gateway_id}: "
                              f"{len(taught_in)} taught-in sender(s).")
+                # a complete memory image is worth keeping across a restart
+                self._schedule_save()
             except Exception as e:  # noqa: BLE001 - a broken memory image must not break the view
                 entry['taught_in_dirty'] = False
                 LOGGER.warning(f"[{LOG_PREFIX_BUS}] Cannot parse memory of position {bus_address} "
@@ -392,7 +541,13 @@ class BusMemberRegistry:
         return result
 
     def clear(self) -> None:
+        """Forget everything, including the persisted memory images."""
         self._members.clear()
+        self._replies.clear()
+        self._memory.clear()
+        self._signatures.clear()
+        self._last_discovery.clear()
+        self._schedule_save(delay=0)
 
 
 def _get_configured_bus_devices(hass: HomeAssistant) -> dict:
@@ -447,10 +602,64 @@ def get_registry(hass: HomeAssistant) -> BusMemberRegistry | None:
 
 
 def setup_registry(hass: HomeAssistant) -> BusMemberRegistry:
-    registry = BusMemberRegistry()
+    """Create the registry without restoring anything (see async_setup_registry)."""
+    registry = BusMemberRegistry(hass)
     hass.data.setdefault(DATA_ELTAKO, {})[DATA_BUS_MEMBERS] = registry
     register_websocket_commands(hass)
     return registry
+
+
+async def async_setup_registry(hass: HomeAssistant) -> BusMemberRegistry:
+    """Create the registry and restore the memory images of the last bus scan."""
+    existing = get_registry(hass)
+    if existing is not None:
+        existing.unload()
+
+    registry = setup_registry(hass)
+    await registry.async_load()
+    return registry
+
+
+def note_telegram(hass: HomeAssistant, gateway: "EnOceanGateway", telegram) -> None:
+    """Feed everything which reveals a bus position into the registry.
+
+    Called by the gateway for every telegram, deliberately **not** by the telegram logger:
+    the channel layout of multi channel devices (e.g. the four positions of an FSR14-4x)
+    only comes from the discovery replies of the FAM14, and the web ui needs it to group
+    the channels of a physical device. Recording telegrams is off by default, so tying this
+    to the logger would leave the hierarchy flat on a default installation.
+
+    Must never raise - it runs in the serial bus thread.
+    """
+    from .enocean_logger import POLLING_MESSAGE_TYPES, resolve_addresses
+
+    registry = get_registry(hass)
+    if registry is None:
+        return
+
+    try:
+        if isinstance(telegram, POLLING_MESSAGE_TYPES):
+            address = getattr(telegram, 'address', None)
+            if isinstance(address, int):
+                registry.note_polled(gateway, address)
+            return
+
+        if isinstance(telegram, EltakoDiscoveryReply):
+            registry.note_discovery_reply(gateway, telegram)
+            return
+
+        if isinstance(telegram, EltakoMemoryResponse):
+            registry.note_memory_response(gateway, telegram)
+            return
+
+        # a status answer of a bus device carries its position as local address
+        address, local_address = resolve_addresses(gateway, telegram)
+        if local_address:
+            parts = str(local_address).split('-')
+            if len(parts) == 4 and parts[:3] == ['00', '00', '00']:
+                registry.note_answer(gateway, int(parts[3], 16), address)
+    except Exception as e:  # noqa: BLE001 - must never break the bus
+        LOGGER.debug(f"[{LOG_PREFIX_BUS}] Cannot note bus member: {e}")
 
 
 ### ---------------------------------------------------------------------------

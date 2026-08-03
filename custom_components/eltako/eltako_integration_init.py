@@ -65,8 +65,9 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     gateway_scan.register_websocket_commands(hass)
     gateway_config.register_websocket_commands(hass)
 
-    # Devices on the RS485 bus, detected passively from the traffic
-    bus_members.setup_registry(hass)
+    # Devices on the RS485 bus, detected passively from the traffic. Restores the memory
+    # images of the last scan, so the taught-in senders are known without locking the bus.
+    await bus_members.async_setup_registry(hass)
 
     # Long term activity of all EnOcean addresses (independent of the telegram logging)
     await device_activity.async_setup_activity_tracker(hass)

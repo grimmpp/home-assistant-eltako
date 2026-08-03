@@ -7,8 +7,13 @@ class BusMock():
 
     def __init__(self):
         self.fired_events = list()
+        self.listeners = list()
 
-    def fire(self, 
+    def async_listen_once(self, event_type: str, listener):
+        self.listeners.append((event_type, listener))
+        return lambda: None
+
+    def fire(self,
                 event_type: str,
                 event_data: dict[str, Any] | None = None,
                 origin = None,

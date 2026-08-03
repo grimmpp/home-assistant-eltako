@@ -2,13 +2,18 @@
 
 import { WS } from "../lib/api.js";
 import {
-  download, escapeHtml, formatDecoded, formatNumber, formatTime, matchesFilter, timestampForFilename, toCsv,
+  decodedToText, download, escapeHtml, formatDecoded, formatNumber, formatTime, matchesFilter,
+  timestampForFilename, toCsv,
 } from "../lib/utils.js";
 
 const CSV_COLUMNS = [
   "seq", "timestamp", "direction", "gateway_id", "gateway_name", "msg_type", "org", "address", "local_address",
-  "known", "role", "eep", "device_name", "entity_ids", "area", "status", "data", "raw", "decoded",
+  "known", "role", "eep", "device_name", "entity_ids", "area", "status", "data", "raw",
+  "decoded_eep", "decoded_source", "decoded",
 ];
+
+// number of decoded values shown per row before the rest is collapsed into a counter
+const VALUE_LIMIT = 8;
 
 export const page = {
   id: "telegrams",
@@ -42,7 +47,7 @@ export const page = {
   renderToolbar(ctx) {
     const state = ctx.state;
     return `
-      <input id="filter" type="search" placeholder="Filter address, device, EEP, entity, data&hellip;"
+      <input id="filter" type="search" placeholder="Filter address, device, EEP, entity, data, value&hellip;"
              value="${escapeHtml(state.telegramFilter)}" />
       <select id="gateway">
         <option value="all" ${state.gatewayFilter === "all" ? "selected" : ""}>all gateways</option>
@@ -127,6 +132,7 @@ export const page = {
 
     const rows = telegrams.map((telegram, index) => {
       const detailId = `telegram-detail-${telegram.seq}-${index}`;
+      const eep = this._eep(telegram);
       return `
         <tr data-detail="${detailId}" class="${telegram.known ? "" : "unknown-row"}">
           <td class="mono">${formatTime(telegram.timestamp)}</td>
@@ -140,10 +146,11 @@ export const page = {
                  ${telegram.role && telegram.role !== "device" ? `<span class="tag role">${escapeHtml(telegram.role)}</span>` : ""}
                  ${(telegram.entity_ids || []).length ? `<span class="hint">${escapeHtml(telegram.entity_ids.join(", "))}</span>` : ""}`
               : `<span class="tag unknown">unknown</span>`}</td>
-          <td class="mono">${escapeHtml(telegram.eep || telegram.teach_in_profile || "-")}</td>
+          <td class="mono">${escapeHtml(eep.value || "-")}
+            ${eep.hint ? `<span class="hint">${escapeHtml(eep.hint)}</span>` : ""}</td>
           <td>${escapeHtml(telegram.msg_type)}</td>
           <td class="mono">${escapeHtml(telegram.data || telegram.payload || "-")}</td>
-          <td class="decoded">${formatDecoded(telegram.decoded)}</td>
+          <td class="decoded">${this._values(telegram, eep)}</td>
         </tr>
         <tr class="detail" id="${detailId}"><td colspan="9"><pre>${escapeHtml(JSON.stringify(telegram, null, 2))}</pre></td></tr>`;
     }).join("");
@@ -154,7 +161,7 @@ export const page = {
         <table class="clickable">
           <thead><tr>
             <th>Time</th><th>Dir</th><th>Gateway</th><th>Address</th><th>Device / Entity</th>
-            <th>EEP</th><th>Message type</th><th>Data</th><th>Decoded</th>
+            <th>EEP</th><th>Message type</th><th>Data</th><th>Values</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -274,6 +281,32 @@ export const page = {
     });
   },
 
+  /**
+   * EEP of a telegram and where it comes from: the configuration of a known device, or the
+   * profile of a 4BS teach-in telegram for a device which is not configured (yet).
+   */
+  _eep(telegram) {
+    if (telegram.eep) return { value: telegram.eep, hint: "", known: true };
+    const profile = telegram.teach_in_profile || telegram.decoded_eep;
+    if (profile) return { value: profile, hint: "from teach-in", known: true };
+    return { value: null, hint: "", known: false };
+  },
+
+  /** Decoded values of a telegram, or a hint why there are none although the EEP is known. */
+  _values(telegram, eep) {
+    const values = formatDecoded(telegram.decoded, VALUE_LIMIT, { skipFalse: false });
+    if (values) return values;
+    if (telegram.teach_in_profile) {
+      return `<span class="hint">teach-in of ${escapeHtml(telegram.teach_in_profile)}</span>`;
+    }
+    // decoded_eep is only set when a decode was actually attempted (it is skipped when
+    // 'telegram_log_decode_eep' is off), so this really points to a mismatching EEP
+    if (telegram.decoded_eep) {
+      return `<span class="hint">cannot be decoded with ${escapeHtml(telegram.decoded_eep)}</span>`;
+    }
+    return "";
+  },
+
   /** Gateways for the filter: from the integration info, fallback to the recorded telegrams. */
   _gateways(ctx) {
     const fromInfo = ((ctx.state.integrationInfo || {}).gateways || [])
@@ -297,6 +330,7 @@ export const page = {
       return matchesFilter(state.telegramFilter, [
         telegram.address, telegram.local_address, telegram.device_name, telegram.eep, telegram.msg_type,
         telegram.data, telegram.gateway_name, (telegram.entity_ids || []).join(" "),
+        telegram.teach_in_profile, telegram.decoded_eep, decodedToText(telegram.decoded),
       ]);
     });
   },

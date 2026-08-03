@@ -342,7 +342,9 @@ export const page = {
                  function ${escapeHtml(parent.pct14_key_function)}</span>` : ""}
               ${parent.ha_device_id ? `<button class="action small" data-ha-device="${escapeHtml(parent.ha_device_id)}">open device</button>` : ""}
               ${(parent.taught_in || []).length
-                ? `<button class="action small" data-memory-details="${escapeHtml(gw.id)}|${escapeHtml(parent.bus_address)}">
+                ? `<button class="action small" data-memory-details="${escapeHtml(gw.id)}|${escapeHtml(parent.bus_address)}"
+                     title="${parent.scanned_at ? `read from the device memory on ${escapeHtml(formatDateTime(parent.scanned_at))}`
+                       : "read from the device memory"}">
                      memory: ${escapeHtml((parent.taught_in || []).length)} sender${(parent.taught_in || []).length === 1 ? "" : "s"}</button>`
                 : parent.memory_rows_read
                   ? `<span class="hint-inline">memory: ${escapeHtml(parent.memory_rows_read)}/${escapeHtml(parent.memory_size || "?")} rows read</span>` : ""}

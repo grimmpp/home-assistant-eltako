@@ -1,9 +1,10 @@
 """Bus positions are detected passively from the traffic of the gateway."""
 import asyncio
 import unittest
-from unittest import TestCase
+from unittest import IsolatedAsyncioTestCase, TestCase
 
 from tests.mocks import *
+from tests.test_device_activity import StoreMock, iso_days_ago
 from tests.test_enocean_logger import HassDataMock, get_general_settings
 
 from custom_components.eltako import bus_members
@@ -127,42 +128,47 @@ class TestConfiguredDeviceMapping(TestCase):
         self.assertFalse(members[9]['configured'])
 
 
-class TestLoggerFeedsTheRegistry(TestCase):
-    """Polling must not be dropped before the bus information is collected."""
+class TestGatewayFeedsTheRegistry(TestCase):
+    """The gateway feeds the registry for every telegram - also with recording disabled.
+
+    Recording telegrams is off by default. The channel layout of multi channel devices only
+    comes from the discovery replies, so tying the collection to the telegram logger would
+    leave the hierarchy of the web ui flat on a default installation.
+    """
 
     def setUp(self):
         self.gateway = GatewayMock(dev_id=1, base_id=AddressExpression.parse('FF-A2-24-00'))
         self.hass = HassDataMock()
         self.gateway.hass = self.hass
         self.registry = bus_members.setup_registry(self.hass)
-        self.logger = EnOceanTelegramLogger(self.hass, get_general_settings(**{
-            CONF_LOG_ENOCEAN_TELEGRAMS: True}))
-        self.logger.refresh_device_map()
 
-    def test_filtered_polling_still_reveals_the_position(self):
-        self.assertFalse(self.logger.include_polling)
+    def _receive(self, msg):
+        self.gateway._record_telegram(msg, TelegramDirection.INCOMING)
 
-        self.logger.record_message(self.gateway, EltakoPoll(4), TelegramDirection.INCOMING.value)
+    def test_no_telegram_logger_is_active(self):
+        """Precondition of this whole class: recording is disabled."""
+        from custom_components.eltako.enocean_logger import get_telegram_logger
 
-        # not recorded ...
-        self.assertEqual(self.logger.get_recent_telegrams(), [])
-        # ... but the bus position is known
+        self.assertIsNone(get_telegram_logger(self.hass))
+
+    def test_polling_reveals_the_position(self):
+        self._receive(EltakoPoll(4))
+
         members = self.registry.get_members()
         self.assertEqual(len(members), 1)
         self.assertEqual(members[0]['bus_address'], 4)
         self.assertEqual(members[0]['polled_count'], 1)
 
     def test_discovery_reply_is_collected(self):
-        self.logger.record_message(self.gateway, discovery_reply(6), TelegramDirection.INCOMING.value)
+        self._receive(discovery_reply(6))
 
         member = self.registry.get_members()[0]
         self.assertEqual(member['bus_address'], 6)
         self.assertEqual(member['device_class'], 'FSR14_4x')
+        self.assertEqual(member['size'], 4)
 
     def test_status_answer_of_a_bus_device_is_collected(self):
-        self.logger.record_message(self.gateway, EltakoWrapped4BS(address=b'\x00\x00\x00\x0A', status=0x00,
-                                                                 data=b'\x01\x02\x03\x04'),
-                                   TelegramDirection.INCOMING.value)
+        self._receive(EltakoWrapped4BS(address=b'\x00\x00\x00\x0A', status=0x00, data=b'\x01\x02\x03\x04'))
 
         member = self.registry.get_members()[0]
         self.assertEqual(member['bus_address'], 0x0A)
@@ -172,10 +178,185 @@ class TestLoggerFeedsTheRegistry(TestCase):
     def test_wireless_telegrams_do_not_create_bus_members(self):
         from eltakobus.message import RPSMessage
 
-        self.logger.record_message(self.gateway, RPSMessage(address=b'\x81\x04\xE5\x54', status=0x30,
-                                                            data=b'\x10'), TelegramDirection.INCOMING.value)
+        self._receive(RPSMessage(address=b'\x81\x04\xE5\x54', status=0x30, data=b'\x10'))
 
         self.assertEqual(self.registry.get_members(), [])
+
+    def test_channels_are_grouped_without_telegram_logging(self):
+        """The regression this class exists for: an FSR14-4x arrives as one device."""
+        self._receive(discovery_reply(1))                   # FSR14_4x on positions 1-4
+        for position in (2, 3, 4):
+            self._receive(EltakoPoll(position))
+
+        members = {m['bus_address']: m for m in self.registry.get_members()}
+
+        self.assertEqual(members[1]['channel_count'], 4)
+        self.assertIsNone(members[1]['parent_bus_address'])
+        for position in (2, 3, 4):
+            self.assertEqual(members[position]['parent_bus_address'], 1, msg=position)
+
+    def test_telegrams_are_counted_once_when_recording_is_enabled(self):
+        """The logger must not feed the registry a second time."""
+        logger = EnOceanTelegramLogger(self.hass, get_general_settings(**{
+            CONF_LOG_ENOCEAN_TELEGRAMS: True}))
+        logger.refresh_device_map()
+        self.hass.data[DATA_ELTAKO][DATA_TELEGRAM_LOGGER] = logger
+
+        self._receive(EltakoPoll(7))
+
+        member = self.registry.get_members()[0]
+        self.assertEqual(member['bus_address'], 7)
+        self.assertEqual(member['polled_count'], 1)
+
+
+class TestMemoryPersistence(IsolatedAsyncioTestCase):
+    """The memory scan locks the bus for minutes, so its result survives a restart."""
+
+    def _registry(self, stored: dict = None) -> BusMemberRegistry:
+        registry = BusMemberRegistry(HassDataMock())
+        registry._store = StoreMock(stored)
+        return registry
+
+    def _stored_fsr14(self, scanned_at: str = None, model: str = '04-01-72-00', memory_size: int = 2) -> dict:
+        return {'devices': {'1:1': {
+            'model': model,
+            'device_class': 'FSR14_4x',
+            'size': 4,
+            'memory_size': memory_size,
+            'taught_in': [{'sensor_id': 'FE-DB-B6-40', 'channel': 1, 'role': 'button'}],
+            'memory': {'0': '00' * 8, '1': 'fedbb640' + '05030100'},
+            'scanned_at': scanned_at or iso_days_ago(1),
+        }}}
+
+    async def _scan_position_one(self, registry, gateway, memory=127):
+        """A discovery reply followed by all memory rows - like a real scan.
+
+        Same shape as TestMemoryImage._scan_position_one: the taught-in sender sits in
+        memory line 12, everything else is empty.
+        """
+        registry.note_discovery_reply(gateway, discovery_reply(1, memory=memory))
+        for line in range(memory):
+            value = bytes.fromhex('fedbb640') + bytes((5, 3, 1, 0)) if line == 12 else bytes(8)
+            registry.note_memory_response(gateway, MemoryResponseMock(line, value))
+        await registry.async_parse_taught_in()
+
+    ### saving
+
+    async def test_memory_image_and_taught_in_are_persisted(self):
+        registry = self._registry()
+        await self._scan_position_one(registry, GatewayMock(dev_id=1))
+
+        saved = registry._store.saved
+        self.assertIsNotNone(saved, msg="a completed scan must trigger a save")
+        device = saved['devices']['1:1']
+        self.assertEqual(device['model'], '04-01-72-00')
+        self.assertEqual(device['device_class'], 'FSR14_4x')
+        self.assertEqual(device['memory_size'], 127)
+        self.assertEqual(len(device['memory']), 127)
+        self.assertEqual(device['memory']['12'], 'fedbb64005030100')
+        self.assertEqual([s['sensor_id'] for s in device['taught_in']], ['FE-DB-B6-40'])
+        self.assertIsNotNone(device['scanned_at'])
+
+    async def test_session_counters_are_not_persisted(self):
+        """Polling and answer counts describe the current session, not the hardware."""
+        registry = self._registry()
+        gateway = GatewayMock(dev_id=1)
+        registry.note_polled(gateway, 1)
+        registry.note_answer(gateway, 1, 'FF-A2-24-01')
+        await self._scan_position_one(registry, gateway)
+
+        device = registry._store.saved['devices']['1:1']
+        for key in ('polled_count', 'answer_count', 'last_seen', 'taught_in_dirty'):
+            self.assertNotIn(key, device, msg=key)
+
+    async def test_positions_without_a_memory_image_are_not_persisted(self):
+        registry = self._registry()
+        registry.note_polled(GatewayMock(dev_id=1), 9)
+        registry.unload()
+
+        self.assertEqual(registry._store.saved, {'devices': {}})
+
+    ### loading
+
+    async def test_memory_image_is_restored(self):
+        registry = self._registry(self._stored_fsr14())
+        await registry.async_load()
+
+        member = registry.get_members()[0]
+        self.assertEqual(member['bus_address'], 1)
+        self.assertEqual(member['device_class'], 'FSR14_4x')
+        self.assertEqual(member['channel_count'], 4)
+        self.assertEqual([s['sensor_id'] for s in member['taught_in']], ['FE-DB-B6-40'])
+        self.assertEqual(member['memory_rows_read'], 2)
+        # restored, not seen on the bus in this session
+        self.assertIsNone(member['last_seen'])
+        self.assertEqual(member['answer_count'], 0)
+
+    async def test_restored_image_survives_the_next_enumeration(self):
+        """The regression this exists for: the FAM14 re-enumerates all the time."""
+        registry = self._registry(self._stored_fsr14())
+        await registry.async_load()
+
+        registry.note_discovery_reply(GatewayMock(dev_id=1), discovery_reply(1, memory=2))
+
+        member = registry.get_members()[0]
+        self.assertEqual([s['sensor_id'] for s in member['taught_in']], ['FE-DB-B6-40'])
+        self.assertEqual(member['memory_rows_read'], 2)
+        self.assertEqual(len(registry._memory[(1, 1)]), 2)
+
+    async def test_changed_device_discards_the_restored_image(self):
+        """Someone swapped the actuator while home assistant was down."""
+        registry = self._registry(self._stored_fsr14())
+        await registry.async_load()
+
+        registry.note_discovery_reply(GatewayMock(dev_id=1),
+                                      discovery_reply(1, model=b'\x04\x06\x00\x00', size=2, memory=96))
+
+        member = registry.get_members()[0]
+        self.assertEqual(member['device_class'], 'FSB14')
+        self.assertNotIn('taught_in', member)
+        self.assertEqual(registry._memory[(1, 1)], {})
+
+    async def test_outdated_image_is_dropped(self):
+        registry = self._registry(self._stored_fsr14(scanned_at=iso_days_ago(400)))
+        await registry.async_load()
+
+        self.assertEqual(registry.get_members(), [])
+
+    async def test_broken_store_does_not_prevent_the_setup(self):
+        registry = self._registry()
+
+        async def explode():
+            raise RuntimeError("storage file is corrupt")
+        registry._store.async_load = explode
+
+        await registry.async_load()       # must not raise
+        self.assertEqual(registry.get_members(), [])
+
+    async def test_unparsable_rows_are_skipped(self):
+        stored = self._stored_fsr14()
+        stored['devices']['1:1']['memory'] = {'0': 'not-hex', 'x': '0000', '1': '00' * 8}
+        registry = self._registry(stored)
+        await registry.async_load()
+
+        self.assertEqual(list(registry._memory[(1, 1)]), [1])
+
+    async def test_clear_also_clears_the_store(self):
+        registry = self._registry(self._stored_fsr14())
+        await registry.async_load()
+        registry.clear()
+
+        self.assertEqual(registry.get_members(), [])
+        self.assertEqual(registry._store.saved, {'devices': {}})
+
+    async def test_without_hass_nothing_is_persisted(self):
+        """The registry is usable standalone (e.g. in tests) without a store."""
+        registry = BusMemberRegistry()
+        self.assertIsNone(registry._store)
+
+        await registry.async_load()       # must not raise
+        registry.note_polled(GatewayMock(dev_id=1), 1)
+        registry.clear()
 
 
 if __name__ == '__main__':

@@ -13,7 +13,8 @@ eltako:
 Recorded telegrams are
 * enriched with all available information about the sending/receiving device
   (EEP, device name, Home Assistant entity ids, area, gateway, ...),
-* decoded with the configured EEP if the device is known,
+* decoded with the configured EEP of the device, or with the profile a 4BS teach-in
+  telegram revealed if the device is not configured,
 * aggregated into per-device statistics,
 * kept in a ring buffer so that the web ui can display a live view,
 * and optionally written into a rotating log file (JSON lines or CSV).
@@ -476,6 +477,10 @@ class EnOceanTelegramLogger:
         self._recent_timestamps: deque = deque()       # monotonic timestamps of the last minute
         self._started_at = _utc_now()
 
+        # address -> EEP revealed by a 4BS teach-in telegram. Lets the values of devices
+        # which are not (yet) configured be decoded as well.
+        self._teach_in_profiles: dict[str, str] = {}
+
         # address -> device information built from configuration and live entities
         self._device_map: dict[str, dict] = {}
         self._device_map_built_at: float = 0.0
@@ -540,9 +545,6 @@ class EnOceanTelegramLogger:
         """Record one telegram. Can be called from any thread (e.g. the serial bus thread)."""
         try:
             if isinstance(msg, POLLING_MESSAGE_TYPES):
-                # The polling telegrams are the list of bus positions the gateway knows, so
-                # their information is collected even when they are not recorded.
-                self._note_bus_member(gateway, msg)
                 # polling is logged without building a whole record, it can be very frequent
                 self._log_polling(gateway, msg)
                 if not self.include_polling:
@@ -550,7 +552,6 @@ class EnOceanTelegramLogger:
                     return
 
             record = self._create_record(gateway, msg, direction)
-            telegram_for_bus = prettify(msg) if type(msg) is ESP2Message else msg
 
             monotonic = time.monotonic()
             with self._lock:
@@ -573,7 +574,6 @@ class EnOceanTelegramLogger:
             if self._writer:
                 self._writer.submit(record)
 
-            self._note_bus_member(gateway, telegram_for_bus, record)
             self._log_record(record)
             self._notify_subscribers_threadsafe(record)
 
@@ -581,38 +581,9 @@ class EnOceanTelegramLogger:
             self._error_count += 1
             LOGGER.error(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot record telegram: {e}", exc_info=True)
 
-    ### bus members (see bus_members.py)
-
-    def _note_bus_member(self, gateway: "EnOceanGateway", telegram, record: dict = None) -> None:
-        """Feed everything which reveals a bus position into the bus member registry."""
-        from .bus_members import get_registry
-
-        registry = get_registry(self.hass)
-        if registry is None:
-            return
-
-        try:
-            if isinstance(telegram, POLLING_MESSAGE_TYPES):
-                address = getattr(telegram, 'address', None)
-                if isinstance(address, int):
-                    registry.note_polled(gateway, address)
-                return
-
-            if isinstance(telegram, EltakoDiscoveryReply):
-                registry.note_discovery_reply(gateway, telegram)
-                return
-
-            if isinstance(telegram, EltakoMemoryResponse):
-                registry.note_memory_response(gateway, telegram)
-                return
-
-            # a status answer of a bus device carries its position as local address
-            if record and record.get('local_address'):
-                parts = str(record['local_address']).split('-')
-                if len(parts) == 4 and parts[:3] == ['00', '00', '00']:
-                    registry.note_answer(gateway, int(parts[3], 16), record.get('address'))
-        except Exception as e:  # noqa: BLE001 - must never break the recording
-            LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot note bus member: {e}")
+    # The bus member registry is fed by the gateway (see bus_members.note_telegram), not from
+    # here: recording telegrams is off by default, and the channel layout of multi channel
+    # devices must be collected on a default installation as well.
 
     ### logging into the home assistant log
 
@@ -732,6 +703,8 @@ class EnOceanTelegramLogger:
             try:
                 record['teach_in_profile'] = "%02X-%02X-%02X" % telegram.profile
                 record['teach_in_manufacturer'] = telegram.manufacturer
+                if address:
+                    self._teach_in_profiles[address] = record['teach_in_profile']
             except Exception:   # noqa: BLE001
                 pass
 
@@ -749,13 +722,32 @@ class EnOceanTelegramLogger:
                 if hasattr(telegram, attribute):
                     record[attribute] = _json_safe(getattr(telegram, attribute))
 
-        # decode telegram with the EEP of the known device
-        if self.decode_eep and device_info is not None and device_info.get('eep'):
-            record['decoded'] = self._decode(telegram, device_info['eep'])
+        # decode the telegram whenever an EEP is available for its address
+        if self.decode_eep:
+            eep_string, eep_source = self._eep_for_decoding(record, device_info)
+            if eep_string:
+                record['decoded'] = self._decode(telegram, eep_string, count_errors=eep_source == 'device')
+                record['decoded_eep'] = eep_string
+                record['decoded_source'] = eep_source
 
         return record
 
-    def _decode(self, telegram: ESP2Message, eep_string: str) -> dict | None:
+    def _eep_for_decoding(self, record: dict, device_info: dict | None) -> tuple[str | None, str | None]:
+        """EEP used to decode a telegram and where it comes from.
+
+        The configured EEP of a known device always wins. For devices which are not part of
+        the configuration the profile of an earlier 4BS teach-in telegram is used so that the
+        live view shows their values as well. A teach-in telegram itself carries the profile
+        instead of sensor data and is therefore never decoded.
+        """
+        if record.get('teach_in_profile'):
+            return None, None
+        if device_info is not None and device_info.get('eep'):
+            return device_info['eep'], 'device'
+        profile = self._teach_in_profiles.get(record.get('address'))
+        return (profile, 'teach_in') if profile else (None, None)
+
+    def _decode(self, telegram: ESP2Message, eep_string: str, count_errors: bool = True) -> dict | None:
         try:
             eep_class = EEP.find(eep_string)
         except Exception:   # noqa: BLE001
@@ -763,7 +755,10 @@ class EnOceanTelegramLogger:
         try:
             return decoded_eep_to_dict(eep_class.decode_message(telegram))
         except Exception:   # noqa: BLE001 - e.g. WrongOrgError for status telegrams
-            self._decode_error_count += 1
+            # only a configured EEP which does not fit is an error worth counting, a profile
+            # taken from a teach-in telegram is just a best guess
+            if count_errors:
+                self._decode_error_count += 1
             return None
 
     def _resolve_addresses(self, gateway: "EnOceanGateway", telegram: ESP2Message) -> tuple[str | None, str | None]:
@@ -1040,6 +1035,7 @@ class EnOceanTelegramLogger:
         with self._lock:
             self._buffer.clear()
             self._statistics.clear()
+            self._teach_in_profiles.clear()
             self._count_by_gateway.clear()
             self._count_by_msg_type.clear()
             self._recent_timestamps.clear()
