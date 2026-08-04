@@ -24,6 +24,7 @@ eltako:
     telegram_log_filename: enocean_telegrams.jsonl  # if set, telegrams are additionally written into this file
     telegram_log_format: jsonl                      # jsonl (default) or csv
     telegram_log_max_file_size_mb: 10               # rotates the file when the size is exceeded
+    telegram_log_rotate_days: 7                     # ... or when its oldest telegram is older than this
     telegram_log_backup_count: 3                    # number of rotated files to keep (file.1 ... file.3)
     telegram_log_include_polling: False             # True: log bus polling telegrams (FAM14) as well
     telegram_log_decode_eep: True                   # decode telegrams of known devices with their EEP
@@ -37,6 +38,7 @@ eltako:
 | `telegram_log_filename` | `""` | **If a filename is set, telegrams are logged into that file** – and recording is enabled implicitly. Relative paths are resolved against the Home Assistant configuration folder (`/config`), absolute paths are used as they are. Missing directories are created. |
 | `telegram_log_format` | `jsonl` | `jsonl`: one JSON object per line (recommended, e.g. for pandas). `csv`: semicolon separated, spreadsheet friendly. |
 | `telegram_log_max_file_size_mb` | `10` | The log file is rotated as soon as it grows beyond this size. |
+| `telegram_log_rotate_days` | `7` | The log file is **also** rotated when its oldest telegram is older than this - whichever limit is reached first. The files then align with time ranges: "last week" is simply `<name>.1`, independent of how busy the bus was. The age survives restarts (it is read back from the first record of the file). `0` disables the time based rotation. |
 | `telegram_log_backup_count` | `3` | Number of rotated files (`<name>.1` … `<name>.n`) to keep. `0` deletes the old content instead. |
 | `telegram_log_include_polling` | `False` | Bus gateways (FAM14) poll their actuators permanently. Those telegrams are dropped by default because they would flood the log. |
 | `telegram_log_decode_eep` | `True` | Decodes telegrams of configured devices with their EEP and stores the decoded values (e.g. temperature, humidity, button). |
@@ -139,11 +141,78 @@ print(pd.json_normalize(temperatures['decoded'])['temperature'].describe())
 print(df.set_index(pd.to_datetime(df['timestamp'])).resample('1min').size())
 ```
 
+## Timeseries database and Grafana
+
+Every recorded telegram - including the correlated meta data (device name, EEP, area, platform and
+the decoded values) - can additionally be written into an **InfluxDB** bucket. On top of that bucket
+**Grafana** can analyse the complete history: telegrams per device over months, temperature and
+humidity curves, button press patterns, radio quality (repeater counter), test runs and calibrations.
+
+```yaml
+eltako:
+  general_settings:
+    log_enocean_telegrams: True
+    timeseries_enabled: True
+    timeseries_url: http://localhost:8086     # InfluxDB
+    timeseries_token: <api token>             # InfluxDB 2.x token / InfluxDB 1.8: "user:password"
+    timeseries_org: home                      # InfluxDB 2.x only, empty for 1.8
+    timeseries_bucket: eltako                 # InfluxDB 2.x bucket / 1.8: "database/retention_policy"
+    timeseries_measurement: eltako_telegram   # optional
+```
+
+Works with InfluxDB 2.x (native api) and InfluxDB 1.8+ (via its v2 compatibility api). No client
+library is needed - the integration posts the line protocol directly, batched and from its own
+worker thread. If the database is down, telegrams are counted as failed and the bus is never blocked.
+All settings can also be changed on the **About** page of the web ui.
+
+### Data model
+
+| | |
+|---|---|
+| measurement | `eltako_telegram` |
+| tags (filterable) | `gateway_id`, `direction`, `msg_type`, `address`, `local_address`, `device_name`, `eep`, `area`, `platform`, `known`, `role` |
+| fields | `count=1` (always - makes counting trivial), `status`, `data`, `rp_count` and every decoded EEP value (`temperature`, `humidity`, `target_temp`, ...) |
+| time | timestamp of the telegram (ns) |
+
+### Example Grafana queries (Flux)
+
+```flux
+// telegrams per device, over time
+from(bucket: "eltako")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r._measurement == "eltako_telegram" and r._field == "count")
+  |> group(columns: ["device_name"])
+  |> aggregateWindow(every: 1h, fn: sum)
+
+// temperature curve of one sensor
+from(bucket: "eltako")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r._measurement == "eltako_telegram" and r._field == "temperature")
+  |> filter(fn: (r) => r.device_name == "Temp Living Room")
+
+// unknown devices seen in the last 24 h
+from(bucket: "eltako")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._measurement == "eltako_telegram" and r._field == "count")
+  |> filter(fn: (r) => r.known == "False")
+  |> group(columns: ["address"])
+  |> sum()
+```
+
+### Backfill of the history
+
+Telegrams are exported live from the moment the export is enabled. The **history in the rotating
+log files** (jsonl) can be imported once with the service
+`eltako.export_telegram_log_to_timeseries` (Developer tools → Actions). The files are read oldest
+first; records without a timestamp are skipped. Running it twice duplicates nothing visible in
+practice - InfluxDB overwrites points with identical timestamp and tag set.
+
 ## Service
 
 | Service | Description |
 |---|---|
 | `eltako.clear_telegram_log` | Resets statistics and live buffer. The log file is not modified. |
+| `eltako.export_telegram_log_to_timeseries` | Backfill: writes the history of the jsonl log files into the configured InfluxDB bucket. |
 
 ## Websocket API
 

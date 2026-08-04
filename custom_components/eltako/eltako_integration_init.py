@@ -1,7 +1,7 @@
 """Support for Eltako devices."""
 import os
 
-from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ID, CONF_NAME
 from homeassistant.helpers.typing import ConfigType
@@ -26,6 +26,7 @@ from . import device_activity
 from . import general_settings
 from . import gateway_scan
 from . import gateway_config
+from . import config_import
 from . import bus_members
 
 LOG_PREFIX_INIT = "Eltako Integration Setup"
@@ -56,6 +57,9 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
 
     general_settings_values = config_helpers.get_general_settings_from_configuration(hass)
     config_helpers.log_deprecated_general_settings(general_settings_values)
+    # the radio is a virtual bus with several gateways: a wireless device taught into more
+    # than one gateway gets one entity, but its commands are repeated through all of them
+    hass.data[DATA_ELTAKO][DATA_ADDITIONAL_SENDERS] = config_helpers.collect_additional_senders(config)
     config_helpers.remove_duplicate_devices(config)
 
     LOGGER.info("f[{LOG_PREFIX_INIT}] Register websocket extension.")
@@ -64,6 +68,7 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     general_settings.register_websocket_commands(hass)
     gateway_scan.register_websocket_commands(hass)
     gateway_config.register_websocket_commands(hass)
+    config_import.register_websocket_commands(hass)
 
     # Devices on the RS485 bus, detected passively from the traffic. Restores the memory
     # images of the last scan, so the taught-in senders are known without locking the bus.
@@ -82,6 +87,41 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
 
     return True
 
+class EltakoFrontendView(HomeAssistantView):
+    """Serves custom_components/eltako/frontend with an explicit no-cache header.
+
+    The folder contains frontend code only (plain javascript modules, no build step), so it can
+    be served completely. Requests are contained inside it - a path which escapes the folder
+    (../) is rejected instead of read.
+    """
+
+    url = PANEL_STATIC_URL + "/{path:.*}"
+    name = "eltako:frontend"
+    requires_auth = False       # the browser loads the modules without the auth header
+
+    def __init__(self, root: str):
+        self._root = os.path.realpath(root)
+
+    async def get(self, request, path: str):
+        return self._serve(path)
+
+    async def head(self, request, path: str):
+        return self._serve(path)
+
+    def _serve(self, path: str):
+        from aiohttp import web
+
+        target = os.path.realpath(os.path.join(self._root, path))
+        if target != self._root and not target.startswith(self._root + os.sep):
+            return web.Response(status=404)
+        if not os.path.isfile(target):
+            return web.Response(status=404)
+
+        return web.FileResponse(target, headers={
+            'Cache-Control': 'no-cache, must-revalidate',
+        })
+
+
 async def async_register_frontend(hass: HomeAssistant, general_settings: dict) -> None:
     """Register the web ui of this integration.
 
@@ -97,12 +137,13 @@ async def async_register_frontend(hass: HomeAssistant, general_settings: dict) -
     try:
         # The folder contains frontend code only, therefore it can be served completely.
         static_path = os.path.join(os.path.dirname(__file__), "frontend")
-        await hass.http.async_register_static_paths([
-            StaticPathConfig(
-                PANEL_STATIC_URL,
-                path=static_path,
-                cache_headers=False,
-            )])
+
+        # Serve it through our own view instead of async_register_static_paths:
+        # cache_headers=False only means "do not add long lived cache headers", the response
+        # then carries ETag/Last-Modified only. Browsers cache ES modules heuristically from
+        # Last-Modified and do NOT revalidate, so an edited page of the web ui stays invisible
+        # until a hard reload. The view sends an explicit no-cache instead.
+        hass.http.register_view(EltakoFrontendView(static_path))
 
         await panel_custom.async_register_panel(
             hass=hass,
@@ -237,7 +278,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] config: {config}\n")
 
     
-    general_settings = config_helpers.get_general_settings_from_configuration(hass)
+    general_settings_values = config_helpers.get_general_settings_from_configuration(hass)
     # Initialise the gateway
     # get base_id from user input
     if CONF_GATEWAY_DESCRIPTION not in config_entry.data.keys():
@@ -252,8 +293,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
 
     # get home assistant configuration section matching base_id
-    gateway_config = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
-    if not gateway_config:
+    gateway_conf = await config_helpers.async_find_gateway_config_by_id(gateway_id, hass, CONFIG_SCHEMA)
+    if not gateway_conf:
         LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
         return False
     
@@ -264,15 +305,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_serial_path = config_entry.data[CONF_SERIAL_PATH]
 
     # only transceiver can send teach-in telegrams
-    gateway_device_type = GatewayDeviceType.find(gateway_config[CONF_DEVICE_TYPE])    # from configuration
+    gateway_device_type = GatewayDeviceType.find(gateway_conf[CONF_DEVICE_TYPE])    # from configuration
     if gateway_device_type is None:
-        LOGGER.error(f"[{LOG_PREFIX_INIT}] USB device {gateway_config[CONF_DEVICE_TYPE]} is not supported!!!")
+        LOGGER.error(f"[{LOG_PREFIX_INIT}] USB device {gateway_conf[CONF_DEVICE_TYPE]} is not supported!!!")
         return False
     if GatewayDeviceType.is_lan_gateway(gateway_device_type):
-        if gateway_config.get(CONF_GATEWAY_ADDRESS, None) is None:
+        if gateway_conf.get(CONF_GATEWAY_ADDRESS, None) is None:
             raise Exception(f"[{LOG_PREFIX_INIT}] Missing field '{CONF_GATEWAY_ADDRESS}' for LAN Gateway (id: {gateway_id})")
 
-    general_settings[CONF_ENABLE_TEACH_IN_BUTTONS] = True # GatewayDeviceType.is_transceiver(gateway_device_type) # should only be disabled for decentral gateways
+    general_settings_values[CONF_ENABLE_TEACH_IN_BUTTONS] = True # GatewayDeviceType.is_transceiver(gateway_device_type) # should only be disabled for decentral gateways
 
     # The kernel renumbers /dev/ttyUSB* when sticks are re-plugged. If the configured port is
     # gone, follow the stick by its usb serial number so that reception does not silently die.
@@ -281,18 +322,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             hass, gateway_id, gateway_device_type, gateway_serial_path)
 
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Initializes Gateway Device '{gateway_description}'")
-    gateway_name = gateway_config.get(CONF_NAME, None)  # from configuration
+    gateway_name = gateway_conf.get(CONF_NAME, None)  # from configuration
     baud_rate= BAUD_RATE_DEVICE_TYPE_MAPPING[gateway_device_type]
-    port = gateway_config.get(CONF_GATEWAY_PORT, VIRT_GW_PORT if gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter else 5100)
-    auto_reconnect = gateway_config.get(CONF_GATEWAY_AUTO_RECONNECT, True)
-    gateway_base_id = AddressExpression.parse(gateway_config[CONF_BASE_ID])
-    message_delay = gateway_config.get(CONF_GATEWAY_MESSAGE_DELAY, None)
+    port = gateway_conf.get(CONF_GATEWAY_PORT, VIRT_GW_PORT if gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter else 5100)
+    auto_reconnect = gateway_conf.get(CONF_GATEWAY_AUTO_RECONNECT, True)
+    gateway_base_id = AddressExpression.parse(gateway_conf[CONF_BASE_ID])
+    message_delay = gateway_conf.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
     
     if gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter:
-        gateway = VirtualNetworkGateway(general_settings, hass, gateway_id, port, config_entry)
+        gateway = VirtualNetworkGateway(general_settings_values, hass, gateway_id, port, config_entry)
     else:
-        gateway = EnOceanGateway(general_settings, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
+        gateway = EnOceanGateway(general_settings_values, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
 
     
     # gateways query their base id from the hardware after the connection is up - persist

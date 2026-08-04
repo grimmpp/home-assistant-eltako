@@ -13,8 +13,17 @@ from eltakobus import *
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 ClimateController.schedule_update_ha_state = mock.Mock(return_value=None)
-EltakoEntity.send_message = mock.Mock(return_value=None)
 # EltakoBinarySensor.hass.bus.fire is mocked by class HassMock
+
+# send_message is mocked for this module only. A module-level class patch would leak into
+# every later test of the pytest process (e.g. the fanout tests of the real send_message).
+_original_send_message = EltakoEntity.send_message
+
+def setUpModule():
+    EltakoEntity.send_message = mock.Mock(return_value=None)
+
+def tearDownModule():
+    EltakoEntity.send_message = _original_send_message
 
 class EventDataMock():
     def __init__(self,d):

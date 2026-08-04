@@ -72,6 +72,31 @@ class TestFormDescriptor(TestCase):
             self.assertTrue(sender['required'], msg=platform_name)
             self.assertEqual([f['name'] for f in sender['fields']], [CONF_ID, CONF_EEP])
 
+    def test_area_field_is_a_combo(self):
+        """The area is picked from the areas home assistant knows - or typed freely."""
+        for platform in device_config.get_form_descriptor()['platforms']:
+            area = [f for f in platform['fields'] if f['name'] == CONF_AREA][0]
+            self.assertEqual(area['type'], 'combo', msg=platform['platform'])
+
+    def test_area_options_are_injected(self):
+        descriptor = device_config.get_form_descriptor()
+        device_config._inject_area_options(descriptor, ['Kitchen', 'Living room'])
+
+        for platform in descriptor['platforms']:
+            area = [f for f in platform['fields'] if f['name'] == CONF_AREA][0]
+            self.assertEqual(area['options'], ['Kitchen', 'Living room'], msg=platform['platform'])
+
+    def test_area_injection_does_not_leak_into_the_module_constant(self):
+        """FIELD_AREA is shared between the platforms and between websocket calls."""
+        descriptor = device_config.get_form_descriptor()
+        device_config._inject_area_options(descriptor, ['Kitchen'])
+
+        self.assertNotIn('options', device_config.FIELD_AREA)
+        fresh = device_config.get_form_descriptor()
+        for platform in fresh['platforms']:
+            area = [f for f in platform['fields'] if f['name'] == CONF_AREA][0]
+            self.assertNotIn('options', area, msg=platform['platform'])
+
 
 class TestDeviceValidation(TestCase):
 

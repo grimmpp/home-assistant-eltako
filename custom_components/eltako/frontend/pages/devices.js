@@ -72,6 +72,18 @@ export const page = {
         ${card("Telegrams", formatNumber(summary.total_count))}
         ${card("Telegrams / min", formatNumber(summary.telegrams_per_minute))}
         ${card("Filtered polling", formatNumber(summary.filtered_count))}
+        ${summary.file_logging_enabled
+          ? card("Log file", formatNumber(summary.file_written_count), summary.file_error ? "warn" : "",
+                 summary.file_error || (summary.file_rotate_after_days
+                   ? `rotates after ${summary.file_rotate_after_days} d / ${summary.file_max_size_mb} MB`
+                   : `rotates after ${summary.file_max_size_mb} MB`))
+          : card("Log file", "off", "warn", "telegrams are not persisted")}
+        ${summary.timeseries_enabled
+          ? card("Timeseries export", formatNumber((summary.timeseries || {}).exported_count),
+                 (summary.timeseries || {}).last_error ? "warn" : "good",
+                 (summary.timeseries || {}).last_error
+                   || `InfluxDB bucket ${(summary.timeseries || {}).bucket || ""}`)
+          : ""}
       </div>
       ${Object.keys(summary.count_by_msg_type || {}).length ? `
         <div class="chips">${Object.entries(summary.count_by_msg_type)

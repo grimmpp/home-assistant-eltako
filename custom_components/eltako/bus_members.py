@@ -36,6 +36,7 @@ from eltakobus.message import EltakoDiscoveryReply, EltakoMemoryResponse
 from eltakobus.util import b2s
 
 from .const import *
+from .device_catalog import DEVICE_CATALOG, describe_hw_type
 
 if TYPE_CHECKING:
     from .gateway import EnOceanGateway
@@ -72,64 +73,12 @@ def _build_model_map() -> dict:
 
 MODEL_MAP = _build_model_map()
 
-# Device knowledge per hardware type, taken from the EEP_MAPPING of the EnOcean Device Manager
-# (https://github.com/grimmpp/enocean-device-manager, eo_man/data/data_helper.py, MIT, same
-# author as this integration). The key matches the BusObject class name of the eltakobus
-# library. The PCT14 fields describe where the Home Assistant sender id has to be entered
-# when teaching in the actuator.
-HW_TYPE_INFO = {
-    'FAM14':      {'description': 'Bus Gateway', 'brand': 'Eltako'},
-    'FGW14_USB':  {'description': 'Bus Gateway', 'brand': 'Eltako'},
-    'FTD14':      {'description': 'Bus Gateway', 'brand': 'Eltako'},
-    'FTS14EM':    {'description': 'Wired inputs (switches, contacts)', 'brand': 'Eltako',
-                   'eep': 'F6-02-01', 'platform': 'binary_sensor'},
-    'FSDG14':     {'description': 'Electricity Meter', 'brand': 'Eltako', 'eep': 'A5-12-01', 'platform': 'sensor'},
-    'F3Z14D':     {'description': 'Electricity/Gas/Water Meter', 'brand': 'Eltako', 'eep': 'A5-12-01', 'platform': 'sensor'},
-    'FWZ14_65A':  {'description': 'Electricity Meter', 'brand': 'Eltako', 'eep': 'A5-12-01', 'platform': 'sensor'},
-    'FWG14MS':    {'description': 'Weather Station Gateway', 'brand': 'Eltako', 'eep': 'A5-13-01', 'platform': 'sensor'},
-    'FUD14':      {'description': 'Light dimmer', 'brand': 'Eltako', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 3, 'pct14_key_function': 32},
-    'FUD14_800W': {'description': 'Light dimmer', 'brand': 'Eltako', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 3, 'pct14_key_function': 32},
-    'FSG14_1_10V': {'description': 'Dimming for electr. ballasts (1-10V)', 'brand': 'Eltako', 'eep': 'A5-38-08',
-                   'sender_eep': 'A5-38-08', 'platform': 'light', 'pct14_function_group': 3, 'pct14_key_function': 32},
-    'FDG14':      {'description': 'Dali Gateway', 'brand': 'Eltako', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 1, 'pct14_key_function': 32},
-    'FD2G14':     {'description': 'Dali Gateway', 'brand': 'Eltako', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 1, 'pct14_key_function': 32},
-    'FMZ14':      {'description': 'Relay (multifunction)', 'brand': 'Eltako', 'eep': 'M5-38-08', 'sender_eep': 'F6-02-01',
-                   'platform': 'light', 'pct14_function_group': 1, 'pct14_key_function': 1},
-    'FSR14':      {'description': 'Relay', 'brand': 'Eltako', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 2, 'pct14_key_function': 51},
-    'FSR14_1x':   {'description': 'Relay (1 channel)', 'brand': 'Eltako', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 2, 'pct14_key_function': 51},
-    'FSR14_2x':   {'description': 'Relay (2 channels)', 'brand': 'Eltako', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 2, 'pct14_key_function': 51},
-    'FSR14_4x':   {'description': 'Relay (4 channels)', 'brand': 'Eltako', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-                   'platform': 'light', 'pct14_function_group': 2, 'pct14_key_function': 51},
-    'FSR14M_2x':  {'description': 'Relay (2 channels, with metering)', 'brand': 'Eltako', 'eep': 'M5-38-08',
-                   'sender_eep': 'A5-38-08', 'platform': 'light', 'pct14_function_group': 2, 'pct14_key_function': 51},
-    'F4SR14_LED': {'description': 'Relay for LED (4 channels)', 'brand': 'Eltako', 'eep': 'M5-38-08',
-                   'sender_eep': 'A5-38-08', 'platform': 'light', 'pct14_function_group': 2, 'pct14_key_function': 51},
-    'FSB14':      {'description': 'Cover', 'brand': 'Eltako', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F',
-                   'platform': 'cover', 'pct14_function_group': 2, 'pct14_key_function': 31},
-    'FHK14':      {'description': 'Heating/Cooling', 'brand': 'Eltako', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06',
-                   'platform': 'climate', 'pct14_function_group': 3, 'pct14_key_function': 65},
-    'F4HK14':     {'description': 'Heating/Cooling (4 channels)', 'brand': 'Eltako', 'eep': 'A5-10-06',
-                   'sender_eep': 'A5-10-06', 'platform': 'climate', 'pct14_function_group': 3, 'pct14_key_function': 65},
-    'FAE14SSR':   {'description': 'Heating/Cooling', 'brand': 'Eltako', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06',
-                   'platform': 'climate', 'pct14_function_group': 3, 'pct14_key_function': 65},
-    'FMSR14':     {'description': 'Multisensor relay', 'brand': 'Eltako'},
-    'FSU14':      {'description': 'Clock/timer module', 'brand': 'Eltako'},
-    'FMZ61':      {'description': 'Relay (multifunction)', 'brand': 'Eltako', 'eep': 'M5-38-08', 'platform': 'light'},
-}
-
-
-def describe_hw_type(device_class: str | None) -> dict:
-    """Information of the eo_man mapping table for a device class of the eltakobus library."""
-    if not device_class:
-        return {}
-    return HW_TYPE_INFO.get(device_class, {})
+# Device knowledge per hardware type from the central device catalog (device_catalog.py,
+# ported from the EEP_MAPPING of the EnOcean Device Manager). The key matches the BusObject
+# class name of the eltakobus library. The PCT14 fields describe where the Home Assistant
+# sender id has to be entered when teaching in the actuator.
+HW_TYPE_INFO = {entry['hw_type']: describe_hw_type(entry['hw_type'])
+                for entry in DEVICE_CATALOG if entry.get('bus_device')}
 
 
 def describe_model(model: bytes | None, size: int | None) -> tuple[str | None, str | None]:

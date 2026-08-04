@@ -12,7 +12,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers import area_registry as ar, device_registry as dr
-from homeassistant.const import Platform
+from homeassistant.const import CONF_ID, Platform
 
 from .const import *
 from .gateway import EnOceanGateway
@@ -210,6 +210,51 @@ class EltakoEntity(Entity):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
+        self._send_via_additional_gateways(msg)
+
+    def _send_via_additional_gateways(self, msg: ESP2Message) -> None:
+        """Repeat the command with the sender of every other gateway this device is taught into.
+
+        The radio is a virtual bus with several gateways (and repeaters) attached to it.
+        A wireless device declared for more than one gateway has one entity, but a sender
+        per gateway (collected by config_helpers.collect_additional_senders).
+
+        The send signal itself already reaches every gateway (SIGNAL_SEND_MESSAGE is one
+        shared dispatcher signal) - but a gateway only transmits senders of its own base id
+        range (ESP3 chips enforce that). So the command has to be repeated once per taught-in
+        gateway with THAT gateway's sender. Commands are idempotent and an actuator receiving
+        a telegram several times (also via repeaters) is fine. The sender sits in
+        body[-5:-1] of every RPS/1BS/4BS telegram (same layout the gateway uses when it
+        rewrites local addresses to external ones).
+        """
+        try:
+            senders = (self.hass.data.get(DATA_ELTAKO, {}) or {}).get(DATA_ADDITIONAL_SENDERS, {})
+            if not senders:
+                return
+            additional = senders.get((str(self._attr_ha_platform), b2s(self.dev_id[0])))
+            if not additional:
+                return
+
+            primary = getattr(self, '_sender_id', None)
+            body = bytearray(msg.body)
+            if primary is None or len(body) < 5 or body[-5:-1] != bytes(primary[0]):
+                return      # not built with our sender (e.g. a forwarded telegram)
+
+            for sender in additional:
+                try:
+                    alt_address = AddressExpression.parse(str(sender[CONF_ID]))
+                    alt_body = bytearray(msg.body)
+                    alt_body[-5:-1] = alt_address[0]
+                    alt_msg = prettify(ESP2Message(bytes(alt_body)))
+                    event_id = config_helpers.get_bus_event_type(sender[CONF_GATEWAY_ID], SIGNAL_SEND_MESSAGE)
+                    dispatcher_send(self.hass, event_id, alt_msg)
+                    LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Repeated command via "
+                                 f"gateway {sender[CONF_GATEWAY_ID]} with sender {sender[CONF_ID]}.")
+                except Exception as e:  # noqa: BLE001 - one broken sender must not stop the others
+                    LOGGER.warning(f"[{self._attr_ha_platform} {self.dev_id}] Cannot repeat command "
+                                   f"via gateway {sender.get(CONF_GATEWAY_ID)}: {e}")
+        except Exception as e:  # noqa: BLE001 - the fanout must never break the primary send
+            LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Additional-gateway fanout failed: {e}")
         
 
 def validate_actuators_dev_and_sender_id(entities:list[EltakoEntity]):

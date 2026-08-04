@@ -53,6 +53,10 @@ SETTING_DESCRIPTORS = [
      'help': "This web ui. Disabling it here removes the panel after the next restart - "
              "you would then need the yaml to switch it on again.",
      'restart_required': True},
+    {'group': 'web_ui', 'name': CONF_ENABLE_TEST_PAGE, 'type': 'boolean', 'label': 'Test page enabled',
+     'help': "Shows the 'Tests' page which runs the test suites of the project (integration, "
+             "standalone runtime, EnOcean Device Manager). Only useful on a development "
+             "machine - the suites run in the standalone runtime, not inside Home Assistant."},
     {'group': 'telegram_log', 'name': CONF_LOG_ENOCEAN_TELEGRAMS, 'type': 'boolean', 'label': 'Record EnOcean telegrams',
      'help': "Enables the live view, the statistics and the detection of unknown devices."},
     {'group': 'telegram_log', 'name': CONF_TELEGRAM_LOG_FILENAME, 'type': 'text', 'label': 'Telegram log file',
@@ -63,6 +67,10 @@ SETTING_DESCRIPTORS = [
      'help': "jsonl: one json object per line (best for analysis). csv: spreadsheet friendly."},
     {'group': 'telegram_log', 'name': CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB, 'type': 'number', 'label': 'Max. log file size (MB)',
      'min': 0.1, 'max': 1024, 'help': "The log file is rotated when it grows beyond this size."},
+    {'group': 'telegram_log', 'name': CONF_TELEGRAM_LOG_ROTATE_DAYS, 'type': 'number', 'label': 'Rotate after (days)',
+     'min': 0, 'max': 3650, 'help': "The log file is also rotated when its oldest telegram is older than "
+                                    "this. 0 disables the time based rotation - the file then only rotates "
+                                    "by size."},
     {'group': 'telegram_log', 'name': CONF_TELEGRAM_LOG_BACKUP_COUNT, 'type': 'number', 'label': 'Rotated log files kept',
      'min': 0, 'max': 100},
     {'group': 'telegram_log', 'name': CONF_TELEGRAM_LOG_INCLUDE_POLLING, 'type': 'boolean', 'label': 'Include bus polling telegrams',
@@ -72,6 +80,29 @@ SETTING_DESCRIPTORS = [
      'help': "Decodes telegrams with the configured EEP and stores the values (temperature, button, ...)."},
     {'group': 'telegram_log', 'name': CONF_TELEGRAM_LOG_BUFFER_SIZE, 'type': 'number', 'label': 'Live buffer size',
      'min': 0, 'max': 100000, 'help': "Number of telegrams kept in memory for the live view."},
+
+    # timeseries export (InfluxDB / Grafana)
+    {'group': 'timeseries', 'name': CONF_TIMESERIES_ENABLED, 'type': 'boolean', 'label': 'Export telegrams to InfluxDB',
+     'help': "Requires the telegram recording to be enabled. The full history of the log files can be "
+             "imported once with the service 'eltako.export_telegram_log_to_timeseries'."},
+    {'group': 'timeseries', 'name': CONF_TIMESERIES_URL, 'type': 'text', 'label': 'InfluxDB URL',
+     'help': "e.g. http://localhost:8086"},
+    {'group': 'timeseries', 'name': CONF_TIMESERIES_TOKEN, 'type': 'text', 'label': 'API token',
+     'help': "InfluxDB 2.x: an api token with write access to the bucket. "
+             "InfluxDB 1.8: 'username:password'."},
+    {'group': 'timeseries', 'name': CONF_TIMESERIES_ORG, 'type': 'text', 'label': 'Organization',
+     'help': "InfluxDB 2.x organization. Leave empty for InfluxDB 1.8."},
+    {'group': 'timeseries', 'name': CONF_TIMESERIES_BUCKET, 'type': 'text', 'label': 'Bucket',
+     'help': "InfluxDB 2.x: bucket name. InfluxDB 1.8: 'database/retention_policy'."},
+    {'group': 'timeseries', 'name': CONF_TIMESERIES_MEASUREMENT, 'type': 'text', 'label': 'Measurement',
+     'help': "Name of the measurement the telegrams are written into."},
+    {'group': 'timeseries', 'name': CONF_GRAFANA_URL, 'type': 'text', 'label': 'Grafana URL',
+     'help': "e.g. http://localhost:3000 - used for the link to the dashboards in this web ui "
+             "and by the 'Sync dashboards' button. Leave empty to hide both."},
+    {'group': 'timeseries', 'name': CONF_GRAFANA_TOKEN, 'type': 'text', 'label': 'Grafana API token',
+     'help': "Service account token with the role 'Editor' (Grafana: Administration -> Users and "
+             "access -> Service accounts). Only needed for the 'Sync dashboards' button. "
+             "'user:password' is accepted as well (basic auth, e.g. admin:admin for a test setup)."},
 
     # one log level per telegram category
     {'group': 'log_levels', 'name': CONF_LOG_LEVEL_INCOMING, 'type': 'select', 'label': 'Incoming telegrams',

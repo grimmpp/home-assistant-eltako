@@ -57,12 +57,20 @@ export const page = {
     const settings = info.general_settings || {};
 
     return `
+      <div class="notice warn">
+        <h3>${icon("mdi:account-group-outline", "☆")} Community variant</h3>
+        <p><strong>This is a community-maintained open source project (MIT license) and NOT an
+          official product of Eltako GmbH.</strong> It is developed and supported by the community
+          in its spare time &ndash; without any warranty and without official support by
+          Eltako GmbH. Please report problems in the issue tracker of the project, not to the
+          Eltako support.</p>
+      </div>
+
       <div class="notice">
         <h3>${escapeHtml(info.name || "Eltako")} &mdash; EnOcean / Eltako Baureihe 14 for Home Assistant</h3>
         <p>This integration connects Eltako series 14 devices (RS485 bus) and EnOcean devices in general to
           Home Assistant. It reads the status of all bus members, controls actuators, exposes sensors and
           rocker switches for automations, and can record and analyse the EnOcean traffic.</p>
-        <p>It is a community project (MIT license) and not an official product of Eltako GmbH.</p>
       </div>
 
       <div class="cards">
@@ -209,6 +217,10 @@ export const page = {
           ctx.state.settingsForm = result.form;
           ctx.state.settingsError = null;
           ctx.state.settingsMessage = `Saved. Telegram logger restarted: ${result.applied.telegram_logger_restarted ? "yes" : "no"}, gateways reloaded: ${result.applied.reloaded_gateways}.`;
+          // changed settings take effect without reloading the page: the navigation
+          // (pages can be hidden by a setting) and the header re-render as well
+          await ctx.loadIntegrationInfo();
+          ctx.requestRender();
         } else {
           ctx.state.settingsError = (ctx.api.lastError || {}).message || "Could not save the settings.";
           ctx.state.settingsMessage = null;
@@ -225,6 +237,8 @@ export const page = {
           ctx.state.settingsForm = result.form;
           ctx.state.settingsMessage = `Reset ${result.reset.join(", ")} to the configuration.yaml/default value.`;
           ctx.state.settingsError = null;
+          await ctx.loadIntegrationInfo();
+          ctx.requestRender();
         }
         ctx.requestContentRender(true);
       });
@@ -239,6 +253,8 @@ export const page = {
           ctx.state.settingsForm = result.form;
           ctx.state.settingsMessage = `Reset ${result.reset.length} override(s).`;
           ctx.state.settingsError = null;
+          await ctx.loadIntegrationInfo();
+          ctx.requestRender();
         }
         ctx.requestContentRender(true);
       });

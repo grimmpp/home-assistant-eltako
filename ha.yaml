@@ -9,10 +9,17 @@ eltako:
     telegram_log_filename: enocean_telegrams.jsonl  # if set, telegrams are written into this file (relative paths are located in the HA config folder)
     telegram_log_format: jsonl                      # jsonl (default, best for analysis) or csv
     telegram_log_max_file_size_mb: 10               # log file is rotated when this size is exceeded. Default: 10
+    telegram_log_rotate_days: 7                     # ... or when its oldest telegram is older than this (0 = off). Default: 7
     telegram_log_backup_count: 3                    # number of rotated log files to be kept. Default: 3
     telegram_log_include_polling: False             # True: bus polling telegrams (FAM14) are logged as well. Default: False
     telegram_log_decode_eep: True                   # True: telegrams of known devices are decoded with their EEP. Default: True
     telegram_log_buffer_size: 500                   # number of telegrams kept in memory for the live view. Default: 500
+    # export of the recorded telegrams into InfluxDB, for analysis with Grafana (see docs/telegram-analysis/readme.md)
+    # timeseries_enabled: True
+    # timeseries_url: http://localhost:8086         # InfluxDB 2.x or 1.8+ (v2 compatibility api)
+    # timeseries_token: <api token>                 # InfluxDB 1.8: "user:password"
+    # timeseries_org: home                          # InfluxDB 2.x only
+    # timeseries_bucket: eltako                     # InfluxDB 1.8: "database/retention_policy"
   gateway:
   - id: 0
     device_type: esp2-network-reverse-bridge

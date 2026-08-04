@@ -3,4 +3,12 @@ clear_telegram_log:
   description: >
     Resets the in-memory statistics and the live buffer of the EnOcean telegram logger.
     The telegram log file itself is not modified.
+
+export_telegram_log_to_timeseries:
+  name: Export telegram log to timeseries database
+  description: >
+    Backfill: reads the complete history of the rotating telegram log files (jsonl) and
+    writes every telegram into the configured InfluxDB bucket. Requires the timeseries
+    export to be enabled in the general settings. Telegrams recorded from now on are
+    exported live anyway - this service is for the history from before.
     Only available if telegram recording is enabled (general_settings -> log_enocean_telegrams).

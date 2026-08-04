@@ -1,0 +1,273 @@
+{
+  "uid": "eltako-devices",
+  "title": "Eltako - Device analysis",
+  "tags": [
+    "eltako",
+    "enocean"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "textbox",
+        "query": "eltako",
+        "current": {
+          "text": "eltako",
+          "value": "eltako"
+        }
+      },
+      {
+        "name": "measurement",
+        "label": "Measurement",
+        "type": "textbox",
+        "query": "eltako_telegram",
+        "current": {
+          "text": "eltako_telegram",
+          "value": "eltako_telegram"
+        }
+      },
+      {
+        "name": "device",
+        "label": "Device",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "eltako-influxdb"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"device_name\")"
+      },
+      {
+        "name": "value",
+        "label": "Decoded value",
+        "description": "Field of the decoded EEP, e.g. temperature, humidity, illumination, meter_reading",
+        "type": "textbox",
+        "query": "temperature",
+        "current": {
+          "text": "temperature",
+          "value": "temperature"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "$value over time",
+      "description": "Every decoded EEP field is written as its own influx field. Switch the 'Decoded value' variable to humidity, illumination, meter_reading, wind_speed, ...",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "last",
+            "min",
+            "max",
+            "mean"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"${value}\")\n  |> filter(fn: (r) => contains(value: r.device_name, set: ${device:json}) or ${device:json}[0] == \"$__all\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"device_name\", \"address\"])",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Switching state of the actuators",
+      "description": "The decoded 'state' field of relays and the switching commands sent to them.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and (r._field == \"state\" or r._field == \"switching_command\"))\n  |> filter(fn: (r) => contains(value: r.device_name, set: ${device:json}) or ${device:json}[0] == \"$__all\")\n  |> group(columns: [\"device_name\", \"_field\"])",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Silent devices (last telegram per address)",
+      "description": "A device which has not reported for a long time either has an empty battery, a wrong address or a wrong EEP configured.",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"address\", \"device_name\", \"eep\"])\n  |> last()\n  |> group()\n  |> sort(columns: [\"_time\"])\n  |> keep(columns: [\"_time\", \"address\", \"device_name\", \"eep\"])\n  |> rename(columns: {_time: \"last seen\"})",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Telegrams per hour and area",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)\n  |> group(columns: [\"area\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"area\"])",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Repeater level (rp_count) per address",
+      "description": "How often a telegram was repeated before it arrived. A high value means the device is far away or the path is weak.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"rp_count\")\n  |> group(columns: [\"address\", \"device_name\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 50)\n  |> keep(columns: [\"address\", \"device_name\", \"_value\"])\n  |> rename(columns: {_value: \"avg repeater level\"})",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    }
+  ]
+}

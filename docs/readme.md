@@ -40,6 +40,10 @@
 * **Management of EnOcean Devices** 
   * To manage, inventory, and auto-generate the configuration you can use [EnOcean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager).
 
+* **Development**
+  * [Development container (Home Assistant + example data + Grafana)](dev-container/readme.md)
+  * [Standalone runtime (without Home Assistant)](standalone/readme.md)
+  * [Analysing telegrams with Grafana](grafana/readme.md)
 * **Testing**
   * [Testing (on Landing Page)](../README.md)
 

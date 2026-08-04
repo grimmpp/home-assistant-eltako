@@ -40,8 +40,25 @@ export const page = {
       <span class="pill">${formatNumber(info.total_count)} total</span>
       <span class="pill">${formatNumber(info.telegrams_per_minute)} / min</span>
       ${info.file_logging_enabled
-        ? `<span class="pill" title="${escapeHtml(info.file_path)}">${formatNumber(info.file_written_count)} written</span>`
-        : `<span class="pill warn" title="Set 'telegram_log_filename' to persist telegrams">memory only</span>`}`;
+        ? `<span class="pill" title="${escapeHtml(info.file_path)}${info.file_rotate_after_days
+             ? ` - rotates after ${info.file_rotate_after_days} day${info.file_rotate_after_days === 1 ? "" : "s"}` : ""}">
+             ${formatNumber(info.file_written_count)} written</span>`
+        : `<span class="pill warn" title="Set 'telegram_log_filename' to persist telegrams">memory only</span>`}
+      ${info.timeseries_enabled ? (info.timeseries || {}).last_error
+        ? `<span class="pill warn" title="${escapeHtml((info.timeseries || {}).last_error)}">timeseries error</span>`
+        : `<span class="pill on" title="${escapeHtml((info.timeseries || {}).url || "")} - bucket ${escapeHtml((info.timeseries || {}).bucket || "")}">
+             ${formatNumber((info.timeseries || {}).exported_count)} exported</span>`
+        : ""}
+      ${this._grafanaLink(info)}`;
+  },
+
+  /** Link to the Grafana dashboards - only if a Grafana url is configured. */
+  _grafanaLink(info) {
+    if (!info.timeseries_enabled || !info.grafana_url) return "";
+    return `<a class="pill link" href="${escapeHtml(info.grafana_url)}/dashboards?tag=eltako"
+               target="_blank" rel="noreferrer noopener"
+               title="Analyse the recorded history in Grafana (${escapeHtml(info.grafana_url)})">
+              Grafana &#8599;</a>`;
   },
 
   renderToolbar(ctx) {
@@ -65,6 +82,9 @@ export const page = {
       <span class="spacer"></span>
       <button id="send-telegram" class="action ${state.sendForm ? "" : "primary"}">
         ${state.sendForm ? "Close send form" : "Send telegram"}</button>
+      <button id="sync-grafana" class="action"
+              title="Push the dashboards shipped with the integration into the configured Grafana">
+        Sync dashboards</button>
       <button id="export" class="action">Export CSV</button>
       <button id="clear" class="action danger">Clear</button>`;
   },
@@ -90,6 +110,29 @@ export const page = {
       ctx.state.paused = !ctx.state.paused;
       ctx.requestRender();
     });
+    const syncGrafana = root.getElementById("sync-grafana");
+    if (syncGrafana) {
+      syncGrafana.addEventListener("click", async () => {
+        syncGrafana.disabled = true;
+        syncGrafana.textContent = "Syncing\u2026";
+        const result = await ctx.api.call(WS.GRAFANA_SYNC);
+        syncGrafana.disabled = false;
+        syncGrafana.textContent = "Sync dashboards";
+        if (!result) {
+          alert((ctx.api.lastError || {}).message || "Sync failed.");
+          ctx.api.lastError = null;
+          return;
+        }
+        const lines = (result.dashboards || []).map((dashboard) =>
+          `${dashboard.success ? "\u2713" : "\u2717"} ${dashboard.title}`
+          + `${dashboard.message ? ` - ${dashboard.message}` : ""}`);
+        alert(result.success
+          ? `${lines.length} dashboard(s) synced to ${result.grafana_url}`
+            + `${result.folder ? ` (folder '${result.folder}')` : ""}:\n\n${lines.join("\n")}`
+          : `${result.error || "Sync failed."}\n\n${lines.join("\n")}`);
+      });
+    }
+
     root.getElementById("export").addEventListener("click", () => {
       download(`eltako_telegrams_${timestampForFilename()}.csv`,
         toCsv(CSV_COLUMNS, this._filtered(ctx)), "text/csv");
@@ -150,9 +193,11 @@ export const page = {
             ${eep.hint ? `<span class="hint">${escapeHtml(eep.hint)}</span>` : ""}</td>
           <td>${escapeHtml(telegram.msg_type)}</td>
           <td class="mono">${escapeHtml(telegram.data || telegram.payload || "-")}</td>
+          <td class="mono signal" title="Signal strength (only reported by ESP3 transceivers)">
+            ${telegram.rssi_dbm != null ? `${escapeHtml(String(telegram.rssi_dbm))} dBm` : "-"}</td>
           <td class="decoded">${this._values(telegram, eep)}</td>
         </tr>
-        <tr class="detail" id="${detailId}"><td colspan="9"><pre>${escapeHtml(JSON.stringify(telegram, null, 2))}</pre></td></tr>`;
+        <tr class="detail" id="${detailId}"><td colspan="10"><pre>${escapeHtml(JSON.stringify(telegram, null, 2))}</pre></td></tr>`;
     }).join("");
 
     return `
@@ -161,7 +206,7 @@ export const page = {
         <table class="clickable">
           <thead><tr>
             <th>Time</th><th>Dir</th><th>Gateway</th><th>Address</th><th>Device / Entity</th>
-            <th>EEP</th><th>Message type</th><th>Data</th><th>Values</th>
+            <th>EEP</th><th>Message type</th><th>Data</th><th>Signal</th><th>Values</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>

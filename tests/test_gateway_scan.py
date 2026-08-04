@@ -54,6 +54,68 @@ class TestSysfsReading(TestCase):
         self.assertFalse(os.path.exists(os.path.normpath(os.path.join(base, '../../product'))))
 
 
+class PortInfoMock:
+    def __init__(self, device, manufacturer=None, product=None, description=None,
+                 serial_number=None, interface=None):
+        self.device = device
+        self.manufacturer = manufacturer
+        self.product = product
+        self.description = description
+        self.serial_number = serial_number
+        self.interface = interface
+
+
+class TestPyserialFallback(TestCase):
+    """macOS (/dev/cu.*) and windows (COMx) have no /dev/ttyUSB* and no sysfs - there the
+    ports come from pyserial. Relevant for the standalone runtime on a developer machine."""
+
+    def scan_with(self, ports):
+        original = gateway_scan._pyserial_ports
+        gateway_scan._pyserial_ports = lambda: ports
+        try:
+            return gateway_scan.scan_serial_ports()
+        finally:
+            gateway_scan._pyserial_ports = original
+
+    def test_macos_port_is_found_and_gets_a_suggestion(self):
+        ports = self.scan_with([{
+            'device': '/dev/cu.usbserial-AQ028YCS',
+            'manufacturer': 'FTDI', 'product': 'FT232R USB UART',
+            'serial_number': 'AQ028YCS', 'interface_name': None,
+        }])
+
+        port = next(p for p in ports if p['device'] == '/dev/cu.usbserial-AQ028YCS')
+        self.assertEqual(port['manufacturer'], 'FTDI')
+        self.assertIn('FTDI', port['name'])
+        # the FT232R descriptor suggests the Eltako gateways - also without sysfs
+        self.assertTrue(port['suggested_device_types'], msg=port)
+
+    def test_windows_com_port(self):
+        ports = self.scan_with([{
+            'device': 'COM3', 'manufacturer': 'Silicon Labs', 'product': 'CP2102 USB to UART',
+            'serial_number': None, 'interface_name': None,
+        }])
+
+        port = next(p for p in ports if p['device'] == 'COM3')
+        self.assertIn('esp3', " ".join(port['suggested_device_types']).lower())
+
+    def test_pyserial_enumeration_returns_port_objects(self):
+        """_pyserial_ports maps the pyserial objects into plain dicts."""
+        from serial.tools import list_ports
+
+        original = list_ports.comports
+        list_ports.comports = lambda: [PortInfoMock('COM7', manufacturer='FTDI',
+                                                    description='FT232R USB UART')]
+        try:
+            ports = gateway_scan._pyserial_ports()
+        finally:
+            list_ports.comports = original
+
+        self.assertEqual(ports, [{'device': 'COM7', 'manufacturer': 'FTDI',
+                                  'product': 'FT232R USB UART', 'serial_number': None,
+                                  'interface_name': None}])
+
+
 class TestDeviceTypeSuggestion(TestCase):
 
     def test_ftdi_suggests_the_eltako_gateways(self):
@@ -63,11 +125,16 @@ class TestDeviceTypeSuggestion(TestCase):
         self.assertIn('fam14', types)
         self.assertTrue(hint)
 
-    def test_enocean_programmer_suggests_esp3(self):
+    def test_enocean_programmer_suggests_fam_usb_first(self):
+        """This is the descriptor of a real Eltako FAM-USB ('EnOcean Programmer V3.2', two
+        ports). ESP3 sticks use it too, so both are suggested - but the FAM-USB first: it is
+        the Eltako device and needs 9600 baud instead of 57600."""
         types, hint = gateway_scan._describe_descriptor("EnOcean GmbH EnOcean_Programmer V3.2")
 
-        self.assertEqual(types[0], 'enocean-usb300')
-        self.assertIn('two ports', hint)
+        self.assertEqual(types[0], 'fam-usb')
+        self.assertIn('enocean-usb300', types)
+        self.assertIn('TWO ports', hint)
+        self.assertIn('9600', hint)
 
     def test_unknown_device(self):
         self.assertEqual(gateway_scan._describe_descriptor("Some random adapter"), ([], ""))

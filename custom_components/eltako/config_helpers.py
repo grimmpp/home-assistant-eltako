@@ -17,11 +17,23 @@ DEFAULT_GENERAL_SETTINGS = {
     CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
     CONF_ENABLE_TEACH_IN_BUTTONS: False,
     CONF_ENABLE_FRONTEND: False,
+    # default True while the test page is under development - switch the default
+    # to False for a release
+    CONF_ENABLE_TEST_PAGE: True,
     CONF_LOG_ENOCEAN_TELEGRAMS: False,
     CONF_TELEGRAM_LOG_FILENAME: "",
     CONF_TELEGRAM_LOG_FORMAT: TelegramLogFormat.JSONL.value,
     CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB: 10,
+    CONF_TELEGRAM_LOG_ROTATE_DAYS: 7,
     CONF_TELEGRAM_LOG_BACKUP_COUNT: 3,
+    CONF_TIMESERIES_ENABLED: False,
+    CONF_TIMESERIES_URL: "",
+    CONF_TIMESERIES_TOKEN: "",
+    CONF_TIMESERIES_ORG: "",
+    CONF_TIMESERIES_BUCKET: "eltako",
+    CONF_TIMESERIES_MEASUREMENT: "eltako_telegram",
+    CONF_GRAFANA_URL: "",
+    CONF_GRAFANA_TOKEN: "",
     CONF_TELEGRAM_LOG_INCLUDE_POLLING: False,
     CONF_TELEGRAM_LOG_DECODE_EEP: True,
     CONF_TELEGRAM_LOG_BUFFER_SIZE: 500,
@@ -295,14 +307,58 @@ def sanitize_object_id(id: str) -> str:
     return result if result else DOMAIN
 
 
-def remove_duplicate_devices(config: dict, log: bool = True) -> dict[str, list[str]]:
-    """Remove device configurations which are declared more than once and report them.
+def collect_additional_senders(config: dict) -> dict[tuple[str, str], list[dict]]:
+    """Senders of wireless devices which are declared for more than one gateway.
 
-    Wireless devices are gateway independent: their entities listen to telegrams of all
-    gateways and their unique id does not contain the gateway id. Configuring such a device
-    for two gateways would therefore create two entities with the same unique id, which
-    Home Assistant rejects with 'Platform eltako does not generate unique IDs'.
-    The first declaration wins, all later ones are dropped.
+    The radio is a virtual bus with several gateways (and repeaters) attached to it. A
+    wireless device therefore gets ONE entity (see remove_duplicate_devices), but it can be
+    taught into several gateways - each declaration carries the sender of its gateway.
+    This collects the senders of the second and later declarations, keyed by
+    (platform, device address), so that the entity can repeat every command through all
+    of its gateways (commands are idempotent, telegrams arriving twice are fine).
+
+    Must run BEFORE remove_duplicate_devices - it reads the declarations which are
+    removed there.
+    """
+    result: dict[tuple[str, str], list[dict]] = {}
+    seen: set[tuple[str, str]] = set()
+
+    for gateway_config in config.get(CONF_GATEWAY, []) or []:
+        gateway_id = gateway_config.get(CONF_ID)
+        for platform, devices in (gateway_config.get(CONF_DEVICES, {}) or {}).items():
+            for device in devices or []:
+                dev_id = str(device.get(CONF_ID, '')).upper().split(' ')[0]
+                if not dev_id or dev_id.startswith('00-00-'):
+                    continue        # bus devices get one entity per gateway instead
+                key = (str(platform), dev_id)
+                if key not in seen:
+                    seen.add(key)   # the first declaration becomes the entity
+                    continue
+                sender = device.get(CONF_SENDER)
+                if isinstance(sender, dict) and sender.get(CONF_ID):
+                    result.setdefault(key, []).append({
+                        CONF_ID: str(sender[CONF_ID]),
+                        CONF_EEP: sender.get(CONF_EEP),
+                        CONF_GATEWAY_ID: gateway_id,
+                    })
+    return result
+
+
+def remove_duplicate_devices(config: dict, log: bool = True) -> dict[str, list[str]]:
+    """Remove device configurations which collide and report them.
+
+    Several gateways on one bus and devices taught into more than one gateway are a
+    supported setup: telegrams arriving through several gateways are fine and all commands
+    are idempotent. Therefore **bus devices** (local 00-00-.. addresses) may be declared
+    for more than one gateway - their unique id contains the gateway id, every declaration
+    becomes its own working entity.
+
+    Only two real collisions are removed (first declaration wins):
+    * the same device declared twice for the **same** gateway
+    * a **wireless** device declared for more than one gateway: its unique id carries no
+      gateway id (the entity listens to the telegrams of all gateways anyway), so a second
+      declaration would be rejected by Home Assistant with 'Platform eltako does not
+      generate unique IDs'.
     """
     occurrences: dict[str, list[str]] = {}
 
@@ -315,7 +371,11 @@ def remove_duplicate_devices(config: dict, log: bool = True) -> dict[str, list[s
                 dev_id = device.get(CONF_ID)
                 if not dev_id:
                     continue
-                key = f"{platform}/{str(dev_id).upper()}"
+                dev_id = str(dev_id).upper()
+                # local bus addresses get one entity per gateway (unique id contains the
+                # gateway id) - they only collide within the same gateway
+                is_bus_device = dev_id.startswith('00-00-')
+                key = f"{platform}/{dev_id}" + (f"@gw{gateway_id}" if is_bus_device else "")
                 if key in occurrences:
                     devices.remove(device)      # keep the first declaration only
                 occurrences.setdefault(key, []).append(f"gateway {gateway_id}")
@@ -324,10 +384,17 @@ def remove_duplicate_devices(config: dict, log: bool = True) -> dict[str, list[s
     if log:
         for key, sources in duplicates.items():
             platform, dev_id = key.split('/', 1)
-            LOGGER.warning(f"Device '{dev_id}' is configured {len(sources)} times as {platform} "
-                           f"({', '.join(sources)}). Entities of wireless devices are shared by all "
-                           f"gateways, so only the declaration of {sources[0]} is used. "
-                           f"Please remove the duplicates from your configuration.")
+            if '@gw' in dev_id:
+                dev_id = dev_id.split('@gw', 1)[0]
+                LOGGER.warning(f"Device '{dev_id}' is configured {len(sources)} times as {platform} "
+                               f"on the same gateway ({sources[0]}). Only the first declaration "
+                               f"is used, please remove the duplicates.")
+            else:
+                LOGGER.info(f"Wireless device '{dev_id}' is configured {len(sources)} times as "
+                            f"{platform} ({', '.join(sources)}). The radio is one virtual bus, so "
+                            f"one entity is created (declaration of {sources[0]}) - it receives "
+                            f"through all gateways and repeats its commands through every gateway "
+                            f"with a declared sender.")
     return duplicates
 
 

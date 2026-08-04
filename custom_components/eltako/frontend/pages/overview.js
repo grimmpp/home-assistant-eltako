@@ -20,6 +20,27 @@ export const page = {
     ]);
     if (form) ctx.state.gatewayForm = form;
 
+    // a gateway module found on the devices page opens the wizard prefilled
+    if (ctx.state.pendingNewGateway && !ctx.state.gatewayEditor) {
+      const pending = ctx.state.pendingNewGateway;
+      ctx.state.pendingNewGateway = null;
+      await this._openGatewayWizard(ctx, pending);
+    }
+  },
+
+  /** Open the gateway wizard with a FRESH form: the port list must reflect what is
+   *  plugged in right now, not what was there when the page was loaded. */
+  async _openGatewayWizard(ctx, preset = {}) {
+    const form = (await ctx.api.call(WS.GATEWAY_FORM)) || ctx.state.gatewayForm || {};
+    ctx.state.gatewayForm = form;
+    ctx.state.gatewayEditor = { values: {
+      device_type: preset.device_type || (form.types || [{}])[0].device_type || "fgw14usb",
+      id: form.next_free_id, base_id: form.default_base_id || "00-00-00-00",
+      serial_path: ((form.ports || []).find((p) => p.free) || {}).device || "",
+    }};
+    ctx.state.gatewayError = null;
+    ctx.state.gatewayMessage = null;
+    ctx.requestContentRender(true);
   },
 
   render(ctx) {
@@ -81,13 +102,6 @@ export const page = {
   },
 
   /** Navigate to the device page of home assistant (canonical panel navigation). */
-  _openHaDevice(deviceId) {
-    const path = `/config/devices/device/${deviceId}`;
-    history.pushState(null, "", path);
-    window.dispatchEvent(new CustomEvent("location-changed"));
-  },
-
-  /** Wizard for a new gateway: type, connection, id, name, base id. */  /** Navigate to the device page of home assistant (canonical panel navigation). */
   _openHaDevice(deviceId) {
     const path = `/config/devices/device/${deviceId}`;
     history.pushState(null, "", path);
@@ -204,18 +218,7 @@ export const page = {
   afterRender(ctx, root) {
     const addGateway = root.getElementById("add-gateway");
     if (addGateway) {
-      addGateway.addEventListener("click", async () => {
-        if (!ctx.state.gatewayForm) ctx.state.gatewayForm = await ctx.api.call(WS.GATEWAY_FORM);
-        const form = ctx.state.gatewayForm || {};
-        ctx.state.gatewayEditor = { values: {
-          device_type: (form.types || [{}])[0].device_type || "fgw14usb",
-          id: form.next_free_id, base_id: form.default_base_id || "00-00-00-00",
-          serial_path: ((form.ports || []).find((p) => p.free) || {}).device || "",
-        }};
-        ctx.state.gatewayError = null;
-        ctx.state.gatewayMessage = null;
-        ctx.requestContentRender(true);
-      });
+      addGateway.addEventListener("click", () => this._openGatewayWizard(ctx));
     }
 
     const cancel = root.getElementById("gateway-cancel");
@@ -285,6 +288,14 @@ export const page = {
         const result = await ctx.api.call(WS.GATEWAY_SCAN);
         ctx.state.portScanRunning = false;
         if (result) ctx.state.portScan = result;
+        // keep the port dropdown of the gateway wizard in sync with the scan - without
+        // wiping what the user already typed into an open wizard
+        const form = await ctx.api.call(WS.GATEWAY_FORM);
+        if (form) ctx.state.gatewayForm = form;
+        const editorRoot = ctx.root && ctx.root.getElementById("gateway-editor");
+        if (editorRoot && ctx.state.gatewayEditor) {
+          ctx.state.gatewayEditor.values = readFields(editorRoot);
+        }
         ctx.requestContentRender(true);
       });
     }

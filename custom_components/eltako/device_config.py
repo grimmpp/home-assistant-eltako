@@ -25,6 +25,7 @@ from eltakobus.util import AddressExpression
 
 from .const import *
 from . import config_helpers
+from .device_catalog import get_device_templates
 from .schema import (
     BinarySensorSchema,
     ClimateSchema,
@@ -51,8 +52,11 @@ SUPPORTED_PLATFORMS: dict[str, type] = {
 FIELD_ID = {'name': CONF_ID, 'label': 'Address', 'type': 'address', 'required': True,
             'help': "EnOcean address, e.g. FF-AA-80-01. Bus devices use their local address, e.g. 00-00-00-01."}
 FIELD_NAME = {'name': CONF_NAME, 'label': 'Name', 'type': 'text', 'required': False}
-FIELD_AREA = {'name': CONF_AREA, 'label': 'Area', 'type': 'text', 'required': False,
-              'help': "Area of the device in Home Assistant. It is created if it does not exist."}
+# combo: text input with suggestions. The options (the areas known to Home Assistant) are
+# injected by ws_device_form - a new area can still be typed, it is created automatically.
+FIELD_AREA = {'name': CONF_AREA, 'label': 'Area', 'type': 'combo', 'required': False,
+              'help': "Area of the device in Home Assistant. Pick one of the existing areas "
+                      "or type a new one - it is created if it does not exist."}
 
 
 # Typical Eltako devices per EEP. The description itself comes from the docstring of the EEP
@@ -132,13 +136,23 @@ def _sender_field(eeps: list[str], required: bool) -> dict:
 
 
 def get_form_descriptor() -> dict:
-    """Describe all platforms and their fields so that the web ui can render the forms."""
+    """Describe all platforms and their fields so that the web ui can render the forms.
+
+    Besides the fields every platform carries `device_types`: the known devices of the
+    central catalog (device_catalog.py). Selecting one in the form prefills its EEP and
+    sender EEP as template - like the device list of the EnOcean Device Manager. The
+    templates are filtered against the EEPs the platform schema supports, so the form
+    can never offer a combination the validation would reject.
+    """
     return {
         'platforms': [
             {
                 'platform': Platform.BINARY_SENSOR.value,
                 'label': 'Binary sensor',
                 'help': "Rocker switches, window/door contacts, occupancy sensors, ...",
+                'device_types': get_device_templates(
+                    Platform.BINARY_SENSOR.value,
+                    supported_eeps=BinarySensorSchema.ENTITY_SCHEMA.validators[0].schema[vol.Required(CONF_EEP)].container),
                 'fields': [
                     FIELD_ID,
                     _eep_field(BinarySensorSchema.ENTITY_SCHEMA.validators[0].schema[vol.Required(CONF_EEP)].container),
@@ -153,6 +167,8 @@ def get_form_descriptor() -> dict:
                 'platform': Platform.SENSOR.value,
                 'label': 'Sensor',
                 'help': "Temperature, humidity, weather station, meter readings, ...",
+                'device_types': get_device_templates(
+                    Platform.SENSOR.value, supported_eeps=SensorSchema.CONF_EEP_SUPPORTED),
                 'fields': [
                     FIELD_ID,
                     _eep_field(SensorSchema.CONF_EEP_SUPPORTED),
@@ -165,6 +181,9 @@ def get_form_descriptor() -> dict:
                 'platform': Platform.LIGHT.value,
                 'label': 'Light',
                 'help': "Eltako relays (M5-38-08) and dimmers (A5-38-08)",
+                'device_types': get_device_templates(
+                    Platform.LIGHT.value, supported_eeps=LightSchema.CONF_EEP_SUPPORTED,
+                    supported_sender_eeps=LightSchema.CONF_SENDER_EEP_SUPPORTED),
                 'fields': [
                     FIELD_ID,
                     _eep_field(LightSchema.CONF_EEP_SUPPORTED),
@@ -176,6 +195,10 @@ def get_form_descriptor() -> dict:
                 'platform': Platform.SWITCH.value,
                 'label': 'Switch',
                 'help': "Same actuators as light, but represented as switch (sockets, pumps, ...)",
+                'device_types': get_device_templates(
+                    'light',        # switches use the same actuators as lights
+                    supported_eeps=SwitchSchema.CONF_EEP_SUPPORTED,
+                    supported_sender_eeps=SwitchSchema.CONF_SENDER_EEP_SUPPORTED),
                 'fields': [
                     FIELD_ID,
                     _eep_field(SwitchSchema.CONF_EEP_SUPPORTED),
@@ -187,6 +210,9 @@ def get_form_descriptor() -> dict:
                 'platform': Platform.COVER.value,
                 'label': 'Cover',
                 'help': "Blind/shutter actuators (FSB14, FSB61, ...)",
+                'device_types': get_device_templates(
+                    Platform.COVER.value, supported_eeps=CoverSchema.CONF_EEP_SUPPORTED,
+                    supported_sender_eeps=CoverSchema.CONF_SENDER_EEP_SUPPORTED),
                 'fields': [
                     FIELD_ID,
                     _eep_field(CoverSchema.CONF_EEP_SUPPORTED),
@@ -206,6 +232,9 @@ def get_form_descriptor() -> dict:
                 'platform': Platform.CLIMATE.value,
                 'label': 'Climate',
                 'help': "Heating and cooling actuators (FAE14, FHK14, ...)",
+                'device_types': get_device_templates(
+                    Platform.CLIMATE.value, supported_eeps=ClimateSchema.CONF_CLIMATE_EEP,
+                    supported_sender_eeps=ClimateSchema.CONF_CLIMATE_SENDER_EEP),
                 'fields': [
                     FIELD_ID,
                     _eep_field(ClimateSchema.CONF_CLIMATE_EEP),
@@ -527,6 +556,36 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_device_remove)
 
 
+def _get_area_names(hass: HomeAssistant) -> list[str]:
+    """All areas known to Home Assistant, offered as suggestions for the area field."""
+    try:
+        from homeassistant.helpers import area_registry as ar
+
+        return sorted((area.name for area in ar.async_get(hass).async_list_areas()),
+                      key=str.casefold)
+    except Exception:   # noqa: BLE001 - registry not available (e.g. in tests)
+        return []
+
+
+def _inject_area_options(descriptor: dict, areas: list[str]) -> None:
+    """Fill the suggestions of every area field (incl. fields nested in groups).
+
+    Replaces the field dicts instead of mutating them - FIELD_AREA is a shared module
+    level constant and must not accumulate state between websocket calls.
+    """
+    def walk(fields: list[dict]) -> None:
+        for index, field in enumerate(fields):
+            if field.get('name') == CONF_AREA:
+                fields[index] = {**field, 'options': areas}
+            elif field.get('fields'):
+                field['fields'] = list(field['fields'])
+                walk(field['fields'])
+
+    for platform in descriptor.get('platforms', []):
+        platform['fields'] = list(platform.get('fields', []))
+        walk(platform['fields'])
+
+
 @websocket_api.require_admin
 @websocket_api.websocket_command({vol.Required('type'): WS_DEVICE_FORM})
 @callback
@@ -535,6 +594,8 @@ def ws_device_form(hass: HomeAssistant, connection, msg) -> None:
     from . import get_gateway_from_hass
 
     descriptor = get_form_descriptor()
+    descriptor['areas'] = _get_area_names(hass)
+    _inject_area_options(descriptor, descriptor['areas'])
     descriptor['gateways'] = [{
         'id': getattr(get_gateway_from_hass(hass, entry), 'dev_id', None),
         'name': getattr(get_gateway_from_hass(hass, entry), 'dev_name', entry.title),

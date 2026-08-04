@@ -1,0 +1,581 @@
+{
+  "uid": "eltako-telegrams",
+  "title": "Eltako - Telegram overview",
+  "tags": [
+    "eltako",
+    "enocean"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "textbox",
+        "query": "eltako",
+        "current": {
+          "text": "eltako",
+          "value": "eltako"
+        }
+      },
+      {
+        "name": "measurement",
+        "label": "Measurement",
+        "type": "textbox",
+        "query": "eltako_telegram",
+        "current": {
+          "text": "eltako_telegram",
+          "value": "eltako_telegram"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Telegrams in range",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> sum()\n  |> keep(columns: [\"_value\"])",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Distinct addresses",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\")\n  |> keep(columns: [\"address\"])\n  |> group()\n  |> distinct(column: \"address\")\n  |> count()",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Telegrams of unknown devices",
+      "description": "Addresses which are not configured in the integration. A device you just pressed a button on shows up here.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.known == \"False\")\n  |> sum()\n  |> keep(columns: [\"_value\"])",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Gateways seen",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\")\n  |> keep(columns: [\"gateway_id\"])\n  |> group()\n  |> distinct(column: \"gateway_id\")\n  |> count()",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Telegram rate by direction",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"direction\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"direction\"])\n  |> rename(columns: {_value: \"telegrams\"})",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Telegram rate by gateway",
+      "description": "With several gateways on one radio/bus the same telegram is received more than once - that is expected.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"gateway_id\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"gateway_id\"])",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Most active addresses",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "xTickLabelRotation": -45,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"address\", \"device_name\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 20)\n  |> map(fn: (r) => ({ label: if exists r.device_name and r.device_name != \"\" then r.device_name else r.address, telegrams: r._value }))",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "Telegrams per message type",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 12,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"msg_type\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "Telegrams per EEP",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"eep\"])\n  |> sum()\n  |> group()\n  |> map(fn: (r) => ({ r with eep: if r.eep == \"\" then \"not configured\" else r.eep }))\n  |> sort(columns: [\"_value\"], desc: true)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "description": "Telegrams of addresses which are not configured have no EEP - they are summarized as 'not configured' instead of a nameless slice."
+    },
+    {
+      "type": "table",
+      "title": "Unknown devices (not configured yet)",
+      "description": "Sorted by the number of telegrams. Use 'Devices -> + add device' in the Eltako web ui to configure them.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "address"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "All telegrams of this address",
+                    "url": "/d/eltako-inspect/eltako-product-and-test-inspector?var-address=${__value.raw}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.known == \"False\")\n  |> group(columns: [\"address\", \"msg_type\", \"gateway_id\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 50)\n  |> keep(columns: [\"address\", \"msg_type\", \"gateway_id\", \"_value\"])\n  |> rename(columns: {_value: \"telegrams\"})",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux"
+        }
+      ],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Configured vs. unconfigured addresses over time",
+      "description": "Telegrams of addresses which are not part of the configuration. Press a button on a device and its telegrams appear here - the fastest way to find out which address it uses.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "values": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> map(fn: (r) => ({ r with state: if r.known == \"True\" then \"configured\" else \"not configured\" }))\n  |> group(columns: [\"state\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"state\"])"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Most active unconfigured addresses (with their last payload)",
+      "description": "Click an address to open the 'Product and test inspector' with all of its telegrams.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "address"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "All telegrams of this address",
+                    "url": "/d/eltako-inspect/eltako-product-and-test-inspector?var-address=${__value.raw}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"data\" and r.known == \"False\")\n  |> group(columns: [\"address\", \"msg_type\"])\n  |> reduce(identity: {telegrams: 0, payload: \"\"},\n            fn: (r, accumulator) => ({ telegrams: accumulator.telegrams + 1, payload: r._value }))\n  |> group()\n  |> sort(columns: [\"telegrams\"], desc: true)\n  |> limit(n: 20)\n  |> keep(columns: [\"address\", \"msg_type\", \"telegrams\", \"payload\"])"
+        }
+      ]
+    }
+  ]
+}

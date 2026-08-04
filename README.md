@@ -116,6 +116,10 @@ In order to automatically generate the configuration and managing your devices y
 
 # Testing
 
+For manual testing there are two ready-to-use environments: the **dev container** ([docs/dev-container](docs/dev-container/readme.md)) and the **standalone runtime** ([docs/standalone](docs/standalone/readme.md)) which runs the integration without Home Assistant for tests, analysis and calibration.
+
+Dev container ([dev/](dev/README.md)): `cd dev && ./start.sh` starts a Home Assistant with the integration mounted live, a seeded admin user (admin/admin), the example configuration of [ha.yaml](ha.yaml) and 24 h of example telegram history - optionally with InfluxDB + Grafana (`./start.sh analytics`).
+
 Testing this integration via Home Assistant development container or updating it in a Home Assistant instance is quite time consuming. Therefore I've added some basic tests to ensure quickly a base quality. 
 
 Unit and component tests for this integration are located in the folder tests. There is already a vscode settings.json prepared to start them via vscode or you can just run the following command from the repo folder.

@@ -894,16 +894,19 @@ class GatewayLastReceivedMessage(EltakoSensor):
     async def async_value_changed(self, value: datetime) -> None:
         try:
             self.value_changed(value)
-        except AttributeError as e:
-            # Home Assistant not ready yet
-            pass  
+        except Exception as e:  # noqa: BLE001 - an event listener must not break the bus
+            # This used to swallow AttributeError silently ("Home Assistant not ready yet"),
+            # which hid an assignment to the read-only property `native_value` - the sensor
+            # never updated. Log it instead, so the next such bug is visible.
+            LOGGER.warning(f"[{Platform.SENSOR}] [{self.dev_name}] Cannot apply the received "
+                           f"value {value!r}: {e}", exc_info=True)
 
     def value_changed(self, value: datetime) -> None:
         """Update the current value."""
         # LOGGER.debug("[%s] Last message received", Platform.SENSOR)
 
         if isinstance(value, datetime):
-            self.native_value = value
+            self._attr_native_value = value
             self.schedule_update_ha_state()
 
 class GatewayReceivedMessagesInActiveSession(EltakoSensor):
@@ -918,10 +921,11 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                             key="Received Messages per Session",
                             name="Received Messages per Session",
                             state_class=SensorStateClass.TOTAL_INCREASING,
-                            # device_class=SensorDeviceClass.VOLUME,
-                            # native_unit_of_measurement="Messages", # => raises error message
-                            unit_of_measurement="count",
-                            suggested_unit_of_measurement="Messages",
+                            # A free unit is only accepted as native_unit_of_measurement and
+                            # only without a device class. 'suggested_unit_of_measurement' is
+                            # validated against the units of the device class and made Home
+                            # Assistant reject the whole entity.
+                            native_unit_of_measurement="messages",
                             icon="mdi:chart-line",
                         )
         )
@@ -942,15 +946,15 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
     async def async_value_changed(self, value: int) -> None:
         try:
             self.value_changed(value)
-        except AttributeError as e:
-            # Home Assistant not ready yet
-            pass  
+        except Exception as e:  # noqa: BLE001 - an event listener must not break the bus
+            LOGGER.warning(f"[{Platform.SENSOR}] [{self.dev_name}] Cannot apply the received "
+                           f"message count {value!r}: {e}", exc_info=True)
 
     def value_changed(self, value: int) -> None:
         """Update the current value."""
         # LOGGER.debug("[%s] received amount of messages: %s", Platform.SENSOR, str(value))
 
-        self.native_value = value
+        self._attr_native_value = value
         self.schedule_update_ha_state()
 
 
@@ -987,7 +991,7 @@ class GatewayBaseId(EltakoSensor):
         """Update the current value."""
 
         if isinstance(base_id, AddressExpression):
-            self.native_value = b2s(base_id)
+            self._attr_native_value = b2s(base_id)
             self.schedule_update_ha_state()
 
 
@@ -1079,7 +1083,7 @@ class EventListenerInfoField(EltakoSensor):
     
     def value_changed(self, event) -> None:
         LOGGER.debug(f"Received event: {event}")
-        self.native_value = self.convert_event_function(event)
+        self._attr_native_value = self.convert_event_function(event)
 
         self.schedule_update_ha_state()
             

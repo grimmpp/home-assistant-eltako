@@ -1,0 +1,98 @@
+# Home Assistant dev container for the Eltako integration.
+#
+#   ./start.sh            (or: docker compose up -d)
+#   http://localhost:8123 - login admin / admin, the Eltako panel is in the sidebar
+#
+# The integration is mounted live from ../custom_components/eltako - after a code change
+# restart home assistant (Developer tools -> Restart, or: docker compose restart homeassistant).
+# The demo configuration (gateways + devices) comes from ../ha.yaml, included as package.
+#
+# Reset everything (users, storage, history):  docker compose down -v
+#
+# Optional analytics stack (InfluxDB 2 + Grafana) for the timeseries export:
+#   docker compose --profile analytics up -d
+#   InfluxDB:  http://localhost:8086  (admin / eltako-dev, org 'home', bucket 'eltako', token 'eltako-dev-token')
+#   Grafana:   http://localhost:3000  (admin / admin, InfluxDB datasource preconfigured)
+#   In the Eltako web ui (About page) set: timeseries_enabled=on, url=http://influxdb:8086,
+#   token=eltako-dev-token, org=home, bucket=eltako
+
+services:
+  # copies the seed (pre-onboarded admin user, eltako config entry, sample telegram log)
+  # into the config volume on the very first start - later starts leave it untouched
+  init:
+    image: alpine:3
+    volumes:
+      - ha_config:/config
+      - ./seed:/seed:ro
+    command: >
+      sh -c "if [ ! -f /config/.storage/onboarding ]; then
+               echo 'Seeding fresh /config ...' &&
+               mkdir -p /config/.storage &&
+               cp -rv /seed/config/. /config/;
+             else echo 'Config already seeded.'; fi"
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: eltako-dev-ha
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    # LINUX host: pass a usb gateway straight through (uncomment and adjust).
+    # macOS/Windows cannot do that - docker runs in a vm without usb access. Publish the port
+    # on the host instead: ./share-serial.sh /dev/cu.usbserial-XXX 9600 5100 and configure the
+    # gateway as 'lan-gw-esp2' with host.docker.internal:5100. See README.md.
+    # devices:
+    #   - "/dev/ttyUSB0:/dev/ttyUSB0"
+    volumes:
+      - ha_config:/config
+      - ../custom_components/eltako:/config/custom_components/eltako
+      - ../ha.yaml:/config/ha.yaml:ro
+      - ../blueprints/automation/eltako:/config/blueprints/automation/eltako:ro
+    ports:
+      - "8123:8123"
+    environment:
+      TZ: Europe/Berlin
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: eltako-dev-influxdb
+    profiles: [analytics]
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: eltako-dev
+      DOCKER_INFLUXDB_INIT_ORG: home
+      DOCKER_INFLUXDB_INIT_BUCKET: eltako
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: eltako-dev-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: eltako-dev-grafana
+    profiles: [analytics]
+    depends_on:
+      - influxdb
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      # single source of truth: the dashboards ship with the integration, so the sync button
+      # of the web ui pushes exactly the same files (see custom_components/eltako/grafana)
+      - ../custom_components/eltako/grafana/dashboards:/etc/grafana/provisioning/dashboards/eltako:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # open the Eltako telegram overview right away instead of the Grafana welcome page
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/eltako/telegram-overview.json
+    restart: unless-stopped
+
+volumes:
+  ha_config:
+  influxdb_data:
+  grafana_data:

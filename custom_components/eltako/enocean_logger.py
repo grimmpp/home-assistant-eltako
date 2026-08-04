@@ -100,6 +100,7 @@ CSV_COLUMNS = [
     'msg_type', 'org', 'address', 'local_address', 'status', 'data', 'raw',
     'known', 'role', 'eep', 'device_name', 'entity_ids', 'platforms', 'area',
     'rp_count', 'repeated', 'teach_in_profile', 'teach_in_manufacturer', 'decoded',
+    'rssi_dbm',
 ]
 
 
@@ -207,6 +208,7 @@ class DeviceStatistics:
         self.first_seen: str | None = None
         self.last_seen: str | None = None
         self.last_data: str | None = None
+        self.last_status: str | None = None
         self.last_decoded: dict | None = None
         self.min_interval: float | None = None
         self.max_interval: float | None = None
@@ -232,6 +234,7 @@ class DeviceStatistics:
             self.first_seen = record.get('timestamp')
         self.last_seen = record.get('timestamp')
         self.last_data = record.get('data')
+        self.last_status = record.get('status')
         if record.get('decoded'):
             self.last_decoded = record['decoded']
         if record.get('local_address'):
@@ -291,6 +294,7 @@ class DeviceStatistics:
             'first_seen': self.first_seen,
             'last_seen': self.last_seen,
             'last_data': self.last_data,
+            'last_status': self.last_status,
             'last_decoded': self.last_decoded,
             'min_interval': None if self.min_interval is None else round(self.min_interval, 3),
             'max_interval': None if self.max_interval is None else round(self.max_interval, 3),
@@ -300,15 +304,23 @@ class DeviceStatistics:
 
 class TelegramFileWriter(threading.Thread):
     """Writes telegrams into a rotating file. Runs in its own thread so that neither
-    the Home Assistant event loop nor the serial bus thread is blocked by disk i/o."""
+    the Home Assistant event loop nor the serial bus thread is blocked by disk i/o.
+
+    The file rotates when it grows beyond `max_bytes` **or** when its oldest telegram is
+    older than `max_age_seconds` - whichever happens first. The time based rotation keeps
+    the files aligned with a time range (default one week), so "last week" is simply the
+    previous backup file, independent of how busy the bus was.
+    """
 
     _SENTINEL = object()
 
-    def __init__(self, path: str, log_format: str, max_bytes: int, backup_count: int):
+    def __init__(self, path: str, log_format: str, max_bytes: int, backup_count: int,
+                 max_age_seconds: float = 0):
         super().__init__(name="eltako_telegram_log_writer", daemon=True)
         self.path = path
         self.log_format = log_format
         self.max_bytes = max_bytes
+        self.max_age_seconds = max_age_seconds
         self.backup_count = backup_count
         self.written_count = 0
         self.dropped_count = 0
@@ -316,6 +328,9 @@ class TelegramFileWriter(threading.Thread):
         self._queue: queue.Queue = queue.Queue(maxsize=FILE_QUEUE_SIZE)
         self._file = None
         self._size = 0
+        # unix timestamp of the oldest record in the current file - survives a restart
+        # because it is read back from the file itself (see _read_oldest_timestamp)
+        self.oldest_record_at: float | None = None
 
     ### public api (thread safe)
 
@@ -362,10 +377,31 @@ class TelegramFileWriter(threading.Thread):
         if directory:
             os.makedirs(directory, exist_ok=True)
         is_new_file = not os.path.exists(self.path) or os.path.getsize(self.path) == 0
+        if not is_new_file:
+            # continue an existing file: its age is defined by its oldest record, not by
+            # the restart - otherwise the time based rotation would reset on every restart
+            self.oldest_record_at = self._read_oldest_timestamp()
         self._file = open(self.path, 'a', encoding='utf-8', newline='')
         self._size = os.path.getsize(self.path)
         if is_new_file:
             self._write_header()
+
+    def _read_oldest_timestamp(self) -> float | None:
+        """Timestamp of the first record in the existing file (jsonl and csv both carry it)."""
+        try:
+            with open(self.path, encoding='utf-8') as file:
+                first = file.readline().strip()
+                if self.log_format == TelegramLogFormat.CSV.value and first.startswith('seq;'):
+                    first = file.readline().strip()     # skip the header
+                if not first:
+                    return None
+                if self.log_format == TelegramLogFormat.CSV.value:
+                    timestamp = first.split(';')[CSV_COLUMNS.index('timestamp')]
+                else:
+                    timestamp = json.loads(first).get('timestamp')
+                return datetime.fromisoformat(str(timestamp)).timestamp()
+        except Exception:   # noqa: BLE001 - an unreadable first line must not break the writer
+            return None
 
     def _close(self) -> None:
         if self._file:
@@ -408,9 +444,14 @@ class TelegramFileWriter(threading.Thread):
         self._file.flush()
         self._size += len(line.encode('utf-8'))
         self.written_count += 1
+        if self.oldest_record_at is None:
+            self.oldest_record_at = time.time()
 
     def _rotate_if_needed(self, next_size: int) -> None:
-        if self.max_bytes <= 0 or self._size + next_size <= self.max_bytes:
+        too_big = self.max_bytes > 0 and self._size + next_size > self.max_bytes
+        too_old = (self.max_age_seconds > 0 and self.oldest_record_at is not None
+                   and time.time() - self.oldest_record_at > self.max_age_seconds)
+        if not too_big and not too_old:
             return
 
         self._close()
@@ -430,6 +471,7 @@ class TelegramFileWriter(threading.Thread):
         LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Rotated telegram log file '{self.path}'.")
         self._file = open(self.path, 'a', encoding='utf-8', newline='')
         self._size = 0
+        self.oldest_record_at = None        # set again by the first record of the new file
         self._write_header()
 
 
@@ -459,6 +501,10 @@ class EnOceanTelegramLogger:
 
         self.file_path: str | None = None
         self._writer: TelegramFileWriter | None = None
+
+        # optional export into a timeseries database (InfluxDB, see timeseries.py)
+        from .timeseries import create_exporter_from_settings
+        self._timeseries = create_exporter_from_settings(general_settings)
 
         self._buffer: deque = deque(maxlen=max(self.buffer_size, 1))
         self._statistics: dict[str, DeviceStatistics] = {}
@@ -497,12 +543,18 @@ class EnOceanTelegramLogger:
                 log_format=self.log_format,
                 max_bytes=int(float(self.general_settings.get(CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB, 10)) * 1024 * 1024),
                 backup_count=int(self.general_settings.get(CONF_TELEGRAM_LOG_BACKUP_COUNT, 3)),
+                max_age_seconds=float(self.general_settings.get(CONF_TELEGRAM_LOG_ROTATE_DAYS, 7)) * 86400,
             )
             self._writer.start()
             LOGGER.info(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Write EnOcean telegrams as {self.log_format} into '{self.file_path}'.")
         else:
             LOGGER.info(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] EnOcean telegram recording enabled "
                         f"(in memory only, no filename configured in '{CONF_TELEGRAM_LOG_FILENAME}').")
+
+        if self._timeseries is not None:
+            self._timeseries.start()
+            LOGGER.info(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Export EnOcean telegrams to "
+                        f"'{self._timeseries.url}' (bucket '{self._timeseries.bucket}').")
 
         # known devices can only be collected once all platforms have been set up
         self._unsubscribe_handles.append(
@@ -539,6 +591,13 @@ class EnOceanTelegramLogger:
                          f"({self._writer.written_count} telegrams written).")
             self._writer = None
 
+        if self._timeseries:
+            self._timeseries.stop()
+            self._timeseries.join(15)
+            LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Timeseries exporter stopped "
+                         f"({self._timeseries.exported_count} telegrams exported).")
+            self._timeseries = None
+
     ### recording
 
     def record_message(self, gateway: "EnOceanGateway", msg: ESP2Message, direction: str) -> None:
@@ -573,6 +632,9 @@ class EnOceanTelegramLogger:
 
             if self._writer:
                 self._writer.submit(record)
+
+            if self._timeseries:
+                self._timeseries.submit(record)
 
             self._log_record(record)
             self._notify_subscribers_threadsafe(record)
@@ -652,7 +714,10 @@ class EnOceanTelegramLogger:
 
         record = {
             'seq': next(self._sequence_counter),
-            'timestamp': now.isoformat(timespec='milliseconds'),
+            # microseconds, not milliseconds: telegram bursts (repeaters, a command repeated
+            # through several gateways) happen well within one millisecond, and the timeseries
+            # export needs distinct timestamps - see timeseries.record_to_line_protocol.
+            'timestamp': now.isoformat(timespec='microseconds'),
             'timestamp_ms': int(now.timestamp() * 1000),
             'direction': direction,
             'gateway_id': getattr(gateway, 'dev_id', None),
@@ -675,6 +740,13 @@ class EnOceanTelegramLogger:
             record['org'] = f"0x{telegram.org:02X}"
         except Exception:   # noqa: BLE001
             record['org'] = None
+
+        # signal strength of radio telegrams (only ESP3 transceivers report it, the
+        # value is attached to the converted message - see gateway._attach_rssi_to_esp2_conversion).
+        # Read from the original msg: prettify() above creates a new object without it.
+        rssi = getattr(msg, 'dBm', None)
+        if isinstance(rssi, (int, float)) and rssi < 0:
+            record['rssi_dbm'] = int(rssi)
 
         if hasattr(telegram, 'status') and isinstance(telegram.status, int):
             record['status'] = f"0x{telegram.status:02X}"
@@ -729,6 +801,12 @@ class EnOceanTelegramLogger:
                 record['decoded'] = self._decode(telegram, eep_string, count_errors=eep_source == 'device')
                 record['decoded_eep'] = eep_string
                 record['decoded_source'] = eep_source
+                # A configured EEP which cannot decode the telegram is a real configuration
+                # error (wrong EEP for that device) - marked per telegram so it can be found
+                # in the log file and grouped in Grafana. A profile guessed from a teach-in
+                # telegram is only a best guess and therefore no error.
+                if record['decoded'] is None and eep_source == 'device':
+                    record['decode_error'] = True
 
         return record
 
@@ -982,6 +1060,18 @@ class EnOceanTelegramLogger:
             'file_written_count': 0 if self._writer is None else self._writer.written_count,
             'file_dropped_count': 0 if self._writer is None else self._writer.dropped_count,
             'file_error': None if self._writer is None else self._writer.last_error,
+            'file_rotate_after_days': None if self._writer is None or self._writer.max_age_seconds <= 0
+                                      else self._writer.max_age_seconds / 86400,
+            'file_max_size_mb': None if self._writer is None or self._writer.max_bytes <= 0
+                                else self._writer.max_bytes / (1024 * 1024),
+            'file_backup_count': None if self._writer is None else self._writer.backup_count,
+            'file_oldest_record_at': None if self._writer is None or self._writer.oldest_record_at is None
+                                     else datetime.fromtimestamp(self._writer.oldest_record_at,
+                                                                 timezone.utc).isoformat(timespec='seconds'),
+            'timeseries_enabled': self._timeseries is not None,
+            'timeseries': None if self._timeseries is None else self._timeseries.get_status(),
+            # the web ui offers a link to the dashboards with it, see pages/telegrams.js
+            'grafana_url': str(self.general_settings.get(CONF_GRAFANA_URL, "") or "").rstrip('/'),
             'buffer_size': self.buffer_size,
             'buffered_count': len(self._buffer),
             'include_polling': self.include_polling,
@@ -1019,10 +1109,44 @@ class EnOceanTelegramLogger:
             'count_by_msg_type': count_by_msg_type,
         })
 
+        # What could this address be? Derived from the telegrams (message type, data bytes,
+        # teach-in profile), enriched with the devices of the central catalog and with a ready
+        # configuration.yaml snippet. The web ui only renders these fields - all of the logic
+        # lives in telegram_suggestions.py so that services and the CLI can reuse it.
+        # Only for the unknown ones: a configured device has its EEP already.
+        from .telegram_suggestions import enrich_unknown
+        for device in unknown_devices:
+            enrich_unknown(device)
+
+        # senders which were already found in the memory of a bus actuator are not "unknown"
+        # for the ui: they are shown at their bus position, where the key function names the
+        # EEP reliably instead of guessing it from the data.
+        detected = self._addresses_detected_in_memories()
+        unknown_for_ui = [device for device in unknown_devices
+                          if str(device['address']).upper() not in detected]
+
         return {
             'summary': info,
             'devices': devices,
+            # ready to render: filtered, sorted by telegram count, enriched
+            'unknown_devices': unknown_for_ui,
         }
+
+    def _addresses_detected_in_memories(self) -> set[str]:
+        """Taught-in senders which the bus scan already found in a device memory."""
+        try:
+            from .bus_members import get_registry
+
+            registry = get_registry(self.hass)
+            if registry is None:
+                return set()
+            return {str(sensor.get('sensor_id')).upper()
+                    for member in registry.get_members()
+                    for sensor in (member.get('taught_in') or [])
+                    if sensor.get('sensor_id')}
+        except Exception as e:  # noqa: BLE001 - must never break the statistics
+            LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot read the bus members: {e}")
+            return set()
 
     def get_recent_telegrams(self, limit: int = 200) -> list[dict]:
         with self._lock:
@@ -1066,6 +1190,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_telegram_log_subscribe)
     websocket_api.async_register_command(hass, ws_telegram_log_clear)
     websocket_api.async_register_command(hass, ws_telegram_log_refresh_devices)
+    websocket_api.async_register_command(hass, ws_grafana_sync)
 
     domain_data[WS_COMMANDS_REGISTERED] = True
     LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Websocket commands registered.")
@@ -1176,4 +1301,41 @@ async def async_setup_telegram_logger(hass: HomeAssistant, general_settings: dic
 
     hass.services.async_register(DOMAIN, SERVICE_CLEAR_TELEGRAM_LOG, async_service_clear_telegram_log)
 
+    async def async_service_export_telegram_log(call) -> None:
+        """Backfill: submit the full history of the jsonl log files to the timeseries export."""
+        from .timeseries import LOG_PREFIX_TIMESERIES, backfill_log_files
+
+        if telegram_logger._timeseries is None:
+            LOGGER.warning(f"[{LOG_PREFIX_TIMESERIES}] Backfill requested but the timeseries "
+                           f"export is not enabled ('{CONF_TIMESERIES_ENABLED}').")
+            return
+        if not telegram_logger.file_path:
+            LOGGER.warning(f"[{LOG_PREFIX_TIMESERIES}] Backfill requested but no telegram log "
+                           f"file is configured ('{CONF_TELEGRAM_LOG_FILENAME}').")
+            return
+        if telegram_logger.log_format != TelegramLogFormat.JSONL.value:
+            LOGGER.warning(f"[{LOG_PREFIX_TIMESERIES}] Backfill only supports the jsonl format "
+                           f"(configured: '{telegram_logger.log_format}').")
+            return
+        await hass.async_add_executor_job(
+            backfill_log_files, telegram_logger._timeseries, telegram_logger.file_path)
+
+    hass.services.async_register(DOMAIN, SERVICE_EXPORT_TELEGRAM_LOG, async_service_export_telegram_log)
+
     return telegram_logger
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_GRAFANA_SYNC})
+@websocket_api.async_response
+async def ws_grafana_sync(hass: HomeAssistant, connection, msg) -> None:
+    """Push the dashboards shipped with the integration into the configured Grafana.
+
+    The http requests run in an executor - urllib is blocking and must not stall the event
+    loop. Errors are part of the result instead of an exception, so the web ui can show them.
+    """
+    from . import config_helpers, grafana_sync
+
+    settings = config_helpers.get_general_settings_from_configuration(hass)
+    result = await hass.async_add_executor_job(grafana_sync.sync, settings)
+    result['available'] = grafana_sync.describe_dashboards()
+    connection.send_result(msg['id'], result)

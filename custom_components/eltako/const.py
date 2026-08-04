@@ -19,6 +19,9 @@ DATA_SETTINGS_STORE: Final = "settings_store"
 DATA_UI_GATEWAYS: Final = "ui_gateway_definitions"
 DATA_GATEWAY_STORE: Final = "ui_gateway_store"
 DATA_BUS_MEMBERS: Final = "bus_members"
+# senders of wireless devices which are taught into more than one gateway,
+# (platform, device address) -> list of {id, eep, gateway_id}. See config_helpers.
+DATA_ADDITIONAL_SENDERS: Final = "additional_senders"
 DATA_PORT_FINGERPRINTS: Final = "port_fingerprints"
 DATA_PORT_FINGERPRINT_STORE: Final = "port_fingerprint_store"
 ELTAKO_GATEWAY: Final = "gateway"
@@ -49,6 +52,7 @@ CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"
 CONF_SHOW_DEV_ID_IN_DEV_NAME: Final = "show_dev_id_in_dev_name"
 CONF_ENABLE_FRONTEND: Final = "enable_frontend"
+CONF_ENABLE_TEST_PAGE: Final = "enable_test_page"
 CONF_ENABLE_TEACH_IN_BUTTONS: Final = "enable_teach_in_buttons"
 
 ### Deprecated general settings. They are still accepted so that existing configurations
@@ -97,10 +101,23 @@ CONF_LOG_ENOCEAN_TELEGRAMS: Final = "log_enocean_telegrams"
 CONF_TELEGRAM_LOG_FILENAME: Final = "telegram_log_filename"
 CONF_TELEGRAM_LOG_FORMAT: Final = "telegram_log_format"
 CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB: Final = "telegram_log_max_file_size_mb"
+CONF_TELEGRAM_LOG_ROTATE_DAYS: Final = "telegram_log_rotate_days"
 CONF_TELEGRAM_LOG_BACKUP_COUNT: Final = "telegram_log_backup_count"
 CONF_TELEGRAM_LOG_INCLUDE_POLLING: Final = "telegram_log_include_polling"
 CONF_TELEGRAM_LOG_DECODE_EEP: Final = "telegram_log_decode_eep"
 CONF_TELEGRAM_LOG_BUFFER_SIZE: Final = "telegram_log_buffer_size"
+
+# export of the recorded telegrams into a timeseries database (InfluxDB, for Grafana)
+CONF_TIMESERIES_ENABLED: Final = "timeseries_enabled"
+CONF_TIMESERIES_URL: Final = "timeseries_url"
+CONF_TIMESERIES_TOKEN: Final = "timeseries_token"
+CONF_TIMESERIES_ORG: Final = "timeseries_org"
+CONF_TIMESERIES_BUCKET: Final = "timeseries_bucket"
+CONF_TIMESERIES_MEASUREMENT: Final = "timeseries_measurement"
+# url of the Grafana which reads that bucket - only used to offer a link in the web ui
+CONF_GRAFANA_URL: Final = "grafana_url"
+# api token of that Grafana - only needed to push the dashboards from the web ui
+CONF_GRAFANA_TOKEN: Final = "grafana_token"
 
 ### Log levels per telegram category. They control what ends up in the Home Assistant log
 ### (logger 'eltako.telegrams'), independent of the telegram log file.
@@ -127,6 +144,9 @@ SETTING_GROUPS: Final = [
     ('general', "General", "Behaviour of the integration and its entities."),
     ('web_ui', "Web UI", "This user interface."),
     ('telegram_log', "Telegram recording", "Live view, statistics and the telegram log file."),
+    ('timeseries', "Timeseries export (Grafana)", "Writes every recorded telegram with its meta data "
+     "(device, EEP, area, decoded values) into an InfluxDB bucket - analyse the history with Grafana. "
+     "Works with InfluxDB 2.x and 1.8+ (v2 compatibility api)."),
     ('log_levels', "Log levels of telegrams", "What is written into the Home Assistant log "
      "(logger 'eltako.telegrams'). Use this to follow specific telegrams without flooding the log."),
 ]
@@ -171,6 +191,7 @@ WS_SETTINGS_SET: Final = "eltako/settings/set"
 WS_SETTINGS_RESET: Final = "eltako/settings/reset"
 WS_GATEWAY_SCAN: Final = "eltako/gateways/scan"
 WS_GATEWAY_FORM: Final = "eltako/gateways/form"
+WS_GRAFANA_SYNC: Final = "eltako/grafana/sync"
 WS_GATEWAY_ADD: Final = "eltako/gateways/add"
 WS_GATEWAY_REMOVE: Final = "eltako/gateways/remove"
 WS_BUS_MEMBERS: Final = "eltako/bus/members"
@@ -190,6 +211,7 @@ WS_TELEGRAM_LOG_REFRESH_DEVICES: Final = "eltako/telegram_log/refresh_devices"
 
 ### Services of the telegram logger
 SERVICE_CLEAR_TELEGRAM_LOG: Final = "clear_telegram_log"
+SERVICE_EXPORT_TELEGRAM_LOG: Final = "export_telegram_log_to_timeseries"
 
 class LANGUAGE_ABBREVIATION(StrEnum):
     LANG_ENGLISH = 'en'
@@ -247,8 +269,12 @@ class GatewayDeviceType(str, Enum):
 
     @classmethod
     def is_bus_gateway(cls, dev_type) -> bool:
+        # EltakoFAM14/EltakoFGW14USB are aliases of the Gateway* members above (same enum
+        # value) and only listed for readability. EltakoFAMUSB used to be in this list, which
+        # made the FAM-USB a bus gateway AND a transceiver at the same time - it is a wireless
+        # transceiver, it sits on no RS485 bus.
         return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB,
-                            GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFAMUSB, GatewayDeviceType.EltakoFGW14USB]
+                            GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFGW14USB]
     
     @classmethod
     def is_esp2_gateway(cls, dev_type) -> bool:

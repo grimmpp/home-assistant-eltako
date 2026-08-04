@@ -83,16 +83,28 @@ class GeneralSettings(EltakoPlatformSchema):
 
             # Web ui / panel of the integration incl. all its sub pages
             vol.Optional(CONF_ENABLE_FRONTEND, default=False): cv.boolean,
+            vol.Optional(CONF_ENABLE_TEST_PAGE, default=True): cv.boolean,
 
             # EnOcean telegram logging and analysis
             vol.Optional(CONF_LOG_ENOCEAN_TELEGRAMS, default=False): cv.boolean,
             vol.Optional(CONF_TELEGRAM_LOG_FILENAME, default=""): cv.string,
             vol.Optional(CONF_TELEGRAM_LOG_FORMAT, default=TelegramLogFormat.JSONL.value): vol.In([f.value for f in TelegramLogFormat]),
             vol.Optional(CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB, default=10): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=1024)),
+            vol.Optional(CONF_TELEGRAM_LOG_ROTATE_DAYS, default=7): vol.All(vol.Coerce(float), vol.Range(min=0, max=3650)),
             vol.Optional(CONF_TELEGRAM_LOG_BACKUP_COUNT, default=3): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
             vol.Optional(CONF_TELEGRAM_LOG_INCLUDE_POLLING, default=False): cv.boolean,
             vol.Optional(CONF_TELEGRAM_LOG_DECODE_EEP, default=True): cv.boolean,
             vol.Optional(CONF_TELEGRAM_LOG_BUFFER_SIZE, default=500): vol.All(vol.Coerce(int), vol.Range(min=0, max=100000)),
+
+            # export of the recorded telegrams into a timeseries database (InfluxDB, for Grafana)
+            vol.Optional(CONF_TIMESERIES_ENABLED, default=False): cv.boolean,
+            vol.Optional(CONF_TIMESERIES_URL, default=""): cv.string,
+            vol.Optional(CONF_TIMESERIES_TOKEN, default=""): cv.string,
+            vol.Optional(CONF_TIMESERIES_ORG, default=""): cv.string,
+            vol.Optional(CONF_TIMESERIES_BUCKET, default="eltako"): cv.string,
+            vol.Optional(CONF_TIMESERIES_MEASUREMENT, default="eltako_telegram"): cv.string,
+            vol.Optional(CONF_GRAFANA_URL, default=""): cv.string,
+            vol.Optional(CONF_GRAFANA_TOKEN, default=""): cv.string,
 
             # log levels per telegram category
             vol.Optional(CONF_LOG_LEVEL_INCOMING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),

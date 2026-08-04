@@ -1,0 +1,466 @@
+{
+  "uid": "eltako-errors",
+  "title": "Eltako - Errors and bus health",
+  "tags": [
+    "eltako",
+    "enocean"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "textbox",
+        "query": "eltako",
+        "current": {
+          "text": "eltako",
+          "value": "eltako"
+        }
+      },
+      {
+        "name": "measurement",
+        "label": "Measurement",
+        "type": "textbox",
+        "query": "eltako_telegram",
+        "current": {
+          "text": "eltako_telegram",
+          "value": "eltako_telegram"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Telegrams with a wrong EEP",
+      "description": "The device is configured, but its configured EEP cannot decode the telegram - almost always the wrong EEP in the configuration.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.decode_error == \"True\")\n  |> sum()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Telegrams of unconfigured addresses",
+      "description": "",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.known == \"False\")\n  |> sum()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Repeated telegrams",
+      "description": "Telegrams which arrived through a repeater. Many of them mean a weak path.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"rp_count\")\n  |> filter(fn: (r) => r._value > 0)\n  |> count()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Weakest signal (dBm)",
+      "description": "Only ESP3 gateways report a signal strength. Closer to 0 is better; below -90 dBm the reception gets unreliable.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -90
+              },
+              {
+                "color": "green",
+                "value": -80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"rssi_dbm\")\n  |> min()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Wrong EEP over time, per device",
+      "description": "Which device is configured with an EEP that does not fit its telegrams.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "values": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.decode_error == \"True\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"device_name\", \"eep\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"device_name\", \"eep\"])"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Devices with a wrong EEP",
+      "description": "Compare the configured EEP with the message type: a 4BS device configured with an F6 profile can never decode.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.decode_error == \"True\")\n  |> group(columns: [\"device_name\", \"address\", \"eep\", \"msg_type\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> keep(columns: [\"device_name\", \"address\", \"eep\", \"msg_type\", \"_value\"])\n  |> rename(columns: {_value: \"telegrams\", eep: \"configured eep\"})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Signal strength per device (dBm)",
+      "description": "",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "last",
+            "min",
+            "mean"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"rssi_dbm\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"device_name\", \"address\"])"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Repeater level per device",
+      "description": "",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"rp_count\")\n  |> group(columns: [\"device_name\", \"address\"])\n  |> mean()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 50)\n  |> keep(columns: [\"device_name\", \"address\", \"_value\"])\n  |> rename(columns: {_value: \"avg repeater level\"})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Unconfigured addresses over time",
+      "description": "Press a button on a device and it appears here - the fastest way to find the address of an unknown device.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 6
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.known == \"False\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"address\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"address\"])"
+        }
+      ]
+    }
+  ]
+}

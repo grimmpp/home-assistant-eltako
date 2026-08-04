@@ -16,20 +16,27 @@ export const STYLES = `
   }
 
   /* ---------------------------------------------------------------- layout */
-  /* The navigation is a horizontal bar on top so that the content can use the full width. */
+  /* App header (menu button + title) above the horizontal navigation bar. The menu button
+     is the standard home assistant one: it shows the hamburger when the sidebar is hidden,
+     so the panel can be left again on a smartphone. */
   .shell { display: flex; flex-direction: column; height: 100%; position: relative; }
+  header.app-head {
+    flex: 0 0 auto; box-sizing: border-box; display: flex; align-items: center; gap: 8px;
+    padding: 4px 16px 0; background: var(--eltako-card);
+  }
+  header.app-head .brand-title { font-size: 1.05rem; font-weight: 500; }
+  header.app-head .brand-version { font-size: .7rem; color: var(--eltako-muted); }
+  header.app-head ha-icon, header.app-head .glyph { --mdc-icon-size: 20px; }
+  header.app-head .menu-fallback {
+    background: none; border: none; cursor: pointer; font-size: 20px; padding: 6px 8px;
+    margin-left: -8px; color: var(--primary-text-color); border-radius: 8px;
+  }
+  header.app-head .menu-fallback:hover { background: var(--secondary-background-color, rgba(127,127,127,.1)); }
   nav {
     flex: 0 0 auto; box-sizing: border-box; display: flex; align-items: center; gap: 4px;
-    flex-wrap: wrap; padding: 8px 16px; background: var(--eltako-card);
+    flex-wrap: wrap; padding: 4px 16px 8px; background: var(--eltako-card);
     border-bottom: 1px solid var(--eltako-border);
   }
-  nav .brand {
-    display: flex; align-items: baseline; gap: 8px; margin-right: 10px; padding-right: 14px;
-    border-right: 1px solid var(--eltako-border); align-self: stretch;
-  }
-  nav .brand ha-icon, nav .brand .glyph { align-self: center; }
-  nav .brand-title { font-size: 1rem; font-weight: 500; }
-  nav .brand-version { font-size: .7rem; color: var(--eltako-muted); }
   nav a {
     display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px;
     color: var(--primary-text-color); text-decoration: none; cursor: pointer; font-size: .9rem;
@@ -52,8 +59,8 @@ export const STYLES = `
   .head-status { display: flex; flex-wrap: wrap; gap: 6px; }
 
   @media (max-width: 640px) {
-    nav { flex-wrap: nowrap; overflow-x: auto; padding: 6px 10px; }
-    nav .brand { display: none; }
+    header.app-head { padding: 4px 10px 0; }
+    nav { flex-wrap: nowrap; overflow-x: auto; padding: 4px 10px 6px; }
     nav a span:not(.badge) { display: none; }   /* icons only, keeps the bar on one line */
     nav a.active span:not(.badge) { display: inline; }
     main { padding: 14px 14px 32px; }
@@ -67,6 +74,8 @@ export const STYLES = `
   .pill.on { background: var(--label-badge-green, #43a047); color: #fff; border-color: transparent; }
   .pill.off { background: var(--label-badge-red, #e53935); color: #fff; border-color: transparent; }
   .pill.warn { background: var(--label-badge-yellow, #f9a825); color: #212121; border-color: transparent; }
+  a.pill.link { color: var(--eltako-accent, var(--primary-color, #03a9f4)); text-decoration: none; }
+  a.pill.link:hover { border-color: var(--eltako-accent, var(--primary-color, #03a9f4)); }
 
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 6px; }
   .card { background: var(--eltako-card); border: 1px solid var(--eltako-border);
@@ -151,6 +160,19 @@ export const STYLES = `
   tr.channel-row td:first-child { padding-left: 20px; }
   tr.taught-in-row td { padding-left: 20px; background: color-mix(in srgb, var(--label-badge-green, #43a047) 6%, transparent); }
   tr.taught-in-row .chip { margin: 2px 4px 2px 0; }
+
+  /* candidates of an address which is not configured yet (block 'Unknown devices'):
+     one line per EEP, the EEPs aligned in their own column so the device models of the
+     different profiles can be compared at a glance. */
+  .eep-devices { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: baseline; }
+  .eep-devices-key { font-size: .75rem; opacity: .75; white-space: nowrap; }
+  .eep-devices-key::after { content: ":"; }
+  .eep-devices-value { display: flex; flex-wrap: wrap; gap: 3px; align-items: baseline; }
+  .eep-devices-value .chip { padding: 1px 7px; }
+
+  /* one candidate per line in the 'Possible EEPs' column */
+  .candidate { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; margin: 1px 0; }
+  .candidate .hint { flex: 1 1 100%; margin: 0; }
   .tree { color: var(--eltako-muted); margin-right: 6px; }
   .bus-heading { font-size: .9rem; font-weight: 500; margin: 16px 0 8px; color: var(--eltako-muted); }
   tr.linked td:first-child { box-shadow: inset 3px 0 0 var(--primary-color, #03a9f4); }

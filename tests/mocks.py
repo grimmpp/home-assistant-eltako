@@ -9,6 +9,10 @@ class BusMock():
         self.fired_events = list()
         self.listeners = list()
 
+    def async_listen(self, event_type: str, listener):
+        self.listeners.append((event_type, listener))
+        return lambda: None
+
     def async_listen_once(self, event_type: str, listener):
         self.listeners.append((event_type, listener))
         return lambda: None

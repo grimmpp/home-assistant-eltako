@@ -1,0 +1,761 @@
+!!python/object:eo_man.data.application_data.ApplicationData
+application_version: 0.1.10
+data_filters:
+  Buttons: !!python/object:eo_man.data.filter.DataFilter
+    device_address_filter: []
+    device_eep_filter: []
+    device_external_address_filter:
+    - FE
+    device_type_filter: []
+    global_filter: []
+    name: Buttons
+  Smart Home: !!python/object:eo_man.data.filter.DataFilter
+    device_address_filter: []
+    device_eep_filter: []
+    device_external_address_filter: []
+    device_type_filter:
+    - Smart Home
+    global_filter: []
+    name: Smart Home
+devices:
+  05-1E-83-15: !!python/object:eo_man.data.device.Device
+    address: 00-00-00-00
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Weather Station
+    eep: A5_04_02
+    external_id: 05-1E-83-15
+    ha_platform: sensor
+    key_function: FWG14MS_WEATHER_STATION
+    memory_entries: []
+    name: Weather Station 05-1E-83-15
+    use_in_ha: true
+    version: unknown
+  FE-DB-0A-10: !!python/object:eo_man.data.device.Device
+    address: FE-DB-0A-10
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Button
+    eep: F6-02-01
+    external_id: FE-DB-0A-10
+    ha_platform: !!python/object/apply:builtins.getattr
+    - &id001 !!python/name:homeassistant.const.Platform ''
+    - BINARY_SENSOR
+    key_function: DIRECTION_PUSH_BUTTON_BOTTOM_ON
+    memory_entries: &id002 []
+    name: Button FE-DB-0A-10
+    use_in_ha: true
+    version: unknown
+  FE-DB-0A-1B: !!python/object:eo_man.data.device.Device
+    address: FE-DB-0A-1B
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Button
+    eep: F6-02-01
+    external_id: FE-DB-0A-1B
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - BINARY_SENSOR
+    key_function: DIRECTION_PUSH_BUTTON_BOTTOM_ON
+    memory_entries: *id002
+    name: Button FE-DB-0A-1B
+    use_in_ha: true
+    version: unknown
+  FE-DB-DA-04: !!python/object:eo_man.data.device.Device
+    address: FE-DB-DA-04
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Button
+    eep: F6-02-01
+    external_id: FE-DB-DA-04
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - BINARY_SENSOR
+    key_function: DIRECTION_PUSH_BUTTON_BOTTOM_ON
+    memory_entries: *id002
+    name: Button FE-DB-DA-04
+    use_in_ha: true
+    version: unknown
+  FF-81-41-07: !!python/object:eo_man.data.device.Device
+    address: FF-81-41-07
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Button
+    eep: F6-02-01
+    external_id: FF-81-41-07
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - BINARY_SENSOR
+    key_function: DIRECTION_PUSH_BUTTON_BOTTOM_ON
+    memory_entries: *id002
+    name: Button FF-81-41-07
+    use_in_ha: true
+    version: unknown
+  FF-86-B0-8A: !!python/object:eo_man.data.device.Device
+    address: FF-86-B0-8A
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Smart Home
+    eep: ''
+    external_id: FF-86-B0-8A
+    ha_platform: ''
+    key_function: SWITCHING_STATE_FROM_CONTROLLER
+    memory_entries: *id002
+    name: HA Controller FF-86-B0-8A
+    use_in_ha: false
+    version: unknown
+  FF-86-B0-8B: !!python/object:eo_man.data.device.Device
+    address: FF-86-B0-8B
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Smart Home
+    eep: ''
+    external_id: FF-86-B0-8B
+    ha_platform: ''
+    key_function: SWITCHING_STATE_FROM_CONTROLLER
+    memory_entries: *id002
+    name: HA Controller FF-86-B0-8B
+    use_in_ha: false
+    version: unknown
+  FF-86-B0-8C: !!python/object:eo_man.data.device.Device
+    address: FF-86-B0-8C
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Smart Home
+    eep: ''
+    external_id: FF-86-B0-8C
+    ha_platform: ''
+    key_function: SWITCHING_STATE_FROM_CONTROLLER
+    memory_entries: *id002
+    name: HA Controller FF-86-B0-8C
+    use_in_ha: false
+    version: unknown
+  FF-BC-00-00: !!python/object:eo_man.data.device.Device
+    address: FF-BC-00-00
+    base_id: FF-BC-00-00
+    bus_device: false
+    channel: 1
+    comment: null
+    dev_size: 1
+    device_type: FAM-USB (Wireless Transceiver)
+    external_id: FF-BC-00-00
+    memory_entries: &id003 []
+    name: FAM-USB (FF-BC-00-00)
+    use_in_ha: true
+    version: null
+  FF-CD-60-80: !!python/object:eo_man.data.device.Device
+    additional_fields: {}
+    address: 00-00-00-FF
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: FAM14
+    eep: null
+    external_id: FF-CD-60-80
+    ha_platform: null
+    key_function: ''
+    memory_entries: []
+    name: FAM14 FF-CD-60-80
+    use_in_ha: true
+    version: 1.5.0.0
+  FF-CD-60-81: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      sender:
+        eep: A5-38-08
+        id: 00-00-B0-01
+    address: 00-00-00-01
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: FMZ14
+    eep: M5-38-08
+    external_id: FF-CD-60-81
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - LIGHT
+    key_function: ''
+    memory_entries: []
+    name: FMZ14 00-00-00-01
+    use_in_ha: true
+    version: 2.2.0.0
+  FF-CD-60-85: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      device_class: shutter
+      sender:
+        eep: H5-3F-7F
+        id: 00-00-B0-05
+      time_closes: 25
+      time_opens: 25
+    address: 00-00-00-05
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 1
+    comment: ''
+    dev_size: 2
+    device_type: FSB14
+    eep: G5-3F-7F
+    external_id: FF-CD-60-85
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - COVER
+    key_function: ''
+    memory_entries:
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABQ==
+      dev_adr_str: 00-00-00-05
+      dev_id: 5
+      dev_type: FSB14
+      in_func_group: 2
+      key: 0
+      key_func: 31
+      memory_line: 17
+      sensor_id: !!binary |
+        AACwBQ==
+      sensor_id_str: 00-00-B0-05
+    name: FSB14 00-00-00-05 (1/2)
+    use_in_ha: true
+    version: 2.5.0.0
+  FF-CD-60-86: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      device_class: shutter
+      sender:
+        eep: H5-3F-7F
+        id: 00-00-B0-06
+      time_closes: 25
+      time_opens: 25
+    address: 00-00-00-06
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 2
+    comment: ''
+    dev_size: 2
+    device_type: FSB14
+    eep: G5-3F-7F
+    external_id: FF-CD-60-86
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - COVER
+    key_function: ''
+    memory_entries: []
+    name: FSB14 00-00-00-06 (2/2)
+    use_in_ha: true
+    version: 2.5.0.0
+  FF-CD-60-87: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      sender:
+        eep: A5-38-08
+        id: 00-00-B0-07
+    address: 00-00-00-07
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 1
+    comment: ''
+    dev_size: 4
+    device_type: FSR14_4x
+    eep: M5-38-08
+    external_id: FF-CD-60-87
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - LIGHT
+    key_function: ''
+    memory_entries:
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABw==
+      dev_adr_str: 00-00-00-07
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 4
+      key_func: 23
+      memory_line: 12
+      sensor_id: !!binary |
+        AAAQAg==
+      sensor_id_str: 00-00-10-02
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABw==
+      dev_adr_str: 00-00-00-07
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 0
+      key_func: 51
+      memory_line: 15
+      sensor_id: !!binary |
+        /4awig==
+      sensor_id_str: FF-86-B0-8A
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABw==
+      dev_adr_str: 00-00-00-07
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 5
+      key_func: 3
+      memory_line: 18
+      sensor_id: !!binary |
+        /tsKGw==
+      sensor_id_str: FE-DB-0A-1B
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABw==
+      dev_adr_str: 00-00-00-07
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 19
+      sensor_id: !!binary |
+        /tvaBA==
+      sensor_id_str: FE-DB-DA-04
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABw==
+      dev_adr_str: 00-00-00-07
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 0
+      key_func: 51
+      memory_line: 20
+      sensor_id: !!binary |
+        AACwBw==
+      sensor_id_str: 00-00-B0-07
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 1
+      dev_adr: !!binary |
+        AAAABw==
+      dev_adr_str: 00-00-00-07
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 21
+      sensor_id: !!binary |
+        /tsKEA==
+      sensor_id_str: FE-DB-0A-10
+    name: FSR14_4x 00-00-00-07 (1/4)
+    use_in_ha: true
+    version: 4.1.0.0
+  FF-CD-60-88: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      sender:
+        eep: A5-38-08
+        id: 00-00-B0-08
+    address: 00-00-00-08
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 2
+    comment: ''
+    dev_size: 4
+    device_type: FSR14_4x
+    eep: M5-38-08
+    external_id: FF-CD-60-88
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - LIGHT
+    key_function: ''
+    memory_entries:
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 2
+      dev_adr: !!binary |
+        AAAACA==
+      dev_adr_str: 00-00-00-08
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 14
+      sensor_id: !!binary |
+        /4FBBw==
+      sensor_id_str: FF-81-41-07
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 2
+      dev_adr: !!binary |
+        AAAACA==
+      dev_adr_str: 00-00-00-08
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 0
+      key_func: 51
+      memory_line: 16
+      sensor_id: !!binary |
+        /4awiw==
+      sensor_id_str: FF-86-B0-8B
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 2
+      dev_adr: !!binary |
+        AAAACA==
+      dev_adr_str: 00-00-00-08
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 5
+      key_func: 3
+      memory_line: 18
+      sensor_id: !!binary |
+        /tsKGw==
+      sensor_id_str: FE-DB-0A-1B
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 2
+      dev_adr: !!binary |
+        AAAACA==
+      dev_adr_str: 00-00-00-08
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 19
+      sensor_id: !!binary |
+        /tvaBA==
+      sensor_id_str: FE-DB-DA-04
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 2
+      dev_adr: !!binary |
+        AAAACA==
+      dev_adr_str: 00-00-00-08
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 21
+      sensor_id: !!binary |
+        /tsKEA==
+      sensor_id_str: FE-DB-0A-10
+    name: FSR14_4x 00-00-00-08 (2/4)
+    use_in_ha: true
+    version: 4.1.0.0
+  FF-CD-60-89: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      sender:
+        eep: A5-38-08
+        id: 00-00-B0-09
+    address: 00-00-00-09
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 3
+    comment: ''
+    dev_size: 4
+    device_type: FSR14_4x
+    eep: M5-38-08
+    external_id: FF-CD-60-89
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - LIGHT
+    key_function: ''
+    memory_entries:
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 3
+      dev_adr: !!binary |
+        AAAACQ==
+      dev_adr_str: 00-00-00-09
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 4
+      key_func: 23
+      memory_line: 13
+      sensor_id: !!binary |
+        AAAQJg==
+      sensor_id_str: 00-00-10-26
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 3
+      dev_adr: !!binary |
+        AAAACQ==
+      dev_adr_str: 00-00-00-09
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 0
+      key_func: 51
+      memory_line: 17
+      sensor_id: !!binary |
+        /4awjA==
+      sensor_id_str: FF-86-B0-8C
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 3
+      dev_adr: !!binary |
+        AAAACQ==
+      dev_adr_str: 00-00-00-09
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 5
+      key_func: 3
+      memory_line: 18
+      sensor_id: !!binary |
+        /tsKGw==
+      sensor_id_str: FE-DB-0A-1B
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 3
+      dev_adr: !!binary |
+        AAAACQ==
+      dev_adr_str: 00-00-00-09
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 19
+      sensor_id: !!binary |
+        /tvaBA==
+      sensor_id_str: FE-DB-DA-04
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 3
+      dev_adr: !!binary |
+        AAAACQ==
+      dev_adr_str: 00-00-00-09
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 21
+      sensor_id: !!binary |
+        /tsKEA==
+      sensor_id_str: FE-DB-0A-10
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 3
+      dev_adr: !!binary |
+        AAAACQ==
+      dev_adr_str: 00-00-00-09
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 0
+      key_func: 51
+      memory_line: 22
+      sensor_id: !!binary |
+        AACwBw==
+      sensor_id_str: 00-00-B0-07
+    name: FSR14_4x 00-00-00-09 (3/4)
+    use_in_ha: true
+    version: 4.1.0.0
+  FF-CD-60-8A: !!python/object:eo_man.data.device.Device
+    additional_fields:
+      sender:
+        eep: A5-38-08
+        id: 00-00-B0-0A
+    address: 00-00-00-0A
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 4
+    comment: ''
+    dev_size: 4
+    device_type: FSR14_4x
+    eep: M5-38-08
+    external_id: FF-CD-60-8A
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - LIGHT
+    key_function: ''
+    memory_entries:
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 4
+      dev_adr: !!binary |
+        AAAACg==
+      dev_adr_str: 00-00-00-0A
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 5
+      key_func: 3
+      memory_line: 18
+      sensor_id: !!binary |
+        /tsKGw==
+      sensor_id_str: FE-DB-0A-1B
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 4
+      dev_adr: !!binary |
+        AAAACg==
+      dev_adr_str: 00-00-00-0A
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 19
+      sensor_id: !!binary |
+        /tvaBA==
+      sensor_id_str: FE-DB-DA-04
+    - !!python/object:eltakobus.device.SensorInfo
+      channel: 4
+      dev_adr: !!binary |
+        AAAACg==
+      dev_adr_str: 00-00-00-0A
+      dev_id: 7
+      dev_type: FSR14_4x
+      in_func_group: 2
+      key: 6
+      key_func: 3
+      memory_line: 21
+      sensor_id: !!binary |
+        /tsKEA==
+      sensor_id_str: FE-DB-0A-10
+    name: FSR14_4x 00-00-00-0A (4/4)
+    use_in_ha: true
+    version: 4.1.0.0
+  FF-CD-60-D0: !!python/object:eo_man.data.device.Device
+    additional_fields: {}
+    address: 00-00-00-50
+    base_id: FF-CD-60-80
+    bus_device: true
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: FGW14_USB
+    eep: null
+    external_id: FF-CD-60-D0
+    ha_platform: null
+    key_function: ''
+    memory_entries: []
+    name: FGW14_USB 00-00-00-50
+    use_in_ha: true
+    version: 1.10.0.0
+  FF-CD-70-82: !!python/object:eo_man.data.device.Device
+    address: 00-00-10-02
+    base_id: FF-CD-60-80
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: FTS14EM Button
+    eep: F6-02-01
+    external_id: FF-CD-70-82
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - BINARY_SENSOR
+    key_function: UNIVERSAL_PUSH_BUTTON_ES
+    memory_entries: *id002
+    name: FTS14EM Button 00-00-10-02
+    use_in_ha: true
+    version: unknown
+  FF-CD-70-A6: !!python/object:eo_man.data.device.Device
+    address: 00-00-10-26
+    base_id: FF-CD-60-80
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: FTS14EM Button
+    eep: F6-02-01
+    external_id: FF-CD-70-A6
+    ha_platform: !!python/object/apply:builtins.getattr
+    - *id001
+    - BINARY_SENSOR
+    key_function: UNIVERSAL_PUSH_BUTTON_ES
+    memory_entries: *id002
+    name: FTS14EM Button 00-00-10-26
+    use_in_ha: true
+    version: unknown
+  FF-CE-10-85: !!python/object:eo_man.data.device.Device
+    address: 00-00-B0-05
+    base_id: FF-CD-60-80
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Smart Home
+    eep: ''
+    external_id: FF-CE-10-85
+    ha_platform: ''
+    key_function: OPERATIONS_COMMAND_WITH_TIME_VALUE_TRASMISSION_FROM_CONTROLLER
+    memory_entries: *id002
+    name: HA Controller 00-00-B0-05
+    use_in_ha: false
+    version: unknown
+  FF-CE-10-87: !!python/object:eo_man.data.device.Device
+    address: 00-00-B0-07
+    base_id: FF-CD-60-80
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: Smart Home
+    eep: ''
+    external_id: FF-CE-10-87
+    ha_platform: ''
+    key_function: SWITCHING_STATE_FROM_CONTROLLER
+    memory_entries: *id002
+    name: HA Controller 00-00-B0-07
+    use_in_ha: false
+    version: unknown
+  FF-D6-00-00: !!python/object:eo_man.data.device.Device
+    address: FF-D6-00-00
+    base_id: FF-D6-00-00
+    bus_device: false
+    channel: 1
+    comment: null
+    dev_size: 1
+    device_type: USB300 (Wireless Transceiver)
+    external_id: FF-D6-00-00
+    memory_entries: *id003
+    name: USB300 (FF-D6-00-00)
+    use_in_ha: true
+    version: null
+  FF-E2-35-90: !!python/object:eo_man.data.device.Device
+    address: FF-E2-35-90
+    base_id: 00-00-00-00
+    bus_device: false
+    channel: 1
+    comment: ''
+    dev_size: 1
+    device_type: FUTH
+    eep: ''
+    external_id: FF-E2-35-90
+    ha_platform: sensor
+    key_function: ''
+    memory_entries: []
+    name: unknown
+    use_in_ha: true
+    version: unknown
+recorded_messages: []
+selected_data_filter_name: null
+send_message_template_list:
+- !!python/object:eo_man.data.message_history.MessageHistoryEntry
+  message: !!binary |
+    pVprBTAAAAD+27ZAQK8=
+  name: 'Switch: Right Top Button Pushed'

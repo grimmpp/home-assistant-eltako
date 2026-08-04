@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eltako</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #fafafa;
+                 font-family: system-ui, sans-serif; }
+    eltako-panel { display: block; height: 100vh; }
+    #connect-error { display: none; padding: 40px; text-align: center; color: #b71c1c; }
+  </style>
+</head>
+<body>
+  <div id="connect-error">
+    <h2>Connection lost</h2>
+    <p>Reconnecting to the Eltako standalone server &hellip;</p>
+  </div>
+  <script type="module" src="/shell/shell.js"></script>
+</body>
+</html>

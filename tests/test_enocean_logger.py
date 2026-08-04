@@ -3,7 +3,9 @@ import json
 import os
 import tempfile
 import threading
+import time
 import unittest
+from datetime import datetime, timezone
 from unittest import IsolatedAsyncioTestCase, TestCase
 
 from tests.mocks import *
@@ -174,8 +176,37 @@ class TestFrontendSettings(TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, PANEL_JS_FILE)))
         for module in ['lib/api.js', 'lib/utils.js', 'lib/styles.js',
                        'pages/overview.js', 'pages/telegrams.js', 'pages/devices.js',
-                       'pages/unknown.js', 'pages/about.js']:
+                       'pages/devices_config.js', 'pages/about.js']:
             self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, *module.split('/'))), msg=module)
+
+    def test_every_module_imported_by_the_panel_exists(self):
+        """A missing module breaks the whole panel: an ES import which 404s aborts the module
+        graph, so the sidebar entry stays empty instead of showing one broken page."""
+        import re
+
+        seen = set()
+        pending = [PANEL_JS_FILE]
+        while pending:
+            relative = pending.pop()
+            if relative in seen:
+                continue
+            seen.add(relative)
+            path = os.path.join(self.FRONTEND_DIR, *relative.split('/'))
+            self.assertTrue(os.path.isfile(path), msg=f"{relative} is imported but missing")
+            with open(path, encoding='utf-8') as handle:
+                source = handle.read()
+            for target in re.findall(r'^\s*import\s+.*?from\s+["\'](\./|\.\./)([^"\']+)["\']',
+                                     source, re.MULTILINE):
+                base = os.path.dirname(relative)
+                resolved = os.path.normpath(os.path.join(base, target[0] + target[1]))
+                pending.append(resolved.replace(os.sep, '/'))
+
+        self.assertIn('pages/devices_config.js', seen)
+        self.assertNotIn('pages/unknown.js', seen,
+                         msg="the unknown devices page was replaced by a block of the device page")
+        self.assertNotIn('lib/unknown_devices.js', seen,
+                         msg="EEP/device/yaml suggestions come from the backend now "
+                             "(telegram_suggestions.py), the frontend only renders them")
 
         # the frontend folder is served as static path, it must not contain any python code
         for root, _dirs, files in os.walk(self.FRONTEND_DIR):
@@ -558,6 +589,87 @@ class TestTelegramFileWriter(TestCase):
         self.assertTrue(os.path.exists(path + '.2'))
         self.assertFalse(os.path.exists(path + '.3'))
         self.assertLessEqual(os.path.getsize(path), 500 + 300)
+
+    def _write_synchronously(self, writer: TelegramFileWriter, records: list[dict]) -> None:
+        """Drive the writer without its thread, so the rotation clock can be manipulated."""
+        writer._open()
+        for record in records:
+            writer._write(record)
+        writer._close()
+
+    def test_rotation_by_age(self):
+        """The default: the file rotates when its oldest record is older than the limit."""
+        directory = tempfile.mkdtemp()
+        path = os.path.join(directory, 'telegrams.jsonl')
+        writer = TelegramFileWriter(path, TelegramLogFormat.JSONL.value, max_bytes=0,
+                                    backup_count=2, max_age_seconds=7 * 86400)
+
+        writer._open()
+        writer._write({'seq': 1, 'timestamp': '2026-08-01T00:00:00+00:00'})
+        # the file is now "8 days old"
+        writer.oldest_record_at = time.time() - 8 * 86400
+        writer._write({'seq': 2, 'timestamp': '2026-08-09T00:00:00+00:00'})
+        writer._close()
+
+        self.assertTrue(os.path.exists(path + '.1'), msg="old week must be rotated away")
+        with open(path) as file:
+            lines = [json.loads(line) for line in file if line.strip()]
+        self.assertEqual([line['seq'] for line in lines], [2], msg="new file starts with the new record")
+        with open(path + '.1') as file:
+            lines = [json.loads(line) for line in file if line.strip()]
+        self.assertEqual([line['seq'] for line in lines], [1])
+
+    def test_no_age_rotation_when_disabled(self):
+        directory = tempfile.mkdtemp()
+        path = os.path.join(directory, 'telegrams.jsonl')
+        writer = TelegramFileWriter(path, TelegramLogFormat.JSONL.value, max_bytes=0,
+                                    backup_count=2, max_age_seconds=0)
+
+        writer._open()
+        writer._write({'seq': 1})
+        writer.oldest_record_at = time.time() - 365 * 86400
+        writer._write({'seq': 2})
+        writer._close()
+
+        self.assertFalse(os.path.exists(path + '.1'))
+
+    def test_age_survives_a_restart(self):
+        """The age of the file is defined by its oldest record, not by the last restart."""
+        directory = tempfile.mkdtemp()
+        path = os.path.join(directory, 'telegrams.jsonl')
+
+        first = TelegramFileWriter(path, TelegramLogFormat.JSONL.value, max_bytes=0,
+                                   backup_count=1, max_age_seconds=7 * 86400)
+        self._write_synchronously(first, [{'seq': 1, 'timestamp': '2026-01-01T00:00:00+00:00'}])
+
+        # "restart": a new writer opens the same file - and must read the old timestamp back
+        second = TelegramFileWriter(path, TelegramLogFormat.JSONL.value, max_bytes=0,
+                                    backup_count=1, max_age_seconds=7 * 86400)
+        second._open()
+        self.assertIsNotNone(second.oldest_record_at)
+        self.assertEqual(datetime.fromtimestamp(second.oldest_record_at, timezone.utc).year, 2026)
+        self.assertEqual(datetime.fromtimestamp(second.oldest_record_at, timezone.utc).month, 1)
+
+        # the record of january is far older than 7 days -> first write rotates
+        second._write({'seq': 2, 'timestamp': '2026-08-04T00:00:00+00:00'})
+        second._close()
+        self.assertTrue(os.path.exists(path + '.1'))
+
+    def test_age_survives_a_restart_csv(self):
+        """Same for csv: the timestamp sits behind the header line."""
+        directory = tempfile.mkdtemp()
+        path = os.path.join(directory, 'telegrams.csv')
+
+        first = TelegramFileWriter(path, TelegramLogFormat.CSV.value, max_bytes=0,
+                                   backup_count=1, max_age_seconds=7 * 86400)
+        self._write_synchronously(first, [{'seq': 1, 'timestamp': '2026-01-01T00:00:00+00:00'}])
+
+        second = TelegramFileWriter(path, TelegramLogFormat.CSV.value, max_bytes=0,
+                                    backup_count=1, max_age_seconds=7 * 86400)
+        second._open()
+        second._close()
+        self.assertIsNotNone(second.oldest_record_at)
+        self.assertEqual(datetime.fromtimestamp(second.oldest_record_at, timezone.utc).month, 1)
 
 
 class TestTelegramLoggerSetup(IsolatedAsyncioTestCase):

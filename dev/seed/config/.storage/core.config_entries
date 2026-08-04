@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "core.config_entries",
+  "data": {
+    "entries": [
+      {
+        "entry_id": "480201a43207c1aa15695f9a8a3c0d4b",
+        "version": 1,
+        "minor_version": 1,
+        "domain": "eltako",
+        "title": "FGW14-USB - fgw14usb (Id: 1)",
+        "data": {
+          "gateway_description": "FGW14-USB - fgw14usb (Id: 1)",
+          "serial_path": "/dev/ttyUSB0"
+        },
+        "options": {},
+        "pref_disable_new_entities": false,
+        "pref_disable_polling": false,
+        "source": "user",
+        "unique_id": "FGW14-USB - fgw14usb (Id: 1)",
+        "disabled_by": null
+      }
+    ]
+  }
+}

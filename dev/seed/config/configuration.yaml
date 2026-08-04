@@ -1,0 +1,13 @@
+# Dev container configuration. The Eltako demo setup (gateways + example devices for every
+# platform) lives in the repository file ha.yaml, mounted to /config/ha.yaml and included
+# here as a package - so the dev container always runs the same example the docs show.
+
+default_config:
+
+homeassistant:
+  name: Eltako Dev
+  packages:
+    eltako_demo: !include ha.yaml
+
+# no own logger section here - ha.yaml already brings one (logger cannot be merged
+# between a package and the main configuration, it would fail with 'duplicate key')

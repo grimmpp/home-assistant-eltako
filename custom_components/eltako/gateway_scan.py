@@ -43,9 +43,11 @@ SYSFS_FIELDS = {
 # The descriptor cannot identify an Eltako device reliably (most use the same FTDI chip),
 # so this is a hint and never an automatism.
 KNOWN_DEVICES = [
-    ("enocean programmer", [GatewayDeviceType.EnOceanUSB300.value, GatewayDeviceType.GatewayEltakoFAMUSB.value],
-     "EnOcean USB stick / programmer. Usually ESP3 at 57600 baud. Such devices often expose two "
-     "ports (if00/if01) - only one of them carries the telegrams, try the other one if nothing is received."),
+    ("enocean programmer", [GatewayDeviceType.GatewayEltakoFAMUSB.value, GatewayDeviceType.EnOceanUSB300.value],
+     "EnOcean USB stick / programmer - this descriptor is used by the Eltako FAM-USB (ESP2 at "
+     "9600 baud) and by ESP3 sticks (57600 baud). Such devices expose TWO ports (if00/if01, e.g. "
+     "...600 and ...601) and only the SECOND one carries the telegrams - a FAM-USB answers on "
+     "if01. If the gateway stays disconnected, use the other port."),
     ("USB300", [GatewayDeviceType.EnOceanUSB300.value],
      "EnOcean USB300 transceiver (ESP3, 57600 baud)."),
     ("FT232R", [GatewayDeviceType.GatewayEltakoFGW14USB.value, GatewayDeviceType.GatewayEltakoFAM14.value,
@@ -118,6 +120,28 @@ def _pretty_name(descriptor: str) -> str:
     return name.replace("_", " ")
 
 
+def _pyserial_ports() -> list[dict]:
+    """Serial ports enumerated by pyserial - works on linux, macOS and windows."""
+    try:
+        from serial.tools import list_ports
+    except ImportError:     # pragma: no cover - pyserial is a hard dependency
+        return []
+
+    ports = []
+    try:
+        for port in list_ports.comports():
+            ports.append({
+                'device': port.device,
+                'manufacturer': getattr(port, 'manufacturer', None),
+                'product': getattr(port, 'product', None) or getattr(port, 'description', None),
+                'serial_number': getattr(port, 'serial_number', None),
+                'interface_name': getattr(port, 'interface', None),
+            })
+    except Exception as e:  # noqa: BLE001 - enumeration must never break the scan
+        LOGGER.debug(f"[{LOG_PREFIX_SCAN}] pyserial enumeration failed: {e}")
+    return ports
+
+
 def scan_serial_ports() -> list[dict]:
     """All serial ports incl. usb descriptor and a suggestion for the device type."""
     by_id = _read_link(SERIAL_BY_ID_DIR)
@@ -137,6 +161,15 @@ def scan_serial_ports() -> list[dict]:
         for device in glob.glob(pattern):
             entry_for(device)
 
+    # 1b) pyserial enumeration - the globs and udev above are linux specific, this also
+    # finds COM3 on windows and /dev/cu.usbserial-* on macOS (relevant for the standalone
+    # runtime, which runs directly on the developer machine)
+    for info in _pyserial_ports():
+        entry = entry_for(info['device'])
+        for key in ('manufacturer', 'product', 'serial_number', 'interface_name'):
+            if info.get(key) and not entry.get(key):
+                entry[key] = info[key]
+
     # 2) stable names from udev, if available
     for descriptor, device in by_id.items():
         entry = entry_for(device)
@@ -150,22 +183,23 @@ def scan_serial_ports() -> list[dict]:
     for descriptor, device in by_path.items():
         entry_for(device)['by_path'] = os.path.join(SERIAL_BY_PATH_DIR, descriptor)
 
-    # 3) usb descriptor from sysfs and the resulting suggestion
+    # 3) usb descriptor from sysfs (linux) and the resulting suggestion. The entry may
+    # already carry manufacturer/product from the pyserial enumeration (macOS, windows).
     for entry in ports.values():
         info = _read_sysfs_info(entry['device'])
         entry.update({key: value for key, value in info.items()})
 
         if not entry.get('descriptor'):
-            readable = " ".join(part for part in [info.get('manufacturer'), info.get('product'),
-                                                  info.get('serial_number')] if part)
+            readable = " ".join(part for part in [entry.get('manufacturer'), entry.get('product'),
+                                                  entry.get('serial_number')] if part)
             if readable:
                 entry['name'] = readable
         if entry.get('interface_name') and not entry.get('interface'):
             entry['interface'] = entry['interface_name']
 
         # the suggestion is derived from every available text
-        haystack = " ".join(str(value) for value in [entry.get('descriptor'), info.get('product'),
-                                                    info.get('manufacturer'), info.get('interface_name')] if value)
+        haystack = " ".join(str(value) for value in [entry.get('descriptor'), entry.get('product'),
+                                                    entry.get('manufacturer'), entry.get('interface_name')] if value)
         types, hint = _describe_descriptor(haystack)
         entry['suggested_device_types'] = types
         entry['hint'] = hint

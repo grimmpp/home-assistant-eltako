@@ -37,6 +37,14 @@ function renderField(field, value, prefix = "") {
         <option value="">${field.required ? "&mdash; please select &mdash;" : "&mdash; not set &mdash;"}</option>
         ${options.join("")}
       </select>`;
+  } else if (field.type === "combo") {
+    // text input with suggestions (e.g. the areas of home assistant) - free text stays allowed
+    const listId = `${id}-list`;
+    const options = (field.options || []).map((option) =>
+      `<option value="${escapeHtml(option && typeof option === "object" ? option.value : option)}"></option>`);
+    input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="combo"
+                    value="${escapeHtml(current)}" list="${listId}"${required} />
+             <datalist id="${listId}">${options.join("")}</datalist>`;
   } else if (field.type === "boolean") {
     const checked = current === true || current === "true" ? "checked" : "";
     input = `<input type="checkbox" id="${id}" data-field="${escapeHtml(name)}" data-type="boolean" ${checked} />`;

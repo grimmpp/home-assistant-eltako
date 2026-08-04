@@ -1,0 +1,259 @@
+{
+  "uid": "eltako-per-device",
+  "title": "Eltako - Telegrams per device",
+  "tags": [
+    "eltako",
+    "enocean"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "textbox",
+        "query": "eltako",
+        "current": {
+          "text": "eltako",
+          "value": "eltako"
+        }
+      },
+      {
+        "name": "measurement",
+        "label": "Measurement",
+        "type": "textbox",
+        "query": "eltako_telegram",
+        "current": {
+          "text": "eltako_telegram",
+          "value": "eltako_telegram"
+        }
+      },
+      {
+        "name": "device",
+        "label": "Device",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "eltako-influxdb"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"device_name\")"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Telegrams per device over time",
+      "description": "How chatty is each device? A sensor which suddenly stops or floods stands out here.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "sum",
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> filter(fn: (r) => contains(value: r.device_name, set: ${device:json}) or ${device:json}[0] == \"$__all\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"device_name\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"device_name\"])"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Total per device",
+      "description": "",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "xTickLabelRotation": -45,
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"device_name\", \"address\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 25)\n  |> map(fn: (r) => ({ device: if exists r.device_name and r.device_name != \"\" then r.device_name else r.address, telegrams: r._value }))"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Per device: count, first and last telegram",
+      "description": "Sorted by traffic. 'last' shows when the device was heard from the last time.",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"device_name\", \"address\", \"eep\", \"area\"])\n  |> reduce(identity: {telegrams: 0, last: time(v: 0)},\n            fn: (r, accumulator) => ({ telegrams: accumulator.telegrams + 1,\n                                       last: if r._time > accumulator.last then r._time else accumulator.last }))\n  |> group()\n  |> sort(columns: [\"telegrams\"], desc: true)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Telegrams per hour and platform",
+      "description": "",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)\n  |> group(columns: [\"platform\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"platform\"])"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Average interval between two telegrams",
+      "description": "A battery sensor with a very long interval may have an empty battery; a very short one floods the bus.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> group(columns: [\"device_name\", \"address\"])\n  |> elapsed(unit: 1s)\n  |> mean(column: \"elapsed\")\n  |> group()\n  |> sort(columns: [\"elapsed\"])\n  |> rename(columns: {elapsed: \"avg seconds between telegrams\"})"
+        }
+      ]
+    }
+  ]
+}

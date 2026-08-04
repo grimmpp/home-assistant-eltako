@@ -177,6 +177,33 @@ class TestDuplicateDeviceDetection(TestCase):
 
         self.assertEqual(config_helpers.remove_duplicate_devices(config), {})
 
+    def test_bus_device_on_two_gateways_is_kept(self):
+        """Several gateways on one bus are a supported setup: the same bus device may be
+        declared for both. Its unique id contains the gateway id, so every declaration
+        becomes its own working entity - nothing collides, nothing is dropped."""
+        config = {CONF_GATEWAY: [
+            {CONF_ID: 1, CONF_DEVICES: {'light': [
+                {CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08'}]}},
+            {CONF_ID: 2, CONF_DEVICES: {'light': [
+                {CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08'}]}},
+        ]}
+
+        self.assertEqual(config_helpers.remove_duplicate_devices(config), {})
+        self.assertEqual(len(config[CONF_GATEWAY][0][CONF_DEVICES]['light']), 1)
+        self.assertEqual(len(config[CONF_GATEWAY][1][CONF_DEVICES]['light']), 1)
+
+    def test_bus_device_twice_on_the_same_gateway_is_removed(self):
+        config = {CONF_GATEWAY: [{CONF_ID: 1, CONF_DEVICES: {'light': [
+            {CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08', CONF_NAME: 'first'},
+            {CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08', CONF_NAME: 'second'},
+        ]}}]}
+
+        duplicates = config_helpers.remove_duplicate_devices(config)
+
+        self.assertEqual(list(duplicates.keys()), ['light/00-00-00-01@gw1'])
+        remaining = config[CONF_GATEWAY][0][CONF_DEVICES]['light']
+        self.assertEqual([d[CONF_NAME] for d in remaining], ['first'])
+
     def test_empty_config(self):
         self.assertEqual(config_helpers.remove_duplicate_devices({}), {})
 

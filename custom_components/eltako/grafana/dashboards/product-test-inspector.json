@@ -1,0 +1,594 @@
+{
+  "uid": "eltako-inspect",
+  "title": "Eltako - Product and test inspector",
+  "tags": [
+    "eltako",
+    "enocean"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "description": "Search for a device, a product or a test run and look at its raw telegrams: what was sent, what came back, how the values developed.",
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "textbox",
+        "query": "eltako",
+        "current": {
+          "text": "eltako",
+          "value": "eltako"
+        }
+      },
+      {
+        "name": "measurement",
+        "label": "Measurement",
+        "type": "textbox",
+        "query": "eltako_telegram",
+        "current": {
+          "text": "eltako_telegram",
+          "value": "eltako_telegram"
+        }
+      },
+      {
+        "name": "search",
+        "label": "Search (address or name)",
+        "type": "textbox",
+        "query": "",
+        "description": "Free text, matches a part of the address or the device name. Leave empty for all.",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      },
+      {
+        "name": "payload",
+        "label": "Data payload contains",
+        "type": "textbox",
+        "query": "",
+        "description": "Part of the raw data bytes, e.g. '70' or '00-50'. Leave empty for all.",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      },
+      {
+        "name": "device",
+        "label": "Device",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "eltako-influxdb"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"device_name\")"
+      },
+      {
+        "name": "address",
+        "label": "Address",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "eltako-influxdb"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"address\")"
+      },
+      {
+        "name": "eep",
+        "label": "EEP",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "eltako-influxdb"
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"eep\")"
+      },
+      {
+        "name": "value",
+        "label": "Decoded value",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "eltako-influxdb"
+        },
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "description": "Which decoded EEP field to plot (temperature, humidity, state, ...)",
+        "query": "import \"influxdata/influxdb/schema\"\nschema.measurementFieldKeys(bucket: \"${bucket}\", measurement: \"${measurement}\")"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Matching telegrams",
+      "description": "",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> sum()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Addresses",
+      "description": "",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> keep(columns: [\"address\"])\n  |> group()\n  |> distinct(column: \"address\")\n  |> count()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Outgoing (commands)",
+      "description": "Commands Home Assistant sent - the stimulus of a test run.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.direction == \"outgoing\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> sum()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Incoming (answers)",
+      "description": "",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.direction == \"incoming\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> sum()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Wrong EEP",
+      "description": "",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\" and r.decode_error == \"True\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> sum()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Weakest signal",
+      "description": "",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"rssi_dbm\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> min()\n  |> keep(columns: [\"_value\"])"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Raw telegrams (newest first)",
+      "description": "Exactly what went over the air/bus: direction, message type, the raw data bytes and the status byte. This is the table to read after a test run.",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "_time",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and (r._field == \"data\" or r._field == \"status\" or r._field == \"rp_count\" or r._field == \"rssi_dbm\" or r._field == \"raw\"))\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => \"$payload\" == \"\" or (exists r.data and strings.containsStr(v: r.data, substr: \"$payload\")))\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 500)\n  |> keep(columns: [\"_time\", \"direction\", \"address\", \"device_name\", \"msg_type\", \"eep\",\n                    \"data\", \"raw\", \"status\", \"rp_count\", \"rssi_dbm\", \"gateway_id\", \"decode_error\"])"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "$value over time",
+      "description": "Any decoded value of the matching devices - pick the field with the 'Decoded value' variable (temperature, humidity, state, switching_command, ...).",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": true,
+            "pointSize": 5,
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "last",
+            "min",
+            "max",
+            "mean"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"$value\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> group(columns: [\"device_name\", \"address\"])"
+        }
+      ]
+    },
+    {
+      "type": "state-timeline",
+      "title": "Telegram sequence (in / out)",
+      "description": "When did which side talk? A command followed by an answer is a working round trip; a command without an answer is the failure to look at.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": false,
+        "showValue": "never",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"direction\", \"address\", \"_time\"])\n  |> sum()\n  |> group(columns: [\"direction\", \"address\"])"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Message types and EEPs of the selection",
+      "description": "",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"count\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => ${eep:json}[0] == \"$__all\" or contains(value: r.eep, set: ${eep:json}))\n  |> filter(fn: (r) => \"$search\" == \"\" or strings.containsStr(v: r.address, substr: \"$search\")\n                       or (exists r.device_name and strings.containsStr(v: r.device_name, substr: \"$search\")))\n  |> group(columns: [\"msg_type\", \"eep\", \"direction\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)\n  |> keep(columns: [\"msg_type\", \"eep\", \"direction\", \"_value\"])\n  |> rename(columns: {_value: \"telegrams\"})"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Distinct data payloads",
+      "description": "Which distinct payloads did this product send? A rocker switch shows a handful of values, a sensor a wide spread - a quick way to spot a stuck device.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "datasource": {
+        "type": "influxdb",
+        "uid": "eltako-influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "eltako-influxdb"
+          },
+          "queryType": "flux",
+          "query": "import \"strings\"\nfrom(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"${measurement}\" and r._field == \"data\")\n  |> filter(fn: (r) => ${device:json}[0] == \"$__all\" or contains(value: r.device_name, set: ${device:json}))\n  |> filter(fn: (r) => ${address:json}[0] == \"$__all\" or contains(value: r.address, set: ${address:json}))\n  |> filter(fn: (r) => \"$payload\" == \"\" or strings.containsStr(v: r._value, substr: \"$payload\"))\n  |> map(fn: (r) => ({ r with payload: r._value }))\n  |> group(columns: [\"payload\", \"address\", \"device_name\", \"msg_type\"])\n  |> reduce(identity: {occurrences: 0}, fn: (r, accumulator) => ({occurrences: accumulator.occurrences + 1}))\n  |> group()\n  |> sort(columns: [\"occurrences\"], desc: true)\n  |> limit(n: 200)\n  |> keep(columns: [\"payload\", \"address\", \"device_name\", \"msg_type\", \"occurrences\"])"
+        }
+      ]
+    }
+  ]
+}

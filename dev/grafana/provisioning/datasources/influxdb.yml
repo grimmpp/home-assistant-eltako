@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  # the uid is referenced by the provisioned dashboards - do not change it
+  - name: InfluxDB (eltako)
+    uid: eltako-influxdb
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    jsonData:
+      version: Flux
+      organization: home
+      defaultBucket: eltako
+    secureJsonData:
+      token: eltako-dev-token

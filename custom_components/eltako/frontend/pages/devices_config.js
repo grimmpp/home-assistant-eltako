@@ -23,6 +23,8 @@ export const page = {
       ctx.api.call(WS.DEVICE_LIST),
       ctx.api.call(WS.BUS_MEMBERS),
       ctx.loadIntegrationInfo(),
+      // addresses which send but are not configured - shown as their own block below
+      ctx.loadStatistics(),
     ]);
     if (form) ctx.state.deviceForm = form;
     if (list) ctx.state.configuredDevices = list.devices || [];
@@ -54,7 +56,42 @@ export const page = {
       <label class="check"><input id="only-silent" type="checkbox" ${ctx.state.onlySilent ? "checked" : ""}/>
              only never reported</label>
       <span class="spacer"></span>
+      <button id="import-config" class="action"
+              title="Import gateways and devices from an EnOcean Device Manager project (.eodm) or an eltako yaml">
+        Import&hellip;</button>
+      <input id="import-file" type="file" accept=".eodm,.yaml,.yml,.txt" style="display:none" />
       <button id="add-device" class="action primary">+ Add device</button>`;
+  },
+
+  async _importConfigFile(ctx, file) {
+    const content = await file.text();
+
+    const preview = await ctx.api.call("eltako/config/import", { content, dry_run: true });
+    if (!preview) {
+      alert(`Cannot read '${file.name}':\n${(ctx.api.lastError || {}).message || "unknown error"}`);
+      return;
+    }
+
+    const lines = preview.gateways.map((gateway) =>
+      `- ${gateway.name || gateway.device_type} (${gateway.device_type}, base id ${gateway.base_id})` +
+      `${gateway.already_configured ? " - ALREADY CONFIGURED, will be skipped" : `: ${gateway.device_count} devices`}`);
+    const warnings = preview.warnings.length
+      ? `\n\nNotes:\n${preview.warnings.map((warning) => `- ${warning}`).join("\n")}` : "";
+    if (!confirm(`Import from '${file.name}' (${preview.format}):\n\n${lines.join("\n")}${warnings}\n\nProceed?`)) {
+      return;
+    }
+
+    const result = await ctx.api.call("eltako/config/import", { content, dry_run: false });
+    if (!result) {
+      alert(`Import failed:\n${(ctx.api.lastError || {}).message || "unknown error"}`);
+      return;
+    }
+    const resultWarnings = result.warnings.length
+      ? `\n\nNotes:\n${result.warnings.map((warning) => `- ${warning}`).join("\n")}` : "";
+    alert(`Imported ${result.created_gateways} gateway(s) and ${result.created_devices} device(s).` +
+          `${resultWarnings}`);
+    await this.load(ctx);
+    ctx.requestRender();
   },
 
   bindToolbar(ctx, root) {
@@ -77,6 +114,13 @@ export const page = {
       };
       ctx.requestContentRender(true);
     });
+    const importFile = root.getElementById("import-file");
+    root.getElementById("import-config").addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", async () => {
+      const file = importFile.files && importFile.files[0];
+      importFile.value = "";      // allow importing the same file again
+      if (file) await this._importConfigFile(ctx, file);
+    });
   },
 
   render(ctx) {
@@ -89,14 +133,25 @@ export const page = {
       return activity && activity.silent_since_seconds !== null && activity.silent_since_seconds < 86400;
     }).length;
 
+    // a device is everything which exists on the installation: gateways, sensors and
+    // actuators. The gateways are devices of their own (they have their own entities and
+    // their own EnOcean address) and are listed in the hierarchy below as well.
+    const gateways = ((ctx.state.integrationInfo || {}).gateways || []);
+    const unknown = ((ctx.state.statistics || {}).unknown_devices || []).length;
+
     return `
       ${this._renderEditor(ctx)}
       ${this._renderMemoryPanel(ctx)}
       <div class="cards">
-        ${card("Devices", all.length)}
+        ${card("Devices", gateways.length + all.length, "",
+               `${gateways.length} gateway${gateways.length === 1 ? "" : "s"}, `
+               + `${all.length} sensor${all.length === 1 ? "" : "s"} / actuator${all.length === 1 ? "" : "s"}`)}
+        ${card("Gateways", gateways.length, gateways.length ? "" : "warn")}
         ${card("Reported today", activeToday, activeToday ? "good" : "")}
         ${card("Never reported", neverSeen, neverSeen ? "warn" : "",
                neverSeen ? "possibly wrong address or EEP" : "")}
+        ${card("Not configured yet", unknown, unknown ? "warn" : "",
+               unknown ? "see 'Unknown devices' below" : "")}
         ${card("From configuration.yaml", all.filter((d) => d.source === "yaml").length)}
         ${card("Created in the web ui", fromUi)}
       </div>
@@ -113,6 +168,11 @@ export const page = {
            <div class="empty">${all.length ? "No device matches the current filter."
              : "No devices configured yet. Use <b>+ Add device</b> or declare them in <code>configuration.yaml</code>."}</div>`)
         : this._renderHierarchy(ctx, devices)}
+
+      ${/* always the last block of the page, in both views: what exists but is not
+            configured yet belongs below everything which is configured */ ""}
+      ${this._renderUnknownSection(ctx)}
+
       <div class="footnote">Devices of <code>configuration.yaml</code> cannot be edited here - they are
         version controlled and always win over devices of the web ui. Changes made here take effect
         immediately, the gateway is reloaded automatically.</div>`;
@@ -210,6 +270,12 @@ export const page = {
     <th>Address</th><th>Name</th><th>Platform</th><th>EEP</th><th>Sender</th>
     <th>Area</th><th>Gateway</th><th class="num">Telegrams</th><th>Last reported</th>
     <th>Source</th><th></th>`,
+
+  // own head for the unknown block: it shows candidates instead of a configuration
+  UNKNOWN_TABLE_HEAD: `
+    <th>Address</th><th>Telegrams seen</th><th colspan="2">Possible EEPs</th>
+    <th colspan="3">Possible devices</th><th>Gateway</th><th class="num">Count</th>
+    <th>Last seen</th><th>Source</th><th></th>`,
 
   _deviceRow(device, indent = false, senderBadge = "") {
     return `
@@ -491,14 +557,131 @@ export const page = {
       radioRows.push(...radioDetected.map((sensor) => this._detectedSensorRow(sensor)));
     }
     sections.push(`
-      <h3 class="bus-heading">Radio devices <span class="hint-inline">${radioDevices.length} device${radioDevices.length === 1 ? "" : "s"},
-        ${radioGateways.length} wireless gateway${radioGateways.length === 1 ? "" : "s"}${radioDetected.length
+      <h3 class="bus-heading">Radio <span class="hint-inline">${radioGateways.length} gateway${radioGateways.length === 1 ? "" : "s"},
+        ${radioDevices.length} sensor${radioDevices.length === 1 ? "" : "s"} / actuator${radioDevices.length === 1 ? "" : "s"}${radioDetected.length
           ? `, ${radioDetected.length} detected in memories` : ""}</span></h3>
       ${radioRows.length ? `<div class="table-wrapper"><table>
           <thead><tr>${this.TABLE_HEAD}</tr></thead><tbody>${radioRows.join("")}</tbody></table></div>`
         : `<div class="empty">No radio devices configured.</div>`}`);
 
     return sections.join("");
+  },
+
+  /**
+   * Addresses which send telegrams but are not configured yet - the same data as the
+   * 'Unknown devices' page, as a block of the device list so that everything which exists on
+   * the bus and in the air is visible in one place.
+   *
+   * Senders which were already found in the device memories are skipped: they are listed at
+   * their bus position above, with the far better EEP from their key function.
+   */
+  _renderUnknownSection(ctx) {
+    const recording = !(ctx.state.logInfo && ctx.state.logInfo.enabled === false);
+    if (!recording) {
+      return `
+        <h3 class="bus-heading">Unknown devices <span class="hint-inline">telegram recording is
+          disabled - enable it to detect devices which are not configured yet</span></h3>`;
+    }
+
+    // the backend delivers them filtered, sorted and enriched (candidates + yaml snippet),
+    // see telegram_suggestions.py - nothing is derived here
+    const unknown = ((ctx.state.statistics || {}).unknown_devices || [])
+      .filter((device) => matchesFilter(ctx.state.configFilter,
+        [device.address, ...Object.keys(device.msg_types || {}),
+         ...(device.suggestions || []).map((candidate) => candidate.eep)]));
+
+    const heading = `
+      <h3 class="bus-heading">Unknown devices <span class="hint-inline">addresses which send
+        telegrams but are not configured yet${unknown.length ? `, ${unknown.length} found` : ""}</span>
+        ${unknown.length ? `<button class="action small" id="copy-unknown-yaml"
+          title="configuration.yaml snippet for all of them">copy all as yaml</button>` : ""}</h3>`;
+
+    if (!unknown.length) {
+      return `${heading}
+        <div class="empty">${(ctx.state.statistics || {}).devices?.length
+          ? "Every recorded telegram belongs to a configured device."
+          : "No telegrams recorded yet - press a button on a device to make it appear here."}</div>`;
+    }
+
+    const rows = unknown.map((device) => {
+      const best = device.suggested || {};
+      return `
+        <tr class="channel-row unknown-row" data-address="${escapeHtml(device.address)}">
+          <td class="mono">${escapeHtml(device.address)}
+            ${device.local_address && device.local_address !== device.address
+              ? `<span class="hint">bus ${escapeHtml(device.local_address)}</span>` : ""}</td>
+          <td><span class="hint">${escapeHtml(Object.keys(device.msg_types || {}).join(", "))}</span>
+            ${device.last_data ? `<span class="hint">data ${escapeHtml(device.last_data)}</span>` : ""}</td>
+          <td colspan="2">${this._renderEepCandidates(device)}</td>
+          <td colspan="3">${this._renderDeviceCandidates(device)}</td>
+          <td>${escapeHtml((device.gateway_ids || []).join(", ") || "-")}</td>
+          <td class="num">${formatNumber(device.count)}</td>
+          <td class="mono">${escapeHtml(formatDateTime(device.last_seen))}</td>
+          <td><span class="tag role">telegram</span></td>
+          <td class="actions"><button class="action small primary"
+            data-add-unknown="${escapeHtml(device.address)}|${escapeHtml(best.eep || "")}|${escapeHtml(best.platform || "")}"
+            >+ add device</button>
+            <button class="action small" data-unknown-yaml="${encodeURIComponent(device.yaml || '')}"
+              >copy yaml</button></td>
+        </tr>`;
+    }).join("");
+    this._unknownYaml = unknown.map((device) => device.yaml || "").join("");
+
+    return `${heading}
+      <div class="table-wrapper"><table>
+        <thead><tr>${this.UNKNOWN_TABLE_HEAD}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="footnote">The candidates come from the backend: a 4BS teach-in telegram states
+        the EEP (<span class="tag taught">confirmed</span>), otherwise the message type limits
+        the possible profiles and the data bytes decide between them - a candidate whose decoded
+        values are out of range is dropped. The device suggestions are the models of the central
+        device catalog which speak that EEP. Devices found in the memory of a bus actuator are
+        listed at their bus position above instead, their key function reveals the EEP reliably.</div>`;
+  },
+
+  /** Column "possible EEPs": what the backend derived from the telegrams. */
+  _renderEepCandidates(device) {
+    const candidates = device.suggestions || [];
+    if (!candidates.length) {
+      return `<span class="hint">no candidate - waiting for a telegram with data</span>`;
+    }
+    return candidates.map((candidate) => `
+      <div class="candidate">
+        <span class="mono">${escapeHtml(candidate.eep)}</span>
+        <span class="tag ${candidate.confidence === "confirmed" ? "taught"
+          : candidate.confidence === "likely" ? "role" : "unknown"}"
+          >${escapeHtml(candidate.confidence)}</span>
+        <span class="hint">${escapeHtml(candidate.reason)}</span>
+      </div>`).join("");
+  },
+
+  /** Column "possible devices": the models of the catalog which speak those EEPs. */
+  /** at most this many device models per EEP - the rest is summarized as '+N' */
+  MAX_MODELS_PER_EEP: 6,
+
+  _renderDeviceCandidates(device) {
+    const withDevices = (device.suggestions || [])
+      .filter((candidate) => (candidate.devices || []).length);
+    if (!withDevices.length) {
+      return `<span class="hint">${(device.suggestions || []).length
+        ? "no device of the catalog uses these profiles" : "-"}</span>`;
+    }
+
+    // one line per EEP: "<eep>: model model model" - the EEPs are aligned in a grid column so
+    // the models of the different profiles stay readable next to each other
+    return `<div class="eep-devices">${withDevices.map((candidate) => {
+      const models = candidate.devices;
+      const shown = models.slice(0, this.MAX_MODELS_PER_EEP);
+      const rest = models.length - shown.length;
+      return `
+        <span class="mono eep-devices-key">${escapeHtml(candidate.eep)}</span>
+        <span class="eep-devices-value">
+          ${shown.map((model) => `<span class="chip"
+            title="${escapeHtml([model.hw_type, model.brand, model.description, model.platform]
+              .filter(Boolean).join(" - "))}">${escapeHtml(model.hw_type)}</span>`).join("")}
+          ${rest > 0 ? `<span class="hint" title="${escapeHtml(models.map((m) => m.hw_type).join(", "))}"
+            >+${rest} more</span>` : ""}
+        </span>`;
+    }).join("")}</div>`;
   },
 
   /**
@@ -603,6 +786,17 @@ export const page = {
             </select>
             <span class="field-help">${escapeHtml(platform.help || "")}</span>
           </div>
+          ${(platform.device_types || []).length ? `
+          <div class="field">
+            <label for="editor-device-type">Device</label>
+            <select id="editor-device-type">
+              <option value="">&mdash; select a device (optional) &mdash;</option>
+              ${platform.device_types.map((t) => `<option value="${escapeHtml(t.value)}"
+                 ${t.value === editor.deviceType ? "selected" : ""}>${escapeHtml(t.label)}</option>`).join("")}
+            </select>
+            <span class="field-help">${this._deviceTypeHint(platform, editor.deviceType)
+              || "Selecting a device prefills its EEP and sender EEP - all values stay editable."}</span>
+          </div>` : ""}
         </div>
         <div class="form-grid" id="device-fields">
           ${renderFields(platform.fields, editor.values || {})}
@@ -743,6 +937,38 @@ export const page = {
     });
 
     // take over an unconfigured bus channel: open the editor prefilled
+    const copyAllYaml = root.getElementById("copy-unknown-yaml");
+    if (copyAllYaml) {
+      copyAllYaml.addEventListener("click", () => {
+        navigator.clipboard.writeText(this._unknownYaml || "");
+        copyAllYaml.textContent = "copied";
+        setTimeout(() => (copyAllYaml.textContent = "copy all as yaml"), 1500);
+      });
+    }
+
+    root.querySelectorAll("button[data-unknown-yaml]").forEach((button) => {
+      button.addEventListener("click", () => {
+        navigator.clipboard.writeText(decodeURIComponent(button.dataset.unknownYaml));
+        button.textContent = "copied";
+        setTimeout(() => (button.textContent = "copy yaml"), 1500);
+      });
+    });
+
+    root.querySelectorAll("button[data-add-unknown]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const [address, eep, platform] = button.dataset.addUnknown.split("|");
+        ctx.state.editor = {
+          mode: "add",
+          platform: platform || "binary_sensor",
+          gatewayId: this._defaultGatewayId(ctx),
+          values: { id: address, eep: eep || "", name: `Device ${address}` },
+          error: null,
+        };
+        ctx.requestContentRender(true);
+        ctx.root && ctx.root.getElementById("device-editor")?.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+
     root.querySelectorAll("button[data-add-bus]").forEach((button) => {
       button.addEventListener("click", () => {
         const [address, eep, platform, gatewayId] = button.dataset.addBus.split("|");
@@ -817,6 +1043,7 @@ export const page = {
         // keep the values which exist in both platforms (address, name, area, eep)
         editor.values = { ...readFields(root.getElementById("device-fields")) };
         editor.platform = event.target.value;
+        editor.deviceType = null;       // templates belong to one platform
         editor.error = null;
         ctx.requestContentRender(true);
       });
@@ -826,6 +1053,29 @@ export const page = {
       gatewaySelect.addEventListener("change", (event) => {
         editor.gatewayId = Number(event.target.value);
         editor.values = { ...readFields(root.getElementById("device-fields")) };
+        ctx.requestContentRender(true);
+      });
+    }
+
+    // device template: prefills EEP + sender EEP of the selected device (from the backend
+    // catalog). Values stay editable - the template only fills, it does not lock anything.
+    const deviceTypeSelect = root.getElementById("editor-device-type");
+    if (deviceTypeSelect) {
+      deviceTypeSelect.addEventListener("change", (event) => {
+        editor.values = { ...readFields(root.getElementById("device-fields")) };
+        editor.deviceType = event.target.value || null;
+
+        const descriptor = ctx.state.deviceForm || { platforms: [] };
+        const platform = descriptor.platforms.find((p) => p.platform === editor.platform) || {};
+        const template = (platform.device_types || []).find((t) => t.value === editor.deviceType);
+        if (template) {
+          editor.values.eep = template.eep;
+          if (template.sender_eep) {
+            editor.values.sender = { ...(editor.values.sender || {}), eep: template.sender_eep };
+          }
+          if (!editor.values.name) editor.values.name = template.hw_type;
+        }
+        editor.error = null;
         ctx.requestContentRender(true);
       });
     }
@@ -863,6 +1113,19 @@ export const page = {
   _defaultGatewayId(ctx) {
     const gateways = (ctx.state.deviceForm || {}).gateways || [];
     return gateways.length ? gateways[0].id : null;
+  },
+
+  /** Teach-in hint of the selected device template (PCT14 function group / key function). */
+  _deviceTypeHint(platform, deviceType) {
+    if (!deviceType) return "";
+    const template = (platform.device_types || []).find((t) => t.value === deviceType);
+    if (!template) return "";
+    const parts = [];
+    if (template.pct14_function_group) {
+      parts.push(`teach-in: PCT14 group ${template.pct14_function_group}, function ${template.pct14_key_function}`);
+    }
+    if (template.address_count > 1) parts.push(`occupies ${template.address_count} addresses`);
+    return parts.join(" - ");
   },
 
   _filtered(ctx) {

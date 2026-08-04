@@ -14,13 +14,21 @@ import { STYLES } from "./lib/styles.js";
 import { escapeHtml, icon } from "./lib/utils.js";
 
 import { page as overviewPage } from "./pages/overview.js";
+import { page as controlPage } from "./pages/control.js";
 import { page as devicesConfigPage } from "./pages/devices_config.js";
 import { page as telegramsPage } from "./pages/telegrams.js";
 import { page as statisticsPage } from "./pages/devices.js";
-import { page as unknownPage } from "./pages/unknown.js";
+import { page as testsPage } from "./pages/tests.js";
 import { page as aboutPage } from "./pages/about.js";
 
-const PAGES = [overviewPage, devicesConfigPage, telegramsPage, statisticsPage, unknownPage, aboutPage];
+// pages marked standaloneOnly need the eltako_standalone runtime (its shell sets
+// window.eltakoStandalone) - inside Home Assistant they are hidden. Pages with a
+// visible(ctx) hook can additionally hide themselves (e.g. by a general setting).
+// 'unknown devices' has no page of its own anymore - the addresses which are not configured
+// yet are the last block of the device page, next to everything else which exists on the bus.
+const PAGES = [overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
+               testsPage, aboutPage]
+  .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
 const DEFAULT_PAGE = overviewPage.id;
 const MAX_LIVE_TELEGRAMS = 500;
 
@@ -30,6 +38,8 @@ class EltakoPanel extends HTMLElement {
     this._hass = null;
     this._api = null;
     this._connected = false;
+    this._narrow = false;
+    this._menuButton = null;
     this._pageId = this._pageIdFromLocation();
     this._unsubscribeTelegrams = null;
     this._refreshTimer = null;
@@ -76,7 +86,6 @@ class EltakoPanel extends HTMLElement {
       pendingNewGateway: null,
       deviceSort: "count",
       deviceSortDescending: true,
-      unknownFilter: "",
     };
 
     this.attachShadow({ mode: "open" });
@@ -91,6 +100,7 @@ class EltakoPanel extends HTMLElement {
   set hass(hass) {
     const isFirst = this._hass === null;
     this._hass = hass;
+    if (this._menuButton) this._menuButton.hass = hass;
     if (isFirst) {
       this._api = new EltakoApi(hass);
       this._renderShell();
@@ -100,6 +110,17 @@ class EltakoPanel extends HTMLElement {
 
   get hass() {
     return this._hass;
+  }
+
+  /** home assistant sets `narrow` on panel elements - the menu button needs it to decide
+   *  whether the sidebar is hidden (smartphone) and the hamburger has to be shown. */
+  set narrow(narrow) {
+    this._narrow = narrow;
+    if (this._menuButton) this._menuButton.narrow = narrow;
+  }
+
+  get narrow() {
+    return this._narrow;
   }
 
   connectedCallback() {
@@ -116,7 +137,9 @@ class EltakoPanel extends HTMLElement {
   }
 
   async _start() {
-    await this.loadLogInfo();
+    // integration info is needed by the navigation (pages can hide themselves
+    // depending on the general settings, see page.visible)
+    await Promise.all([this.loadLogInfo(), this.loadIntegrationInfo()]);
     this._subscribeTelegrams();
     await this._enterPage();
   }
@@ -272,6 +295,12 @@ class EltakoPanel extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>${STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
       <div class="shell">
+        <header class="app-head">
+          <span id="menu-button-slot"></span>
+          ${icon("mdi:access-point-network", "◉")}
+          <span class="brand-title">Eltako</span>
+          <span class="brand-version" id="app-version">EnOcean</span>
+        </header>
         <nav id="nav"></nav>
         <main>
           <header class="page-head">
@@ -293,6 +322,34 @@ class EltakoPanel extends HTMLElement {
       event.preventDefault();
       this._navigate(link.dataset.page);
     });
+
+    this._attachMenuButton();
+  }
+
+  /**
+   * The standard home assistant menu button at the very left of the header. It shows the
+   * hamburger when the sidebar is hidden (smartphone) - without it there is no way to
+   * navigate back out of the panel on a phone. Falls back to a plain button firing the
+   * 'hass-toggle-menu' event if the ha-menu-button element is not available.
+   */
+  _attachMenuButton() {
+    const slot = this.shadowRoot.getElementById("menu-button-slot");
+    if (!slot) return;
+
+    if (customElements.get("ha-menu-button")) {
+      this._menuButton = document.createElement("ha-menu-button");
+      this._menuButton.hass = this._hass;
+      this._menuButton.narrow = this._narrow;
+    } else {
+      this._menuButton = document.createElement("button");
+      this._menuButton.className = "menu-fallback";
+      this._menuButton.setAttribute("aria-label", "Open menu");
+      this._menuButton.textContent = "☰";
+      this._menuButton.addEventListener("click", () => {
+        this.dispatchEvent(new CustomEvent("hass-toggle-menu", { bubbles: true, composed: true }));
+      });
+    }
+    slot.replaceChildren(this._menuButton);
   }
 
   _render() {
@@ -306,13 +363,14 @@ class EltakoPanel extends HTMLElement {
   _renderNav() {
     const info = this.state.integrationInfo || {};
     const context = this._context();
-    this.shadowRoot.getElementById("nav").innerHTML = `
-      <div class="brand">
-        ${icon("mdi:access-point-network", "◉")}
-        <span class="brand-title">Eltako</span>
-        <span class="brand-version">${info.version ? `v${escapeHtml(info.version)}` : "EnOcean"}</span>
-      </div>
-      ${PAGES.map((page) => {
+    const version = this.shadowRoot.getElementById("app-version");
+    if (version) version.textContent = info.version ? `v${info.version}` : "EnOcean";
+    const nav = this.shadowRoot.getElementById("nav");
+    // on a narrow screen the navigation scrolls horizontally - a refresh must not jump it
+    // back to the first entry
+    const navScroll = nav ? nav.scrollLeft : 0;
+    nav.innerHTML = `
+      ${PAGES.filter((page) => !page.visible || page.visible(context)).map((page) => {
         const badge = page.badge ? page.badge(context) : null;
         return `
           <a data-page="${page.id}" href="#/${page.id}" class="${page.id === this._pageId ? "active" : ""}">
@@ -321,6 +379,7 @@ class EltakoPanel extends HTMLElement {
             ${badge ? `<span class="badge">${escapeHtml(badge)}</span>` : ""}
           </a>`;
       }).join("")}`;
+    nav.scrollLeft = navScroll;
   }
 
   _renderHead() {
@@ -352,10 +411,54 @@ class EltakoPanel extends HTMLElement {
     if (page.bindToolbar) page.bindToolbar(this._context(), this.shadowRoot);
   }
 
+  /**
+   * Scroll positions of the content area.
+   *
+   * Replacing innerHTML destroys every scrollable element: the browser clamps the scrollTop
+   * of <main> to 0 while the new content has no height yet, and each freshly created
+   * .table-wrapper starts at the left again. On a page which refreshes every few seconds that
+   * makes reading a wide table impossible - so the positions are captured and restored.
+   *
+   * Inner containers are keyed by their position in the document. Between two refreshes the
+   * number and order of the tables is stable; if it does change (a block appears), the
+   * remaining ones are restored and the new one simply starts at 0.
+   */
+  // every element of the content which can scroll on its own
+  SCROLLABLE_SELECTOR = ".table-wrapper, .dt-log, .detail-drawer, pre";
+
+  _captureScroll(content) {
+    const main = this.shadowRoot.querySelector("main");
+    return {
+      main: main ? { top: main.scrollTop, left: main.scrollLeft } : null,
+      inner: [...content.querySelectorAll(this.SCROLLABLE_SELECTOR)]
+        .map((element) => ({ top: element.scrollTop, left: element.scrollLeft })),
+    };
+  }
+
+  _restoreScroll(content, captured) {
+    if (!captured) return;
+    if (captured.main) {
+      const main = this.shadowRoot.querySelector("main");
+      if (main) {
+        main.scrollTop = captured.main.top;
+        main.scrollLeft = captured.main.left;
+      }
+    }
+    const elements = [...content.querySelectorAll(this.SCROLLABLE_SELECTOR)];
+    captured.inner.forEach((position, index) => {
+      const element = elements[index];
+      if (!element) return;
+      element.scrollTop = position.top;
+      element.scrollLeft = position.left;
+    });
+  }
+
   _renderContent() {
     const page = this._page;
     const content = this.shadowRoot.getElementById("content");
     if (!content) return;
+
+    const captured = this._captureScroll(content);
 
     try {
       content.innerHTML = page.render(this._context());
@@ -366,6 +469,7 @@ class EltakoPanel extends HTMLElement {
       const outlet = this.shadowRoot.getElementById("drawer-outlet");
       if (outlet) outlet.replaceChildren(...content.querySelectorAll("aside.detail-drawer"));
       if (page.afterRender) page.afterRender(this._context(), this.shadowRoot);
+      this._restoreScroll(content, captured);
     } catch (err) {
       content.innerHTML = `<div class="notice warn"><h3>Cannot display this page</h3>
         <pre>${escapeHtml(err && err.stack ? err.stack : err)}</pre></div>`;

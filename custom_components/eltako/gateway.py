@@ -18,6 +18,36 @@ from eltakobus import locking
 from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
 from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
 
+
+def _attach_rssi_to_esp2_conversion():
+    """Carry the signal strength of radio telegrams over the ESP3 -> ESP2 translation.
+
+    ESP3 radio packets report the RSSI in their optional data (packet.dBm, negative
+    dBm). The adapter drops it when it converts to ESP2 (the ESP2 frame has no place
+    for it), so the converted message gets it attached as a plain attribute. The
+    telegram logger picks it up from there. ESP2 gateways (FAM14, FGW14-USB) do not
+    report a signal strength - nothing is attached for them.
+
+    The adapter calls the classmethod via the class name, therefore subclassing is
+    not enough - the classmethod itself is wrapped (once).
+    """
+    original = ESP3SerialCommunicator.convert_esp3_to_esp2_message.__func__
+
+    def convert_with_rssi(cls, packet):
+        esp2_msg = original(cls, packet)
+        if esp2_msg is not None:
+            dbm = getattr(packet, 'dBm', None)
+            if isinstance(dbm, (int, float)) and dbm < 0:
+                esp2_msg.dBm = int(dbm)
+        return esp2_msg
+
+    convert_with_rssi._adds_rssi = True
+    ESP3SerialCommunicator.convert_esp3_to_esp2_message = classmethod(convert_with_rssi)
+
+
+if not getattr(ESP3SerialCommunicator.convert_esp3_to_esp2_message.__func__, '_adds_rssi', False):
+    _attach_rssi_to_esp2_conversion()
+
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_MAC
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
@@ -131,7 +161,15 @@ class EnOceanGateway:
             self._base_id_query_done = False     # query again after a reconnect
             return
 
-        if GatewayDeviceType.is_esp2_gateway(self.dev_type) and self.dev_type != GatewayDeviceType.GatewayEltakoFAM14:
+        # ESP2 gateways which cannot report a base id of their own: a FGW14-USB uses the base
+        # id of the FAM14 on its bus, the reverse network bridge has none at all.
+        # A FAM14 needs the special (bus locking) request, a FAM-USB answers the normal one,
+        # and an ESP2 gateway reached over tcp (`lan-gw-esp2`, e.g. a serial gateway published
+        # with socat) forwards that request to whatever hangs behind it - all of them are
+        # queried, so the base id never has to be entered by hand.
+        if GatewayDeviceType.is_esp2_gateway(self.dev_type) and self.dev_type not in (
+                GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFAMUSB,
+                GatewayDeviceType.LAN_ESP2):
             return
 
         if self._base_id_query_done or self._base_id_query_lock.locked():
@@ -254,14 +292,44 @@ class EnOceanGateway:
                 LOGGER.debug("[Gateway] [Id: %s] Cannot track device activity: %s", self.dev_id, e)
 
     
+    # pyserial validates the baud rate even for a socket url, where it is meaningless (the
+    # real rate is set on the device by whoever publishes it). -1 of the LAN types is rejected
+    # with "Not a valid baudrate", which crashed the reader thread in an endless retry loop.
+    DEFAULT_BAUD_RATE_FOR_URL = 57600
+
+    def _esp2_connection(self) -> tuple[str, int]:
+        """(url, baud rate) RS485SerialInterfaceV2 is opened with.
+
+        An ESP2 gateway reached over the network (`lan-gw-esp2`) has no device file: its
+        configuration provides a host and a port. pyserial opens a tcp connection for the url
+        `socket://<host>:<port>`, so the same serial interface serves both cases.
+
+        This makes a serial gateway usable from a container which cannot access usb: publish
+        the port on the host (`dev/share-serial.sh` runs socat) and configure the gateway as
+        `lan-gw-esp2` with that host and port.
+        """
+        path = str(self.serial_path or "")
+        baud_rate = self.baud_rate
+
+        if GatewayDeviceType.is_lan_gateway(self.dev_type):
+            if '://' not in path:       # not already a pyserial url like socket://host:5100
+                path = f"socket://{path}:{self.port}"
+            if not baud_rate or baud_rate <= 0:
+                baud_rate = self.DEFAULT_BAUD_RATE_FOR_URL
+
+        return path, baud_rate
+
     def _init_bus(self):
         self._received_message_count = 0
         self._fire_received_message_count_event()
 
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
-            self._bus = RS485SerialInterfaceV2(self.serial_path, 
-                                               baud_rate=self.baud_rate, 
-                                               callback=self._callback_receive_message_from_serial_bus, 
+            url, baud_rate = self._esp2_connection()
+            LOGGER.debug("[Gateway] [Id: %s] ESP2 connection: %s (baud rate %s)",
+                         self.dev_id, url, baud_rate)
+            self._bus = RS485SerialInterfaceV2(url,
+                                               baud_rate=baud_rate,
+                                               callback=self._callback_receive_message_from_serial_bus,
                                                delay_message=self._message_delay,
                                                auto_reconnect=self._auto_reconnect)
             
@@ -374,7 +442,7 @@ class EnOceanGateway:
 
         # receive messages from HA event bus
         event_id = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_SEND_MESSAGE)
-        LOGGER.debug("[Gateway] [Id: %d] Register gateway bus for message event_id %s", event_id)
+        LOGGER.debug("[Gateway] [Id: %s] Register gateway bus for message event_id %s", self.dev_id, event_id)
         self.dispatcher_disconnect_handle = async_dispatcher_connect(
             self.hass, event_id, self._callback_send_message_to_serial_bus
         )
@@ -385,7 +453,7 @@ class EnOceanGateway:
         # might have different gateways that cause the eltako relays
         # only to react on them.
         service_name = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_SEND_MESSAGE_SERVICE)
-        LOGGER.debug("[Gateway] [Id: %d] Register send message service event_id %s", event_id)
+        LOGGER.debug("[Gateway] [Id: %s] Register send message service %s", self.dev_id, service_name)
         self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
 
 

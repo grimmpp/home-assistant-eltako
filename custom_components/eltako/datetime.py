@@ -84,5 +84,5 @@ class GatewayLastReceivedMessage(EltakoEntity, DateTimeEntity):
     def set_value(self, value: datetime) -> None:
         """Update the current value."""
 
-        self.native_value = value
+        self._attr_native_value = value
         self.schedule_update_ha_state()

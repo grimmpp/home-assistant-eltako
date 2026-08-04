@@ -19,6 +19,7 @@ export const WS = {
   BUS_READ_MEMORY: "eltako/bus/read_memory",
   BUS_TEACH_IN: "eltako/bus/teach_in_senders",
   GATEWAY_FORM: "eltako/gateways/form",
+  GRAFANA_SYNC: "eltako/grafana/sync",
   GATEWAY_ADD: "eltako/gateways/add",
   GATEWAY_REMOVE: "eltako/gateways/remove",
   GATEWAY_SCAN: "eltako/gateways/scan",
