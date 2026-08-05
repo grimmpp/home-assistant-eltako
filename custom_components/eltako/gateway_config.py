@@ -207,6 +207,94 @@ async def async_update_gateway_base_id(hass: HomeAssistant, gateway_id: int, bas
     return False
 
 
+### fields a gateway of the user interface can be edited with. The id is missing on purpose:
+### it is part of the description a config entry is identified by and of every entity id of
+### the gateway, so changing it would orphan all devices and entities of that gateway.
+EDITABLE_FIELDS = [CONF_NAME, CONF_DEVICE_TYPE, CONF_BASE_ID, CONF_SERIAL_PATH,
+                   CONF_GATEWAY_ADDRESS, CONF_GATEWAY_PORT, CONF_GATEWAY_AUTO_RECONNECT,
+                   CONF_GATEWAY_MESSAGE_DELAY]
+
+
+async def async_update_gateway(hass: HomeAssistant, gateway_id: int, changes: dict) -> dict:
+    """Change the attributes of a gateway which was created in the user interface.
+
+    Only the fields of EDITABLE_FIELDS are taken over, everything else keeps its stored
+    value. A gateway declared in `configuration.yaml` is not editable here - it wins over the
+    ui anyway, so an override would silently do nothing.
+
+    Returns the validated gateway. The caller (`ws_gateway_update`) keeps the config entry in
+    sync and reloads it, so the change is live without a restart.
+    """
+    gateways = get_ui_gateways(hass)
+    index = next((i for i, gateway in enumerate(gateways)
+                  if int(gateway.get(CONF_ID, -1)) == int(gateway_id)), None)
+    if index is None:
+        config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
+        if any(str(gateway.get(CONF_ID)) == str(gateway_id) for gateway in (config.get(CONF_GATEWAY) or [])):
+            raise vol.Invalid(f"Gateway {gateway_id} is declared in your configuration.yaml. "
+                              f"Please edit it there.")
+        raise vol.Invalid(f"No gateway with id {gateway_id} was created in the user interface.")
+
+    updated = dict(gateways[index])
+    for field in EDITABLE_FIELDS:
+        if field in changes:
+            updated[field] = changes[field]
+
+    # a serial gateway has no address and a LAN gateway no serial port - the fields of the
+    # other family are dropped so that a type change cannot leave a stale connection behind
+    device_type = GatewayDeviceType.find(str(updated.get(CONF_DEVICE_TYPE, '')))
+    if device_type is not None and GatewayDeviceType.is_lan_gateway(device_type):
+        updated.pop(CONF_SERIAL_PATH, None)
+    else:
+        updated.pop(CONF_GATEWAY_ADDRESS, None)
+
+    updated[CONF_ID] = int(gateway_id)
+    validated = validate_gateway(updated)
+
+    gateways[index] = validated
+    await _async_save(hass, gateways)
+
+    LOGGER.info(f"[{LOG_PREFIX_GATEWAY_CONFIG}] Updated gateway '{get_description(validated)}' "
+                f"({get_serial_path(validated)}) via user interface.")
+    return validated
+
+
+def find_config_entry(hass: HomeAssistant, gateway_id: int):
+    """Config entry of a gateway, identified by the id inside its description."""
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        try:
+            if config_helpers.get_id_from_gateway_name(entry.data[CONF_GATEWAY_DESCRIPTION]) == int(gateway_id):
+                return entry
+        except Exception:   # noqa: BLE001 - an entry without a usable description
+            continue
+    return None
+
+
+async def async_apply_to_config_entry(hass: HomeAssistant, gateway: dict) -> dict:
+    """Write description and connection of a changed gateway into its config entry.
+
+    The entry carries the description and the serial path (see async_setup_entry), so a
+    renamed or re-plugged gateway has to be updated there as well. Updating the entry
+    triggers the update listener which reloads the gateway; if nothing in the entry changed,
+    the reload is requested explicitly - the rest of the configuration lives in the store and
+    is only read while setting up.
+    """
+    entry = find_config_entry(hass, int(gateway[CONF_ID]))
+    if entry is None:
+        return {'config_entry_updated': False, 'reloaded': False}
+
+    data = dict(entry.data)
+    data[CONF_GATEWAY_DESCRIPTION] = get_description(gateway)
+    data[CONF_SERIAL_PATH] = get_serial_path(gateway)
+
+    if data != dict(entry.data):
+        hass.config_entries.async_update_entry(entry, data=data)
+        return {'config_entry_updated': True, 'reloaded': True}
+
+    await hass.config_entries.async_reload(entry.entry_id)
+    return {'config_entry_updated': False, 'reloaded': True}
+
+
 async def async_remove_gateway(hass: HomeAssistant, gateway_id: int) -> bool:
     """Remove a gateway of the user interface (its config entry has to be removed separately)."""
     gateways = get_ui_gateways(hass)
@@ -255,6 +343,7 @@ def get_form_descriptor(hass: HomeAssistant) -> dict:
 
     gateways = []
     for gateway in (config.get(CONF_GATEWAY, []) or []):
+        from_ui = int(gateway.get(CONF_ID, -1)) in ui_ids
         gateways.append({
             'id': gateway.get(CONF_ID),
             'name': gateway.get(CONF_NAME) or "",
@@ -263,7 +352,11 @@ def get_form_descriptor(hass: HomeAssistant) -> dict:
             'serial_path': gateway.get(CONF_SERIAL_PATH),
             'address': gateway.get(CONF_GATEWAY_ADDRESS),
             'port': gateway.get(CONF_GATEWAY_PORT),
-            'source': 'ui' if int(gateway.get(CONF_ID, -1)) in ui_ids else 'yaml',
+            'auto_reconnect': gateway.get(CONF_GATEWAY_AUTO_RECONNECT, True),
+            'message_delay': gateway.get(CONF_GATEWAY_MESSAGE_DELAY),
+            'source': 'ui' if from_ui else 'yaml',
+            # only a gateway of the user interface can be changed here, see async_update_gateway
+            'editable': from_ui,
             'description': get_description(gateway) if gateway.get(CONF_DEVICE_TYPE) else None,
         })
 
@@ -276,6 +369,7 @@ def get_form_descriptor(hass: HomeAssistant) -> dict:
                    'suggested_device_types': port.get('suggested_device_types', [])}
                   for port in scan_ports(hass)['ports']],
         'default_base_id': '00-00-00-00',
+        'editable_fields': list(EDITABLE_FIELDS),
         'hint': "A FAM14 and ESP3 gateways (e.g. USB300) report their base id automatically after "
                 "connecting - simply leave 00-00-00-00, it is stored here as soon as it is known. "
                 "For a FAM-USB enter the base id printed on the device, for a FGW14-USB the base "
@@ -290,6 +384,7 @@ def get_form_descriptor(hass: HomeAssistant) -> dict:
 def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_gateway_form)
     websocket_api.async_register_command(hass, ws_gateway_add)
+    websocket_api.async_register_command(hass, ws_gateway_update)
     websocket_api.async_register_command(hass, ws_gateway_remove)
 
 
@@ -329,6 +424,28 @@ async def ws_gateway_add(hass: HomeAssistant, connection, msg) -> None:
         'config_entry_created': result.get('type') == 'create_entry',
         'flow_result': result.get('type'),
         'reason': result.get('reason'),
+    })
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_GATEWAY_UPDATE,
+    vol.Required('gateway_id'): vol.Coerce(int),
+    vol.Required('gateway'): dict,
+})
+@websocket_api.async_response
+async def ws_gateway_update(hass: HomeAssistant, connection, msg) -> None:
+    """Change the attributes of a gateway of the user interface and apply them live."""
+    try:
+        validated = await async_update_gateway(hass, msg['gateway_id'], msg['gateway'])
+    except vol.Invalid as e:
+        connection.send_error(msg['id'], 'invalid_gateway', str(e))
+        return
+
+    applied = await async_apply_to_config_entry(hass, validated)
+    connection.send_result(msg['id'], {
+        'gateway': {str(key): str(value) for key, value in validated.items()},
+        **applied,
     })
 
 

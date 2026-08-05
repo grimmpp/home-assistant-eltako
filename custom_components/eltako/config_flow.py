@@ -37,25 +37,57 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return False
 
     async def async_step_user(self, user_input=None):
-        """Entry point: let the user choose between an existing and a new gateway.
+        """Entry point. Nothing has to be entered here.
 
-        Existing means: declared in configuration.yaml (or created earlier in the web ui) but
-        not set up in Home Assistant yet. New means: define it here - no yaml needed.
+        The first option sets the integration up as it is and lets it look for the hardware
+        itself - that is the way this integration is meant to be installed. The two manual
+        paths stay for everyone who wants to name their gateway right away: one for a gateway
+        which is already declared in configuration.yaml (or was created in the web ui) but is
+        not set up in Home Assistant yet, one for defining a new one here.
         """
         LOGGER.debug("[%s] config_flow user step started.", LOGGER_PREFIX_CONFIG_FLOW)
 
-        available = await self._async_get_available_gateways()
-        if not available:
-            # nothing to choose from, go straight to the wizard
+        menu_options = {}
+        if not self._hub_exists():
+            menu_options["auto"] = "Set up and detect my gateways automatically (recommended)"
+        if await self._async_get_available_gateways():
+            menu_options["detect"] = "Set up a gateway of my configuration"
+        menu_options["new_gateway"] = "Add a gateway by hand"
+
+        if list(menu_options) == ["new_gateway"]:
+            # the hub is there and there is nothing to pick up - only the wizard is left
             return await self.async_step_new_gateway()
 
-        return self.async_show_menu(
-            step_id="user",
-            menu_options={
-                "detect": "Set up a gateway of my configuration",
-                "new_gateway": "Add a new gateway (no configuration.yaml needed)",
-            },
-        )
+        return self.async_show_menu(step_id="user", menu_options=menu_options)
+
+    def _hub_exists(self) -> bool:
+        """True if the integration itself is already set up (the gateway-less entry)."""
+        return any(entry.data.get(CONF_HUB)
+                   for entry in self.hass.config_entries.async_entries(DOMAIN))
+
+    async def async_step_auto(self, user_input=None):
+        """Set the integration up without any input and let it look for the gateways itself.
+
+        The entry created here carries no gateway: it is the integration, which brings the web
+        ui and the detection with it. Every gateway which is found gets its own entry through
+        `async_step_ui_gateway`, exactly like one created in the web ui - so nothing here has
+        to know about serial ports.
+
+        The detection itself is not run here but requested with a flag which
+        `async_setup_entry` picks up: at this point the component may not even be set up yet,
+        and probing the ports takes seconds while reading a bus takes minutes - a config flow
+        which blocks that long looks broken. The overview page of the web ui draws the run
+        live. The flag is consumed once, so a restart does not lock the bus again.
+        """
+        LOGGER.debug("[%s] Setting up the integration and requesting the initial detection.",
+                     LOGGER_PREFIX_CONFIG_FLOW)
+
+        await self.async_set_unique_id(HUB_UNIQUE_ID)
+        self._abort_if_unique_id_configured()
+
+        self.hass.data.setdefault(DATA_ELTAKO, {})[DATA_INITIAL_DETECTION] = True
+
+        return self.async_create_entry(title=HUB_TITLE, data={CONF_HUB: True})
 
     async def async_step_ui_gateway(self, data: dict):
         """A gateway was created in the web ui - create its config entry directly."""

@@ -1,6 +1,6 @@
 """Devices can be declared in configuration.yaml and created through the web ui."""
 import unittest
-from unittest import TestCase
+from unittest import IsolatedAsyncioTestCase, TestCase
 
 import voluptuous as vol
 
@@ -178,6 +178,198 @@ class TestUiDeviceStorage(TestCase):
         self.assertIsNotNone(device_config.find_device(devices, 'binary_sensor', 'ff-aa-80-01'))
         self.assertIsNone(device_config.find_device(devices, 'binary_sensor', 'FF-AA-80-02'))
         self.assertIsNone(device_config.find_device(devices, 'light', 'FF-AA-80-01'))
+
+
+class HassMockForDevices:
+    """Minimal hass which stores the options of one config entry."""
+
+    def __init__(self, gateway_id: int = 1, yaml_devices: dict = None):
+        self.data = {DATA_ELTAKO: {ELTAKO_CONFIG: {CONF_GATEWAY: [{
+            CONF_ID: gateway_id, CONF_DEVICE_TYPE: 'fam14', CONF_NAME: 'FAM14',
+            CONF_DEVICES: yaml_devices or {}}]}}}
+        self.config_entries = self
+
+    def async_update_entry(self, entry, options=None, **kwargs):
+        entry.options = options
+
+
+class TestUiDeviceCrud(IsolatedAsyncioTestCase):
+    """A device created in the web ui can be created, changed and removed again."""
+
+    LIGHT = {CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08', CONF_NAME: 'Lamp',
+             CONF_SENDER: {CONF_ID: '00-00-B0-01', CONF_EEP: 'A5-38-08'}}
+
+    def setUp(self):
+        self.hass = HassMockForDevices()
+        self.entry = ConfigEntryWithOptions()
+        self.entry.data = {CONF_GATEWAY_DESCRIPTION: 'FAM14 - fam14 (Id: 1)'}
+
+    def _stored(self, platform: str) -> list:
+        return (self.entry.options.get(CONF_UI_DEVICES) or {}).get(platform, [])
+
+    async def test_create_change_and_remove(self):
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+        self.assertEqual(self._stored('light')[0][CONF_NAME], 'Lamp')
+
+        await device_config.async_update_ui_device(
+            self.hass, self.entry, 'light', '00-00-00-01',
+            {**self.LIGHT, CONF_NAME: 'Kitchen ceiling', CONF_AREA: 'Kitchen'})
+
+        self.assertEqual(len(self._stored('light')), 1)
+        self.assertEqual(self._stored('light')[0][CONF_NAME], 'Kitchen ceiling')
+        self.assertEqual(self._stored('light')[0][CONF_AREA], 'Kitchen')
+
+        await device_config.async_remove_ui_device(self.hass, self.entry, 'light', '00-00-00-01')
+        self.assertEqual(self._stored('light'), [])
+
+    async def test_the_eep_and_the_sender_can_be_changed(self):
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+
+        await device_config.async_update_ui_device(
+            self.hass, self.entry, 'light', '00-00-00-01',
+            {**self.LIGHT, CONF_EEP: 'A5-38-08',
+             CONF_SENDER: {CONF_ID: '00-00-B0-09', CONF_EEP: 'A5-38-08'}})
+
+        stored = self._stored('light')[0]
+        self.assertEqual(stored[CONF_EEP], 'A5-38-08')
+        self.assertEqual(stored[CONF_SENDER][CONF_ID], '00-00-B0-09')
+
+    async def test_the_address_can_be_corrected(self):
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+
+        await device_config.async_update_ui_device(
+            self.hass, self.entry, 'light', '00-00-00-01',
+            {**self.LIGHT, CONF_ID: '00-00-00-07'})
+
+        self.assertEqual([device[CONF_ID] for device in self._stored('light')], ['00-00-00-07'])
+
+    async def test_a_lower_case_address_finds_the_device(self):
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+
+        await device_config.async_update_ui_device(
+            self.hass, self.entry, 'light', '00-00-00-01', {**self.LIGHT, CONF_NAME: 'x'})
+
+        self.assertEqual(self._stored('light')[0][CONF_NAME], 'x')
+
+    async def test_invalid_values_are_rejected_and_nothing_is_changed(self):
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+
+        with self.assertRaises(vol.Invalid):
+            await device_config.async_update_ui_device(
+                self.hass, self.entry, 'light', '00-00-00-01', {**self.LIGHT, CONF_EEP: 'F6-02-01'})
+
+        self.assertEqual(self._stored('light')[0][CONF_EEP], 'M5-38-08')
+
+    async def test_updating_an_unknown_device_is_rejected(self):
+        with self.assertRaises(vol.Invalid) as context:
+            await device_config.async_update_ui_device(
+                self.hass, self.entry, 'light', '00-00-00-09', dict(self.LIGHT))
+
+        self.assertIn('not configured', str(context.exception))
+
+    async def test_a_setting_the_form_cannot_show_survives_an_edit(self):
+        """The schemas support more than the form offers - editing must not drop the rest."""
+        await device_config.async_add_ui_device(self.hass, self.entry, 'sensor', {
+            CONF_ID: 'FF-AA-80-02', CONF_EEP: 'A5-09-0C', CONF_NAME: 'Air',
+            CONF_VOC_TYPE_INDEXES: [1, 2], 'language': 'de'})
+
+        # the ui only sends the fields it rendered (no voc_type_indexes, no language)
+        await device_config.async_update_ui_device(self.hass, self.entry, 'sensor', 'FF-AA-80-02', {
+            CONF_ID: 'FF-AA-80-02', CONF_EEP: 'A5-09-0C', CONF_NAME: 'Air quality'})
+
+        stored = self._stored('sensor')[0]
+        self.assertEqual(stored[CONF_NAME], 'Air quality')
+        self.assertEqual(stored[CONF_VOC_TYPE_INDEXES], [1, 2])
+        self.assertEqual(stored['language'], 'de')
+
+    async def test_a_field_of_the_form_can_be_cleared(self):
+        """A field which the form does offer is always taken from the ui - also when empty."""
+        await device_config.async_add_ui_device(self.hass, self.entry, 'binary_sensor', {
+            CONF_ID: 'FF-AA-80-03', CONF_EEP: 'F6-02-01', CONF_NAME: 'Button',
+            CONF_AREA: 'Kitchen'})
+
+        await device_config.async_update_ui_device(
+            self.hass, self.entry, 'binary_sensor', 'FF-AA-80-03',
+            {CONF_ID: 'FF-AA-80-03', CONF_EEP: 'F6-02-01', CONF_NAME: 'Button'})
+
+        self.assertNotIn(CONF_AREA, self._stored('binary_sensor')[0])
+
+    async def test_the_form_field_names_come_from_the_descriptor(self):
+        names = device_config.get_form_field_names('cover')
+
+        self.assertIn(CONF_TIME_CLOSES, names)
+        self.assertIn(CONF_SENDER, names)
+        self.assertEqual(device_config.get_form_field_names('nonsense'), set())
+
+    async def test_several_devices_are_stored_with_one_write(self):
+        """Every write of the options reloads the gateway - a detection must not reload it
+        once per device it found."""
+        writes = []
+        original = device_config.async_save_ui_devices
+
+        async def counting(hass, config_entry, devices):
+            writes.append(len(devices.get('light', [])))
+            await original(hass, config_entry, devices)
+
+        device_config.async_save_ui_devices = counting
+        try:
+            result = await device_config.async_add_ui_devices(self.hass, self.entry, [
+                ('light', {CONF_ID: f'00-00-00-0{index}', CONF_EEP: 'M5-38-08',
+                           CONF_NAME: f'ch{index}',
+                           CONF_SENDER: {CONF_ID: f'00-00-B0-0{index}', CONF_EEP: 'A5-38-08'}})
+                for index in range(1, 5)])
+        finally:
+            device_config.async_save_ui_devices = original
+
+        self.assertEqual(len(result['added']), 4)
+        self.assertEqual(writes, [4])            # one single write
+        self.assertEqual(len(self._stored('light')), 4)
+
+    async def test_one_invalid_device_does_not_stop_the_others(self):
+        result = await device_config.async_add_ui_devices(self.hass, self.entry, [
+            ('light', dict(self.LIGHT)),
+            ('light', {CONF_ID: 'nonsense', CONF_EEP: 'M5-38-08'}),
+            ('binary_sensor', {CONF_ID: 'FF-AA-80-07', CONF_EEP: 'F6-02-01'})])
+
+        self.assertEqual({platform for platform, _device in result['added']},
+                         {'light', 'binary_sensor'})
+        self.assertEqual(len(result['errors']), 1)
+        self.assertEqual(result['errors'][0][1], 'nonsense')
+
+    async def test_devices_which_exist_are_counted_not_reported_as_error(self):
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+
+        result = await device_config.async_add_ui_devices(
+            self.hass, self.entry, [('light', dict(self.LIGHT))])
+
+        self.assertEqual(result['added'], [])
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(result['existing'], [('light', '00-00-00-01')])
+
+    async def test_the_same_address_twice_in_one_batch_is_added_once(self):
+        result = await device_config.async_add_ui_devices(self.hass, self.entry, [
+            ('light', dict(self.LIGHT)), ('light', dict(self.LIGHT))])
+
+        self.assertEqual(len(result['added']), 1)
+        self.assertEqual(len(result['existing']), 1)
+        self.assertEqual(len(self._stored('light')), 1)
+
+    async def test_nothing_to_add(self):
+        result = await device_config.async_add_ui_devices(self.hass, self.entry, [])
+
+        self.assertEqual(result, {'added': [], 'existing': [], 'errors': []})
+        self.assertEqual(self.entry.options, {})
+
+    async def test_a_device_of_the_yaml_cannot_be_shadowed(self):
+        hass = HassMockForDevices(yaml_devices={
+            'binary_sensor': [{CONF_ID: 'FF-AA-80-01', CONF_EEP: 'F6-02-01'}]})
+
+        with self.assertRaises(vol.Invalid) as context:
+            await device_config.async_add_ui_device(
+                hass, self.entry, 'binary_sensor',
+                {CONF_ID: 'FF-AA-80-01', CONF_EEP: 'D5-00-01'})
+
+        self.assertIn('configuration.yaml', str(context.exception))
 
 
 class TestMergeOfBothSources(TestCase):

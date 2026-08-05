@@ -49,9 +49,28 @@ SETTING_DESCRIPTORS = [
              "the actuator. Feels faster but can show a state which was not confirmed."},
     {'group': 'general', 'name': CONF_SHOW_DEV_ID_IN_DEV_NAME, 'type': 'boolean', 'label': 'Show device id in device name',
      'help': "Appends the EnOcean address to the device name. Helpful while setting up."},
+    {'group': 'plug_and_play', 'name': CONF_PLUG_AND_PLAY, 'type': 'boolean', 'label': 'Plug & play enabled',
+     'help': "Checks regularly whether a gateway was plugged in, creates it, reads its bus and adds "
+             "every device which is identified without any doubt (bus position with a known model, "
+             "sender found in a device memory, teach-in telegram). Ambiguous devices are only listed - "
+             "they stay a manual decision. The bus of a gateway is only read once; use the button on "
+             "the overview page to read it again."},
+    {'group': 'plug_and_play', 'name': CONF_PLUG_AND_PLAY_INTERVAL, 'type': 'number',
+     'label': 'Check every (minutes)', 'min': 0, 'max': 10080,
+     'help': "How often the serial ports are checked for a new gateway. Default is 1440 - once a "
+             "day, which is often enough: a gateway is plugged in rarely and the check opens every "
+             "free serial port. 60 = hourly, 0 = only when the button on the overview page is "
+             "pressed. Every run additionally happens a minute after Home Assistant started."},
+    # Shown, but not switchable from here: turning it off would remove the very page the
+    # switch is on, and the yaml cannot undo it (an override stored here wins over the yaml).
+    # Recovery would mean deleting '.storage/eltako_general_settings' by hand. It stays
+    # configurable in configuration.yaml, where switching it back on works.
     {'group': 'web_ui', 'name': CONF_ENABLE_FRONTEND, 'type': 'boolean', 'label': 'Web ui enabled',
-     'help': "This web ui. Disabling it here removes the panel after the next restart - "
-             "you would then need the yaml to switch it on again.",
+     'help': "This web ui. On by default. It can only be switched off in your "
+             "configuration.yaml ('general_settings: enable_frontend: false'), not here: this "
+             "page would disappear with it and an override stored here would win over the yaml, "
+             "so there would be no way back short of deleting '.storage/eltako_general_settings'.",
+     'locked': True,
      'restart_required': True},
     {'group': 'web_ui', 'name': CONF_ENABLE_TEST_PAGE, 'type': 'boolean', 'label': 'Test page enabled',
      'help': "Shows the 'Tests' page which runs the test suites of the project (integration, "
@@ -221,10 +240,26 @@ def validate_setting(name: str, value) -> object:
     return validated[name]
 
 
+LOCKED_SETTINGS = frozenset(
+    descriptor['name'] for descriptor in SETTING_DESCRIPTORS if descriptor.get('locked'))
+
+
 async def async_set_overrides(hass: HomeAssistant, changes: dict) -> dict:
-    """Validate and store overrides. Returns the validated values."""
+    """Validate and store overrides. Returns the validated values.
+
+    Locked settings are dropped instead of stored: the web ui sends every field back when the
+    form is saved, so a locked one arrives on each save with its unchanged value. Storing it
+    would be harmless but pointless, and refusing the whole call would make saving impossible.
+    A real change to one is ignored and logged - the yaml is the place for those.
+    """
     validated = {}
     for name, value in changes.items():
+        if name in LOCKED_SETTINGS:
+            current = config_helpers.get_general_settings_from_configuration(hass).get(name)
+            if value != current:
+                LOGGER.warning(f"[{LOG_PREFIX_SETTINGS}] '{name}' cannot be changed in the web ui "
+                               f"(requested {value!r}, staying {current!r}). Use configuration.yaml.")
+            continue
         validated[name] = validate_setting(name, value)
 
     overrides = get_overrides(hass)
@@ -237,9 +272,19 @@ async def async_set_overrides(hass: HomeAssistant, changes: dict) -> dict:
 
 
 async def async_reset_overrides(hass: HomeAssistant, names: list[str]) -> list[str]:
-    """Remove overrides so that the yaml/default value is used again."""
+    """Remove overrides so that the yaml/default value is used again.
+
+    Locked settings are skipped. For `enable_frontend` that is a leftover which stays on
+    purpose: resetting it falls back to the yaml, and a yaml which switched the web ui off
+    would take this page away - the same one-way door the lock exists for. (The default itself
+    is True nowadays, so a reset without any yaml is harmless.)
+    """
     overrides = get_overrides(hass)
-    removed = [name for name in names if name in overrides]
+    removed = [name for name in names if name in overrides and name not in LOCKED_SETTINGS]
+    skipped = [name for name in names if name in LOCKED_SETTINGS]
+    if skipped:
+        LOGGER.warning(f"[{LOG_PREFIX_SETTINGS}] Not resetting {', '.join(skipped)} - "
+                       f"changeable in configuration.yaml only.")
     for name in removed:
         del overrides[name]
     if removed:
@@ -282,9 +327,11 @@ async def async_apply_settings(hass: HomeAssistant) -> dict:
     gateways and entities (e.g. the device name) is applied by reloading the config entries.
     """
     from .enocean_logger import async_setup_telegram_logger
+    from . import plug_and_play
 
     settings = config_helpers.get_general_settings_from_configuration(hass)
-    result = {'telegram_logger_restarted': False, 'reloaded_gateways': 0}
+    result = {'telegram_logger_restarted': False, 'reloaded_gateways': 0,
+              'plug_and_play_enabled': bool(settings.get(CONF_PLUG_AND_PLAY, False))}
 
     try:
         await async_setup_telegram_logger(hass, settings)
@@ -292,7 +339,15 @@ async def async_apply_settings(hass: HomeAssistant) -> dict:
     except Exception as e:  # noqa: BLE001
         LOGGER.error(f"[{LOG_PREFIX_SETTINGS}] Cannot restart the telegram logger: {e}", exc_info=True)
 
+    # switching plug & play on or off (or changing its interval) takes effect immediately
+    try:
+        plug_and_play.apply_settings(hass, settings)
+    except Exception as e:  # noqa: BLE001
+        LOGGER.error(f"[{LOG_PREFIX_SETTINGS}] Cannot apply the plug & play settings: {e}", exc_info=True)
+
     for entry in hass.config_entries.async_entries(DOMAIN):
+        if entry.data.get(CONF_HUB):
+            continue                # the entry of the integration itself has no gateway
         hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
         result['reloaded_gateways'] += 1
 

@@ -15,8 +15,11 @@ from .const import *
 DEFAULT_GENERAL_SETTINGS = {
     CONF_FAST_STATUS_CHANGE: False,
     CONF_SHOW_DEV_ID_IN_DEV_NAME: False,
+    CONF_PLUG_AND_PLAY: False,
+    CONF_PLUG_AND_PLAY_INTERVAL: 1440,      # once a day
     CONF_ENABLE_TEACH_IN_BUTTONS: False,
-    CONF_ENABLE_FRONTEND: False,
+    # the web ui is where everything is configured - it must be reachable without any yaml
+    CONF_ENABLE_FRONTEND: True,
     # default True while the test page is under development - switch the default
     # to False for a release
     CONF_ENABLE_TEST_PAGE: True,
@@ -119,8 +122,13 @@ def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
 
 
 def is_frontend_enabled(general_settings: dict) -> bool:
-    """Return True if the web ui of the integration (incl. all its sub pages) is enabled."""
-    if general_settings.get(CONF_ENABLE_FRONTEND, False):
+    """Return True if the web ui of the integration (incl. all its sub pages) is enabled.
+
+    Enabled unless it was switched off explicitly - a settings dict which does not mention the
+    option at all describes an installation without any configuration, and that is exactly the
+    one which needs the web ui.
+    """
+    if general_settings.get(CONF_ENABLE_FRONTEND, DEFAULT_GENERAL_SETTINGS[CONF_ENABLE_FRONTEND]):
         return True
     # backwards compatibility for the former option name 'enable-frontend'
     return bool(general_settings.get(CONF_DEPRECATED_ENABLE_FRONTEND, False))
@@ -209,7 +217,9 @@ def add_ui_gateways_to_config(hass: HomeAssistant, config: dict) -> dict:
     return merged
     
 def get_device_config(config: dict, id: int) -> dict:
-    gateways = config[CONF_GATEWAY]
+    # a configuration without any gateway is valid (everything can be created in the web ui),
+    # so the key can be missing entirely
+    gateways = (config or {}).get(CONF_GATEWAY) or []
     for g in gateways:
         if g[CONF_ID] == id:
             if CONF_DEVICES in g:
@@ -247,6 +257,27 @@ def config_check_gateway(config: dict) -> bool:
         return True
 
     return True
+
+def parse_number_state(state: str):
+    """Parse a state string of the state machine back into a number.
+
+    Home Assistant stores states as strings, so a restored counter or measurement can
+    contain a decimal point ('36231.4') even if it was written as int. Returns an int if
+    the value has no fractional part (so that counters keep their type), a float if it
+    has, and None if the state is not a number at all (e.g. 'open' of a window handle).
+    """
+    if state is None:
+        return None
+
+    try:
+        value = float(str(state).strip().replace(',', '.'))
+    except (TypeError, ValueError):
+        return None
+
+    if value.is_integer():
+        return int(value)
+    return value
+
 
 def compare_enocean_ids(id1: bytes, id2: bytes, len=3) -> bool:
     """Compares two bytes arrays. len specifies the length to be checked."""

@@ -94,6 +94,7 @@ export const page = {
   icon: "mdi:toggle-switch-outline",
   glyph: "⏻",
   standaloneOnly: true,
+  modes: ["user", "expert"],
   refreshMs: 3000,
 
   styles: `

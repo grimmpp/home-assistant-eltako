@@ -144,5 +144,5 @@ logger:
 
 In this example the sender id ``00-00-B0-01`` for the light must be registered in the corresponding relay e.g. via [Eltako Software PCT14](https://www.eltako.com/en/software-pct14/). Don't forget to choose function type ``51`` for software controlled command.
 
-Code for detecting the switch and firing the event can be found in function ``value_changed`` in [binary_sensor.py](/eltako/binary_sensor.py).
+Code for detecting the switch and firing the event can be found in function ``value_changed`` in [binary_sensor.py](../../custom_components/eltako/binary_sensor.py).
 

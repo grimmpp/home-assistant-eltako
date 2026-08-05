@@ -13,12 +13,15 @@ import { EltakoApi, WS } from "./lib/api.js";
 import { STYLES } from "./lib/styles.js";
 import { escapeHtml, icon } from "./lib/utils.js";
 
+import { page as homePage } from "./pages/home.js";
 import { page as overviewPage } from "./pages/overview.js";
 import { page as controlPage } from "./pages/control.js";
 import { page as devicesConfigPage } from "./pages/devices_config.js";
 import { page as telegramsPage } from "./pages/telegrams.js";
 import { page as statisticsPage } from "./pages/devices.js";
 import { page as testsPage } from "./pages/tests.js";
+import { page as settingsPage } from "./pages/settings.js";
+import { page as helpPage } from "./pages/help.js";
 import { page as aboutPage } from "./pages/about.js";
 
 // pages marked standaloneOnly need the eltako_standalone runtime (its shell sets
@@ -26,10 +29,38 @@ import { page as aboutPage } from "./pages/about.js";
 // visible(ctx) hook can additionally hide themselves (e.g. by a general setting).
 // 'unknown devices' has no page of its own anymore - the addresses which are not configured
 // yet are the last block of the device page, next to everything else which exists on the bus.
-const PAGES = [overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
-               testsPage, aboutPage]
+const PAGES = [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
+               testsPage, settingsPage, helpPage, aboutPage]
   .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
-const DEFAULT_PAGE = overviewPage.id;
+
+/**
+ * The two views of the panel, switched with the button in the header.
+ *
+ * "user" is the simple view: one page with all devices as cards, grouped by room - see
+ * pages/home.js. "expert" is the full panel with gateways, telegrams, statistics and tests.
+ * A page declares in which modes it appears (`page.modes`); without that declaration it
+ * belongs to the expert mode only, which keeps every existing page where it was.
+ *
+ * The chosen mode is stored in the browser, so a reload (and the next visit) opens the panel
+ * in the same view again. Home Assistant starts in the user mode; the standalone runtime is
+ * an installation and development tool, so there the expert mode is the default.
+ */
+const MODES = {
+  user: { label: "Simple", icon: "mdi:view-grid-outline", glyph: "▦", home: homePage.id,
+          title: "Simple view: your devices, grouped by room" },
+  expert: { label: "Expert", icon: "mdi:tune-variant", glyph: "⚙", home: overviewPage.id,
+            title: "Expert view: gateways, telegrams, statistics and all device settings" },
+};
+const DEFAULT_MODE = window.eltakoStandalone ? "expert" : "user";
+const MODE_STORAGE_KEY = "eltako-panel-mode";
+const pageModes = (page) => page.modes || ["expert"];
+// resolved from this module's own url, so it works in Home Assistant (/eltako_frontend/...)
+// and in the standalone runtime alike. Replace img/eltako-logo.svg to use the official logo.
+// The official Eltako logo. img/eltako-logo.svg is Eltako's own vector file (from the theme
+// of eltako.com), so it stays sharp at any size; the png next to it is the raster version
+// Home Assistant shows for this integration in its settings and serves as a fallback.
+const LOGO_URL = new URL("./img/eltako-logo.svg", import.meta.url).href;
+const LOGO_URL_FALLBACK = new URL("./img/eltako-logo.png", import.meta.url).href;
 const MAX_LIVE_TELEGRAMS = 500;
 
 class EltakoPanel extends HTMLElement {
@@ -40,6 +71,11 @@ class EltakoPanel extends HTMLElement {
     this._connected = false;
     this._narrow = false;
     this._menuButton = null;
+    this._mode = this._storedMode();
+    // a bookmarked url wins over the stored mode: #/telegrams opens the expert mode even if
+    // the panel was left in the simple view
+    const linked = PAGES.find((page) => page.id === this._hashPageId());
+    if (linked && !pageModes(linked).includes(this._mode)) this._mode = pageModes(linked)[0];
     this._pageId = this._pageIdFromLocation();
     this._unsubscribeTelegrams = null;
     this._refreshTimer = null;
@@ -69,15 +105,23 @@ class EltakoPanel extends HTMLElement {
       deviceView: "hierarchy",
       configSortDescending: false,
       onlySilent: false,
-      // settings on the about page
+      // simple device page of the user mode (pages/home.js)
+      simpleFilter: "",
+      simpleEditor: null,
+      // settings page
       settingsForm: null,
       settingsError: null,
       settingsMessage: null,
+      // help page
+      helpCatalog: null,
+      helpFilter: "",
       // usb/serial port scan
       portScan: null,
       busMembers: null,
       gatewayForm: null,
       gatewayEditor: null,
+      // plug & play: status, progress and report of the last detection run
+      plugAndPlay: null,
       gatewayError: null,
       gatewayMessage: null,
       portScanRunning: false,
@@ -144,19 +188,70 @@ class EltakoPanel extends HTMLElement {
     await this._enterPage();
   }
 
+  /* ------------------------------------------------------------------- mode */
+
+  _storedMode() {
+    try {
+      const stored = window.localStorage.getItem(MODE_STORAGE_KEY);
+      if (stored && MODES[stored]) return stored;
+    } catch (err) {
+      // private mode / storage blocked: the panel simply starts in the default mode
+    }
+    return DEFAULT_MODE;
+  }
+
+  /** Remembers the mode in the browser so a reload opens the same view again. */
+  _applyMode(mode) {
+    this._mode = mode;
+    try {
+      window.localStorage.setItem(MODE_STORAGE_KEY, mode);
+    } catch (err) {
+      // storage blocked (private mode): the switch still works for this session
+    }
+  }
+
+  /**
+   * Switches the view. If the current page does not exist in the new mode, the panel opens
+   * that mode's home page.
+   */
+  _setMode(mode, pageId = null) {
+    if (!MODES[mode]) return;
+    const current = this._page;
+    this._applyMode(mode);
+    const target = pageId || (pageModes(current).includes(mode) ? this._pageId : MODES[mode].home);
+    if (target === this._pageId) {
+      this._render();
+    } else {
+      this._navigate(target);
+    }
+  }
+
+  _modePages() {
+    return PAGES.filter((page) => pageModes(page).includes(this._mode));
+  }
+
   /* ---------------------------------------------------------------- routing */
 
+  _hashPageId() {
+    return (window.location.hash || "").replace(/^#\/?/, "").split("?")[0];
+  }
+
+  /** The url wins over the mode: a link to a page of the other view switches the view. */
   _pageIdFromLocation() {
-    const hash = (window.location.hash || "").replace(/^#\/?/, "").split("?")[0];
-    return PAGES.some((page) => page.id === hash) ? hash : DEFAULT_PAGE;
+    const hash = this._hashPageId();
+    return PAGES.some((page) => page.id === hash) ? hash : MODES[this._mode].home;
   }
 
   get _page() {
-    return PAGES.find((page) => page.id === this._pageId) || PAGES[0];
+    return PAGES.find((page) => page.id === this._pageId) || this._modePages()[0] || PAGES[0];
   }
 
   _navigate(pageId) {
     if (this._pageId === pageId) return;
+    // a link into the other view (e.g. "set up a gateway" out of the simple view) switches
+    // the mode along with the page instead of running into a page which is not shown
+    const target = PAGES.find((page) => page.id === pageId);
+    if (target && !pageModes(target).includes(this._mode)) this._applyMode(pageModes(target)[0]);
     this._pageId = pageId;
     if (this._pageIdFromLocation() !== pageId) {
       window.location.hash = `#/${pageId}`;   // keeps the page bookmarkable/reloadable
@@ -252,6 +347,8 @@ class EltakoPanel extends HTMLElement {
       api: this._api,
       state: this.state,
       root: this.shadowRoot,
+      mode: this._mode,
+      setMode: (mode, pageId = null) => this._setMode(mode, pageId),
       loadIntegrationInfo: () => this.loadIntegrationInfo(),
       loadLogInfo: () => this.loadLogInfo(),
       loadStatistics: () => this.loadStatistics(),
@@ -295,13 +392,23 @@ class EltakoPanel extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>${STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
       <div class="shell">
-        <header class="app-head">
-          <span id="menu-button-slot"></span>
-          ${icon("mdi:access-point-network", "◉")}
-          <span class="brand-title">Eltako</span>
-          <span class="brand-version" id="app-version">EnOcean</span>
-        </header>
-        <nav id="nav"></nav>
+        <div class="topbar">
+          <header class="app-head">
+            <span class="brand">
+              <span id="menu-button-slot"></span>
+              ${icon("mdi:access-point-network", "◉")}
+              <span class="brand-title">ELTAKO &ndash; EnOcean</span>
+              <span class="brand-version" id="app-version"></span>
+            </span>
+          </header>
+          <nav id="nav"></nav>
+          <!-- outside of header and nav so it can be centred over the height of the whole
+               white bar, not just over the row with the title -->
+          <img class="brand-logo" src="${LOGO_URL}" alt="Eltako"
+               data-fallback="${LOGO_URL_FALLBACK}"
+               onerror="if (this.dataset.fallback) { this.src = this.dataset.fallback;
+                          this.dataset.fallback = ''; } else { this.style.display = 'none'; }" />
+        </div>
         <main>
           <header class="page-head">
             <div>
@@ -317,6 +424,12 @@ class EltakoPanel extends HTMLElement {
       </div>`;
 
     this.shadowRoot.getElementById("nav").addEventListener("click", (event) => {
+      // the view switch sits at the right end of the same bar as the page links
+      const modeButton = event.target.closest("button[data-mode]");
+      if (modeButton) {
+        this._setMode(modeButton.dataset.mode);
+        return;
+      }
       const link = event.target.closest("a[data-page]");
       if (!link) return;
       event.preventDefault();
@@ -360,17 +473,33 @@ class EltakoPanel extends HTMLElement {
     this._renderContent();
   }
 
+  /**
+   * The switch between the simple and the expert view, at the right end of the navigation.
+   * It is part of the navigation markup (and not a static element) because _renderNav()
+   * rebuilds the whole bar - and it has to show which view is active.
+   */
+  _modeSwitchHtml() {
+    return `
+      <div class="mode-switch" role="group" aria-label="View">
+        ${Object.entries(MODES).map(([mode, definition]) => `
+          <button data-mode="${mode}" class="${mode === this._mode ? "active" : ""}"
+                  title="${escapeHtml(definition.title)}" aria-pressed="${mode === this._mode}">
+            ${icon(definition.icon, definition.glyph)}<span>${escapeHtml(definition.label)}</span>
+          </button>`).join("")}
+      </div>`;
+  }
+
   _renderNav() {
     const info = this.state.integrationInfo || {};
     const context = this._context();
     const version = this.shadowRoot.getElementById("app-version");
-    if (version) version.textContent = info.version ? `v${info.version}` : "EnOcean";
+    if (version) version.textContent = info.version ? `v${info.version}` : "";
     const nav = this.shadowRoot.getElementById("nav");
     // on a narrow screen the navigation scrolls horizontally - a refresh must not jump it
     // back to the first entry
     const navScroll = nav ? nav.scrollLeft : 0;
     nav.innerHTML = `
-      ${PAGES.filter((page) => !page.visible || page.visible(context)).map((page) => {
+      ${this._modePages().filter((page) => !page.visible || page.visible(context)).map((page) => {
         const badge = page.badge ? page.badge(context) : null;
         return `
           <a data-page="${page.id}" href="#/${page.id}" class="${page.id === this._pageId ? "active" : ""}">
@@ -378,7 +507,8 @@ class EltakoPanel extends HTMLElement {
             <span>${escapeHtml(page.title)}</span>
             ${badge ? `<span class="badge">${escapeHtml(badge)}</span>` : ""}
           </a>`;
-      }).join("")}`;
+      }).join("")}
+      ${this._modeSwitchHtml()}`;
     nav.scrollLeft = navScroll;
   }
 

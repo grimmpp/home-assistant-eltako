@@ -19,7 +19,7 @@ from .config_helpers import DeviceConf
 from .gateway import EnOceanGateway
 from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS, DOMAIN, MANUFACTURER, LOGGER
 from . import get_gateway_from_hass, get_device_config_for_gateway
-import time
+import asyncio
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -138,8 +138,11 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
+        # One second more than the configured runtime, so that the cover really reaches its end
+        # position (and therefore recalibrates itself). 255 is the maximum the telegram can
+        # carry - a bigger value would make the encoding fail.
         if self._time_opens is not None:
-            time = self._time_opens + 1
+            time = min(self._time_opens + 1, 255)
         else:
             time = 255
         
@@ -164,8 +167,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
+        # see open_cover: full runtime + 1s, capped at the maximum the telegram can carry
         if self._time_closes is not None:
-            time = self._time_closes + 1
+            time = min(self._time_closes + 1, 255)
         else:
             time = 255
         
@@ -195,14 +199,22 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         address, _ = self._sender_id
         position = kwargs[ATTR_POSITION]
         
+        if self._attr_current_cover_position is None and position not in (0, 100):
+            # Without a known position no runtime can be calculated. Only the end positions can
+            # be reached blindly - they also recalibrate the position.
+            LOGGER.warning(f"[cover {self.dev_id}] Current position is unknown. Only 0 or 100 can be "
+                           f"set until the actuator reported a position (requested: {position}).")
+            return
+
         if position == self._attr_current_cover_position:
             return
         elif position == 100:
+            # drive into the end position (full runtime + 1s), see open_cover
             direction = "up"
-            time = self._time_opens + 1
+            time = min(self._time_opens + 1, 255)
         elif position == 0:
             direction = "down"
-            time = self._time_closes + 1
+            time = min(self._time_closes + 1, 255)
         elif position > self._attr_current_cover_position:
             direction = "up"
             time = max(1,min(int(((position - self._attr_current_cover_position) / 100.0) * self._time_opens), 255))
@@ -329,37 +341,64 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             self.schedule_update_ha_state()
 
 
-    def set_cover_tilt_position(self, **kwargs: Any) -> None:
+    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
+        """Tilt the slats: start the movement and stop it after the calculated time.
+
+        Runs in the event loop, so the wait between the move and the stop telegram must not
+        block (a sync set_cover_tilt_position with time.sleep() would block a worker thread
+        for the whole tilt time).
+        """
         address, _ = self._sender_id
         tilt_position = kwargs[ATTR_TILT_POSITION]
-        
+
+        if self._time_tilts is None:
+            return
+
+        if self._attr_current_cover_tilt_position is None:
+            # The tilt position is unknown (e.g. after a restart without restored state).
+            # The slats are moved from the assumed end position of the requested direction,
+            # which also re-calibrates the position.
+            self._attr_current_cover_tilt_position = 0 if tilt_position > 0 else 100
+            LOGGER.debug(f"[cover {self.dev_id}] Tilt position unknown - assuming "
+                         f"{self._attr_current_cover_tilt_position} as starting point.")
+
         if tilt_position == self._attr_current_cover_tilt_position:
             return
         elif tilt_position > self._attr_current_cover_tilt_position:
             direction = "up"
-            sleeptime = min((((tilt_position - self._attr_current_cover_tilt_position) / 100.0 * self._time_tilts / 10.0) ), 255.0)
-        elif tilt_position < self._attr_current_cover_tilt_position:
+            tilt_difference = tilt_position - self._attr_current_cover_tilt_position
+        else:
             direction = "down"
-            sleeptime = min((((self._attr_current_cover_tilt_position - tilt_position) / 100.0 * self._time_tilts / 10.0) ), 255.0)
+            tilt_difference = self._attr_current_cover_tilt_position - tilt_position
+
+        # time_tilts is configured in 0.1s (like the runtime the actuator reports), the sleep
+        # needs seconds.
+        sleeptime = tilt_difference / 100.0 * self._time_tilts / 10.0
 
         if self._sender_eep == H5_3F_7F:
             if direction == "up":
                 command = 0x01
             elif direction == "down":
                 command = 0x02
-            
+
             msg = H5_3F_7F(0, command, 1).encode_message(address)
             self.send_message(msg)
-            time.sleep(sleeptime)
-            
+            await asyncio.sleep(sleeptime)
+
             msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
             self.send_message(msg)
 
-        
+        else:
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
+            return
+
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
-            if direction == "up":
-                self._attr_is_opening = True
-                self._attr_is_closing = False
-            elif direction == "down":
-                self._attr_is_closing = True
-                self._attr_is_opening = False
+            # The stop telegram was already sent above, so the cover is standing still again.
+            # The tilt position itself is deliberately not set here: the actuator reports the
+            # runtime of the movement afterwards and value_changed derives the position from
+            # it - setting it here as well would count the movement twice.
+            self._attr_is_opening = False
+            self._attr_is_closing = False
+
+            self.schedule_update_ha_state()

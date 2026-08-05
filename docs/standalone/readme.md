@@ -149,18 +149,28 @@ The same tests run from the web ui page **Tests**, controlled by the general set
 ```bash
 python -m eltako_standalone --demo serve                    # bundled eo_man example data
 python -m eltako_standalone --import my_project.eodm serve
+python -m eltako_standalone --import my_bus_PCT14_export.xml serve
 ```
 
 `--demo` loads `eltako_standalone/examples/demo.eodm` (a FAM14 bus with FSR14/FSB14/FMZ14
 actuators, FTS14EM inputs, radio buttons and a weather station) - ideal without hardware. The
-same import is available in the web ui (*Devices → Import…*) for `.eodm` projects of the
-[EnOcean Device Manager](https://github.com/grimmpp/enocean-device-manager) and for an
-`eltako:` yaml, with a preview before anything is written.
+same import is available in the web ui (*Devices → Import…*), with a preview before anything
+is written. Three formats are accepted - which one it is, is detected from the content:
+
+| format | comes from | what is imported |
+| --- | --- | --- |
+| `.eodm` | [EnOcean Device Manager](https://github.com/grimmpp/enocean-device-manager) | every gateway and every device marked *Export to HA* |
+| `.xml` | export of the Eltako **PCT14** tool | the FAM14 of the export as gateway, its bus devices per channel (name, EEP and sender from the device catalog, the descriptions of PCT14 as names) and the senders taught into them as radio pushbuttons, FTS14EM inputs and sensors |
+| `.yaml` | an `eltako:` section | exactly what the file declares |
 
 **All** gateways and devices of the file are imported, also several gateways on one bus.
 Re-importing changes nothing; importing an extended file adds exactly the new parts. An
-`.eodm` file does not know the serial port of this machine - a placeholder is used and
-reported, correct it afterwards.
+`.eodm` file and a PCT14 export do not know the serial port of this machine - a placeholder is
+used and reported, correct it afterwards.
+
+A PCT14 export describes one bus, so only its `<rootdevice>` becomes a gateway; further bus
+gateways of the same rack (an FGW14-USB, an FTD14) and bus devices whose type the device
+catalog does not know are reported in the preview and skipped.
 
 ## Windows, macOS, Linux
 

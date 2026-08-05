@@ -113,6 +113,8 @@ class TeachInButton(AbstractButton):
 class GatewayReconnectButton(AbstractButton):
     """Button for reconnecting serial bus"""
 
+    _attr_is_actuator_entity = False
+
     def __init__(self, platform: str, gateway: EnOceanGateway):
         self.entity_description = ButtonEntityDescription(
             key="gateway_" + str(gateway.dev_id) + "_serial_reconnection",
@@ -141,6 +143,8 @@ class GatewayReconnectButton(AbstractButton):
 
 class GatewayReadAllDevicesButton(AbstractButton):
     """Button for reconnecting serial bus"""
+
+    _attr_is_actuator_entity = False
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         self.entity_description = ButtonEntityDescription(

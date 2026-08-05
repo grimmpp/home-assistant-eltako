@@ -11,7 +11,12 @@ function renderField(field, value, prefix = "") {
   const name = prefix ? `${prefix}.${field.name}` : field.name;
   const id = `field-${name.replace(/\./g, "-")}`;
   const required = field.required ? " required" : "";
-  const label = `<label for="${id}">${escapeHtml(field.label)}${field.required ? " *" : ""}</label>`;
+  // A disabled field is still shown and still carries its value - it just cannot be changed
+  // here (see the 'locked' settings of general_settings.py). readFields() keeps reading it,
+  // so saving a form sends the unchanged value along instead of dropping the key.
+  const disabled = field.disabled ? " disabled" : "";
+  const label = `<label for="${id}">${escapeHtml(field.label)}${field.required ? " *" : ""}${
+    field.disabled ? ` <span class="field-lock" title="Cannot be changed here">&#128274;</span>` : ""}</label>`;
   const help = field.help ? `<span class="field-help">${escapeHtml(field.help)}</span>` : "";
   const current = value === undefined || value === null ? "" : value;
 
@@ -33,7 +38,7 @@ function renderField(field, value, prefix = "") {
       const text = option && typeof option === "object" ? (option.label || option.value) : option;
       return `<option value="${escapeHtml(value)}" ${String(current) === String(value) ? "selected" : ""}>${escapeHtml(text)}</option>`;
     });
-    input = `<select id="${id}" data-field="${escapeHtml(name)}" data-type="select"${required}>
+    input = `<select id="${id}" data-field="${escapeHtml(name)}" data-type="select"${required}${disabled}>
         <option value="">${field.required ? "&mdash; please select &mdash;" : "&mdash; not set &mdash;"}</option>
         ${options.join("")}
       </select>`;
@@ -43,28 +48,29 @@ function renderField(field, value, prefix = "") {
     const options = (field.options || []).map((option) =>
       `<option value="${escapeHtml(option && typeof option === "object" ? option.value : option)}"></option>`);
     input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="combo"
-                    value="${escapeHtml(current)}" list="${listId}"${required} />
+                    value="${escapeHtml(current)}" list="${listId}"${required}${disabled} />
              <datalist id="${listId}">${options.join("")}</datalist>`;
   } else if (field.type === "boolean") {
     const checked = current === true || current === "true" ? "checked" : "";
-    input = `<input type="checkbox" id="${id}" data-field="${escapeHtml(name)}" data-type="boolean" ${checked} />`;
+    input = `<input type="checkbox" id="${id}" data-field="${escapeHtml(name)}" data-type="boolean" ${checked}${disabled} />`;
   } else if (field.type === "number") {
     input = `<input type="number" id="${id}" data-field="${escapeHtml(name)}" data-type="number"
                     value="${escapeHtml(current)}" ${field.min !== undefined ? `min="${field.min}"` : ""}
-                    ${field.max !== undefined ? `max="${field.max}"` : ""} step="any"${required} />`;
+                    ${field.max !== undefined ? `max="${field.max}"` : ""} step="any"${required}${disabled} />`;
   } else if (field.type === "int_list") {
     input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="int_list"
                     value="${escapeHtml(Array.isArray(current) ? current.join(", ") : current)}"
-                    placeholder="e.g. 1, 2"${required} />`;
+                    placeholder="e.g. 1, 2"${required}${disabled} />`;
   } else {
     // text and address
     const placeholder = field.type === "address" ? "FF-AA-80-01" : "";
     input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="${escapeHtml(field.type)}"
                     value="${escapeHtml(current)}" placeholder="${placeholder}"
-                    class="${field.type === "address" ? "mono" : ""}"${required} />`;
+                    class="${field.type === "address" ? "mono" : ""}"${required}${disabled} />`;
   }
 
-  return `<div class="field ${field.type === "boolean" ? "field-inline" : ""}">${label}${input}${help}</div>`;
+  return `<div class="field ${field.type === "boolean" ? "field-inline" : ""}${
+    field.disabled ? " field-disabled" : ""}">${label}${input}${help}</div>`;
 }
 
 export function renderFields(fields, values = {}) {
@@ -128,6 +134,13 @@ export const FORM_STYLES = `
                                 border: 1px solid var(--eltako-border); background: var(--eltako-card);
                                 color: var(--primary-text-color); width: 100%; box-sizing: border-box; }
   .field input[type=checkbox] { width: auto; }
+  /* A locked field stays readable - it shows what is configured, it just cannot be edited
+     here. Greyed out rather than hidden, so the value is still visible for a bug report. */
+  .field-disabled input, .field-disabled select {
+    opacity: .55; cursor: not-allowed; background: var(--eltako-tint); border-style: dashed;
+  }
+  .field-disabled label { opacity: .75; }
+  .field-lock { font-size: .8em; opacity: .7; }
   .field-help { font-size: .7rem; color: var(--eltako-muted); }
   .field-group { grid-column: 1 / -1; border: 1px solid var(--eltako-border); border-radius: 10px;
                  padding: 10px 14px 14px; display: grid;

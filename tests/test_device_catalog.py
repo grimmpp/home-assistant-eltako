@@ -130,6 +130,25 @@ class TestFormDescriptorIntegration(TestCase):
                 self.assertIn(template['eep'], valid,
                               msg=f"{platform['platform']}: {template['value']}")
 
+    def test_find_hw_type_accepts_the_names_of_other_tools(self):
+        """PCT14 and the EnOcean Device Manager write the same device differently."""
+        from custom_components.eltako.device_catalog import find_hw_type
+
+        # PCT14 uses dashes, the catalog underscores
+        self.assertEqual(find_hw_type('FSR14-4x')['hw_type'], 'FSR14_4x')
+        self.assertEqual(find_hw_type('fsr14_4X')['hw_type'], 'FSR14_4x')
+        self.assertEqual(find_hw_type('FWZ14-65A')['hw_type'], 'FWZ14_65A')
+        # a variant separator: the exact entry wins, otherwise the base device
+        self.assertEqual(find_hw_type('FUD14/800W')['hw_type'], 'FUD14_800W')
+        self.assertEqual(find_hw_type('FUD14/500W')['hw_type'], 'FUD14')
+        # gateways are found as well - they carry a gateway type instead of a platform
+        self.assertEqual(find_hw_type('FGW14')['hw_type'], 'FGW14')
+        self.assertEqual(find_hw_type('FGW14-USB')['gateway_type'], 'fgw14usb')
+        # unknown devices are reported as such, not guessed
+        self.assertEqual(find_hw_type('FSR14SSR'), {})
+        self.assertEqual(find_hw_type(''), {})
+        self.assertEqual(find_hw_type(None), {})
+
     def test_switch_reuses_the_light_actuators(self):
         from custom_components.eltako.device_config import get_form_descriptor
 

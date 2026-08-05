@@ -51,6 +51,78 @@ class TestSendMessageService(unittest.IsolatedAsyncioTestCase):
             await g.async_service_send_message(event, True)
 
 
+    async def test_sender_id_field_names(self):
+        """github issue #194: only 'id' was read, so 'sender_id' (the field name everybody
+        guesses first) ended up as 'sender id is None' and nothing was sent."""
+        g = self.create_gateway()
+        for field in ('id', 'sender_id', 'sender', 'address'):
+            sent = []
+            g.send_message = lambda msg: sent.append(msg)
+
+            await g.async_service_send_message(
+                EventMock('gateway_1_send_message',
+                          {field: 'FF-A7-96-82', 'eep': 'F6-02-01', 'command': 1}), True)
+
+            self.assertEqual(len(sent), 1, f"nothing sent for field '{field}'")
+            self.assertEqual(sent[0].address, b'\xff\xa7\x96\x82')
+
+    async def test_sender_id_as_number(self):
+        """An unquoted address in the yaml editor arrives as int."""
+        g = self.create_gateway()
+        sent = []
+        g.send_message = lambda msg: sent.append(msg)
+
+        await g.async_service_send_message(
+            EventMock('gateway_1_send_message',
+                      {'sender_id': 0xFFA79682, 'eep': 'F6-02-01', 'command': 1}), True)
+
+        self.assertEqual(sent[0].address, b'\xff\xa7\x96\x82')
+
+    async def test_missing_sender_id_does_not_send(self):
+        g = self.create_gateway()
+        sent = []
+        g.send_message = lambda msg: sent.append(msg)
+
+        await g.async_service_send_message(
+            EventMock('gateway_1_send_message', {'eep': 'F6-02-01', 'command': 1}))
+
+        self.assertEqual(sent, [])
+
+    async def test_invalid_sender_id_does_not_send(self):
+        g = self.create_gateway()
+        sent = []
+        g.send_message = lambda msg: sent.append(msg)
+
+        for value in ('no address', True, ''):
+            await g.async_service_send_message(
+                EventMock('gateway_1_send_message',
+                          {'sender_id': value, 'eep': 'F6-02-01', 'command': 1}))
+
+        self.assertEqual(sent, [])
+
+    async def test_unknown_eep_does_not_send(self):
+        g = self.create_gateway()
+        sent = []
+        g.send_message = lambda msg: sent.append(msg)
+
+        for eep in ('X5-99-99', None):
+            await g.async_service_send_message(
+                EventMock('gateway_1_send_message', {'sender_id': 'FF-A7-96-82', 'eep': eep}))
+
+        self.assertEqual(sent, [])
+
+    async def test_values_which_do_not_fit_the_eep_do_not_raise(self):
+        g = self.create_gateway()
+        sent = []
+        g.send_message = lambda msg: sent.append(msg)
+
+        await g.async_service_send_message(
+            EventMock('gateway_1_send_message',
+                      {'sender_id': 'FF-A7-96-82', 'eep': 'A5-10-06',
+                       'current_temp': 'not a number'}))
+
+        self.assertEqual(sent, [])
+
     async def test_write_eep_params_to_docs_file(self):
         text  = '# Paramters for EEPs in Send Message Events \n'
         

@@ -8,6 +8,8 @@
     python -m eltako_standalone devices    list all entities with their state
     python -m eltako_standalone state      show one entity
     python -m eltako_standalone control    invoke an action (turn_on, set_cover_position, ...)
+    python -m eltako_standalone devicetest functional tests against the hardware
+                                           (config, actuator, burst, cover - see `devicetest list`)
 
 Everything runs against a config folder (--config, default ~/.eltako-standalone)
 which works exactly like the Home Assistant one: configuration.yaml with the
@@ -38,7 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="load the example data of the EnOcean Device Manager "
                              "(eltako_standalone/examples/demo.eodm) at startup")
     parser.add_argument("--import", dest="import_file", metavar="FILE", default=None,
-                        help="import a configuration file (.eodm or eltako yaml) at startup")
+                        help="import a configuration file (.eodm, PCT14 export .xml or "
+                             "eltako yaml) at startup")
     sub = parser.add_subparsers(dest="command", required=True)
 
     serve = sub.add_parser("serve", help="start runtime + web ui")
@@ -121,6 +124,39 @@ def build_parser() -> argparse.ArgumentParser:
     cover.add_argument("--runs", type=int, default=1)
     cover.add_argument("--wait", type=float, default=5.0,
                        help="seconds to wait for the gateway connection (default 5)")
+
+    actuator = devicetest_sub.add_parser(
+        "actuator", help="switch the configured switches/lights and check that they answer "
+                         "(does the teach-in work?)")
+    actuator.add_argument("--gateway", type=int, required=True, help="gateway id")
+    actuator.add_argument("--devices", default=None,
+                          help="comma separated actuator addresses "
+                               "(default: every configured switch and light of the gateway)")
+    # dest is explicit: 'command' is already taken by the top level subcommand
+    actuator.add_argument("--command", dest="actuator_command", default="on_off",
+                          choices=["on_off", "off_on", "on", "off"],
+                          help="what to send per device (default on_off: switch on, then off)")
+    actuator.add_argument("--timeout", type=float, default=3.0,
+                          help="seconds to wait for the status telegram of the actuator (default 3)")
+    actuator.add_argument("--settle", type=float, default=1.0,
+                          help="pause between two commands in seconds (default 1)")
+    actuator.add_argument("--wait", type=float, default=5.0,
+                          help="seconds to wait for the gateway connection (default 5)")
+
+    config_check = devicetest_sub.add_parser(
+        "config", help="check the configuration (addresses, senders, teach-in, models) - "
+                       "sends nothing")
+    config_check.add_argument("--gateway", type=int, default=None, action="append",
+                              dest="gateways", help="only this gateway id (repeatable)")
+    config_check.add_argument("--severity", default="info", choices=["error", "warning", "info"],
+                              help="lowest severity to report (default info = everything)")
+    config_check.add_argument("--json", action="store_true",
+                              help="print the findings as json instead of text")
+    config_check.add_argument("--wait", type=float, default=0.0,
+                              help="seconds to wait for the gateway connections (default 0 - "
+                                   "the check does not need them)")
+
+    devicetest_sub.add_parser("list", help="list the available device tests")
 
     return parser
 
@@ -508,39 +544,94 @@ async def _cmd_control(runtime, args) -> int:
     return 0
 
 
+def _address_list(value: str | None) -> list[str] | None:
+    return [part.strip() for part in value.split(",") if part.strip()] if value else None
+
+
 async def _cmd_devicetest(runtime, args) -> int:
-    """Functional device tests of the EnOcean Device Manager (burst, cover)."""
+    """Every device test of the web ui, on the command line.
+
+    The page and the CLI call the same runners of `device_tests.TEST_RUNNERS`, so a test never
+    exists on one side only.
+    """
     import asyncio as _asyncio
 
-    from .device_tests import run_burst_test, run_cover_test
+    from custom_components.eltako.device_tests import TEST_DESCRIPTORS, TEST_RUNNERS
+
+    if args.devicetest == "list":
+        for descriptor in TEST_DESCRIPTORS:
+            print(f"{descriptor['id']:10} {descriptor['name']}")
+            print(f"{'':10} {descriptor['description']}")
+            if descriptor.get("warning"):
+                print(f"{'':10} ! {descriptor['warning']}")
+            if descriptor.get("sends_nothing"):
+                print(f"{'':10} (sends no telegram)")
+        return 0
 
     def log(line: str, style: str = "info") -> None:
         marker = {"ok": "+ ", "error": "! ", "received": "  "}.get(style, "")
         print(f"{marker}{line}", flush=True)
 
     if args.devicetest == "burst":
-        gateways = [_find_gateway(runtime, args.gateway1), _find_gateway(runtime, args.gateway2)]
+        gateway_ids = [args.gateway1, args.gateway2]
         params = {"gateway1": args.gateway1, "gateway2": args.gateway2,
                   "count": args.count, "delay": args.delay, "runs": args.runs}
-        runner = run_burst_test
-    else:
-        gateways = [_find_gateway(runtime, args.gateway)]
+    elif args.devicetest == "cover":
+        gateway_ids = [args.gateway]
         params = {"gateway": args.gateway, "runs": args.runs,
-                  "covers": [c.strip() for c in args.covers.split(",")] if args.covers else None,
-                  "senders": [s.strip() for s in args.senders.split(",")] if args.senders else None,
+                  "covers": _address_list(args.covers),
+                  "senders": _address_list(args.senders),
                   "sequence": args.sequence}
-        runner = run_cover_test
+    elif args.devicetest == "actuator":
+        gateway_ids = [args.gateway]
+        params = {"gateway": args.gateway, "devices": _address_list(args.devices),
+                  "command": args.actuator_command, "timeout": args.timeout,
+                  "settle": args.settle}
+    elif args.devicetest == "config":
+        gateway_ids = []
+        # the findings are printed by _print_config_findings (sorted, filtered by --severity),
+        # so the runner does not log them a second time
+        params = {"gateways": args.gateways, "log_findings": False}
+    else:
+        print(f"Unknown device test '{args.devicetest}'. Available: "
+              f"{', '.join(TEST_RUNNERS)}", file=sys.stderr)
+        return 2
 
-    for gateway in gateways:
-        if gateway is not None:
-            await _wait_for_connection(gateway, args.wait)
+    if args.wait:
+        for gateway_id in gateway_ids:
+            gateway = _find_gateway(runtime, gateway_id)
+            if gateway is not None:
+                await _wait_for_connection(gateway, args.wait)
 
+    runner = TEST_RUNNERS[args.devicetest]
     try:
         result = await runner(runtime.hass, params, log, _asyncio.Event())
     except ValueError as e:
         print(str(e), file=sys.stderr)
         return 2
+
+    if args.devicetest == "config":
+        _print_config_findings(result, args)
     return 0 if result.get("success") else 1
+
+
+def _print_config_findings(result: dict, args) -> None:
+    """Machine readable output for the configuration check (the log already had the text)."""
+    if getattr(args, "json", False):
+        print(json.dumps(result, indent=2, default=str))
+        return
+
+    order = {"error": 0, "warning": 1, "info": 2}
+    minimum = order[getattr(args, "severity", "info")]
+    counts = result["counts"]
+    print(f"\n{counts['error']} error(s), {counts['warning']} warning(s), {counts['info']} hint(s) "
+          f"for {result['device_count']} device(s) of {result['gateway_count']} gateway(s).")
+    for finding in result["findings"]:
+        if order[finding["severity"]] > minimum:
+            continue
+        where = f" {finding['name']} ({finding['device']})" if finding["device"] else ""
+        gateway = f" [gateway {finding['gateway_id']}]" if finding["gateway_id"] is not None else ""
+        print(f"  {finding['severity'].upper():7}{gateway}{where}: {finding['message']}")
 
 
 if __name__ == "__main__":

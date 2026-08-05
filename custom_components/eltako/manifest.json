@@ -4,7 +4,7 @@
   "codeowners": ["@grimmpp"],
   "config_flow": true,
   "panel_custom": true,
-  "dependencies": ["frontend", "http", "websocket_api"],
+  "dependencies": ["frontend", "http", "websocket_api", "zeroconf"],
   "documentation": "https://github.com/grimmpp/home-assistant-eltako",
   "integration_type": "hub",
   "iot_class": "local_push",

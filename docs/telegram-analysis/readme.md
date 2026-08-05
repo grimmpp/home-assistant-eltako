@@ -29,12 +29,14 @@ eltako:
     telegram_log_include_polling: False             # True: log bus polling telegrams (FAM14) as well
     telegram_log_decode_eep: True                   # decode telegrams of known devices with their EEP
     telegram_log_buffer_size: 500                   # telegrams kept in memory for the live view
-    enable_frontend: True                           # web ui with live view, statistics and unknown devices
 ```
+
+All of these are on the **Settings** page of the [web ui](../web-ui/readme.md) as well, where they take
+effect immediately - the yaml above is only needed if the configuration is kept in files.
 
 | Option | Default | Description |
 |---|---|---|
-| `log_enocean_telegrams` | `False` | Master switch. Enables recording, statistics, live view and the web ui. |
+| `log_enocean_telegrams` | `False` | Master switch of the recording. It feeds the statistics and the live view; the web ui itself is there anyway. |
 | `telegram_log_filename` | `""` | **If a filename is set, telegrams are logged into that file** – and recording is enabled implicitly. Relative paths are resolved against the Home Assistant configuration folder (`/config`), absolute paths are used as they are. Missing directories are created. |
 | `telegram_log_format` | `jsonl` | `jsonl`: one JSON object per line (recommended, e.g. for pandas). `csv`: semicolon separated, spreadsheet friendly. |
 | `telegram_log_max_file_size_mb` | `10` | The log file is rotated as soon as it grows beyond this size. |
@@ -43,17 +45,18 @@ eltako:
 | `telegram_log_include_polling` | `False` | Bus gateways (FAM14) poll their actuators permanently. Those telegrams are dropped by default because they would flood the log. |
 | `telegram_log_decode_eep` | `True` | Decodes telegrams of configured devices with their EEP and stores the decoded values (e.g. temperature, humidity, button). |
 | `telegram_log_buffer_size` | `500` | Size of the in-memory ring buffer which feeds the live view. `0` disables buffering (file logging and statistics still work). |
-| `enable_frontend` | `False` | Adds the `Eltako` panel to the sidebar. It contains the live view, the device statistics and the unknown devices. See [Web UI](../web-ui/readme.md). |
+| `enable_frontend` | `True` | The `Eltako` panel in the sidebar, which contains the live view and the statistics. On by default, see [Web UI](../web-ui/readme.md). |
 
-> A restart of Home Assistant is required after changing these settings.
+> Changed in the web ui these settings take effect immediately (the telegram logger is re-created).
+> Changed in `configuration.yaml` they need a restart of Home Assistant.
 
 Writing to the file happens in a separate thread, so neither the Home Assistant event loop nor the
 serial communication is slowed down by disk i/o.
 
 ## Web UI
 
-With `enable_frontend: True` the sidebar contains the panel **Eltako** (visible for admins only). Three of
-its pages belong to the telegram analysis:
+The sidebar contains the panel **Eltako** (visible for admins only) without any configuration. Two of its
+pages belong to the telegram analysis:
 
 * **Live telegrams** – all telegrams as they arrive, including direction, gateway, address, device name,
   entity ids, EEP, message type, raw data and decoded values. Can be filtered (address, device, EEP,
@@ -64,18 +67,20 @@ its pages belong to the telegram analysis:
   average/minimum/maximum interval between two telegrams, first/last time seen, message types, area,
   platform, entity ids and the last decoded values. Sortable by clicking a column header.
   `Refresh known devices` rebuilds the list of known devices after configuration changes.
-* **Unknown devices** – addresses which sent telegrams but are not configured in `configuration.yaml`,
-  including the EEP (from a teach-in telegram or guessed) and a ready to use yaml snippet.
+Addresses which sent telegrams but are not configured yet are listed as **unknown devices** on the
+**Devices** page, including their EEP (from a teach-in telegram or guessed). A click takes such a
+candidate over: the device form opens prefilled, no yaml involved.
 
-The remaining pages (**Overview** and **About**) describe the integration itself. All pages and the
-websocket api behind them are documented in [Web UI](../web-ui/readme.md).
+The remaining pages (**Overview**, **Control**, **Tests**, **Settings**, **Help** and **About**) describe
+and configure the integration itself. All pages and the websocket api behind them are documented in
+[Web UI](../web-ui/readme.md).
 
 ## Unknown devices
 
 Every telegram whose address is neither a configured device, a configured sender, thermostat or
 cooling-mode device, nor a live entity of the integration is marked as `unknown`. This is the fastest
-way to find devices which are not yet integrated: press a button on the device, look into the
-*Unknown devices* view and copy the prepared yaml snippet into your configuration.
+way to find devices which are not yet integrated: press a button on the device, look at the *unknown
+devices* on the **Devices** page and add it from there with one click.
 
 The EEP shown there is a guess derived from the message type (RPS → `F6-02-01`, 1BS → `D5-00-01`,
 4BS → `A5-04-02`). If the device sends a 4BS teach-in telegram, the EEP contained in that telegram is
@@ -163,7 +168,7 @@ eltako:
 Works with InfluxDB 2.x (native api) and InfluxDB 1.8+ (via its v2 compatibility api). No client
 library is needed - the integration posts the line protocol directly, batched and from its own
 worker thread. If the database is down, telegrams are counted as failed and the bus is never blocked.
-All settings can also be changed on the **About** page of the web ui.
+All settings can also be changed on the **Settings** page of the web ui.
 
 ### Data model
 

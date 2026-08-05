@@ -24,6 +24,8 @@ DATA_BUS_MEMBERS: Final = "bus_members"
 DATA_ADDITIONAL_SENDERS: Final = "additional_senders"
 DATA_PORT_FINGERPRINTS: Final = "port_fingerprints"
 DATA_PORT_FINGERPRINT_STORE: Final = "port_fingerprint_store"
+# state of the plug & play detection: {'running', 'last_run', 'last_report', 'unsubscribe'}
+DATA_PLUG_AND_PLAY: Final = "plug_and_play"
 ELTAKO_GATEWAY: Final = "gateway"
 ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "Eltako"
@@ -62,6 +64,22 @@ CONF_DEPRECATED_FRONTEND_DEV_URL: Final = "frontend-dev-url"    # frontend is pa
 CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI: Final = "enable_telegram_web_ui"    # part of the frontend now
 
 CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
+
+### Plug & play: newly connected gateways and their devices are detected and added
+### automatically. (See plug_and_play.py)
+CONF_PLUG_AND_PLAY: Final = "plug_and_play"
+CONF_PLUG_AND_PLAY_INTERVAL: Final = "plug_and_play_interval"
+
+### The integration itself as a config entry, without any gateway. It is what "Add integration"
+### creates: the panel appears, the detection runs, and every gateway which is found gets its own
+### entry. Nothing has to be entered by hand. (See config_flow.async_step_auto)
+CONF_HUB: Final = "hub"
+HUB_UNIQUE_ID: Final = "eltako_hub"
+HUB_TITLE: Final = "Eltako"
+# set by the config flow, consumed once by async_setup_entry: run the detection right after
+# the integration was added, but not again on every restart (reading a bus locks it)
+DATA_INITIAL_DETECTION: Final = "run_initial_detection"
+
 GATEWAY_DEFAULT_NAME: Final = "EnOcean Gateway"
 OLD_GATEWAY_DEFAULT_NAME: Final = "EnOcean ESP2 Gateway"
 CONF_GATEWAY: Final = "gateway"
@@ -142,6 +160,9 @@ class TelegramLogLevel(StrEnum):
 ### Groups of the general settings (used to structure the web ui)
 SETTING_GROUPS: Final = [
     ('general', "General", "Behaviour of the integration and its entities."),
+    ('plug_and_play', "Plug & Play", "Detects gateways which are plugged in (FAM14, FGW14-USB, "
+     "FAM-USB, USB300), reads their bus and adds every device which can be identified without "
+     "any doubt. The same run can be triggered by hand with the button on the overview page."),
     ('web_ui', "Web UI", "This user interface."),
     ('telegram_log', "Telegram recording", "Live view, statistics and the telegram log file."),
     ('timeseries', "Timeseries export (Grafana)", "Writes every recorded telegram with its meta data "
@@ -168,7 +189,7 @@ class TelegramDirection(StrEnum):
 ### (custom_components/eltako/frontend) and contains all sub pages (overview, telegram
 ### logging, device statistics, about, ...).
 PANEL_URL_PATH: Final = "eltako"                    # sidebar/url path: /eltako
-PANEL_TITLE: Final = "Eltako"
+PANEL_TITLE: Final = "ELTAKO - EnOcean"    # sidebar entry and heading of the web ui
 PANEL_ICON: Final = "mdi:access-point-network"   # radio/telegrams fit EnOcean better than a bus
 PANEL_WEBCOMPONENT: Final = "eltako-panel"
 PANEL_STATIC_URL: Final = "/eltako_frontend"        # url the frontend folder is served under
@@ -186,6 +207,7 @@ WS_DEVICE_UPDATE: Final = "eltako/devices/update"
 WS_DEVICE_REMOVE: Final = "eltako/devices/remove"
 WS_DEVICE_ACTIVITY: Final = "eltako/devices/activity"
 WS_DEVICE_ACTIVITY_CLEAR: Final = "eltako/devices/activity_clear"
+WS_HELP_CATALOG: Final = "eltako/help/catalog"
 WS_SETTINGS_GET: Final = "eltako/settings/get"
 WS_SETTINGS_SET: Final = "eltako/settings/set"
 WS_SETTINGS_RESET: Final = "eltako/settings/reset"
@@ -193,7 +215,10 @@ WS_GATEWAY_SCAN: Final = "eltako/gateways/scan"
 WS_GATEWAY_FORM: Final = "eltako/gateways/form"
 WS_GRAFANA_SYNC: Final = "eltako/grafana/sync"
 WS_GATEWAY_ADD: Final = "eltako/gateways/add"
+WS_GATEWAY_UPDATE: Final = "eltako/gateways/update"
 WS_GATEWAY_REMOVE: Final = "eltako/gateways/remove"
+WS_PLUG_AND_PLAY_STATUS: Final = "eltako/plug_and_play/status"
+WS_PLUG_AND_PLAY_RUN: Final = "eltako/plug_and_play/run"
 WS_BUS_MEMBERS: Final = "eltako/bus/members"
 WS_BUS_READ_MEMORY: Final = "eltako/bus/read_memory"
 WS_BUS_TEACH_IN_SENDERS: Final = "eltako/bus/teach_in_senders"

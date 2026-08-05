@@ -39,6 +39,18 @@ class TestEntityProperties(unittest.TestCase):
         self.assertTrue( core.valid_entity_id(ee.entity_id ) )
         self.assertTrue( core.validate_state(ee.state))
 
+    def test_entity_id_of_a_gateway_level_entity_is_valid(self):
+        """Gateway entities use 00-00-00-00 as device id and may have no description key, so the
+        unique id ends with '_'. Home Assistant rejects that as entity id ('sets an invalid
+        entity ID: select.eltako_gw_10_'), only the entity id is sanitized - the unique id is the
+        identity in the entity registry and must not change."""
+        gw = GatewayMock(dev_id=10)
+        ee = EltakoEntity(Platform.SELECT, gw, AddressExpression.parse('00-00-00-00'), "Repeater_Mode")
+
+        self.assertTrue(ee.unique_id.endswith('_'))
+        self.assertTrue(core.valid_entity_id(ee.entity_id), ee.entity_id)
+        self.assertEqual(ee.entity_id, 'select.eltako_gw_10')
+
     def test_entity_area_default(self):
         """When no area is provided, suggested_area in DeviceInfo is None."""
         gw = GatewayMock()

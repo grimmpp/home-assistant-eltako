@@ -63,3 +63,11 @@ Use case: a conventional push-button is connected to the FTS14-EM input module a
    - ...
 
 The push-button on the FTS14-EM (e.g. input 1) is now taught in to channel 1 of the FSR14-4x and works independently of Home Assistant.
+
+<br>
+
+## Next: into Home Assistant
+Install the integration, add it (*Settings &rarr; Devices & services &rarr; Add integration &rarr; Eltako*) and
+select the FGW14-USB. The **Eltako** panel is then in the sidebar &ndash; no `configuration.yaml` needed.
+Switch on [plug & play](../plug-and-play/readme.md) there and the bus above is read and its devices are
+added on their own. See the [web ui](../web-ui/readme.md).

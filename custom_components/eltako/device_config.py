@@ -318,13 +318,15 @@ async def async_save_ui_devices(hass: HomeAssistant, config_entry: ConfigEntry,
     hass.config_entries.async_update_entry(config_entry, options=options)
 
 
-async def async_add_ui_device(hass: HomeAssistant, config_entry: ConfigEntry, platform: str,
-                              device: dict) -> dict:
-    """Validate and store a new device. Returns the validated device."""
+def _prepare_ui_device(hass: HomeAssistant, config_entry: ConfigEntry, devices: dict,
+                       platform: str, device: dict) -> tuple[dict, dict]:
+    """Validate one new device against the schema and the devices which already exist.
+
+    Returns (entry to store, validated device). Raises vol.Invalid.
+    """
     validated = validate_device(platform, device)
     address = normalize_address(str(device.get(CONF_ID)))
 
-    devices = get_ui_devices(config_entry)
     if find_device(devices, platform, address) is not None:
         raise vol.Invalid(f"Device '{address}' is already configured as {platform} in the web ui.")
 
@@ -336,17 +338,87 @@ async def async_add_ui_device(hass: HomeAssistant, config_entry: ConfigEntry, pl
 
     entry = dict(device)
     entry[CONF_ID] = address
+    return entry, validated
+
+
+async def async_add_ui_device(hass: HomeAssistant, config_entry: ConfigEntry, platform: str,
+                              device: dict) -> dict:
+    """Validate and store a new device. Returns the validated device."""
+    devices = get_ui_devices(config_entry)
+    entry, validated = _prepare_ui_device(hass, config_entry, devices, platform, device)
+
     devices.setdefault(platform, []).append(entry)
     await async_save_ui_devices(hass, config_entry, devices)
 
-    LOGGER.info(f"[{LOG_PREFIX_DEVICE_CONFIG}] Added {platform} '{address}' via web ui.")
+    LOGGER.info(f"[{LOG_PREFIX_DEVICE_CONFIG}] Added {platform} '{entry[CONF_ID]}' via web ui.")
     return validated
+
+
+async def async_add_ui_devices(hass: HomeAssistant, config_entry: ConfigEntry,
+                               candidates: list[tuple[str, dict]]) -> dict:
+    """Store several devices of one gateway with ONE write of the config entry.
+
+    Every write of the options reloads the gateway, which rebuilds its connection and all its
+    entities. Adding devices one by one - an automatic detection can find dozens at once -
+    would therefore reload the gateway dozens of times in a row. So all devices are validated
+    first and stored together; a single invalid device is reported and skipped instead of
+    stopping the others.
+
+    `candidates` is a list of (platform, device). Returns
+    `{'added': [(platform, device)], 'existing': [...], 'errors': [(platform, address, message)]}`.
+    """
+    devices = get_ui_devices(config_entry)
+    result = {'added': [], 'existing': [], 'errors': []}
+
+    for platform, device in candidates:
+        try:
+            entry, _validated = _prepare_ui_device(hass, config_entry, devices, platform, device)
+        except vol.Invalid as e:
+            address = str(device.get(CONF_ID, '?'))
+            # "already configured/declared" is the merge working as intended, not an error
+            target = 'existing' if 'already' in str(e) else 'errors'
+            result[target].append((platform, address, str(e)) if target == 'errors'
+                                  else (platform, address))
+            continue
+        devices.setdefault(platform, []).append(entry)
+        result['added'].append((platform, entry))
+
+    if result['added']:
+        await async_save_ui_devices(hass, config_entry, devices)
+        LOGGER.info(f"[{LOG_PREFIX_DEVICE_CONFIG}] Added {len(result['added'])} device(s) in one "
+                    f"go: {', '.join(f'{platform} {entry[CONF_ID]}' for platform, entry in result['added'])}")
+    return result
+
+
+def get_form_field_names(platform: str) -> set[str]:
+    """Names of the fields the web ui offers for a platform (groups count as one field)."""
+    for descriptor in get_form_descriptor()['platforms']:
+        if descriptor['platform'] == platform:
+            return {field['name'] for field in descriptor['fields']}
+    return set()
+
+
+def _keep_fields_the_form_does_not_offer(platform: str, existing: dict, device: dict) -> dict:
+    """Carry over settings which the form of the web ui cannot show.
+
+    The schemas support more than the form offers (e.g. `cooling_mode` of a climate device,
+    `voc_type_indexes` and `language` of a sensor). The ui sends exactly the fields it
+    rendered, so saving a device which was imported or hand written would silently drop
+    everything else. Such a field is therefore taken from the stored device; a field which the
+    form does offer is always taken from the ui - leaving it empty has to be able to clear it.
+    """
+    offered = get_form_field_names(platform)
+    preserved = {key: value for key, value in (existing or {}).items()
+                 if key not in offered and key not in device and key != CONF_ID}
+    if preserved:
+        LOGGER.debug(f"[{LOG_PREFIX_DEVICE_CONFIG}] Keeping {', '.join(preserved)} of "
+                     f"{platform} '{existing.get(CONF_ID)}' - the web ui form does not offer it.")
+    return {**preserved, **device}
 
 
 async def async_update_ui_device(hass: HomeAssistant, config_entry: ConfigEntry, platform: str,
                                  address: str, device: dict) -> dict:
-    """Replace an existing ui device."""
-    validated = validate_device(platform, device)
+    """Change an existing ui device. Returns the validated device."""
     address = normalize_address(address)
 
     devices = get_ui_devices(config_entry)
@@ -354,8 +426,10 @@ async def async_update_ui_device(hass: HomeAssistant, config_entry: ConfigEntry,
     if existing is None:
         raise vol.Invalid(f"Device '{address}' is not configured as {platform} in the web ui.")
 
-    entry = dict(device)
-    entry[CONF_ID] = normalize_address(str(device.get(CONF_ID, address)))
+    entry = _keep_fields_the_form_does_not_offer(platform, existing, device)
+    validated = validate_device(platform, entry)
+    entry[CONF_ID] = normalize_address(str(entry.get(CONF_ID, address)))
+
     devices[platform][devices[platform].index(existing)] = entry
     await async_save_ui_devices(hass, config_entry, devices)
 
@@ -424,6 +498,22 @@ def get_merged_device_config(hass: HomeAssistant, config_entry: ConfigEntry,
     return merge_device_config(yaml_devices, get_ui_devices(config_entry))
 
 
+def get_devices_of_gateway(hass: HomeAssistant, gateway_id: int) -> dict[str, list[dict]]:
+    """Devices of one gateway from both sources, without having its config entry at hand.
+
+    The platform setups get the entry handed over (get_merged_device_config), everything which
+    only knows the gateway id - device tests, the configuration check, the command line - uses
+    this one. Reading only the yaml would silently ignore every device created in the web ui.
+    """
+    config = (getattr(hass, 'data', None) or {}).get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
+    yaml_devices = config_helpers.get_device_config(config, int(gateway_id)) or {}
+    try:
+        entry = _find_gateway_entry(hass, int(gateway_id))
+    except Exception:   # noqa: BLE001 - no config entries (e.g. in a unit test)
+        entry = None
+    return merge_device_config(yaml_devices, get_ui_devices(entry) if entry else {})
+
+
 ### ---------------------------------------------------------------------------
 ### websocket api
 ### ---------------------------------------------------------------------------
@@ -442,6 +532,38 @@ def _find_gateway_entry(hass: HomeAssistant, gateway_id: int) -> ConfigEntry | N
     return None
 
 
+def _get_entity_ids_by_address(hass: HomeAssistant) -> dict[str, list[str]]:
+    """EnOcean address -> entity ids of the live entities of this integration.
+
+    Read from the entity platforms, where every entity states which addresses it listens to
+    (device.py: `listen_to_addresses`). That works without the telegram logger - the simple
+    device page of the web ui shows the state of a device even when recording is switched off
+    - and in the standalone runtime alike.
+    """
+    try:
+        from homeassistant.helpers.entity_platform import DATA_ENTITY_PLATFORM
+
+        result: dict[str, list[str]] = {}
+        platforms = (getattr(hass, 'data', None) or {}).get(DATA_ENTITY_PLATFORM, {}) or {}
+        for entity_platform in platforms.get(DOMAIN, []):
+            for entity in list(getattr(entity_platform, 'entities', {}).values()):
+                entity_id = getattr(entity, 'entity_id', None)
+                # info fields (event id, address, ...) describe the device instead of
+                # reporting a value - they are of no use in the simple device view
+                if not entity_id or getattr(entity, 'is_info_field', False):
+                    continue
+                for raw_address in getattr(entity, 'listen_to_addresses', []) or []:
+                    try:
+                        key = config_helpers.b2s(raw_address).upper()
+                    except Exception:   # noqa: BLE001
+                        continue
+                    if entity_id not in result.setdefault(key, []):
+                        result[key].append(entity_id)
+        return result
+    except Exception:   # noqa: BLE001 - no entity platforms (e.g. in a unit test)
+        return {}
+
+
 def _describe_devices(hass: HomeAssistant) -> list[dict]:
     """All configured devices of all gateways incl. their source (yaml or web ui).
 
@@ -454,6 +576,7 @@ def _describe_devices(hass: HomeAssistant) -> list[dict]:
 
     activity_tracker = get_activity_tracker(hass)
     ha_devices = _get_ha_device_ids(hass)
+    entity_ids_by_address = _get_entity_ids_by_address(hass)
     config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
 
     entries_by_gateway_id = {}
@@ -514,12 +637,35 @@ def _describe_devices(hass: HomeAssistant) -> list[dict]:
                         # link to the device page in home assistant (see device.py: entities
                         # register their device with identifiers={(DOMAIN, <address>)})
                         'ha_device_id': ha_devices.get(address.upper()) or ha_devices.get(external_address),
+                        # the entities of this device, so the web ui can show their state
+                        'entity_ids': (entity_ids_by_address.get(str(external_address or '').upper())
+                                       or entity_ids_by_address.get(address.upper()) or []),
                         'name': device.get(CONF_NAME),
                         'eep': device.get(CONF_EEP),
                         'area': device.get(CONF_AREA),
                         'sender': device.get(CONF_SENDER),
                         'config': {str(k): _plain(v) for k, v in device.items()},
                     })
+    return result
+
+
+def get_configured_addresses(hass: HomeAssistant) -> dict:
+    """Every address which is in use, from configuration.yaml and from the web ui.
+
+    Returns `{'by_gateway': {gateway id: {addresses}}, 'all': {addresses}}`. A local bus
+    address (00-00-00-xx) only identifies a device together with its gateway - every bus has
+    its own position 1 - therefore the addresses are additionally grouped per gateway. Sender
+    ids and external addresses are included, so an automatic detection can neither add a
+    device twice nor hand out a sender id which is already used.
+    """
+    result = {'by_gateway': {}, 'all': set()}
+    for device in _describe_devices(hass):
+        gateway_id = device.get('gateway_id')
+        addresses = {device.get('address'), device.get('external_address'),
+                     (device.get('sender') or {}).get(CONF_ID) if isinstance(device.get('sender'), dict) else None}
+        addresses = {str(address).upper() for address in addresses if address}
+        result['all'].update(addresses)
+        result['by_gateway'].setdefault(gateway_id, set()).update(addresses)
     return result
 
 

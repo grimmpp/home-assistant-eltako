@@ -265,6 +265,56 @@ for _entry in DEVICE_CATALOG:
     _PRIMARY_BY_HW_TYPE.setdefault(_entry['hw_type'], _entry)
 
 
+def normalize_hw_type(name: str | None) -> str:
+    """Device name of any tool -> comparable key ('FSR14-4x', 'fsr14 4x' -> 'FSR14_4X').
+
+    Other tools write the same device differently than the housing does: PCT14 exports
+    'FSR14-4x' and 'FUD14/800W', the EnOcean Device Manager 'FSR14_4x'. Separators are
+    therefore all the same character and the case is dropped.
+    """
+    key = str(name or '').strip().upper()
+    for character in ('-', ' ', '/', '.'):
+        key = key.replace(character, '_')
+    return key
+
+
+# normalized hw type -> primary catalog entry
+_PRIMARY_BY_NORMALIZED: dict[str, dict] = {}
+for _entry in DEVICE_CATALOG:
+    _PRIMARY_BY_NORMALIZED.setdefault(normalize_hw_type(_entry['hw_type']), _entry)
+
+
+def find_hw_type(name: str | None) -> dict:
+    """Primary catalog entry of a device name written by another tool (PCT14, eo_man).
+
+    Falls back to the part before the first variant separator, so a device which only
+    differs in a detail the catalog does not distinguish is still found
+    ('FUD14/800W' -> FUD14_800W if known, otherwise FUD14).
+    """
+    key = normalize_hw_type(name)
+    if not key:
+        return {}
+    entry = _PRIMARY_BY_NORMALIZED.get(key)
+    if entry is not None:
+        return entry
+    base = normalize_hw_type(str(name).split('/')[0])
+    return _PRIMARY_BY_NORMALIZED.get(base, {})
+
+
+# gateway type of this integration (GatewayDeviceType) -> catalog entry of that gateway
+_GATEWAY_BY_TYPE: dict[str, dict] = {}
+for _entry in DEVICE_CATALOG:
+    if _entry.get('gateway_type'):
+        _GATEWAY_BY_TYPE.setdefault(_entry['gateway_type'], _entry)
+
+
+def describe_gateway_type(gateway_type: str | None) -> dict:
+    """Catalog entry of a gateway type, e.g. 'fam14' -> the FAM14 entry."""
+    if not gateway_type:
+        return {}
+    return _GATEWAY_BY_TYPE.get(str(gateway_type), {})
+
+
 def describe_hw_type(hw_type: str | None) -> dict:
     """Primary catalog entry of a hw type (e.g. for a bus device identified by discovery)."""
     if not hw_type:

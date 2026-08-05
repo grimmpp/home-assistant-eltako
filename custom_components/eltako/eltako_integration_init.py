@@ -28,6 +28,8 @@ from . import gateway_scan
 from . import gateway_config
 from . import config_import
 from . import bus_members
+from . import device_tests
+from . import plug_and_play
 
 LOG_PREFIX_INIT = "Eltako Integration Setup"
 
@@ -69,6 +71,9 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     gateway_scan.register_websocket_commands(hass)
     gateway_config.register_websocket_commands(hass)
     config_import.register_websocket_commands(hass)
+    # functional device tests (burst, cover travel times) - they run against the gateways
+    # of this runtime, so they work in Home Assistant as well as standalone
+    device_tests.register_websocket_commands(hass)
 
     # Devices on the RS485 bus, detected passively from the traffic. Restores the memory
     # images of the last scan, so the taught-in senders are known without locking the bus.
@@ -79,6 +84,10 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
 
     # Recording, statistics and live view of all EnOcean telegrams
     await async_setup_telegram_logger(hass, general_settings_values)
+
+    # Plug & play: detects gateways which are plugged in, reads their bus and adds the devices
+    # which can be identified without any doubt. Off by default (general setting 'plug_and_play').
+    await plug_and_play.async_setup_detection(hass, general_settings_values)
 
     # Web ui of the integration incl. all its sub pages (overview, telegram log, about, ...)
     await async_register_frontend(hass, general_settings_values)
@@ -130,8 +139,9 @@ async def async_register_frontend(hass: HomeAssistant, general_settings: dict) -
     EnOcean telegram log, device statistics, unknown devices and about.
     """
     if not config_helpers.is_frontend_enabled(general_settings):
-        LOGGER.debug(f"[{LOG_PREFIX_INIT}] Web ui is disabled. "
-                     f"(Enable it with '{CONF_ENABLE_FRONTEND}: True' in '{CONF_GERNERAL_SETTINGS}'.)")
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Web ui is switched off by the configuration. "
+                    f"(Remove '{CONF_ENABLE_FRONTEND}: False' from '{CONF_GERNERAL_SETTINGS}' "
+                    f"to get it back - it is on by default.)")
         return
 
     try:
@@ -247,6 +257,29 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
     return device_config.get_merged_device_config(hass, config_entry, yaml_devices)
 
 
+async def async_setup_hub_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Set up the gateway-less entry of the integration itself.
+
+    'Add integration' creates this one without asking for anything. It exists so that Home
+    Assistant sets the component up at all - that is what brings the web ui into the sidebar
+    and the websocket api behind it. From there gateways and devices are configured
+    graphically, or in `configuration.yaml` for whoever prefers files.
+
+    Right after it was added the detection runs once, so a gateway which is plugged in shows up
+    on its own. The flag is set by the config flow and consumed here: repeating this on every
+    restart would lock the RS485 bus for minutes every time. Afterwards the detection is
+    controlled by the general setting `plug_and_play` and by the button on the overview page.
+    """
+    LOGGER.info(f"[{LOG_PREFIX_INIT}] Integration set up. The web ui is in the sidebar, "
+                f"gateways and devices are configured there.")
+
+    if hass.data.setdefault(DATA_ELTAKO, {}).pop(DATA_INITIAL_DETECTION, False):
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Looking for gateways which are connected.")
+        hass.async_create_task(plug_and_play.async_run(hass))
+
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up an Eltako gateway for the given entry."""
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Start gateway setup.")
@@ -258,7 +291,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                        f"'{config_entry.domain}' (expected: '{DOMAIN}')!")
         return False
 
-    
+    # The entry of the integration itself: it carries no gateway. Everything it provides - the
+    # web ui, the websocket api, the detection - was already set up in async_setup(), so there
+    # is nothing to do here. Gateways get their own entries.
+    if config_entry.data.get(CONF_HUB):
+        return await async_setup_hub_entry(hass, config_entry)
+
+
     # Read the config
     config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
 
@@ -375,6 +414,10 @@ async def async_remove_config_entry_device(hass: HomeAssistant, config_entry: Co
     """
     addresses = {identifier for domain, identifier in device_entry.identifiers if domain == DOMAIN}
 
+    # the entry of the integration itself owns no device - nothing here can belong to it
+    if config_entry.data.get(CONF_HUB):
+        return True
+
     yaml_devices = config_helpers.get_device_config(
         hass.data[DATA_ELTAKO][ELTAKO_CONFIG], config_helpers.get_id_from_gateway_name(
             config_entry.data[CONF_GATEWAY_DESCRIPTION]))
@@ -399,6 +442,10 @@ async def async_remove_config_entry_device(hass: HomeAssistant, config_entry: Co
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload Eltako config entry."""
+
+    # the entry of the integration itself has no gateway and no platforms
+    if config_entry.data.get(CONF_HUB):
+        return True
 
     # The platforms need to be unloaded as well, otherwise a reload would add all entities
     # a second time.

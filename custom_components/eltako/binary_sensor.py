@@ -374,6 +374,8 @@ class EltakoBinarySensor(AbstractBinarySensor):
 class GatewayConnectionState(AbstractBinarySensor):
     """Protocols last time when message received"""
 
+    _attr_is_actuator_entity = False
+
     def __init__(self, platform: str, gateway: EnOceanGateway):
         key = "Gateway_Connection_State"
 

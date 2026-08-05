@@ -64,7 +64,7 @@ They live in `grafana/provisioning/dashboards/eltako/*.json` and are editable in
 (`allowUiUpdates`). The **standalone runtime** enables the export by default and links to
 these dashboards from its web ui - see [eltako_standalone/README.md](../eltako_standalone/README.md).
 
-Enable the export in the Eltako web ui (*About* page, group *Timeseries export*):
+Enable the export in the Eltako web ui (*Settings* page, group *Timeseries export*):
 
 | Setting | Value |
 | --- | --- |

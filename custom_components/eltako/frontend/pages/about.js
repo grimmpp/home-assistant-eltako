@@ -1,40 +1,155 @@
-/** About page: information about the integration itself, its configuration and links. */
+/** About page: what this integration is, which version runs and what it can do.
+ *
+ * The documentation and the catalog of supported devices live on the help page, the editable
+ * general settings on the settings page - this one stays a profile of the running installation.
+ */
 
-import { WS } from "../lib/api.js";
-import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
-import {
-  card, chip, definitionRows, escapeHtml, formatBoolean, formatNumber, icon,
-} from "../lib/utils.js";
+import { card, chip, escapeHtml, formatNumber, icon } from "../lib/utils.js";
 
 const REPOSITORY_URL = "https://github.com/grimmpp/home-assistant-eltako";
 
-const DOC_LINKS = [
-  ["Documentation overview", `${REPOSITORY_URL}/tree/main/docs`, "mdi:book-open-variant"],
-  ["Telegram logging & analysis", `${REPOSITORY_URL}/tree/main/docs/telegram-analysis/readme.md`, "mdi:file-search-outline"],
-  ["Gateways", `${REPOSITORY_URL}/tree/main/docs/gateways/readme.md`, "mdi:router-wireless"],
-  ["Lights", `${REPOSITORY_URL}/tree/main/docs/lights-tutorial/readme.md`, "mdi:lightbulb"],
-  ["Relays and switches", `${REPOSITORY_URL}/tree/main/docs/relays-and-switches/readme.md`, "mdi:toggle-switch"],
-  ["Heating and cooling", `${REPOSITORY_URL}/tree/main/docs/heating-and-cooling/readme.md`, "mdi:thermometer"],
-  ["Rocker switches", `${REPOSITORY_URL}/tree/main/docs/rocker_switch/readme.md`, "mdi:gesture-tap-button"],
-  ["Teach-in buttons", `${REPOSITORY_URL}/tree/main/docs/teach_in_buttons/readme.md`, "mdi:school-outline"],
-  ["Logging", `${REPOSITORY_URL}/tree/main/docs/logging/readme.md`, "mdi:text-box-outline"],
+const DOCS_URL = `${REPOSITORY_URL}/tree/main/docs`;
+
+/**
+ * Feature list of the integration, grouped by topic.
+ *
+ * `doc` is appended to the docs folder of the repository, `setting` names a general setting the
+ * feature depends on - its live state is shown next to the entry, so the page answers "can I do
+ * this?" and "is it switched on here?" at the same time.
+ */
+const FEATURE_GROUPS = [
+  {
+    label: "Gateways and connection", mdi: "mdi:router-wireless", glyph: "((‧))",
+    doc: "gateways/readme.md",
+    items: [
+      { title: "Series 14 bus gateways",
+        text: "FAM14, FGW14-USB and FTD14 over USB/RS485 - the status of every actuator on the bus is read and kept in sync." },
+      { title: "Wireless transceivers",
+        text: "FAM-USB (ESP2) and USB300 / ESP3 sticks; ESP3 telegrams are translated transparently, including the signal strength (RSSI)." },
+      { title: "LAN gateways",
+        text: "MGW-LAN, EUL gateway and any ESP2 gateway published over tcp (ser2net/socat, <code>lan-gw-esp2</code>) - no usb pass-through needed." },
+      { title: "Several gateways in parallel",
+        text: "Gateways on the same bus and devices taught into more than one gateway are supported; every command is repeated with the sender of each gateway.",
+        doc: "gateway_usage/readme.md" },
+      { title: "Survives re-plugging and restarts",
+        text: "Auto-reconnect, the base id is queried from the hardware, and a renumbered <code>/dev/ttyUSB*</code> is found again by the usb serial number." },
+      { title: "Gateways as repeater",
+        text: "The repeater mode (off / level 1 / level 2) of a gateway can be switched from Home Assistant." },
+      { title: "Reverse network bridge",
+        text: "Publishes a connected gateway on the network so that the EnOcean Device Manager can use it while Home Assistant keeps running." },
+    ],
+  },
+  {
+    label: "Devices and entities", mdi: "mdi:lightbulb-group-outline", glyph: "◈",
+    items: [
+      { title: "All relevant Home Assistant platforms",
+        text: "light (switchable and dimmable), switch, cover (incl. tilt), climate, sensor, binary_sensor, button and select." },
+      { title: "Configuration in the web ui or in yaml",
+        text: "Devices can be created in the web ui and are stored with their gateway; <code>configuration.yaml</code> keeps working and always wins.",
+        doc: "update_home_assistant_configuration.md" },
+      { title: "Plug &amp; play detection",
+        text: "Unused serial ports are probed for gateways, a new bus gateway gets its bus read and every unambiguously identified device is added automatically.",
+        doc: "plug-and-play/readme.md", setting: "plug_and_play" },
+      { title: "Device catalog as template",
+        text: "Selecting a known device (e.g. FSR14_4x) prefills device EEP, sender EEP, the number of addresses and the PCT14 teach-in position." },
+      { title: "Teach-in buttons",
+        text: "One button entity per actuator sends the teach-in telegram, so a sender can be taught in from Home Assistant.",
+        doc: "teach_in_buttons/readme.md", setting: "enable_teach_in_buttons" },
+      { title: "Areas and state restore",
+        text: "Devices are assigned to an area (new ones are created automatically) and their last state is restored after a restart." },
+    ],
+  },
+  {
+    label: "Insight into the RS485 bus", mdi: "mdi:file-tree", glyph: "▤",
+    items: [
+      { title: "Passive detection of all bus members",
+        text: "Polling, status answers and discovery replies are aggregated into a hierarchical table of all bus positions - no bus lock, no scan." },
+      { title: "Active bus scan with memory read-out",
+        text: "Reads the memory of every device at its own pace and shows which senders are taught into which channel with which key function." },
+      { title: "Check and teach in HA senders",
+        text: "Compares the configured sender ids against the device memories and writes the missing ones (standard procedure of the EnOcean Device Manager)." },
+      { title: "Long term activity per address",
+        text: "How often an address reported, when it was heard from last and over how many sessions - devices which never reported are highlighted." },
+      { title: "Take over unconfigured devices",
+        text: "A device found on the bus, in a memory image or in the telegram stream can be added with one click, prefilled with address and EEP." },
+    ],
+  },
+  {
+    label: "Telegram analysis", mdi: "mdi:file-search-outline", glyph: "⌕",
+    doc: "telegram-analysis/readme.md",
+    items: [
+      { title: "Live view of all telegrams",
+        text: "Incoming and outgoing telegrams with EEP, decoded values, device name, area and the related entities; filterable per gateway." },
+      { title: "Recording into a log file",
+        text: "JSON lines or CSV, rotating by size and by age, with or without bus polling - written in its own thread, never blocking the bus.",
+        setting: "log_enocean_telegrams" },
+      { title: "Export into a timeseries database",
+        text: "Every telegram is written into InfluxDB with its meta data as tags and the decoded EEP values as fields; Grafana dashboards are included.",
+        doc: "grafana/readme.md", setting: "timeseries_enabled" },
+      { title: "Log levels per category",
+        text: "Incoming, outgoing, unknown devices, bus messages, polling and decode errors can be logged individually (logger <code>eltako.telegrams</code>).",
+        doc: "logging/readme.md" },
+      { title: "Send arbitrary telegrams",
+        text: "Built from an EEP with all its fields or as raw ESP2 hex - useful for testing an actuator without configuring it first." },
+    ],
+  },
+  {
+    label: "Automations", mdi: "mdi:gesture-tap-button", glyph: "⚡",
+    items: [
+      { title: "Events of rocker switches",
+        text: "Button events contain the pressed buttons and how long they were pressed, which is what dimming automations need.",
+        doc: "rocker_switch/readme.md" },
+      { title: "Every incoming telegram as event",
+        text: "The event <code>eltako_global_event_bus</code> reports each telegram with its external sender address - also for devices which are not configured.",
+        doc: "telegram-events/readme.md" },
+      { title: "Send message service",
+        text: "One service per gateway sends any telegram, e.g. to control an Eltako actuator from a non-EnOcean sensor.",
+        doc: "service-send-message/readme.md" },
+      { title: "Blueprints",
+        text: "Ready-made automations for dimming, switching and central on/off with EnOcean rocker switches - also for lights of other protocols (Zigbee, WiFi)." },
+    ],
+  },
+  {
+    label: "Operation and development", mdi: "mdi:tools", glyph: "⚙",
+    items: [
+      { title: "Web ui as part of the integration",
+        text: "Overview, devices, live telegrams, statistics, control and this page - no extra package, no build step." },
+      { title: "Settings editable at runtime",
+        text: "Every general setting can be changed here; the override wins over the yaml, shows its origin and can be reset. Applied immediately." },
+      { title: "Import from the EnOcean Device Manager",
+        text: "An <code>.eodm</code> project or a yaml file is imported with all its gateways and devices; importing it again only adds what is new." },
+      { title: "Device tests",
+        text: "Configuration check (sends nothing), teach-in test of the actuators, link reliability and the travel times of covers - against the real hardware, in the web ui or on the command line.",
+        doc: "device-tests/readme.md", setting: "enable_test_page" },
+      { title: "Standalone runtime",
+        text: "The same integration code runs without Home Assistant (own web ui, InfluxDB export) - for tests on a laptop or in production.",
+        doc: "standalone/readme.md" },
+      { title: "Development container",
+        text: "<code>cd dev &amp;&amp; ./start.sh</code> starts a ready-to-use Home Assistant with example devices, telegram history and optional Grafana.",
+        doc: "dev-container/readme.md" },
+    ],
+  },
 ];
 
-/** Settings which are displayed in the configuration section (in this order). */
-const SETTING_LABELS = [
-  ["fast_status_change", "Fast status change"],
-  ["show_dev_id_in_dev_name", "Show device id in device name"],
-  ["enable_frontend", "Web ui enabled"],
-  ["enable_teach_in_buttons", "Teach-in buttons"],
-  ["log_enocean_telegrams", "Record EnOcean telegrams"],
-  ["telegram_log_filename", "Telegram log file"],
-  ["telegram_log_format", "Telegram log format"],
-  ["telegram_log_max_file_size_mb", "Max. log file size (MB)"],
-  ["telegram_log_backup_count", "Rotated log files kept"],
-  ["telegram_log_include_polling", "Include bus polling telegrams"],
-  ["telegram_log_decode_eep", "Decode telegrams of known devices"],
-  ["telegram_log_buffer_size", "Live buffer size"],
-];
+const ABOUT_STYLES = `
+  .feature-intro { font-size: .78rem; color: var(--eltako-muted); margin: -6px 0 12px; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+              gap: 14px; margin-bottom: 6px; align-items: start; }
+  .feature-card { background: var(--eltako-card); border: 1px solid var(--eltako-border);
+                  border-radius: var(--eltako-radius); padding: 16px; }
+  .feature-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px;
+                     font-size: 1rem; font-weight: 500; color: var(--eltako-accent); }
+  .feature-card h3 a { color: inherit; text-decoration: none; }
+  .feature-card h3 a:hover { text-decoration: underline; }
+  .feature-list { list-style: none; margin: 0; padding: 0; display: flex;
+                  flex-direction: column; gap: 10px; }
+  /* title and the state of its setting in the first row, the description below both */
+  .feature-list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+                     font-size: .85rem; line-height: 1.35; }
+  .feature-list li > b { grid-column: 1; grid-row: 1; font-weight: 500; }
+  .feature-list li > .pill { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+  .feature-list li > .feature-text { grid-column: 1 / -1; grid-row: 2; color: var(--eltako-muted); }
+`;
 
 export const page = {
   id: "about",
@@ -42,13 +157,11 @@ export const page = {
   subtitle: "Information about the Home Assistant Eltako integration",
   icon: "mdi:information-outline",
   glyph: "ℹ",
-  styles: FORM_STYLES,
+  modes: ["user", "expert"],
+  styles: ABOUT_STYLES,
 
   async load(ctx) {
-    const [settings] = await Promise.all([
-      ctx.api.call(WS.SETTINGS_GET), ctx.loadIntegrationInfo(), ctx.loadLogInfo(),
-    ]);
-    if (settings) ctx.state.settingsForm = settings;
+    await Promise.all([ctx.loadIntegrationInfo(), ctx.loadLogInfo()]);
   },
 
   render(ctx) {
@@ -82,28 +195,20 @@ export const page = {
         ${card("IoT class", escapeHtml(info.iot_class || "-"))}
       </div>
 
-      <h2>Documentation and support</h2>
+      <h2>Features</h2>
+      ${this._renderFeatures(settings)}
+
+      <h2>Where to go from here</h2>
       <div class="links">
+        <a class="link" href="#/help">${icon("mdi:help-circle-outline", "?")} Help &ndash; documentation,
+          tutorials and every supported device, EEP and gateway</a>
+        <a class="link" href="#/settings">${icon("mdi:cog-outline", "\u2699")} Settings &ndash; configure
+          the integration without writing yaml</a>
         <a class="link" href="${REPOSITORY_URL}" target="_blank" rel="noreferrer">
-          ${icon("mdi:github", "★")} Repository</a>
+          ${icon("mdi:github", "\u2605")} Repository</a>
         ${info.issue_tracker ? `<a class="link" href="${escapeHtml(info.issue_tracker)}" target="_blank" rel="noreferrer">
           ${icon("mdi:bug-outline", "!")} Report an issue</a>` : ""}
-        <a class="link" href="https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712"
-           target="_blank" rel="noreferrer">${icon("mdi:forum-outline", "☰")} Community forum</a>
-        <a class="link" href="https://www.eltako.com/en/software-pct14/" target="_blank" rel="noreferrer">
-          ${icon("mdi:tools", "⚙")} Eltako PCT14</a>
-        <a class="link" href="https://github.com/grimmpp/enocean-device-manager" target="_blank" rel="noreferrer">
-          ${icon("mdi:file-tree", "▤")} EnOcean Device Manager</a>
       </div>
-
-      <h2>Tutorials</h2>
-      <div class="links">
-        ${DOC_LINKS.map(([label, url, mdi]) =>
-          `<a class="link" href="${url}" target="_blank" rel="noreferrer">${icon(mdi)} ${escapeHtml(label)}</a>`).join("")}
-      </div>
-
-      <h2>Active configuration</h2>
-      ${this._renderSettings(ctx)}
 
       <h2>Platforms</h2>
       <div class="chips">
@@ -117,161 +222,58 @@ export const page = {
     `;
   },
 
-  /** Editable general settings, grouped. Values changed here override configuration.yaml. */
-  _renderSettings(ctx) {
-    const form = ctx.state.settingsForm;
-    if (!form) return `<div class="empty">Loading settings&hellip;</div>`;
-
-    const overridden = form.settings.filter((s) => s.origin === "ui").length;
-    const groups = form.groups && form.groups.length
-      ? form.groups
-      : [{ id: null, label: "Settings", help: "" }];
+  /**
+   * What the integration can do, grouped by topic. Features which depend on a general setting
+   * show whether they are switched on in this installation.
+   */
+  _renderFeatures(settings) {
+    const count = FEATURE_GROUPS.reduce((total, group) => total + group.items.length, 0);
 
     return `
-      <div class="settings-head">
-        <div>
-          <b>These values are live.</b> Changing them here stores an override which wins over
-          <code>configuration.yaml</code>, so the integration can be configured without writing yaml.
-          ${form.has_yaml_section ? "" : "Your configuration.yaml has no <code>general_settings</code> section - everything below comes from the defaults."}
-        </div>
-        <div class="settings-legend">
-          <span class="tag source-ui">web ui</span> overrides
-          <span class="tag source-yaml">yaml</span> from configuration.yaml
-          <span class="tag">default</span>
-        </div>
+      <div class="feature-intro">
+        ${count} features in ${FEATURE_GROUPS.length} areas. Optional ones show whether they are
+        switched on here &ndash; they are turned on and off on the
+        <a class="link" href="#/settings">settings page</a>.
       </div>
-
-      <div id="settings-form">
-        ${groups.map((group) => this._renderGroup(ctx, form, group)).join("")}
+      <div class="features">
+        ${FEATURE_GROUPS.map((group) => this._renderFeatureGroup(group, settings)).join("")}
       </div>
-
-      ${ctx.state.settingsError ? `<div class="form-error">${escapeHtml(ctx.state.settingsError)}</div>` : ""}
-      ${ctx.state.settingsMessage ? `<div class="settings-ok">${escapeHtml(ctx.state.settingsMessage)}</div>` : ""}
-      <div class="form-actions">
-        <button id="settings-save" class="action primary">Save settings</button>
-        ${overridden ? `<button id="settings-reset-all" class="action">Reset all ${overridden} override${overridden === 1 ? "" : "s"}</button>` : ""}
-        <span class="field-help">Read only: teach-in buttons =
-          ${this._formatValue((form.read_only || {}).enable_teach_in_buttons)} (derived at runtime)</span>
-      </div>
-      <div class="footnote">Changes are applied immediately: the telegram logger is restarted and the
-        gateways are reloaded. Settings marked accordingly need a restart of Home Assistant.</div>`;
+      <div class="footnote">Every supported device, EEP and gateway is listed on the
+        <a class="link" href="#/help">help page</a>, every change in the
+        <a class="link" href="${REPOSITORY_URL}/blob/main/changes.md" target="_blank"
+           rel="noreferrer">change log</a>.</div>`;
   },
 
-  _renderGroup(ctx, form, group) {
-    const settings = form.settings.filter((s) => (group.id === null ? true : s.group === group.id));
-    if (!settings.length) return "";
-
-    const fields = settings.map((setting) => ({
-      name: setting.name,
-      label: setting.label,
-      type: setting.type,
-      options: setting.options,
-      min: setting.min,
-      max: setting.max,
-      help: [
-        setting.help || "",
-        setting.origin === "ui"
-          ? `Overridden here. Without it: ${this._formatValue(setting.fallback)} (${setting.fallback_origin}).`
-          : setting.origin === "yaml" ? "Currently from configuration.yaml."
-          : "Currently the default value.",
-        setting.restart_required ? "Takes effect after a restart of Home Assistant." : "",
-      ].filter(Boolean).join(" "),
-    }));
-    const values = Object.fromEntries(settings.map((s) => [s.name, s.value]));
-    const overriddenHere = settings.filter((s) => s.origin === "ui");
+  _renderFeatureGroup(group, settings) {
+    const heading = group.doc
+      ? `<a href="${DOCS_URL}/${group.doc}" target="_blank" rel="noreferrer">${escapeHtml(group.label)}</a>`
+      : escapeHtml(group.label);
 
     return `
-      <div class="form-card">
-        <h3>${escapeHtml(group.label)}</h3>
-        ${group.help ? `<div class="field-help" style="margin:-6px 0 12px">${escapeHtml(group.help)}
-          ${group.id === "log_levels" ? `Logger: <code>${escapeHtml(form.telegram_logger_name || "eltako.telegrams")}</code>` : ""}</div>` : ""}
-        <div class="form-grid">${renderFields(fields, values)}</div>
-        ${overriddenHere.length ? `
-          <div class="origins">
-            ${overriddenHere.map((setting) => `
-              <span class="origin-row">
-                <span class="tag source-ui">web ui</span>
-                <span class="origin-name">${escapeHtml(setting.label)}</span>
-                <button class="action small" data-reset="${escapeHtml(setting.name)}">reset</button>
-              </span>`).join("")}
-          </div>` : ""}
+      <div class="feature-card">
+        <h3>${icon(group.mdi, group.glyph)} ${heading}</h3>
+        <ul class="feature-list">
+          ${group.items.map((item) => this._renderFeature(item, settings)).join("")}
+        </ul>
       </div>`;
   },
 
-  afterRender(ctx, root) {
-    const save = root.getElementById("settings-save");
-    if (save) {
-      save.addEventListener("click", async () => {
-        const values = readFields(root.getElementById("settings-form"));
-        // unchecked checkboxes and emptied text fields must be sent explicitly
-        const form = ctx.state.settingsForm || { settings: [] };
-        const payload = {};
-        for (const setting of form.settings) {
-          if (setting.type === "boolean") payload[setting.name] = values[setting.name] === true;
-          else if (setting.name in values) payload[setting.name] = values[setting.name];
-          else payload[setting.name] = setting.type === "text" ? "" : setting.value;
-        }
+  _renderFeature(item, settings) {
+    // the texts are written here in this file, not entered by a user - the html in them
+    // (<code>, entities) is intended and therefore not escaped
+    const title = item.doc
+      ? `<a class="link" href="${DOCS_URL}/${item.doc}" target="_blank" rel="noreferrer">${item.title}</a>`
+      : item.title;
+    const state = item.setting === undefined ? "" : this._renderFeatureState(item.setting, settings);
 
-        const result = await ctx.api.call(WS.SETTINGS_SET, { settings: payload });
-        if (result) {
-          ctx.state.settingsForm = result.form;
-          ctx.state.settingsError = null;
-          ctx.state.settingsMessage = `Saved. Telegram logger restarted: ${result.applied.telegram_logger_restarted ? "yes" : "no"}, gateways reloaded: ${result.applied.reloaded_gateways}.`;
-          // changed settings take effect without reloading the page: the navigation
-          // (pages can be hidden by a setting) and the header re-render as well
-          await ctx.loadIntegrationInfo();
-          ctx.requestRender();
-        } else {
-          ctx.state.settingsError = (ctx.api.lastError || {}).message || "Could not save the settings.";
-          ctx.state.settingsMessage = null;
-          ctx.api.lastError = null;
-        }
-        ctx.requestContentRender(true);
-      });
-    }
-
-    root.querySelectorAll("button[data-reset]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const result = await ctx.api.call(WS.SETTINGS_RESET, { names: [button.dataset.reset] });
-        if (result) {
-          ctx.state.settingsForm = result.form;
-          ctx.state.settingsMessage = `Reset ${result.reset.join(", ")} to the configuration.yaml/default value.`;
-          ctx.state.settingsError = null;
-          await ctx.loadIntegrationInfo();
-          ctx.requestRender();
-        }
-        ctx.requestContentRender(true);
-      });
-    });
-
-    const resetAll = root.getElementById("settings-reset-all");
-    if (resetAll) {
-      resetAll.addEventListener("click", async () => {
-        const names = (ctx.state.settingsForm.settings || []).filter((s) => s.origin === "ui").map((s) => s.name);
-        const result = await ctx.api.call(WS.SETTINGS_RESET, { names });
-        if (result) {
-          ctx.state.settingsForm = result.form;
-          ctx.state.settingsMessage = `Reset ${result.reset.length} override(s).`;
-          ctx.state.settingsError = null;
-          await ctx.loadIntegrationInfo();
-          ctx.requestRender();
-        }
-        ctx.requestContentRender(true);
-      });
-    }
+    return `<li><b>${title}</b>${state}<span class="feature-text">${item.text}</span></li>`;
   },
 
-  _formatValue(value) {
-    if (typeof value === "boolean") return value ? "yes" : "no";
-    if (value === "" || value === null || value === undefined) return "not set";
-    return String(value);
+  _renderFeatureState(name, settings) {
+    if (!settings || !(name in settings)) return "";
+    // 'off' is a normal state for an optional feature, so it stays neutral instead of red
+    const enabled = settings[name] === true;
+    return `<span class="pill${enabled ? " on" : ""}" title="General setting '${escapeHtml(name)}'">${enabled ? "on" : "off"}</span>`;
   },
 
-  _renderSettingValue(value) {
-    if (typeof value === "boolean") {
-      return `<span class="pill ${value ? "on" : ""}">${formatBoolean(value)}</span>`;
-    }
-    if (value === "" || value === null || value === undefined) return "&ndash; not set &ndash;";
-    return `<span class="mono">${escapeHtml(value)}</span>`;
-  },
 };

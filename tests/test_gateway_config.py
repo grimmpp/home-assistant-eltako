@@ -184,8 +184,185 @@ class TestConfigMerge(IsolatedAsyncioTestCase):
         self.assertEqual(config_helpers.add_ui_gateways_to_config(None, original), original)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class ConfigEntryMock:
+    """Config entry of a gateway - its data carries description and connection."""
+
+    def __init__(self, gateway_id: int = 3, name: str = 'Cellar', device_type: str = 'fgw14usb',
+                 serial_path: str = '/dev/ttyUSB3'):
+        self.entry_id = f"entry_{gateway_id}"
+        self.data = {CONF_GATEWAY_DESCRIPTION: config_helpers.get_gateway_name(
+                         name, device_type, gateway_id),
+                     CONF_SERIAL_PATH: serial_path}
+        self.options = {}
+
+
+class ConfigEntriesMock:
+    def __init__(self, entries: list = None):
+        self.entries = entries or []
+        self.updated = []
+        self.reloaded = []
+
+    def async_entries(self, domain):
+        return self.entries
+
+    def async_update_entry(self, entry, data=None, options=None, **kwargs):
+        if data is not None:
+            entry.data = data
+        if options is not None:
+            entry.options = options
+        self.updated.append(entry.entry_id)
+
+    async def async_reload(self, entry_id):
+        self.reloaded.append(entry_id)
+
+
+class TestUpdate(IsolatedAsyncioTestCase):
+    """Gateways of the web ui can be edited, not only created and removed."""
+
+    async def _hass(self, stored=None, yaml_gateways=None, entries=None):
+        hass = hass_with(yaml_gateways=yaml_gateways,
+                         stored=stored if stored is not None else [SERIAL_GATEWAY])
+        await gateway_config.async_load_ui_gateways(hass)
+        hass.config_entries = ConfigEntriesMock(entries)
+        return hass
+
+    async def test_name_and_base_id_are_changed(self):
+        hass = await self._hass()
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 3, {CONF_NAME: 'Attic', CONF_BASE_ID: 'FF-BB-00-00'})
+
+        self.assertEqual(updated[CONF_NAME], 'Attic')
+        self.assertEqual(updated[CONF_BASE_ID], 'FF-BB-00-00')
+        self.assertEqual(gateway_config.get_ui_gateways(hass)[0][CONF_NAME], 'Attic')
+        stored = hass.data[DATA_ELTAKO][DATA_GATEWAY_STORE].saved
+        self.assertEqual(stored['gateways'][0][CONF_NAME], 'Attic')
+
+    async def test_fields_which_are_not_sent_keep_their_value(self):
+        hass = await self._hass()
+
+        updated = await gateway_config.async_update_gateway(hass, 3, {CONF_NAME: 'Attic'})
+
+        self.assertEqual(updated[CONF_SERIAL_PATH], '/dev/ttyUSB3')
+        self.assertEqual(updated[CONF_DEVICE_TYPE], 'fgw14usb')
+
+    async def test_the_id_cannot_be_changed(self):
+        """It is part of every entity id of the gateway - changing it would orphan them."""
+        hass = await self._hass()
+
+        updated = await gateway_config.async_update_gateway(hass, 3, {CONF_ID: 9, CONF_NAME: 'x'})
+
+        self.assertEqual(updated[CONF_ID], 3)
+        self.assertEqual([g[CONF_ID] for g in gateway_config.get_ui_gateways(hass)], [3])
+
+    async def test_serial_port_can_be_corrected(self):
+        hass = await self._hass()
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 3, {CONF_SERIAL_PATH: '/dev/ttyUSB7'})
+
+        self.assertEqual(updated[CONF_SERIAL_PATH], '/dev/ttyUSB7')
+
+    async def test_switching_to_a_lan_gateway_drops_the_serial_port(self):
+        hass = await self._hass()
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 3, {CONF_DEVICE_TYPE: 'mgw-lan', CONF_GATEWAY_ADDRESS: '192.168.1.50'})
+
+        self.assertEqual(updated[CONF_GATEWAY_ADDRESS], '192.168.1.50')
+        self.assertNotIn(CONF_SERIAL_PATH, updated)
+
+    async def test_switching_to_a_serial_gateway_drops_the_address(self):
+        hass = await self._hass(stored=[LAN_GATEWAY])
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 4, {CONF_DEVICE_TYPE: 'fam14', CONF_SERIAL_PATH: '/dev/ttyUSB0'})
+
+        self.assertEqual(updated[CONF_SERIAL_PATH], '/dev/ttyUSB0')
+        self.assertNotIn(CONF_GATEWAY_ADDRESS, updated)
+
+    async def test_invalid_values_are_rejected_and_nothing_is_stored(self):
+        hass = await self._hass()
+
+        with self.assertRaises(vol.Invalid):
+            await gateway_config.async_update_gateway(hass, 3, {CONF_BASE_ID: 'nonsense'})
+
+        self.assertEqual(gateway_config.get_ui_gateways(hass)[0][CONF_BASE_ID], '00-00-00-00')
+        self.assertIsNone(hass.data[DATA_ELTAKO][DATA_GATEWAY_STORE].saved)
+
+    async def test_a_gateway_of_the_yaml_is_not_editable(self):
+        hass = await self._hass(stored=[], yaml_gateways=[{CONF_ID: 1, CONF_DEVICE_TYPE: 'fam14'}])
+
+        with self.assertRaises(vol.Invalid) as context:
+            await gateway_config.async_update_gateway(hass, 1, {CONF_NAME: 'x'})
+
+        self.assertIn('configuration.yaml', str(context.exception))
+
+    async def test_unknown_gateway(self):
+        hass = await self._hass()
+
+        with self.assertRaises(vol.Invalid) as context:
+            await gateway_config.async_update_gateway(hass, 99, {CONF_NAME: 'x'})
+
+        self.assertIn('99', str(context.exception))
+
+    async def test_a_renamed_gateway_updates_its_config_entry(self):
+        entry = ConfigEntryMock()
+        hass = await self._hass(entries=[entry])
+
+        updated = await gateway_config.async_update_gateway(hass, 3, {CONF_NAME: 'Attic'})
+        applied = await gateway_config.async_apply_to_config_entry(hass, updated)
+
+        self.assertTrue(applied['config_entry_updated'])
+        self.assertIn('Attic', entry.data[CONF_GATEWAY_DESCRIPTION])
+        self.assertEqual(hass.config_entries.updated, [entry.entry_id])
+
+    async def test_a_new_serial_port_reaches_the_config_entry(self):
+        entry = ConfigEntryMock()
+        hass = await self._hass(entries=[entry])
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 3, {CONF_SERIAL_PATH: '/dev/ttyUSB7'})
+        await gateway_config.async_apply_to_config_entry(hass, updated)
+
+        self.assertEqual(entry.data[CONF_SERIAL_PATH], '/dev/ttyUSB7')
+
+    async def test_a_change_which_the_entry_does_not_see_reloads_it(self):
+        """auto_reconnect lives in the store only - the gateway still has to be rebuilt."""
+        entry = ConfigEntryMock()
+        hass = await self._hass(entries=[entry])
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 3, {CONF_GATEWAY_AUTO_RECONNECT: False})
+        applied = await gateway_config.async_apply_to_config_entry(hass, updated)
+
+        self.assertFalse(updated[CONF_GATEWAY_AUTO_RECONNECT])
+        self.assertFalse(applied['config_entry_updated'])
+        self.assertEqual(hass.config_entries.reloaded, [entry.entry_id])
+
+    async def test_a_gateway_without_config_entry_is_only_stored(self):
+        hass = await self._hass(entries=[])
+
+        updated = await gateway_config.async_update_gateway(hass, 3, {CONF_NAME: 'Attic'})
+        applied = await gateway_config.async_apply_to_config_entry(hass, updated)
+
+        self.assertFalse(applied['config_entry_updated'])
+        self.assertFalse(applied['reloaded'])
+
+    async def test_the_form_marks_which_gateway_is_editable(self):
+        hass = await self._hass(yaml_gateways=[{CONF_ID: 1, CONF_DEVICE_TYPE: 'fam14',
+                                               CONF_SERIAL_PATH: '/dev/ttyUSB1'}])
+        config = config_helpers.add_ui_gateways_to_config(
+            hass, hass.data[DATA_ELTAKO][ELTAKO_CONFIG])
+        hass.data[DATA_ELTAKO][ELTAKO_CONFIG] = config
+
+        descriptor = gateway_config.get_form_descriptor(hass)
+        editable = {gateway['id']: gateway['editable'] for gateway in descriptor['gateways']}
+
+        self.assertFalse(editable[1])        # configuration.yaml
+        self.assertTrue(editable[3])         # created in the web ui
+        self.assertIn(CONF_NAME, descriptor['editable_fields'])
+        self.assertNotIn(CONF_ID, descriptor['editable_fields'])
 
 
 class TestReportedBaseId(IsolatedAsyncioTestCase):
@@ -227,3 +404,7 @@ class TestReportedBaseId(IsolatedAsyncioTestCase):
         hass = await self._hass_with_ui_gateway()
 
         self.assertFalse(await gateway_config.async_update_gateway_base_id(hass, 99, 'FF-AA-00-00'))
+
+
+if __name__ == '__main__':
+    unittest.main()

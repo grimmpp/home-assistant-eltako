@@ -179,7 +179,7 @@ settings are seeded into `.storage/eltako_general_settings`:
 | `grafana_url` | `http://localhost:3000` | `ELTAKO_GRAFANA_URL` |
 
 They are **seeded once**, not enforced: everything changed afterwards in the web ui
-(*About → Active configuration*) is kept, and a value set explicitly in
+(*Settings*) is kept, and a value set explicitly in
 `configuration.yaml` is never seeded, so it is not shadowed. To get the defaults back,
 delete `<config>/.storage/eltako_general_settings`.
 

@@ -370,11 +370,22 @@ class EnOceanGateway:
     
 
     def sender_id_validation_by_transmitter(self, sender_id: AddressExpression, device_name: str = "") -> bool:
+        # Without a known base id there is nothing to compare against (it is queried from the
+        # gateway right after the connection is established). Validating against the
+        # placeholder 00-00-00-00 would mark every correct sender id as wrong.
+        if self.base_id is None or self.base_id[0][0] != 0xFF:
+            LOGGER.debug(f"{device_name}: Base id of gateway '{self.dev_name}' is not available yet - "
+                         f"sender id {b2s(sender_id[0])} not validated.")
+            return True
+
         result = config_helpers.compare_enocean_ids(self.base_id[0], sender_id[0])
         if not result:
-            LOGGER.warning(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
+            LOGGER.warning(f"{device_name}: Sender id {b2s(sender_id[0])} is not in the base id range of "
+                           f"gateway '{self.dev_name}' ({getattr(self.dev_type, 'value', self.dev_type)}); expected "
+                           f"{b2s(self.base_id[0])[0:8]}-XX. Telegrams with a foreign sender id are "
+                           f"not transmitted by the gateway.")
         return result
-    
+
 
     def sender_id_validation_by_bus_gateway(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
@@ -391,14 +402,19 @@ class EnOceanGateway:
     def dev_id_validation_by_transmitter(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = 0xFF == dev_id[0][0]
         if not result:
-            LOGGER.warning(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+            LOGGER.warning(f"{device_name}: Device id {b2s(dev_id[0])} is not a wireless address; gateway "
+                           f"'{self.dev_name}' ({getattr(self.dev_type, 'value', self.dev_type)}) is a wireless transceiver and expects "
+                           f"FF-XX-XX-XX. Local bus addresses (00-00-XX-XX) only work with a bus gateway "
+                           f"(FAM14, FGW14-USB).")
         return result
-    
+
 
     def dev_id_validation_by_bus_gateway(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
         if not result:
-            LOGGER.warning(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+            LOGGER.warning(f"{device_name}: Device id {b2s(dev_id[0])} is not a local bus address; gateway "
+                           f"'{self.dev_name}' ({getattr(self.dev_type, 'value', self.dev_type)}) is a bus gateway and expects "
+                           f"00-00-XX-XX.")
         return result
     
 
@@ -457,25 +473,65 @@ class EnOceanGateway:
         self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
 
 
+    # Names accepted for the sender address of the send message service. 'id' is the
+    # documented one, the others are what users intuitively enter (and what other
+    # integrations call it) - accepting them saves a lot of guessing.
+    SENDER_ID_SERVICE_FIELDS = ("id", "sender_id", "sender", "address")
+
+    @classmethod
+    def get_sender_id_of_service_call(cls, data: dict) -> AddressExpression:
+        """Read the sender address out of the data of a send message service call.
+
+        Accepts every field name of SENDER_ID_SERVICE_FIELDS and both notations of an
+        address: 'FF-A7-96-82' (string) and 0xFFA79682 (number, e.g. when the yaml editor
+        turns the unquoted value into an int). Raises ValueError if there is none.
+        """
+        for field in cls.SENDER_ID_SERVICE_FIELDS:
+            value = data.get(field, None)
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                continue
+
+            if isinstance(value, bool):     # bool is an int - and never an address
+                raise ValueError(f"Field '{field}' of the sender id is not an address: {value}")
+
+            if isinstance(value, int):
+                value = b2s(value.to_bytes(4, 'big'))
+
+            return AddressExpression.parse(str(value).strip())
+
+        raise ValueError(f"No sender id given. Use one of the fields: "
+                         f"{', '.join(cls.SENDER_ID_SERVICE_FIELDS)}")
+
     # Command Section
     async def async_service_send_message(self, event, raise_exception=False) -> None:
         """Send an arbitrary message with the provided eep."""
         LOGGER.debug(f"[Service Send Message: {event.service}] Received event data: {event.data}")
-        
-        try:
-            sender_id_str = event.data.get("id", None)
-            sender_id:AddressExpression = AddressExpression.parse(sender_id_str)
-        except:
-            LOGGER.error(f"[Service Send Message: {event.service}] No valid sender id defined. (Given sender id: {sender_id_str})")
-            return
 
         try:
-            sender_eep_str = event.data.get("eep", None)
-            sender_eep:EEP = EEP.find(sender_eep_str)
-        except:
-            LOGGER.error(f"[Service Send Message: {event.service}] No valid sender id defined. (Given sender id: {sender_id_str})")
+            sender_id:AddressExpression = self.get_sender_id_of_service_call(event.data)
+        except Exception as e:
+            LOGGER.error(f"[Service Send Message: {event.service}] No valid sender id defined. ({e}) "
+                         f"Given data: {dict(event.data)}")
+            if raise_exception:
+                raise e
             return
-        
+
+        # Only a warning: the telegram is sent anyway (a foreign sender id can be intended,
+        # e.g. for a FTS14EM input). But it is the usual reason for 'nothing happens':
+        # a wireless transceiver only transmits sender ids of its own base id range.
+        self.validate_sender_id(sender_id, f"[Service Send Message: {event.service}]")
+
+        sender_eep_str = event.data.get("eep", None)
+        try:
+            sender_eep:EEP = EEP.find(sender_eep_str)
+        except Exception as e:
+            LOGGER.error(f"[Service Send Message: {event.service}] No valid eep defined. "
+                         f"(Given eep: {sender_eep_str})")
+            if raise_exception:
+                raise e
+            return
+
+
         # prepare all arguements for eep constructor
         import inspect
         sig = inspect.signature(sender_eep.__init__)
@@ -486,8 +542,15 @@ class EnOceanGateway:
         LOGGER.debug(f"[Service Send Message: {event.service}] Missing EEP ({sender_eep.__name__}) args: {uknargs})")
         eep_args = knargs
         eep_args.update(uknargs)
-            
-        eep:EEP = sender_eep(**eep_args)
+
+        try:
+            eep:EEP = sender_eep(**eep_args)
+        except Exception as e:
+            LOGGER.error(f"[Service Send Message: {event.service}] Cannot build telegram of eep "
+                         f"{sender_eep_str} with the given values {eep_args}: {e}")
+            if raise_exception:
+                raise e
+            return
 
         try:
             # create message

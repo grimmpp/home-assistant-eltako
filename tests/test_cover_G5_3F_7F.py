@@ -4,6 +4,7 @@ from tests.mocks import *
 from unittest import mock, IsolatedAsyncioTestCase, TestCase
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
+from homeassistant.components.cover import CoverEntityFeature
 from custom_components.eltako.cover import EltakoCover
 from custom_components.eltako.device import EltakoEntity
 from eltakobus import *
@@ -339,7 +340,7 @@ class TestCover(unittest.TestCase):
         ec._attr_is_closed = None
         self.assertEqual(ec.is_closed, None)
         self.assertEqual(ec.state, None)
-        
+
         ec.load_value_initially(LatestStateMock('closed', {'current_position': 0, 'current_tilt_position': 0}))
         self.assertEqual(ec.is_closed, True)
         self.assertEqual(ec.is_opening, False)
@@ -347,6 +348,123 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec.state, 'closed')
         self.assertEqual(ec.current_cover_position, 0)
         self.assertEqual(ec.current_cover_tilt_position, 0)
+
+
+    def test_runtime_of_end_position_is_not_bigger_than_the_telegram_allows(self):
+        """The runtime is one byte. time_opens/time_closes may be 255 (max of the schema),
+        so full runtime + 1 must be capped - otherwise encoding the telegram fails."""
+        settings = DEFAULT_GENERAL_SETTINGS
+        settings[CONF_FAST_STATUS_CHANGE] = True
+        ec = EltakoCover(Platform.COVER, GatewayMock(settings), AddressExpression.parse('00-00-00-01'),
+                         'device name', EEP.find("G5-3F-7F"), AddressExpression.parse("00-00-B1-06"),
+                         EEP.find("H5-3F-7F"), "shutter", 255, 255, None)
+        ec.send_message = self.mock_send_message
+
+        ec.open_cover()
+        self.assertEqual(self.last_sent_command.body[3], 255)
+
+        ec.close_cover()
+        self.assertEqual(self.last_sent_command.body[3], 255)
+
+        ec._attr_current_cover_position = 50
+        ec.set_cover_position(position=100)
+        self.assertEqual(self.last_sent_command.body[3], 255)
+
+
+    def test_set_position_without_known_position(self):
+        """Without a known position no runtime can be calculated - only the end positions work."""
+        ec = self.create_cover()
+        self.last_sent_command = None
+
+        ec._attr_current_cover_position = None
+        ec.set_cover_position(position=50)
+        self.assertEqual(self.last_sent_command, None)
+
+        # end positions are reached blindly and recalibrate the cover
+        ec.set_cover_position(position=0)
+        self.assertEqual(self.last_sent_command.body[3], 11)   # time_closes + 1
+        self.assertEqual(self.last_sent_command.body[4], 0x02)
+
+
+class TestCoverTilt(unittest.IsolatedAsyncioTestCase):
+    """Tilting sends a move telegram, waits and sends a stop telegram. The wait must not
+    block the event loop, therefore it is implemented as async_set_cover_tilt_position."""
+
+    def mock_send_message(self, msg):
+        self.sent_commands.append(msg)
+
+    def create_blind(self, time_tilts=15) -> EltakoCover:
+        settings = DEFAULT_GENERAL_SETTINGS
+        settings[CONF_FAST_STATUS_CHANGE] = True
+        ec = EltakoCover(Platform.COVER, GatewayMock(settings), AddressExpression.parse('00-00-00-01'),
+                         'device name', EEP.find("G5-3F-7F"), AddressExpression.parse("00-00-B1-07"),
+                         EEP.find("H5-3F-7F"), "blind", 10, 10, time_tilts)
+        self.sent_commands = []
+        ec.send_message = self.mock_send_message
+        return ec
+
+    def test_tilt_is_offered_to_home_assistant(self):
+        """github issue #95: the tilt position of blinds can be set from Home Assistant as soon
+        as time_tilts is configured."""
+        self.assertTrue(self.create_blind()._attr_supported_features & CoverEntityFeature.SET_TILT_POSITION)
+        self.assertFalse(self.create_blind(time_tilts=None)._attr_supported_features & CoverEntityFeature.SET_TILT_POSITION)
+
+    def test_tilt_is_async(self):
+        """A sync implementation would be run in an executor thread and block it while sleeping."""
+        self.assertIn('async_set_cover_tilt_position', EltakoCover.__dict__)
+        self.assertNotIn('set_cover_tilt_position', EltakoCover.__dict__)
+        self.assertTrue(asyncio.iscoroutinefunction(EltakoCover.async_set_cover_tilt_position))
+
+    async def test_tilt_sends_move_and_stop(self):
+        ec = self.create_blind()
+        ec._attr_current_cover_tilt_position = 0
+
+        with mock.patch('asyncio.sleep') as sleep_mock:
+            await ec.async_set_cover_tilt_position(tilt_position=100)
+
+        self.assertEqual(len(self.sent_commands), 2)
+        self.assertEqual(self.sent_commands[0].body[4], 0x01)   # up
+        self.assertEqual(self.sent_commands[1].body[4], 0x00)   # stop
+        # 100% of 15 * 0.1s
+        sleep_mock.assert_awaited_once_with(1.5)
+
+        # the movement is over when the stop telegram was sent
+        self.assertEqual(ec._attr_is_opening, False)
+        self.assertEqual(ec._attr_is_closing, False)
+
+    async def test_tilt_down(self):
+        ec = self.create_blind()
+        ec._attr_current_cover_tilt_position = 100
+
+        with mock.patch('asyncio.sleep') as sleep_mock:
+            await ec.async_set_cover_tilt_position(tilt_position=50)
+
+        self.assertEqual(self.sent_commands[0].body[4], 0x02)   # down
+        sleep_mock.assert_awaited_once_with(0.75)
+
+    async def test_tilt_to_current_position_does_nothing(self):
+        ec = self.create_blind()
+        ec._attr_current_cover_tilt_position = 40
+
+        await ec.async_set_cover_tilt_position(tilt_position=40)
+        self.assertEqual(self.sent_commands, [])
+
+    async def test_tilt_without_known_position(self):
+        """After a restart without restored state the tilt position is unknown. The slats are
+        moved from the assumed end position instead of crashing on a comparison with None."""
+        ec = self.create_blind()
+        self.assertEqual(ec._attr_current_cover_tilt_position, None)
+
+        with mock.patch('asyncio.sleep') as sleep_mock:
+            await ec.async_set_cover_tilt_position(tilt_position=100)
+
+        self.assertEqual(self.sent_commands[0].body[4], 0x01)   # up, starting from 0
+        sleep_mock.assert_awaited_once_with(1.5)
+
+    async def test_tilt_without_configured_tilt_time(self):
+        ec = self.create_blind(time_tilts=None)
+        await ec.async_set_cover_tilt_position(tilt_position=100)
+        self.assertEqual(self.sent_commands, [])
 
 
 

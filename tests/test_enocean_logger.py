@@ -133,8 +133,13 @@ class TestJsonSafeConversion(TestCase):
 class TestFrontendSettings(TestCase):
     """The web ui is controlled by one single option, deprecated ones still work."""
 
-    def test_frontend_disabled_by_default(self):
-        self.assertFalse(config_helpers.is_frontend_enabled(get_general_settings()))
+    def test_frontend_enabled_by_default(self):
+        """Without any configuration the web ui is there - it is where things get configured."""
+        self.assertTrue(config_helpers.is_frontend_enabled(get_general_settings()))
+
+    def test_frontend_can_be_switched_off(self):
+        self.assertFalse(config_helpers.is_frontend_enabled(
+            get_general_settings(**{CONF_ENABLE_FRONTEND: False})))
 
     def test_frontend_enabled(self):
         self.assertTrue(config_helpers.is_frontend_enabled(get_general_settings(**{CONF_ENABLE_FRONTEND: True})))
@@ -166,8 +171,8 @@ class TestFrontendSettings(TestCase):
         }}})[DOMAIN][CONF_GERNERAL_SETTINGS]
 
         self.assertTrue(config_helpers.is_frontend_enabled(config))
-        # the new option is not set, so its default is used
-        self.assertFalse(config[CONF_ENABLE_FRONTEND])
+        # the new option is not set, so its default is used - the web ui is on by default
+        self.assertTrue(config[CONF_ENABLE_FRONTEND])
 
     FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                                 'custom_components', 'eltako', 'frontend')
@@ -176,7 +181,10 @@ class TestFrontendSettings(TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, PANEL_JS_FILE)))
         for module in ['lib/api.js', 'lib/utils.js', 'lib/styles.js',
                        'pages/overview.js', 'pages/telegrams.js', 'pages/devices.js',
-                       'pages/devices_config.js', 'pages/about.js']:
+                       'pages/devices_config.js', 'pages/about.js',
+                       # the header shows the svg and falls back to the png; both ship with
+                       # the integration and must not get lost
+                       'img/eltako-logo.svg', 'img/eltako-logo.png']:
             self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, *module.split('/'))), msg=module)
 
     def test_every_module_imported_by_the_panel_exists(self):
@@ -807,3 +815,48 @@ class TestTelegramLogLevels(TestCase):
 
         self.assertEqual(levels['incoming'], 'INFO')
         self.assertEqual(levels['outgoing'], 'off')
+
+
+class TestTestPageIsAvailableInHomeAssistant(TestCase):
+    """The 'Tests' page must not be hidden while its setting says it is on.
+
+    It used to be marked `standaloneOnly`, so Home Assistant filtered it out no matter what
+    `enable_test_page` said - the setting looked broken. Its backend (device_tests.py) lives
+    in the integration now and works against the gateways of whichever runtime is running.
+    """
+
+    FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                'custom_components', 'eltako', 'frontend')
+
+    def test_page_is_not_standalone_only(self):
+        with open(os.path.join(self.FRONTEND_DIR, 'pages', 'tests.js'), encoding='utf-8') as handle:
+            source = handle.read()
+
+        self.assertNotIn('standaloneOnly', source,
+                         msg="the tests page works in Home Assistant too")
+        # it hides itself through the setting instead
+        self.assertIn('enable_test_page', source)
+
+    def test_device_tests_ship_with_the_integration(self):
+        """Its websocket commands must be registered by the integration, not by the runtime."""
+        from custom_components.eltako import device_tests
+
+        self.assertTrue(hasattr(device_tests, 'register_websocket_commands'))
+        for name in ('run_burst_test', 'run_cover_test', 'resolve_covers'):
+            self.assertTrue(hasattr(device_tests, name), msg=name)
+
+    def test_the_integration_registers_them(self):
+        import inspect
+
+        from custom_components.eltako import eltako_integration_init
+
+        source = inspect.getsource(eltako_integration_init.async_setup)
+        self.assertIn('device_tests.register_websocket_commands', source)
+
+    def test_the_setting_reaches_the_frontend(self):
+        """visible() of the page reads it from integration_info."""
+        import inspect
+
+        from custom_components.eltako import websocket
+
+        self.assertIn('general_settings', inspect.getsource(websocket))

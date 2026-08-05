@@ -21,8 +21,14 @@ from . import config_helpers
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
-    
-    
+
+    # Only entities which represent a device of the configuration carry an address which can
+    # be validated against the gateway. Gateway-level, metadata, diagnostic, event-listener
+    # and configuration entities intentionally use the gateway base id or 00-00-00-00 and
+    # must not be validated as actuators - otherwise they produce false warnings.
+    _attr_is_actuator_entity = True
+
+
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None, description_key:str=None, dev_area: str=None):
         """Initialize the device."""
         self._attr_has_entity_name = True
@@ -139,17 +145,22 @@ class EltakoEntity(Entity):
         
 
     def validate_dev_id(self) -> bool:
+        if not self._attr_is_actuator_entity:
+            return True
         return self.gateway.validate_dev_id(self.dev_id, self.dev_name)
 
 
     def validate_sender_id(self, sender_id=None) -> bool:
-        
+        if not self._attr_is_actuator_entity:
+            return True
+
         if sender_id is None:
-            if hasattr(self, "sender_id"):
-                sender_id = self.sender_id
+            # actuator entities store the sender as '_sender_id' (light, switch, cover, climate),
+            # buttons and other helper entities as 'sender_id'.
+            sender_id = getattr(self, "sender_id", None) or getattr(self, "_sender_id", None)
 
         if sender_id is not None:
-            return self.gateway.validate_sender_id(self.sender_id, self.dev_name)
+            return self.gateway.validate_sender_id(sender_id, self.dev_name)
         return True
 
     @property
@@ -258,8 +269,19 @@ class EltakoEntity(Entity):
         
 
 def validate_actuators_dev_and_sender_id(entities:list[EltakoEntity]):
-    """Only call it for actuators."""
+    """Validate device and sender addresses of the configured devices.
+
+    The lists handed over by the platform setups are mixed: besides the entities of the
+    configured devices they also contain gateway-level, metadata, diagnostic and
+    configuration entities. Those carry the gateway base id or 00-00-00-00 as device id by
+    design and are skipped here (they set _attr_is_actuator_entity to False), so that a
+    warning always points at a real address problem in the configuration.
+    """
     for e in entities:
+        if not getattr(e, '_attr_is_actuator_entity', True):
+            LOGGER.debug(f"[{getattr(e, '_attr_ha_platform', '')} {getattr(e, 'dev_id', None)}] "
+                         f"Skip address validation of {type(e).__name__} (no configured device).")
+            continue
         e.validate_dev_id()
         e.validate_sender_id()
 

@@ -118,6 +118,9 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
 class RepeaterMode(EltakoEntity, SelectEntity, RestoreEntity):
     """Defines priority for controlling heating actuators"""
 
+    # gateway configuration entity - uses 00-00-00-00 as device id by design
+    _attr_is_actuator_entity = False
+
     DEFAULT_REPEATER_MODE = "None"
 
     def __init__(self, platform: str, gateway: EnOceanGateway):

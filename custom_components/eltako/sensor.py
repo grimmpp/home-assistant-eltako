@@ -19,6 +19,8 @@ from homeassistant.const import (
     PERCENTAGE,
     STATE_CLOSED,
     STATE_OPEN,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
     LIGHT_LUX,
     UnitOfPower,
     UnitOfTemperature,
@@ -465,19 +467,15 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
         try:
-            if 'unknown' == latest_state.state:
+            if latest_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
                 self._attr_is_on = None
             else:
-                if latest_state.attributes.get('state_class', None) == 'measurement':
-                    if latest_state.state.count('.') + latest_state.state.count(',') == 1:
-                        self._attr_native_value = float(latest_state.state)
-                    elif latest_state.state.count('.') == 0 and latest_state.state.count(',') == 0:
-                        self._attr_native_value = int(latest_state.state)
-                    else:
-                        self._attr_native_value = None
-
-                elif latest_state.attributes.get('state_class', None) == 'total_increasing':
-                    self._attr_native_value = int(latest_state.state)
+                state_class = latest_state.attributes.get('state_class', None)
+                if state_class in ('measurement', 'total', 'total_increasing'):
+                    # Restored states are strings. Both measurements and counters can carry
+                    # decimals (e.g. '36231.4' of an electricity meter), so the value is
+                    # parsed as a number and only narrowed to int if it has no fraction.
+                    self._attr_native_value = parse_number_state(latest_state.state)
 
                 elif latest_state.attributes.get('device_class', None) == 'device_class':
                     # e.g.: 2024-02-12T23:32:44+00:00
@@ -864,6 +862,8 @@ class EltakoAirQualitySensor(EltakoSensor):
 class GatewayLastReceivedMessage(EltakoSensor):
     """Protocols last time when message received"""
 
+    _attr_is_actuator_entity = False
+
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
                          dev_id=AddressExpression.parse('00-00-00-00'), 
@@ -911,6 +911,8 @@ class GatewayLastReceivedMessage(EltakoSensor):
 
 class GatewayReceivedMessagesInActiveSession(EltakoSensor):
     """Protocols amount of messages per session"""
+
+    _attr_is_actuator_entity = False
 
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
@@ -961,6 +963,8 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
 class GatewayBaseId(EltakoSensor):
     """"Displays base id of gateway."""
 
+    _attr_is_actuator_entity = False
+
     def __init__(self, platform: str, gateway: EnOceanGateway):
         super().__init__(platform, gateway,
                          dev_id=AddressExpression.parse('00-00-00-00'), 
@@ -997,6 +1001,13 @@ class GatewayBaseId(EltakoSensor):
 
 class StaticInfoField(EltakoSensor):
     """Key value fields for gateway information"""
+
+    # derived info field of a device (or of the gateway) - the address it displays belongs to
+    # the device of another platform and is validated there, not again here.
+    _attr_is_actuator_entity = False
+    # it describes the device (address, event id) instead of measuring something, so the
+    # simple device view of the web ui leaves it out - see device_config._get_entity_ids_by_address
+    is_info_field = True
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, key:str, value:str, icon:str=None):
         super().__init__(platform, gateway,
@@ -1059,6 +1070,10 @@ class GatewayInfoField(StaticInfoField):
         
 class EventListenerInfoField(EltakoSensor):
     """Key value fields for gateway information"""
+
+    _attr_is_actuator_entity = False
+    # see StaticInfoField: describes the device, not one of its measured values
+    is_info_field = True
 
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, event_id: str, key:str, convert_event_function, icon:str=None):
         super().__init__(platform, gateway,

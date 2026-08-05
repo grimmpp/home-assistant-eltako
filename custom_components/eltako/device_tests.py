@@ -12,11 +12,12 @@ Ported from eo_man (https://github.com/grimmpp/enocean-device-manager):
   FSB actuator.
 
 Unlike eo_man the tests do not open their own serial connections - they use
-the gateways of the running standalone runtime and the covers (incl. their
-sender ids) of the configuration.
+the gateways of the running runtime and the covers (incl. their sender ids) of the
+configuration.
 
-Used by `python -m eltako_standalone devicetest ...` and the 'Tests' page of
-the web ui (websocket commands eltako/device_tests/*).
+Used by the 'Tests' page of the web ui (websocket commands `eltako/device_tests/*`) and by
+`python -m eltako_standalone devicetest ...`. It runs against the gateways of the running
+runtime, so it works in Home Assistant as well as in the standalone runtime.
 """
 
 from __future__ import annotations
@@ -26,20 +27,22 @@ import logging
 import time
 from typing import Callable
 
-from eltakobus.eep import G5_3F_7F, H5_3F_7F
+from eltakobus.eep import (A5_38_08, CentralCommandDimming, CentralCommandSwitching, EEP,
+                           F6_02_01, F6_02_02, G5_3F_7F, H5_3F_7F)
 from eltakobus.message import EltakoPoll, EltakoTimeout, Regular4BSMessage, prettify
 from eltakobus.util import AddressExpression, b2s
 
 from homeassistant.const import CONF_ID
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from custom_components.eltako import config_helpers
-from custom_components.eltako.const import (
-    CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS,
-    DATA_ELTAKO, ELTAKO_CONFIG, SIGNAL_RECEIVE_MESSAGE)
-from custom_components.eltako.websocket import get_gateways
+from . import config_helpers
+from .config_check import check_configuration, run_config_test
+from .const import (
+    CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS,
+    DATA_ELTAKO, ELTAKO_CONFIG, SIGNAL_RECEIVE_MESSAGE, GatewayDeviceType)
+from .websocket import get_gateways
 
-LOGGER = logging.getLogger("eltako_standalone.device_tests")
+LOGGER = logging.getLogger("eltako.device_tests")
 
 DATA_DEVICE_TEST_MANAGER = "eltako_standalone_device_test_manager"
 
@@ -66,6 +69,11 @@ TEST_DESCRIPTORS = [
                        "gateway 2 receives every single one. Checks the reliability of the "
                        "link and whether the message delay is sufficient. Needs two "
                        "connected gateways (like in the EnOcean Device Manager).",
+        # only gateways on the RS485 bus can carry the test addresses - see is_wired()
+        "wired_gateways_only": True,
+        "gateway_requirement": "Two different gateways on the same RS485 bus (FAM14, "
+                               "FGW14-USB). Wireless transceivers cannot send the test "
+                               "addresses FF-00-00-01.. - they are outside every base id range.",
     },
     {
         "id": "cover",
@@ -74,6 +82,25 @@ TEST_DESCRIPTORS = [
                        "(e.g. up:25, pause:2, down:25), records their status telegrams and "
                        "measures the real travel times - the base for configuring the "
                        "runtime of an FSB actuator (time_closes / time_opens).",
+    },
+    {
+        "id": "actuator",
+        "name": "Actuator / teach-in test",
+        "description": "Switches every selected switch or light once and waits for its status "
+                       "telegram. An actuator only answers when the sender of Home Assistant is "
+                       "taught into it - this is the test for 'Home Assistant sends but nothing "
+                       "happens'. The round trip time comes along and shows an overloaded bus.",
+        "warning": "The actuators really switch. With the default sequence (ON, then OFF) every "
+                   "device ends up switched off.",
+    },
+    {
+        "id": "config",
+        "name": "Configuration check",
+        "description": "Checks the configuration against everything the integration already "
+                       "knows - address classes, sender ids and base id ranges, duplicates, the "
+                       "models which answered on the bus, the taught-in senders of the memory "
+                       "images and the recorded activity. Sends nothing, changes nothing.",
+        "sends_nothing": True,
     },
 ]
 
@@ -115,10 +142,28 @@ def _is_connected(gateway) -> bool:
         return False
 
 
+def is_wired(gateway) -> bool:
+    """True for a gateway which sits on the RS485 bus (FAM14, FGW14-USB).
+
+    The burst test needs this: it sends with the fixed addresses FF-00-00-01.. of the EnOcean
+    Device Manager, which are not derived from any base id. A wireless transceiver only
+    transmits telegrams whose sender address lies inside its own base id range (base id ..
+    base id + 127, and valid base ids start at FF-80-00-00), so it drops these silently - the
+    test would then report every telegram as missing without saying why. A bus gateway puts
+    the frame on the wire whatever the address is.
+    """
+    return bool(GatewayDeviceType.is_bus_gateway(gateway.dev_type))
+
+
+def _devices_of_gateway(hass, gateway_id: int) -> dict:
+    """Devices of a gateway from configuration.yaml AND from the web ui."""
+    from .device_config import get_devices_of_gateway
+    return get_devices_of_gateway(hass, gateway_id)
+
+
 def get_configured_covers(hass, gateway_id: int) -> list[dict]:
     """Covers of the configuration of one gateway incl. their sender ids."""
-    config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
-    devices = config_helpers.get_device_config(config, int(gateway_id)) or {}
+    devices = _devices_of_gateway(hass, gateway_id)
     covers = []
     for entry in devices.get("cover", []) or []:
         sender = entry.get(CONF_SENDER) or {}
@@ -200,6 +245,13 @@ async def run_burst_test(hass, params: dict, log: Callable[[str, str], None],
     for gateway in (gateway1, gateway2):
         if not _is_connected(gateway):
             raise ValueError(f"Gateway {gateway.dev_id} ({gateway.serial_path}) is not connected.")
+        if not is_wired(gateway):
+            raise ValueError(
+                f"Gateway {gateway.dev_id} ({gateway.dev_type}) is a wireless transceiver. "
+                f"The burst test sends with the fixed addresses FF-00-00-01.., which lie "
+                f"outside every base id range, so a transceiver does not transmit them and "
+                f"hears nothing on the wire. Use gateways on the RS485 bus "
+                f"(FAM14, FGW14-USB) for both sides.")
 
     message_count = int(params.get("count") or 44)
     message_delay = float(params.get("delay") or 0.01)
@@ -485,7 +537,214 @@ async def run_cover_test(hass, params: dict, log: Callable[[str, str], None],
             "senders": [cover["sender_id"] for cover in covers]}
 
 
-TEST_RUNNERS = {"burst": run_burst_test, "cover": run_cover_test}
+### ---------------------------------------------------------------------------
+### actuator test: does the actuator answer a command of Home Assistant?
+### ---------------------------------------------------------------------------
+
+# platforms whose actuators can be switched on and off. Covers have their own test (a stop
+# telegram of a standing cover is not answered, so it proves nothing), climate actuators are
+# driven with a temperature and are left alone here.
+SWITCHABLE_PLATFORMS = ("switch", "light")
+
+
+def get_configured_actuators(hass, gateway_id: int) -> list[dict]:
+    """Switchable actuators of one gateway incl. their sender - the candidates of the test."""
+    devices = _devices_of_gateway(hass, gateway_id)
+    actuators = []
+    for platform in SWITCHABLE_PLATFORMS:
+        for entry in devices.get(platform, []) or []:
+            sender = entry.get(CONF_SENDER) or {}
+            actuators.append({
+                "id": str(entry.get(CONF_ID, "")).upper(),
+                "name": entry.get("name") or str(entry.get(CONF_ID, "")),
+                "platform": platform,
+                "eep": str(entry.get(CONF_EEP, "") or ""),
+                "sender_id": str(sender.get(CONF_ID, "") or "").upper(),
+                "sender_eep": str(sender.get(CONF_EEP, "") or ""),
+            })
+    return actuators
+
+
+def resolve_actuators(hass, gateway_id: int, addresses: list | None) -> list[dict]:
+    """The actuators to test: all configured ones, or the given subset of them."""
+    configured = {actuator["id"]: actuator for actuator in get_configured_actuators(hass, gateway_id)}
+    wanted = [str(address).strip().upper() for address in (addresses or []) if str(address).strip()]
+    if not wanted:
+        return list(configured.values())
+
+    unknown = [address for address in wanted if address not in configured]
+    if unknown:
+        raise ValueError(f"Not configured as switch or light for gateway {gateway_id}: "
+                         f"{', '.join(unknown)}. The test switches through the configuration, so "
+                         f"the device (with its sender) has to be configured first.")
+    return [configured[address] for address in wanted]
+
+
+def build_switch_telegrams(actuator: dict, turn_on: bool) -> list:
+    """The telegrams Home Assistant itself would send to switch this actuator.
+
+    Same encoding as light.py/switch.py - a test which built its own telegrams would prove
+    something the integration never sends.
+    """
+    sender_eep_name = str(actuator.get("sender_eep") or "").upper()
+    try:
+        sender_eep = EEP.find(sender_eep_name)
+    except Exception as e:  # noqa: BLE001
+        raise ValueError(f"Unknown sender eep '{sender_eep_name}': {e}") from e
+
+    address = AddressExpression.parse(actuator["sender_id"])[0]
+
+    if sender_eep == A5_38_08:
+        if actuator["platform"] == "light":
+            dimming = CentralCommandDimming(100 if turn_on else 0, 0, 1, 0, 0, 1 if turn_on else 0)
+            return [A5_38_08(command=0x02, dimming=dimming).encode_message(address)]
+        switching = CentralCommandSwitching(0, 1, 0, 0, 1 if turn_on else 0)
+        return [A5_38_08(command=0x01, switching=switching).encode_message(address)]
+
+    if sender_eep in (F6_02_01, F6_02_02):
+        # a rocker sends a press and a release; which button switches on depends on the key
+        # function configured in PCT14 (direct pushbutton top on)
+        action = 1 if turn_on else 0
+        return [F6_02_01(action, 1, 0, 0).encode_message(address),
+                F6_02_01(action, 0, 0, 0).encode_message(address)]
+
+    raise ValueError(f"Sender eep {sender_eep_name} cannot be switched by this test "
+                     f"(supported: A5-38-08, F6-02-01, F6-02-02).")
+
+
+async def run_actuator_test(hass, params: dict, log: Callable[[str, str], None],
+                            stop_event: asyncio.Event) -> dict:
+    """Switch every selected actuator and wait for its status telegram.
+
+    This is the answer to "Home Assistant sends, nothing happens": the actuator only answers
+    when the sender of Home Assistant is taught into it. The round trip time comes for free and
+    shows an overloaded bus.
+    """
+    gateway = _find_gateway(hass, params.get("gateway"))
+    if gateway is None:
+        raise ValueError(f"No gateway with id {params.get('gateway')}.")
+    if not _is_connected(gateway):
+        raise ValueError(f"Gateway {gateway.dev_id} ({gateway.serial_path}) is not connected.")
+
+    actuators = resolve_actuators(hass, gateway.dev_id, params.get("devices"))
+    if not actuators:
+        raise ValueError("No switch or light is configured for this gateway. Covers have their "
+                         "own test (cover travel time test).")
+
+    without_sender = [actuator["id"] for actuator in actuators if not actuator["sender_id"]]
+    actuators = [actuator for actuator in actuators if actuator["sender_id"]]
+    if without_sender:
+        log(f"Skipped (no sender configured): {', '.join(without_sender)}", "error")
+    if not actuators:
+        raise ValueError("None of the selected devices has a sender address. Home Assistant "
+                         "needs one to send commands.")
+
+    command = str(params.get("command") or "on_off").lower()
+    if command not in ("on_off", "off_on", "on", "off"):
+        raise ValueError(f"Unknown command '{command}' (use on_off, off_on, on or off).")
+    steps_per_device = {"on_off": (True, False), "off_on": (False, True),
+                        "on": (True,), "off": (False,)}[command]
+    timeout = float(params.get("timeout") or 3.0)
+    settle = float(params.get("settle") or 1.0)
+
+    log(f"Actuator test on gateway {gateway.dev_id}: "
+        f"{', '.join(actuator['id'] for actuator in actuators)}", "info")
+    log(f"Command sequence per device: {' -> '.join('ON' if on else 'OFF' for on in steps_per_device)}"
+        f", answer timeout {timeout:g}s.", "info")
+
+    answers: dict[str, float] = {}
+    waiting_for: str | None = None
+    answer_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    def on_receive(data) -> None:
+        msg = data.get("esp2_msg")
+        if msg is None or isinstance(msg, (EltakoPoll, EltakoTimeout)):
+            return
+        try:
+            address = b2s(prettify(msg).address)
+        except Exception:  # noqa: BLE001
+            return
+        if waiting_for and address == waiting_for:
+            answers[address] = time.time()
+            loop.call_soon_threadsafe(answer_event.set)
+
+    event_id = config_helpers.get_bus_event_type(gateway.dev_id, SIGNAL_RECEIVE_MESSAGE)
+    unsubscribe = async_dispatcher_connect(hass, event_id, on_receive)
+
+    rows: list[dict] = []
+    try:
+        for actuator in actuators:
+            if stop_event.is_set():
+                break
+            for turn_on in steps_per_device:
+                if stop_event.is_set():
+                    break
+                label = "ON" if turn_on else "OFF"
+                try:
+                    telegrams = build_switch_telegrams(actuator, turn_on)
+                except ValueError as e:
+                    log(f"{actuator['id']}: {e}", "error")
+                    rows.append({"device": actuator["id"], "name": actuator["name"],
+                                 "platform": actuator["platform"], "sender": actuator["sender_id"],
+                                 "command": label, "answered": False, "response_s": None,
+                                 "problems": [str(e)]})
+                    break
+
+                waiting_for = actuator["id"]
+                answers.pop(actuator["id"], None)
+                answer_event.clear()
+                sent_at = time.time()
+                for telegram in telegrams:
+                    gateway.send_message(telegram)
+
+                try:
+                    await asyncio.wait_for(answer_event.wait(), timeout)
+                except asyncio.TimeoutError:
+                    pass
+                waiting_for = None
+
+                answered_at = answers.get(actuator["id"])
+                response = round(answered_at - sent_at, 3) if answered_at else None
+                problems = [] if answered_at else [
+                    f"no status telegram within {timeout:g}s - sender {actuator['sender_id']} is "
+                    f"probably not taught into the actuator"]
+
+                if answered_at:
+                    log(f"  {actuator['name']} ({actuator['id']}) {label}: answered after "
+                        f"{response:.3f}s.", "ok")
+                else:
+                    log(f"  {actuator['name']} ({actuator['id']}) {label}: NO ANSWER within "
+                        f"{timeout:g}s.", "error")
+
+                rows.append({"device": actuator["id"], "name": actuator["name"],
+                             "platform": actuator["platform"], "sender": actuator["sender_id"],
+                             "command": label, "answered": bool(answered_at),
+                             "response_s": response, "problems": problems})
+
+                if settle:
+                    await asyncio.sleep(settle)
+    finally:
+        unsubscribe()
+
+    answered = len([row for row in rows if row["answered"]])
+    success = bool(rows) and answered == len(rows)
+    log(f"RESULT: {answered} of {len(rows)} command(s) were answered by the actuator.",
+        "ok" if success else "error")
+
+    silent = sorted({row["device"] for row in rows if not row["answered"]})
+    if silent:
+        log(f"Not answering: {', '.join(silent)}. Check the sender id and teach it in "
+            f"('check & teach in HA senders' or PCT14).", "error")
+
+    return {"test": "actuator", "success": success, "steps": rows,
+            "gateway": gateway.dev_id, "command": command,
+            "devices": [actuator["id"] for actuator in actuators],
+            "answered": answered, "total": len(rows)}
+
+
+TEST_RUNNERS = {"burst": run_burst_test, "cover": run_cover_test,
+                "actuator": run_actuator_test, "config": run_config_test}
 
 
 ### ---------------------------------------------------------------------------
@@ -582,9 +841,11 @@ def get_manager(hass) -> DeviceTestManager:
 
 def _info(hass) -> dict:
     manager = get_manager(hass)
-    gateways = [{"id": gw.dev_id, "name": gw.dev_name, "connected": _is_connected(gw)}
+    gateways = [{"id": gw.dev_id, "name": gw.dev_name, "connected": _is_connected(gw),
+                 "device_type": str(gw.dev_type), "wired": is_wired(gw)}
                 for gw in sorted(get_gateways(hass), key=lambda g: g.dev_id)]
     covers = {}
+    actuators = {}
     for gateway in gateways:
         entries = get_configured_covers(hass, gateway["id"])
         if entries:
@@ -592,10 +853,14 @@ def _info(hass) -> dict:
                 "covers": entries,
                 "default_sequence": default_cover_sequence(entries),
             }
+        switchable = get_configured_actuators(hass, gateway["id"])
+        if switchable:
+            actuators[str(gateway["id"])] = {"actuators": switchable}
     return {
         "tests": TEST_DESCRIPTORS,
         "gateways": gateways,
         "covers": covers,
+        "actuators": actuators,
         "running": manager.is_running,
         "test": manager.test_id,
         "log": manager.log_lines[-200:],

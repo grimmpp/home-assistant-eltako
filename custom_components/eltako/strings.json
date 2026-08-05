@@ -1,6 +1,26 @@
 {
   "config": {
     "step": {
+      "user": {
+        "title": "Eltako",
+        "description": "Nothing has to be entered here. The recommended option sets the integration up and looks for your gateways itself - the Eltako panel then appears in the sidebar, where gateways and devices are configured.",
+        "menu_options": {
+          "auto": "Set up and detect my gateways automatically (recommended)",
+          "detect": "Set up a gateway of my configuration",
+          "new_gateway": "Add a gateway by hand"
+        }
+      },
+      "new_gateway": {
+        "title": "Add a gateway",
+        "description": "Serial ports found: {ports}\n{error}",
+        "data": {
+          "device_type": "Gateway type",
+          "serial_path": "Serial port or host",
+          "id": "Gateway id",
+          "name": "Name (optional)",
+          "base_id": "Base id (optional, it is queried from the hardware)"
+        }
+      },
       "detect": {
         "title": "Select the path to your Eltako gateway",
         "data": {
@@ -15,10 +35,12 @@
       }
     },
     "error": {
-      "invalid_gateway_path": "No valid gateway found for this path"
+      "invalid_gateway_path": "No valid gateway found for this path",
+      "invalid_gateway": "The gateway could not be added with these settings"
     },
     "abort": {
       "invalid_gateway_path": "Invalid gateway path",
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
       "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
     }
   },

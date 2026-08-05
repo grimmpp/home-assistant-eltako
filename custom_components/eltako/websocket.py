@@ -24,6 +24,7 @@ async def register_websockets(hass: HomeAssistant, config: ConfigEntry):
     websocket_api.async_register_command(hass, ws_usb_ports)
     websocket_api.async_register_command(hass, ws_configured_gateways)
     websocket_api.async_register_command(hass, ws_integration_info)
+    websocket_api.async_register_command(hass, ws_help_catalog)
     websocket_api.async_register_command(hass, ws_send_telegram_form)
     websocket_api.async_register_command(hass, ws_send_telegram)
 
@@ -315,6 +316,21 @@ async def ws_send_telegram(hass: HomeAssistant, connection, msg):
     LOGGER.info(f"[Websocket] Sent telegram via gateway {gateway.dev_id}: {telegram}")
     connection.send_result(msg['id'], {'sent': True, 'telegram': str(telegram),
                                        'hex': telegram.serialize().hex()})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_HELP_CATALOG})
+@websocket_api.async_response
+async def ws_help_catalog(hass: HomeAssistant, connection, msg):
+    """Everything the help page lists: devices, EEPs, gateways, platforms, documentation.
+
+    Compiled from the catalog, the schemas and the docs directory - see help_catalog.py. The
+    docs part touches the filesystem, so the whole build runs in the executor.
+    """
+    from . import help_catalog
+
+    catalog = await hass.async_add_executor_job(help_catalog.build_catalog)
+    connection.send_result(msg['id'], catalog)
 
 
 @websocket_api.require_admin

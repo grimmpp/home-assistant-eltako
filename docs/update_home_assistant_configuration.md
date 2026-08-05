@@ -1,8 +1,18 @@
 # Update Home Assistant Configuration
 
-Before you can start and see your devices and sensors in Home Assistant you need to enter them unfortunately manually into the Home Assistant Configuration ``/config/configuration.yaml``. 
+> [!NOTE]
+> **This is the optional way.** Gateways, devices and all general settings can be configured in the
+> [web ui](web-ui/readme.md) of the integration, which is in the sidebar as soon as the integration is
+> set up &ndash; no `configuration.yaml` needed for anything. This page describes the file based
+> configuration for everyone who prefers to keep their setup in files (and it explains the schema
+> behind the forms of the web ui).
+>
+> Both sources are validated identically and can be mixed. A device declared here **wins**: it cannot be
+> edited or deleted in the web ui, because the next reload would bring it back.
+
+Devices and sensors are entered into the Home Assistant configuration ``/config/configuration.yaml``.
 You can edit the configuration file e.g. with the add-on [File Editor](https://github.com/home-assistant/addons/tree/master/configurator). 
-In order to get supported by creating the configuration and managing your devices you can use [Enocean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager).
+In order to get supported by creating the configuration and managing your devices you can use [Enocean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager). The web ui can **import** its projects, a PCT14 export or an existing yaml directly.
 
 After you have finished the configuration changes **don't forget to restart Home Assistant so that the changes will be applied.** Hint: You can trigger the restart in the menu of File Editor.
 

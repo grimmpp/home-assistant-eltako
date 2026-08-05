@@ -57,9 +57,9 @@ export const page = {
              only never reported</label>
       <span class="spacer"></span>
       <button id="import-config" class="action"
-              title="Import gateways and devices from an EnOcean Device Manager project (.eodm) or an eltako yaml">
+              title="Import gateways and devices from an EnOcean Device Manager project (.eodm), a PCT14 export (.xml) or an eltako yaml">
         Import&hellip;</button>
-      <input id="import-file" type="file" accept=".eodm,.yaml,.yml,.txt" style="display:none" />
+      <input id="import-file" type="file" accept=".eodm,.xml,.yaml,.yml,.txt" style="display:none" />
       <button id="add-device" class="action primary">+ Add device</button>`;
   },
 

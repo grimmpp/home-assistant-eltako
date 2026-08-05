@@ -2,6 +2,17 @@
 
 A gateway is the component which builds the bridge between Home Assistant and the EnOcean wireless network or the RS485 bus. The gateway listens to telegrams on the RS485 bus or in the wireless network and transfers them to Home Assistant. In Home Assistant the Eltako Integration can send telegram either into wireless network or directly on the RS485 bus dependent on the type of gateway (USB based connection or radio transmitter). Based on the delivered EnOcean telegrams the Eltako Integration can display the state of the actuators or send commands to change those states. In Home Assistant gateways are also called hubs.
 
+> [!NOTE]
+> **A gateway does not have to be configured in a file.** Adding the integration
+> (*Settings &rarr; Devices & services &rarr; Add integration &rarr; Eltako*) detects what can be detected -
+> the serial ports are probed and LAN gateways which announce themselves via mDNS are picked up
+> ([plug & play](../plug-and-play/readme.md)). Everything else is added on the *Overview* page of the
+> [web ui](../web-ui/readme.md) with **"+ add gateway"**: type, serial port or host, id - the ports of a
+> scan are offered as suggestions and the base id is queried from the hardware.
+>
+> The `configuration.yaml` snippets in the sections below are the alternative for everyone who keeps
+> their setup in files. They still work and still win over the web ui.
+
 ## Summary of Supported Gateways
 What gateway is preferred for what?
 
@@ -60,7 +71,7 @@ You can use its usb port to connect it to Home Assistant.
 | Address space | 128 internal address can be used for actuators. If you need more you can increase your setup by a second RS485 bus incl. dedicated FAM14. |
 
 #### Pros
-* Can read memory of actuators. You can use it to [auto-generate a configuration file for Home Assistant](../../eltakodevice_discovery/readme.md). 
+* Can read memory of actuators. You can use it to [auto-generate a configuration file for Home Assistant](https://github.com/grimmpp/enocean-device-manager). 
 * Not dependent on wireless network. Very stable connection.
 * Receives internal command on the RS485 bu. E.g. telegrams from rocker switches conncted via wires to FTS14EM.
 
@@ -139,7 +150,7 @@ FAM-USB is a usb device which can receive and send EnOcean telegrams via ESP2 pr
 
 | Specialty | Description |
 | ----- | ----- |
-| Chip Set | [TCM300](https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf), [User Manual](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/user-manual-pdf/TCM300_TCM320_UserManual_Nov2021.pdf), [Firmeware](https://www.enocean.com/en/support/software-tools-kits) |
+| Chip Set | [TCM300](https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf), [User Manual](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/user-manual-pdf/TCM300_TCM320_UserManual_Nov2021.pdf), [Firmware](https://www.enocean.com/en/support/software-tools-kits) |
 | Protocol | ESP2 |
 | Baud rate | 9600 |
 | Tool for chip configuration | [DolphinStudio](https://www.enocean.com/de/produkt/dolphinstudio/?ts=1701468463) |
@@ -227,7 +238,7 @@ Successor of USB300 with better range and same protocol (ESP3).
 
 | Specialty | Description |
 | ----- | ----- |
-| Chip Set | [TCM515]([https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf)), [User Manual]([https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/user-manual-pdf/TCM300_TCM320_UserManual_Nov2021.pdf), [Firmeware](https://www.enocean.com/en/support/software-tools-kits](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/tcm-515j/user-manual-pdf/TCM-515-User-Manual-1.pdf)) |
+| Chip Set | TCM515, [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf), [User Manual](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/tcm-515j/user-manual-pdf/TCM-515-User-Manual-1.pdf), [Firmware](https://www.enocean.com/en/support/software-tools-kits) |
 | Protocol | ESP3 |
 | Baud rate | 57600 |
 | Tool | [BCS](https://www.piotek.de/mediafiles/Sonstiges/BSC-480.zip) |
@@ -240,7 +251,7 @@ Similar to PioTek FAM-USB515. Is supports ESP3 over TCP for LAN (cable) and Wifi
 
 | Specialty | Description |
 | ----- | ----- |
-| Chip Set | [TCM515]([https://www.enocean.com/en/product/tcm-300/?frequency=868), [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/data-sheet-pdf/TCM_300_TCM_320_DataSheet_May2019.pdf](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf)), [User Manual]([https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-300/user-manual-pdf/TCM300_TCM320_UserManual_Nov2021.pdf), [Firmeware](https://www.enocean.com/en/support/software-tools-kits](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/tcm-515j/user-manual-pdf/TCM-515-User-Manual-1.pdf)) |
+| Chip Set | TCM515, [Datasheet](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules/tcm-515/data-sheet-pdf/TCM_515_Data_Sheet_Nov2020.pdf), [User Manual](https://www.enocean.com/wp-content/uploads/downloads-produkte/en/products/enocean_modules_928mhz/tcm-515j/user-manual-pdf/TCM-515-User-Manual-1.pdf), [Firmware](https://www.enocean.com/en/support/software-tools-kits) |
 | Protocol | ESP3 |
 | Baud rate | 57600 |
 | Tool | [BCS](https://www.piotek.de/mediafiles/Sonstiges/BSC-480.zip) |

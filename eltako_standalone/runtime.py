@@ -118,9 +118,9 @@ class EltakoRuntime:
 
         # standalone extras: entity list/control commands and the functional
         # device tests of the EnOcean Device Manager (burst test, cover test)
-        from eltako_standalone import device_tests, entity_api
+        # device tests are registered by the integration itself now
+        from eltako_standalone import entity_api
         entity_api.register_websocket_commands(hass)
-        device_tests.register_websocket_commands(hass)
 
         # one config entry per configured gateway (Home Assistant needs a manual step
         # here - standalone creates them automatically)

@@ -81,8 +81,16 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_FAST_STATUS_CHANGE, default=False): cv.boolean,
             vol.Optional(CONF_SHOW_DEV_ID_IN_DEV_NAME, default=False): cv.boolean,
 
-            # Web ui / panel of the integration incl. all its sub pages
-            vol.Optional(CONF_ENABLE_FRONTEND, default=False): cv.boolean,
+            # Plug & play: detect connected gateways and their devices automatically
+            vol.Optional(CONF_PLUG_AND_PLAY, default=False): cv.boolean,
+            # once a day: probing the ports and reading a bus is not free, and a gateway is
+            # plugged in rarely. The button on the overview page runs it on demand.
+            vol.Optional(CONF_PLUG_AND_PLAY_INTERVAL, default=1440): vol.All(vol.Coerce(int), vol.Range(min=0, max=10080)),
+
+            # Web ui / panel of the integration incl. all its sub pages. On by default: it is
+            # the place where gateways, devices and these settings are configured, so an
+            # installation without any yaml has to be able to reach it.
+            vol.Optional(CONF_ENABLE_FRONTEND, default=True): cv.boolean,
             vol.Optional(CONF_ENABLE_TEST_PAGE, default=True): cv.boolean,
 
             # EnOcean telegram logging and analysis

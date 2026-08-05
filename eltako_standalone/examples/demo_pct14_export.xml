@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<exchange version="5.0">
+<rootdevice>
+	<name maxnumberofcharacter="23">FAM14</name>
+	<description maxnumberofcharacter="47">Test Bus 1</description>
+	<header>
+		<address location="Data_Byte_3" byteindex="0">255</address>
+		<addressrange location="Data_Byte_2" byteindex="1">1</addressrange>
+		<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+		<offsetfirstblock location="Data_Byte_0" byteindex="3">0</offsetfirstblock>
+		<versionofinstructionmanual location="Id_Byte_3" byteindex="4">7</versionofinstructionmanual>
+		<devicetype location="Id_Byte_2" byteindex="5">255</devicetype>
+		<versionofsoftware location="Id_Byte_1" byteindex="6">25</versionofsoftware>
+		<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+	</header>
+	<rootdevicedata>
+		<baseid>
+			<baseid_byte_0>255</baseid_byte_0>
+			<baseid_byte_1>162</baseid_byte_1>
+			<baseid_byte_2>36</baseid_byte_2>
+			<baseid_byte_3>0</baseid_byte_3>
+		</baseid>
+		<operatingmode>5</operatingmode>
+		<feedbacklist numberoffeedbackentries="7">
+			<feedbackentry>
+				<feedbackentry_number>1</feedbackentry_number>
+				<feedbackentry_deviceaddress>1</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>1</feedbackentry_devicetype>
+			</feedbackentry>
+			<feedbackentry>
+				<feedbackentry_number>2</feedbackentry_number>
+				<feedbackentry_deviceaddress>2</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>1</feedbackentry_devicetype>
+			</feedbackentry>
+			<feedbackentry>
+				<feedbackentry_number>3</feedbackentry_number>
+				<feedbackentry_deviceaddress>3</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>1</feedbackentry_devicetype>
+			</feedbackentry>
+			<feedbackentry>
+				<feedbackentry_number>4</feedbackentry_number>
+				<feedbackentry_deviceaddress>4</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>1</feedbackentry_devicetype>
+			</feedbackentry>
+			<feedbackentry>
+				<feedbackentry_number>5</feedbackentry_number>
+				<feedbackentry_deviceaddress>5</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>4</feedbackentry_devicetype>
+			</feedbackentry>
+			<feedbackentry>
+				<feedbackentry_number>6</feedbackentry_number>
+				<feedbackentry_deviceaddress>6</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>6</feedbackentry_devicetype>
+			</feedbackentry>
+			<feedbackentry>
+				<feedbackentry_number>7</feedbackentry_number>
+				<feedbackentry_deviceaddress>7</feedbackentry_deviceaddress>
+				<feedbackentry_devicetype>6</feedbackentry_devicetype>
+			</feedbackentry>
+		</feedbacklist>
+	</rootdevicedata>
+</rootdevice>
+<devices numberofdevices="8">
+	<device>
+		<name maxnumberofcharacter="23">FSR14-4x</name>
+		<description maxnumberofcharacter="47">Light Kitchen</description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">1</address>
+			<addressrange location="Data_Byte_2" byteindex="1">4</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">1</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">114</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="4">
+			<channel channelnumber="1" maxnumberofcharacter="47" description="Light 1"/>
+			<channel channelnumber="2" maxnumberofcharacter="47" description="Light 2"/>
+			<channel channelnumber="3" maxnumberofcharacter="47" description="Light 3"/>
+			<channel channelnumber="4" maxnumberofcharacter="47" description="Light 4"/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="9">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>19977983</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>6</entry_number>
+					<entry_id>28377088</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>7</entry_number>
+					<entry_id>36755199</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>8</entry_number>
+					<entry_id>53532415</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>4</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>9</entry_number>
+					<entry_id>70309631</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>8</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>10</entry_number>
+					<entry_id>29932799</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>11</entry_number>
+					<entry_id>46710015</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>12</entry_number>
+					<entry_id>63487231</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>4</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>13</entry_number>
+					<entry_id>80264447</entry_id>
+					<entry_function>51</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>8</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FUD14</name>
+		<description maxnumberofcharacter="47"></description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">5</address>
+			<addressrange location="Data_Byte_2" byteindex="1">1</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">12</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">4</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">66</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="1">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="10">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>1</entry_number>
+					<entry_id>95420416</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>2</entry_number>
+					<entry_id>28377088</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>3</entry_number>
+					<entry_id>28442624</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>4</entry_number>
+					<entry_id>95551488</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>95485952</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>6</entry_number>
+					<entry_id>81452030</entry_id>
+					<entry_function>2</entry_function>
+					<entry_button>6</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>7</entry_number>
+					<entry_id>81452030</entry_id>
+					<entry_function>11</entry_function>
+					<entry_button>1</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>8</entry_number>
+					<entry_id>95617024</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>9</entry_number>
+					<entry_id>97041663</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>10</entry_number>
+					<entry_id>87086847</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FSB14</name>
+		<description maxnumberofcharacter="47"></description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">6</address>
+			<addressrange location="Data_Byte_2" byteindex="1">2</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">135</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">6</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">87</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="2">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+			<channel channelnumber="2" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="7">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>2</entry_number>
+					<entry_id>1085725694</entry_id>
+					<entry_function>2</entry_function>
+					<entry_button>5</entry_button>
+					<entry_channel>3</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>3</entry_number>
+					<entry_id>112197632</entry_id>
+					<entry_function>31</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>4</entry_number>
+					<entry_id>129040384</entry_id>
+					<entry_function>31</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>103864063</entry_id>
+					<entry_function>31</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>6</entry_number>
+					<entry_id>112263168</entry_id>
+					<entry_function>31</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>7</entry_number>
+					<entry_id>120641279</entry_id>
+					<entry_function>31</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>8</entry_number>
+					<entry_id>128974848</entry_id>
+					<entry_function>31</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FAE14SSR</name>
+		<description maxnumberofcharacter="47">Heater 1</description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">8</address>
+			<addressrange location="Data_Byte_2" byteindex="1">2</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">22</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">81</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="2">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+			<channel channelnumber="2" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="9">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>1</entry_number>
+					<entry_id>2172773119</entry_id>
+					<entry_function>64</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>2</entry_number>
+					<entry_id>2167792383</entry_id>
+					<entry_function>64</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>4</entry_number>
+					<entry_id>2453005055</entry_id>
+					<entry_function>69</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>145752064</entry_id>
+					<entry_function>65</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>6</entry_number>
+					<entry_id>154195711</entry_id>
+					<entry_function>65</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>8</entry_number>
+					<entry_id>123394558</entry_id>
+					<entry_function>30</entry_function>
+					<entry_button>7</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>9</entry_number>
+					<entry_id>164150527</entry_id>
+					<entry_function>30</entry_function>
+					<entry_button>7</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>10</entry_number>
+					<entry_id>453696510</entry_id>
+					<entry_function>137</entry_function>
+					<entry_button>4</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>11</entry_number>
+					<entry_id>163643392</entry_id>
+					<entry_function>137</entry_function>
+					<entry_button>4</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FMZ14</name>
+		<description maxnumberofcharacter="47"></description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">10</address>
+			<addressrange location="Data_Byte_2" byteindex="1">1</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">14</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">34</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="1">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="5">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>1</entry_number>
+					<entry_id>170972927</entry_id>
+					<entry_function>1</entry_function>
+					<entry_button>3</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>2</entry_number>
+					<entry_id>179306496</entry_id>
+					<entry_function>3</entry_function>
+					<entry_button>5</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>3</entry_number>
+					<entry_id>269484032</entry_id>
+					<entry_function>1</entry_function>
+					<entry_button>4</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>4</entry_number>
+					<entry_id>168820736</entry_id>
+					<entry_function>1</entry_function>
+					<entry_button>3</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>168820736</entry_id>
+					<entry_function>1</entry_function>
+					<entry_button>1</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FAE14SSR</name>
+		<description maxnumberofcharacter="47">Heater 2</description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">11</address>
+			<addressrange location="Data_Byte_2" byteindex="1">2</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">22</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">81</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="2">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+			<channel channelnumber="2" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="6">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>1</entry_number>
+					<entry_id>2167792383</entry_id>
+					<entry_function>64</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>2</entry_number>
+					<entry_id>2167792383</entry_id>
+					<entry_function>64</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>187750143</entry_id>
+					<entry_function>65</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>6</entry_number>
+					<entry_id>204527359</entry_id>
+					<entry_function>65</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>2</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>7</entry_number>
+					<entry_id>2436227839</entry_id>
+					<entry_function>30</entry_function>
+					<entry_button>7</entry_button>
+					<entry_channel>3</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>8</entry_number>
+					<entry_id>123394521</entry_id>
+					<entry_function>30</entry_function>
+					<entry_button>7</entry_button>
+					<entry_channel>3</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FGW14</name>
+		<description maxnumberofcharacter="47">USB Gateway</description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">13</address>
+			<addressrange location="Data_Byte_2" byteindex="1">1</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">254</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">26</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="1">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="0">
+			</rangeofid>
+		</data>
+	</device>
+	<device>
+		<name maxnumberofcharacter="23">FUD14/800W</name>
+		<description maxnumberofcharacter="47"></description>
+		<header>
+			<address location="Data_Byte_3" byteindex="0">14</address>
+			<addressrange location="Data_Byte_2" byteindex="1">1</addressrange>
+			<numberofblocks location="Data_Byte_1" byteindex="2">127</numberofblocks>
+			<offsetfirstblock location="Data_Byte_0" byteindex="3">8</offsetfirstblock>
+			<versionofinstructionmanual location="Id_Byte_3" byteindex="4">4</versionofinstructionmanual>
+			<devicetype location="Id_Byte_2" byteindex="5">5</devicetype>
+			<versionofsoftware location="Id_Byte_1" byteindex="6">56</versionofsoftware>
+			<reservedbyte location="Id_Byte_0" byteindex="7">0</reservedbyte>
+		</header>
+		<channels numberofchannels="1">
+			<channel channelnumber="1" maxnumberofcharacter="47" description=""/>
+		</channels>
+		<data>
+			<rangeofconfig numberoffeedbackids="0">
+			</rangeofconfig>
+			<rangeofid numberofentries="8">
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>5</entry_number>
+					<entry_id>152043520</entry_id>
+					<entry_function>1</entry_function>
+					<entry_button>3</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>6</entry_number>
+					<entry_id>121733631</entry_id>
+					<entry_function>1</entry_function>
+					<entry_button>1</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>7</entry_number>
+					<entry_id>2343601919</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>8</entry_number>
+					<entry_id>2259715839</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>9</entry_number>
+					<entry_id>1514242559</entry_id>
+					<entry_function>17</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>10</entry_number>
+					<entry_id>246415360</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>11</entry_number>
+					<entry_id>246480896</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+				<entry maxnumberofcharacter="47" description="">
+					<entry_number>12</entry_number>
+					<entry_id>238081791</entry_id>
+					<entry_function>32</entry_function>
+					<entry_button>0</entry_button>
+					<entry_channel>1</entry_channel>
+					<entry_value>0</entry_value>
+				</entry>
+			</rangeofid>
+		</data>
+	</device>
+</devices>
+</exchange>
