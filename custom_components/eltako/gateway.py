@@ -92,6 +92,8 @@ class EnOceanGateway:
 
         self._reading_memory_of_devices_is_running = threading.Event()
 
+        self._send_lock = asyncio.Lock()
+
         self._init_bus()
 
         self._register_device()
@@ -233,7 +235,7 @@ class EnOceanGateway:
     def dev_id_validation_by_transmitter(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = 0xFF == dev_id[0][0]
         if not result:
-            LOGGER.warning(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
+            LOGGER.info(f"{device_name} ({dev_id}): Device id does not start with 0xFF — likely a wirelessly paired device.")
         return result
     
 
@@ -366,13 +368,19 @@ class EnOceanGateway:
             if isinstance(msg, ESP2Message):
                 LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
 
-                # put message on serial bus
                 self.hass.create_task(
-                    self._bus.send(msg)
+                    self._async_send_with_delay(msg)
                 )
                 dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
         else:
             LOGGER.warning("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
+
+    async def _async_send_with_delay(self, msg):
+        """Send message to serial bus with delay to prevent telegram collisions."""
+        async with self._send_lock:
+            await self._bus.send(msg)
+            if self._message_delay and self._message_delay > 0:
+                await asyncio.sleep(self._message_delay)
 
 
     def _callback_receive_message_from_serial_bus(self, message:ESP2Message):
