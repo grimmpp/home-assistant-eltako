@@ -49,7 +49,7 @@ const ROOMLESS = "Without room";
 export const page = {
   id: "home",
   title: "My devices",
-  subtitle: "All your Eltako devices - grouped by room",
+  subtitle: "All your ELTAKO devices - grouped by room",
   icon: "mdi:home-outline",
   glyph: "⌂",
   modes: ["user"],
@@ -63,6 +63,8 @@ export const page = {
                    border-radius: var(--eltako-radius); padding: 12px 14px;
                    display: flex; flex-direction: column; gap: 8px; }
     .device-card.silent { border-style: dashed; }
+    /* a simulated device is marked on its card as well - same signal as in the expert tables */
+    .device-card.simulated-card { border-left: 4px solid var(--eltako-warn); }
     .device-card.new { border-color: var(--eltako-accent); }
     .device-card .device-head { display: flex; align-items: center; gap: 8px; }
     .device-card .device-head ha-icon, .device-card .device-head .glyph {
@@ -130,6 +132,9 @@ export const page = {
       <button id="simple-detect" class="action" ${running ? "disabled" : ""}
               title="Searches for gateways, bus devices, sensors and actuators and lists what was found">
         ${icon("mdi:magnify-scan", "◎")} ${running ? "Searching&hellip;" : "Search devices"}</button>
+      <button id="simple-reset" class="action danger" ${running ? "disabled" : ""}
+              title="Removes every device created here and searches again from scratch - including a fresh read of every bus. Devices from configuration.yaml are kept.">
+        ${icon("mdi:refresh", "↻")} Remove all &amp; search again</button>
       <button id="simple-add" class="action primary">+ Add device</button>`;
   },
 
@@ -142,6 +147,7 @@ export const page = {
       this._openAdd(ctx, {});
     });
     root.getElementById("simple-detect").addEventListener("click", () => this._startDetection(ctx));
+    root.getElementById("simple-reset").addEventListener("click", () => this._resetAndDetect(ctx));
   },
 
   render(ctx) {
@@ -174,7 +180,7 @@ export const page = {
       ${this._renderDetection(ctx)}
       <div class="notice warn">
         <h3>No gateway yet</h3>
-        <p>Your devices talk to Home Assistant through an Eltako gateway (FAM14, FGW14-USB,
+        <p>Your devices talk to Home Assistant through an ELTAKO gateway (FAM14, FGW14-USB,
           FAM-USB, a LAN gateway, ...). <b>Search devices</b> finds a gateway which is plugged in
           all by itself; the expert mode has the wizard for entering one by hand.</p>
         <p><button class="action primary" id="simple-detect-empty">${icon("mdi:magnify-scan", "◎")}
@@ -291,14 +297,15 @@ export const page = {
     const activity = this._activityOf(device);
 
     return `
-      <article class="device-card ${activity ? "" : "silent"}"
+      <article class="device-card ${activity ? "" : "silent"} ${device.simulated ? "simulated-card" : ""}"
                data-address="${escapeHtml(device.address)}"
                data-external="${escapeHtml(device.external_address || "")}">
         <div class="device-head">
           ${icon(mdi, glyph)}
           <div style="min-width:0">
             <div class="device-name">${escapeHtml(device.name || device.address)}</div>
-            <div class="device-kind">${escapeHtml(PLATFORM_LABELS[device.platform] || device.platform)}</div>
+            <div class="device-kind">${escapeHtml(PLATFORM_LABELS[device.platform] || device.platform)}
+              ${device.simulated ? `<span class="tag simulated" title="No hardware: this device is simulated (see the simulation page in the expert view)">simulated</span>` : ""}</div>
           </div>
         </div>
         ${entities.filter((entity) => entity.text).length
@@ -650,6 +657,49 @@ export const page = {
    * devices on it. `rescan_bus` is what makes it a *complete* search - without it only the bus
    * of a gateway which is new to Home Assistant is read.
    */
+  /** Throw away everything this page created and detect from scratch.
+   *
+   * The use case is a configuration which drifted: devices added with a wrong EEP, half a bus
+   * adopted, a gateway which was re-cabled. Deleting them one by one is tedious, and a plain
+   * search does not help - a device which already exists is skipped by the detection.
+   *
+   * Asks **twice** on purpose: the first dialog names the number and what survives, the second
+   * one is the normal search warning (a bus is locked while it is read). Nothing is written
+   * into any device - only the configuration of this integration is reset.
+   */
+  async _resetAndDetect(ctx) {
+    if ((ctx.state.plugAndPlay || {}).running) return;
+
+    const all = ctx.state.configuredDevices || [];
+    const removable = all.filter((device) => device.editable);
+    const fromYaml = all.length - removable.length;
+
+    if (!removable.length) {
+      alert(fromYaml
+        ? `There is nothing to remove - all ${fromYaml} device(s) come from configuration.yaml `
+          + "and are not touched. Use \"Search devices\" to look for new ones."
+        : "There are no devices yet. Use \"Search devices\" to look for them.");
+      return;
+    }
+
+    if (!confirm(`Really remove all ${removable.length} device(s) and search again?\n\n`
+                 + "Everything listed here is deleted first - names, areas and EEPs you "
+                 + "corrected by hand are lost - and then detected from scratch.\n\n"
+                 + (fromYaml ? `${fromYaml} device(s) from configuration.yaml are kept.\n` : "")
+                 + "Your gateways are kept, and nothing is changed in the devices themselves.")) return;
+
+    const result = await ctx.api.call(WS.DEVICE_REMOVE_ALL, {});
+    if (!result) {
+      alert((ctx.api.lastError || {}).message || "Could not remove the devices.");
+      ctx.api.lastError = null;
+      return;
+    }
+
+    await this.load(ctx);
+    ctx.requestContentRender(true);
+    await this._startDetection(ctx);
+  },
+
   async _startDetection(ctx) {
     if ((ctx.state.plugAndPlay || {}).running) return;
     if (!confirm("Search for gateways, actuators and sensors?\n\n"
@@ -704,6 +754,9 @@ export const page = {
     const running = !!(ctx.state.plugAndPlay || {}).running;
     button.disabled = running;
     button.innerHTML = `${icon("mdi:magnify-scan", "◎")} ${running ? "Searching&hellip;" : "Search devices"}`;
+    // the reset starts a search as its second half, so it is locked by the same flag
+    const reset = ctx.root.getElementById("simple-reset");
+    if (reset) reset.disabled = running;
     if (running) this._pollDetection(ctx);
   },
 

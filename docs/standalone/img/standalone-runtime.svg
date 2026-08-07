@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="900" height="480" role="img" aria-labelledby="title desc">
+  <title id="title">How the standalone runtime runs the same integration code without Home Assistant</title>
+  <desc id="desc">One integration package in the middle, two runtimes above it. Home Assistant imports the real homeassistant package; the standalone runtime puts a shim at the front of sys.path so that the same import resolves to it. Below the integration, the gateway and the hardware are identical in both cases.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .soft  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .base  { fill: #0064AF; stroke: #0064AF; }
+      .warn  { fill: #FFF6E5; stroke: #E0A030; stroke-width: 1.5; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .h2    { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0064AF; }
+      .h2w   { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #FFFFFF; }
+      .note  { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .notew { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #D6E8F5; }
+      .warnt { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #6B4A10; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monow { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #FFFFFF; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="480"/>
+  <text class="h1" x="40" y="30">The standalone runtime &#8212; not a second implementation</text>
+  <text class="note" x="40" y="50">Both columns load the very same custom_components/eltako. Only what `import homeassistant` resolves to is different.</text>
+
+  <!-- Home Assistant -->
+  <rect class="soft" x="40" y="70" width="390" height="160" rx="10"/>
+  <text class="h2" x="56" y="94">Home Assistant</text>
+  <text class="note" x="56" y="112">runs the house &#183; starts in tens of seconds</text>
+  <rect class="box" x="56" y="124" width="358" height="52" rx="7"/>
+  <text class="mono" x="70" y="146">import homeassistant</text>
+  <text class="note" x="70" y="164">the real package</text>
+  <text class="note" x="56" y="198">brings everything a home automation system has:</text>
+  <text class="note" x="56" y="216">automations, scenes, history, other integrations</text>
+
+  <!-- standalone -->
+  <rect class="soft" x="470" y="70" width="390" height="160" rx="10"/>
+  <text class="h2" x="486" y="94">eltako_standalone</text>
+  <text class="note" x="486" y="112">test, analyse, calibrate &#183; starts in about a second</text>
+  <rect class="box" x="486" y="124" width="358" height="52" rx="7"/>
+  <text class="mono" x="500" y="146">import homeassistant</text>
+  <text class="note" x="500" y="164">resolves to hass_shim/ &#8212; put first on sys.path</text>
+  <text class="note" x="486" y="198">runtime.py boots it &#183; server.py serves http + ws</text>
+  <text class="note" x="486" y="216">entity_api.py holds the states &#183; cli.py is the CLI</text>
+
+  <path class="flow" d="M235,230 L235,248" marker-end="url(#arrow)"/>
+  <path class="flow" d="M665,230 L665,248" marker-end="url(#arrow)"/>
+
+  <!-- the shared integration -->
+  <rect class="base" x="40" y="250" width="820" height="86" rx="10"/>
+  <text class="h2w" x="56" y="276">custom_components/eltako &#8212; unchanged</text>
+  <text class="notew" x="56" y="298">The same async_setup / async_setup_entry, the same gateways, entities, catalog, observers, web ui and websocket api.</text>
+  <text class="monow" x="56" y="320">core/   config/   catalog/   observation/   simulation/   tools/   frontend/</text>
+
+  <path class="flow" d="M450,336 L450,362" marker-end="url(#arrow)"/>
+
+  <rect class="soft" x="40" y="366" width="820" height="52" rx="10"/>
+  <text class="h2" x="56" y="388">EnOceanGateway &#8594; serial port, USB stick or LAN gateway &#8594; the real bus and the real radio</text>
+  <text class="note" x="56" y="408">On macOS and Windows the standalone runtime reaches a USB gateway natively, which a docker container cannot.</text>
+
+  <rect class="warn" x="40" y="434" width="820" height="34" rx="8"/>
+  <text class="warnt" x="56" y="456">The shim replaces the real homeassistant package, so the two test suites must not share a pytest process &#8212; it poisons the other suite&#8217;s imports.</text>
+</svg>

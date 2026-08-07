@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest import TestCase
 
-from custom_components.eltako import gateway_scan
+from custom_components.eltako.tools import gateway_scan
 
 
 class TestSysfsReading(TestCase):
@@ -114,6 +114,34 @@ class TestPyserialFallback(TestCase):
         self.assertEqual(ports, [{'device': 'COM7', 'manufacturer': 'FTDI',
                                   'product': 'FT232R USB UART', 'serial_number': None,
                                   'interface_name': None}])
+
+    def test_pyserial_placeholder_is_not_a_descriptor(self):
+        """'n/a' is what pyserial writes when it knows nothing - it must not become a
+        descriptor. A port which *has* a descriptor but suggests no gateway is skipped by the
+        probe, so taking the placeholder at face value excludes exactly the ports which the
+        container exception of `ports_to_probe` is meant to cover: inside a container sysfs
+        carries no usb information, yet pyserial still lists every /dev/ttyUSB* with 'n/a'."""
+        from serial.tools import list_ports
+
+        original = list_ports.comports
+        list_ports.comports = lambda: [PortInfoMock('/dev/ttyUSB0', description='n/a')]
+        try:
+            ports = gateway_scan._pyserial_ports()
+        finally:
+            list_ports.comports = original
+
+        self.assertEqual(ports, [{'device': '/dev/ttyUSB0', 'manufacturer': None,
+                                  'product': None, 'serial_number': None,
+                                  'interface_name': None}])
+
+    def test_port_without_usb_information_keeps_its_device_name(self):
+        """Without a descriptor the name stays the device name, not the 'n/a' placeholder."""
+        ports = self.scan_with([{'device': '/dev/ttyUSB0', 'manufacturer': None,
+                                 'product': None, 'serial_number': None, 'interface_name': None}])
+
+        port = next(p for p in ports if p['device'] == '/dev/ttyUSB0')
+        self.assertEqual(port['name'], 'ttyUSB0')
+        self.assertIsNone(port.get('product'))
 
 
 class TestDeviceTypeSuggestion(TestCase):

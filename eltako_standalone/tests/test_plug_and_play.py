@@ -22,7 +22,7 @@ def run(coro):
 # a FAM14 on position 1 plus a four channel relay - the same shape the discovery replies of a
 # real bus produce (see bus_members.BusMemberRegistry)
 def _fake_bus(runtime, gateway_id: int = 1) -> None:
-    from custom_components.eltako import bus_members
+    from custom_components.eltako.observation import bus_members
 
     registry = bus_members.get_registry(runtime.hass)
     fam14 = registry._entry(gateway_id, 1)
@@ -60,7 +60,7 @@ async def _run_detection(runtime, mdns=None, **kwargs) -> dict:
     The serial probe and the mDNS browser are replaced: both need real hardware/network and
     would otherwise cost their timeouts in every test.
     """
-    from custom_components.eltako import plug_and_play
+    from custom_components.eltako.tools import plug_and_play
 
     async def announced(hass):
         """What the mDNS browser would have found, run through the real filtering."""
@@ -102,7 +102,7 @@ def test_detected_devices_are_created_and_editable(config_dir):
 
         # the devices are stored like devices created in the web ui, therefore they can be
         # changed and removed again (source 'ui', editable)
-        from custom_components.eltako import device_config
+        from custom_components.eltako.config import device_config
 
         devices = {device['address']: device for device in device_config._describe_devices(runtime.hass)}
         assert devices['00-00-00-02']['source'] == 'ui'
@@ -138,7 +138,7 @@ def test_attributes_of_an_added_device_can_be_changed(config_dir):
         _fake_bus(runtime)
         await _run_detection(runtime)
 
-        from custom_components.eltako import device_config
+        from custom_components.eltako.config import device_config
         from custom_components.eltako.const import CONF_EEP, CONF_SENDER, CONF_UI_DEVICES
         from homeassistant.const import CONF_ID, CONF_NAME
 
@@ -193,7 +193,7 @@ def test_a_second_run_adds_nothing_twice(config_dir):
 def test_status_and_report_are_available_for_the_web_ui(config_dir):
     async def scenario():
         runtime = await _booted(config_dir)
-        from custom_components.eltako import plug_and_play
+        from custom_components.eltako.tools import plug_and_play
         from homeassistant.components.websocket_api import get_commands
 
         commands = get_commands(runtime.hass)
@@ -238,7 +238,7 @@ def test_a_lan_gateway_which_announces_itself_is_created(config_dir):
         assert [c['device_type'] for c in report['gateways_suggested']] == ['lan-gw-esp2']
 
         # it landed in the configuration with host and port
-        from custom_components.eltako import gateway_config
+        from custom_components.eltako.config import gateway_config
         from custom_components.eltako.const import CONF_GATEWAY_ADDRESS, CONF_GATEWAY_PORT
 
         stored = [gw for gw in gateway_config.get_ui_gateways(runtime.hass)
@@ -260,7 +260,7 @@ def test_the_websocket_commands_work_over_a_real_connection(config_dir):
         import aiohttp
 
         from eltako_standalone.server import StandaloneServer
-        from custom_components.eltako import plug_and_play
+        from custom_components.eltako.tools import plug_and_play
         from custom_components.eltako.const import CONF_PLUG_AND_PLAY
         from unittest import mock
 
@@ -323,6 +323,49 @@ def test_nothing_is_added_when_the_detection_only_looks(config_dir):
 
         assert report['devices_added'] == []
         assert len(report['devices_pending']) == 5
+
+        await runtime.async_stop()
+    run(scenario())
+
+
+def test_several_buses_are_read_in_parallel(config_dir):
+    """Every bus is its own serial or tcp connection - reading them one after the other only
+    multiplies the minutes the stage takes. Each fake bus read waits for the other one to
+    have started: sequential execution deadlocks and fails the timeout."""
+    async def scenario():
+        runtime = await _booted(config_dir)
+
+        from custom_components.eltako.const import GatewayDeviceType
+        from custom_components.eltako.core import websocket as core_websocket
+        from custom_components.eltako.tools import plug_and_play
+
+        class BusGateway:
+            def __init__(self, dev_id):
+                self.dev_id = dev_id
+                self.dev_type = GatewayDeviceType.GatewayEltakoFAM14
+                self.is_simulated = False
+
+        started = {1: asyncio.Event(), 2: asyncio.Event()}
+
+        async def read_bus(hass, bus_members, gateway):
+            started[gateway.dev_id].set()
+            other = 2 if gateway.dev_id == 1 else 1
+            await asyncio.wait_for(started[other].wait(), timeout=1)
+            return {'gateway_id': gateway.dev_id, 'finished': True, 'positions': 0}
+
+        async def announced(hass):
+            return []
+
+        with mock.patch.object(plug_and_play, 'async_probe_ports', return_value={}), \
+             mock.patch.object(plug_and_play, 'async_discover_mdns_gateways', announced), \
+             mock.patch.object(plug_and_play, '_bus_was_read', return_value=False), \
+             mock.patch.object(core_websocket, 'get_gateways',
+                               return_value=[BusGateway(1), BusGateway(2)]), \
+             mock.patch.object(plug_and_play, '_async_read_bus', read_bus):
+            report = await plug_and_play.async_run(runtime.hass)
+
+        assert {read['gateway_id'] for read in report['buses_read']} == {1, 2}
+        assert all(read['finished'] for read in report['buses_read'])
 
         await runtime.async_stop()
     run(scenario())

@@ -11,9 +11,9 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 from tests.mocks import *
 
 from custom_components.eltako.const import *
-from custom_components.eltako import config_helpers
-from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
-from custom_components.eltako.enocean_logger import (
+from custom_components.eltako.config import config_helpers
+from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
+from custom_components.eltako.observation.enocean_logger import (
     EnOceanTelegramLogger,
     TelegramFileWriter,
     _json_safe,
@@ -21,7 +21,7 @@ from custom_components.eltako.enocean_logger import (
     get_telegram_logger,
     is_telegram_logging_enabled,
 )
-from custom_components.eltako.schema import CONFIG_SCHEMA
+from custom_components.eltako.config.schema import CONFIG_SCHEMA
 
 from eltakobus.eep import A5_04_02, F6_02_01
 from eltakobus.message import EltakoDiscoveryRequest, EltakoPoll, RPSMessage, Regular4BSMessage, TeachIn4BSMessage2
@@ -259,6 +259,74 @@ class TestDecodedEepToDict(TestCase):
         self.assertTrue(decoded['energy_bow'])
         # everything must be json serializable
         json.dumps(decoded)
+
+
+class TestWebUiDevicesAreKnownToo(TestCase):
+    """Devices created in the web ui belong to the known addresses just like yaml ones.
+
+    Reading only `configuration.yaml` left their **sender** addresses unknown - and a sender is
+    what Home Assistant transmits with. Its own commands therefore came back as telegrams of an
+    unconfigured device and were offered on the page as "newly discovered".
+    """
+
+    GATEWAY_BASE_ID = AddressExpression.parse('FF-A2-24-00')
+
+    class Entry:
+        def __init__(self, options):
+            self.options = options
+            self.entry_id = 'entry'
+            self.title = 'gw'
+            self.data = {CONF_GATEWAY_DESCRIPTION: 'FAM14 - fam14 (Id: 123)'}
+
+    def setUp(self):
+        self.gateway = GatewayMock(base_id=self.GATEWAY_BASE_ID)
+        # the gateway is configured, its devices are not: they live in the config entry
+        self.hass = HassDataMock(config={CONF_GATEWAY: [{
+            CONF_ID: self.gateway.dev_id, CONF_BASE_ID: 'FF-A2-24-00',
+            CONF_DEVICE_TYPE: 'fam14', CONF_NAME: 'FAM Test'}]})
+        entry = self.Entry({CONF_UI_DEVICES: {'light': [{
+            CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08', CONF_NAME: 'FSR14_4x ch1',
+            CONF_SENDER: {CONF_ID: '00-00-B0-01', CONF_EEP: 'A5-38-08'}}]}})
+        self.hass.config_entries = self
+        self._entries = [entry]
+        self.gateway.hass = self.hass
+        self.logger = EnOceanTelegramLogger(self.hass,
+                                            get_general_settings(**{CONF_LOG_ENOCEAN_TELEGRAMS: True}))
+        self.logger.refresh_device_map()
+
+    def async_entries(self, domain):
+        return self._entries
+
+    def record(self, msg, direction=TelegramDirection.INCOMING) -> dict:
+        self.logger.record_message(self.gateway, msg, direction.value)
+        telegrams = self.logger.get_recent_telegrams()
+        return telegrams[-1] if telegrams else None
+
+    def test_the_device_itself_is_known(self):
+        record = self.record(Regular4BSMessage(address=b'\x00\x00\x00\x01', status=0x00,
+                                               data=b'\x01\x02\x03\x04'))
+
+        self.assertTrue(record['known'])
+        self.assertEqual(record['device_name'], 'FSR14_4x ch1')
+
+    def test_the_sender_is_known_under_its_external_address(self):
+        """00-00-B0-01 + base id FF-A2-24-00 = FF-A2-D4-01 - what the gateway reports."""
+        record = self.record(Regular4BSMessage(address=b'\x00\x00\xB0\x01', status=0x00,
+                                               data=b'\x01\x00\x00\x09'),
+                             TelegramDirection.OUTGOING)
+
+        self.assertEqual(record['address'], 'FF-A2-D4-01')
+        self.assertTrue(record['known'], "the own sender must not show up as a new device")
+        self.assertEqual(record['role'], 'sender')
+
+    def test_the_own_sender_is_not_offered_as_a_newly_discovered_device(self):
+        self.record(Regular4BSMessage(address=b'\x00\x00\xB0\x01', status=0x00,
+                                      data=b'\x01\x00\x00\x09'), TelegramDirection.OUTGOING)
+
+        statistics = self.logger.get_statistics()
+
+        self.assertNotIn('FF-A2-D4-01',
+                         [device['address'] for device in statistics['unknown_devices']])
 
 
 class TestTelegramRecording(TestCase):
@@ -839,7 +907,7 @@ class TestTestPageIsAvailableInHomeAssistant(TestCase):
 
     def test_device_tests_ship_with_the_integration(self):
         """Its websocket commands must be registered by the integration, not by the runtime."""
-        from custom_components.eltako import device_tests
+        from custom_components.eltako.tools import device_tests
 
         self.assertTrue(hasattr(device_tests, 'register_websocket_commands'))
         for name in ('run_burst_test', 'run_cover_test', 'resolve_covers'):
@@ -848,15 +916,15 @@ class TestTestPageIsAvailableInHomeAssistant(TestCase):
     def test_the_integration_registers_them(self):
         import inspect
 
-        from custom_components.eltako import eltako_integration_init
+        from custom_components.eltako.core import integration
 
-        source = inspect.getsource(eltako_integration_init.async_setup)
+        source = inspect.getsource(integration.async_setup)
         self.assertIn('device_tests.register_websocket_commands', source)
 
     def test_the_setting_reaches_the_frontend(self):
         """visible() of the page reads it from integration_info."""
         import inspect
 
-        from custom_components.eltako import websocket
+        from custom_components.eltako.core import websocket
 
         self.assertIn('general_settings', inspect.getsource(websocket))

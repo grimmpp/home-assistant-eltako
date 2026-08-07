@@ -11,7 +11,7 @@ from unittest import TestCase
 
 from tests.mocks import *
 
-from custom_components.eltako import config_helpers
+from custom_components.eltako.config import config_helpers
 from custom_components.eltako.const import *
 
 from eltakobus.message import (

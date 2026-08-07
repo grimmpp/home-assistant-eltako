@@ -1,6 +1,6 @@
 # Home Assistant dev container
 
-A ready-to-use Home Assistant with the Eltako integration and example data - one command,
+A ready-to-use Home Assistant with the ELTAKO integration and example data - one command,
 no onboarding, no manual setup.
 
 > Full documentation: **[docs/dev-container](../docs/dev-container/readme.md)** - incl. how to
@@ -20,8 +20,8 @@ Then open **<http://localhost:8123>** and log in with **admin / admin**.
 
 * **No onboarding**: an admin user (`admin`/`admin`) and the finished onboarding are seeded
   into the config volume on the first start.
-* **Eltako integration is already set up**: the config entry for the demo gateway exists,
-  the *Eltako* panel is in the sidebar right away.
+* **ELTAKO integration is already set up**: the config entry for the demo gateway exists,
+  the *ELTAKO* panel is in the sidebar right away.
 * **Example configuration**: the repository file [`ha.yaml`](../ha.yaml) is included as a
   Home Assistant package - one FGW14-USB bus gateway with example devices for every
   platform (lights, dimmer, switches, covers, climate, sensors, wired and wireless
@@ -52,19 +52,19 @@ catalog, the hierarchy and the web ui are fully usable anyway.
 | InfluxDB 2 | <http://localhost:8086> | `admin` / `eltako-dev` (org `home`, bucket `eltako`, token `eltako-dev-token`) |
 | Grafana | <http://localhost:3000> | `admin` / `admin` (InfluxDB datasource preconfigured) |
 
-Two dashboards are provisioned into the folder *Eltako* (tag `eltako`), the overview is the
+Two dashboards are provisioned into the folder *ELTAKO* (tag `eltako`), the overview is the
 home dashboard:
 
-* **Eltako - Telegram overview** - telegram rate by direction and gateway, most active
+* **ELTAKO - Telegram overview** - telegram rate by direction and gateway, most active
   addresses, distribution over message type and EEP, table of the unconfigured addresses
-* **Eltako - Device analysis** - any decoded EEP value over time, switching states, when each
+* **ELTAKO - Device analysis** - any decoded EEP value over time, switching states, when each
   address was heard from last, telegrams per hour and area, average repeater level
 
 They live in `grafana/provisioning/dashboards/eltako/*.json` and are editable in Grafana
 (`allowUiUpdates`). The **standalone runtime** enables the export by default and links to
 these dashboards from its web ui - see [eltako_standalone/README.md](../eltako_standalone/README.md).
 
-Enable the export in the Eltako web ui (*Settings* page, group *Timeseries export*):
+Enable the export in the ELTAKO web ui (*Settings* page, group *Timeseries export*):
 
 | Setting | Value |
 | --- | --- |

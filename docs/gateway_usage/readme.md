@@ -8,7 +8,7 @@ Hints:
 
 In order to use a gateway you need to declare the gateway and all devices which shall interact with it in the Home Assistant Configuration (`/config/configuration.yaml`). The configuration can be e.g. edit with [File Editor](https://github.com/home-assistant/addons/tree/master/configurator).
 
-To get familiar with the Eltako Integration configuration check out [Update Home Assistant Configuration](../update_home_assistant_configuration.md).
+To get familiar with the ELTAKO Integration configuration check out [Update Home Assistant Configuration](../update_home_assistant_configuration.md).
 
 ## Gateway Attributes
 | Attribute   | Type / Values   | Description |

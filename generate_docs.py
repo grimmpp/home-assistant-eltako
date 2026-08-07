@@ -189,7 +189,7 @@ def render_supported_devices_page(catalog: dict) -> str:
         '',
         f"The integration knows **{len(devices)} device types** and **{summary['eep_count']} EnOcean "
         f"Equipment Profiles**, of which **{summary['entity_eep_count']}** can become a Home Assistant "
-        f"entity on one of **{summary['platform_count']} platforms**. It is not limited to Eltako "
+        f"entity on one of **{summary['platform_count']} platforms**. It is not limited to ELTAKO "
         'hardware - any device which speaks one of these profiles works.',
         '',
         'The **Help** page of the web ui shows the same lists for the version you actually run.',
@@ -305,7 +305,7 @@ def _write(path: str, content: str, check: bool) -> bool:
 def generate(check: bool = False) -> list[str]:
     """Render everything. Returns the files which are out of date (or were written)."""
     # imported here so `--help` works without Home Assistant being installed
-    from custom_components.eltako import help_catalog
+    from custom_components.eltako.catalog import help_catalog
 
     catalog = help_catalog.build_catalog(DOC_BASE_URL)
     outdated = []

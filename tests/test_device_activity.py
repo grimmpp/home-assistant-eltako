@@ -12,10 +12,10 @@ def iso_days_ago(days: float) -> str:
     """Timestamps relative to now, so that the tests are independent of the current date."""
     return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec='seconds')
 
-from custom_components.eltako import device_activity
+from custom_components.eltako.observation import device_activity
 from custom_components.eltako.const import *
-from custom_components.eltako.device_activity import DeviceActivityTracker
-from custom_components.eltako.enocean_logger import resolve_addresses
+from custom_components.eltako.observation.device_activity import DeviceActivityTracker
+from custom_components.eltako.observation.enocean_logger import resolve_addresses
 
 from eltakobus.message import EltakoWrapped4BS, RPSMessage
 from eltakobus.util import AddressExpression

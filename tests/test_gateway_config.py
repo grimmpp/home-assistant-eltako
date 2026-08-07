@@ -7,7 +7,7 @@ import voluptuous as vol
 from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
-from custom_components.eltako import config_helpers, gateway_config
+from custom_components.eltako.config import config_helpers, gateway_config
 from custom_components.eltako.const import *
 
 from homeassistant.const import CONF_ID, CONF_NAME

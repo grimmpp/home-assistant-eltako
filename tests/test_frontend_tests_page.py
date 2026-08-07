@@ -13,7 +13,7 @@ import os
 import re
 from unittest import TestCase
 
-from custom_components.eltako import device_tests
+from custom_components.eltako.tools import device_tests
 
 FRONTEND = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                         'custom_components', 'eltako', 'frontend')

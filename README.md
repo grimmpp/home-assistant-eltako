@@ -1,21 +1,21 @@
 [![Generic badge](https://img.shields.io/badge/HACS-Custom-3498db.svg)](https://github.com/hacs/integration)
 [![Generic badge](https://img.shields.io/badge/Version-2.2.0-3498db.svg)](changes.md)
 [![Generic badge](https://img.shields.io/github/commit-activity/y/grimmpp/home-assistant-eltako.svg?style=flat&color=3498db)](https://github.com/grimmpp/home-assistant-eltako/commits/main)
-[![Generic badge](https://img.shields.io/badge/Community_Forum-Eltako_Integration_Debugging-3498db.svg)](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)
+[![Generic badge](https://img.shields.io/badge/Community_Forum-ELTAKO_Integration_Debugging-3498db.svg)](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712)
 [![Generic badge](https://img.shields.io/badge/License-MIT-3498db.svg)](LICENSE)
 [![Generic badge](https://img.shields.io/badge/SUPPORT_THIS_PROJECT-PayPal.me-27ae60.svg)](https://paypal.me/grimmpp)
 
-# Eltako Bus Integration (RS485 &ndash; EnOcean) for Home Assistant
+# ELTAKO Bus Integration (RS485 &ndash; EnOcean) for Home Assistant
 
-**Brings the Eltako Series 14 (RS485 bus) and EnOcean wireless devices into Home Assistant** &ndash; lights,
+**Brings the ELTAKO Series 14 (RS485 bus) and EnOcean wireless devices into Home Assistant** &ndash; lights,
 switches, covers, heating, meters and sensors as native Home Assistant entities, plus everything you need
 to set them up and to find out why something does not work.
 
-The integration is not limited to Eltako hardware: it speaks the **EnOcean standard**, Eltako devices are
+The integration is not limited to ELTAKO hardware: it speaks the **EnOcean standard**, ELTAKO devices are
 just the ones named as examples throughout the documentation.
 
 * **Nothing to enter, nothing to write.** Install it, add the integration &ndash; that is the whole setup. It
-  looks for your gateways itself (serial ports and mDNS) and reads the RS485 bus, and the **Eltako** panel
+  looks for your gateways itself (serial ports and mDNS) and reads the RS485 bus, and the **ELTAKO** panel
   is in the sidebar, where gateways, devices and settings are configured graphically. Whatever is not
   detected is added there with a form, or in `configuration.yaml` for those who prefer files &ndash; the yaml
   still works and still wins, it is just not required for anything anymore. See
@@ -45,15 +45,27 @@ the repository and run `./install_custom_component_eltako.sh`, which copies `cus
 your Home Assistant configuration. See
 [installing a specific version or branch](docs/install-specific-version-or-branch.md).
 
-**2. Add the integration.** *Settings &rarr; Devices & services &rarr; Add integration &rarr; Eltako* &ndash; and pick
-the first option. **Nothing has to be entered**: no gateway, no serial port, no `configuration.yaml`, no
-restart. The integration then looks for the hardware itself: every free serial port is probed (FAM14,
-FGW14-USB, FAM-USB, USB300 &hellip;) and LAN gateways which announce themselves via mDNS are picked up. Every
-gateway which is identified beyond doubt is set up on its own.
+**2. Add the integration.** *Settings &rarr; Devices & services &rarr; Add integration &rarr; ELTAKO*. **Nothing is
+asked and nothing has to be entered**: no gateway, no serial port, no `configuration.yaml`, no restart &ndash;
+the dialog is over the moment you picked ELTAKO, there is not even an option to choose. The integration then looks for the hardware itself: every
+free serial port is probed (FAM14, FGW14-USB, FAM-USB, USB300 &hellip;) and LAN gateways which announce
+themselves via mDNS are picked up. Every gateway which is identified beyond doubt is set up on its own.
 
-**3. Open the Eltako panel.** It is in the sidebar right away (for administrators) &ndash; the web ui is part of
-the integration and **on by default**. The overview page draws the running detection live. Everything from
-here on happens there.
+What you get is an entry called **ELTAKO Core** &ndash; the base component, holding no hardware: it is what
+makes Home Assistant load the integration, and with it come the web ui, its websocket api and the
+automatic detection. Every gateway found gets its own entry next to it; those are the hardware.
+
+> This step is not optional, and it is not this integration being demanding: Home Assistant loads a custom
+> integration only when it has a config entry or when its domain is in `configuration.yaml`. Until then none
+> of its code runs, so nothing can put a panel into the sidebar. If you prefer files, a single line
+> `eltako:` in your `configuration.yaml` does the same job &ndash; everything else is configured in the web ui
+> either way.
+
+**3. Open the ELTAKO panel.** It is in the sidebar right away (for administrators), and Home Assistant opens
+it for you once, right after the installation &ndash; the web ui is part of the integration and **on by
+default**. The overview page draws the running detection live. Everything from here on happens there. The
+sidebar entry can be hidden later (*Settings &rarr; Web UI &rarr; Show in sidebar*, or on the integration page
+under *Configure*); the panel then stays reachable under `/eltako`.
 
 **A gateway which was not detected** &ndash; an FGW14-USB cannot be told apart from any other serial adapter, and
 a LAN gateway which does not announce itself cannot be found at all &ndash; is added with **"+ add gateway"** on
@@ -67,7 +79,7 @@ the overview page: type, serial port or host, done. The ports of a scan are offe
 | --- | --- |
 | [**Plug & play**](docs/plug-and-play/readme.md) | Series 14 racks: the bus is read and every device which can be identified beyond doubt is added. Everything ambiguous is listed with its reason instead of being guessed. Switch it on with one click on the overview page. |
 | **By hand** | The device form with the device catalog as a template &ndash; selecting *FSR14_4x* prefills EEP, sender EEP and the PCT14 teach-in position. |
-| **Import** | An `.eodm` project of the [EnOcean Device Manager](https://github.com/grimmpp/enocean-device-manager), an **Eltako PCT14 export (.xml)** or an existing `eltako:` yaml &ndash; with a preview before anything is applied. |
+| **Import** | An `.eodm` project of the [EnOcean Device Manager](https://github.com/grimmpp/enocean-device-manager), an **ELTAKO PCT14 export (.xml)** or an existing `eltako:` yaml &ndash; with a preview before anything is applied. |
 
 **5. Teach in the senders.** Actuators only obey a sender they know. The web ui has
 *check & teach in HA senders* per FAM14, and there are
@@ -114,6 +126,7 @@ Own panel in the sidebar, part of the integration. Every page has its own url an
 | **Live telegrams** | Live stream of every telegram: time, direction, gateway, address, device name, entity ids, EEP, raw data and decoded values. Filterable, pausable, exportable, and telegrams can be sent from here. |
 | **Statistics** | One row per EnOcean address: telegram counters, intervals, first/last seen, message types, entity ids, current state and the last decoded values. |
 | **Tests** | [Functional tests](docs/device-tests/readme.md) against the real hardware: configuration check, teach-in test, burst test, cover travel times. |
+| **Simulation** | [Gateways and devices without hardware](docs/simulation/readme.md): a simulated FAM14, USB300 or LAN gateway with virtual lights, covers, heating and sensors &ndash; define the values they report, trigger their telegrams, let them send periodically and announce their profile. |
 | **Settings** | The general settings of the integration, editable at runtime. Values changed here override `configuration.yaml`, every override shows its origin and can be reset. |
 | **Help** | Documentation, tutorials and every supported device, EEP, gateway and platform &ndash; compiled by the backend, so the lists always match the version you run. |
 | **About** | Version, Home Assistant version, gateways, devices/entities, feature list and dependencies. |
@@ -131,8 +144,8 @@ and [multiple gateway support](docs/multiple-gateway-support/readme.md).
 
 | Gateway | Connection | Library |
 | --- | --- | --- |
-| **Eltako FAM14**, **Eltako FGW14-USB** | ESP2, RS485 bus, 57600 baud | [eltako14bus](https://github.com/grimmpp/eltako14bus) |
-| **Eltako FAM-USB** | ESP2, 9600 baud | [eltako14bus](https://github.com/grimmpp/eltako14bus) |
+| **ELTAKO FAM14**, **ELTAKO FGW14-USB** | ESP2, RS485 bus, 57600 baud | [eltako14bus](https://github.com/grimmpp/eltako14bus) |
+| **ELTAKO FAM-USB** | ESP2, 9600 baud | [eltako14bus](https://github.com/grimmpp/eltako14bus) |
 | **EnOcean USB300** | ESP3 (ESP2 feature set), 57600 baud | [Python EnOcean](https://github.com/kipe/enocean), [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter) |
 | [**PioTek FAM-USB 515**](https://www.piotek.de/FAM-USB-515) | ESP3 (ESP2 feature set), 57600 baud | [Python EnOcean](https://github.com/kipe/enocean), [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter) |
 | [**PioTek MGW LAN**](https://www.piotek.de/PioTek-MGW-POE) | ESP3 via TCP/LAN, port 5100 | [Python EnOcean](https://github.com/kipe/enocean), [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter) |
@@ -160,74 +173,74 @@ and [multiple gateway support](docs/multiple-gateway-support/readme.md).
 
 | Device | Brand | What it is | Connection | Addresses | Platform | EEP | Sender EEP |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **F3Z14D** | Eltako | Electricity/Gas/Water Meter | RS485 bus | 3 | sensor | `A5-12-01`, `A5-12-02`, `A5-12-03` | &ndash; |
-| **F4HK14** | Eltako | Heating/Cooling (4 channels) | RS485 bus | 4 | climate | `A5-10-06` | `A5-10-06` |
-| **F4SR14_LED** | Eltako | Relay for LED (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
-| **F4T55E** | Eltako | Wireless 4-way pushbutton (E-Design55) | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
-| **FABH65S** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FAE14SSR** | Eltako | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
-| **FB55EB** | Eltako | Occupancy sensor | wireless | 1 | binary_sensor | `A5-07-01` | &ndash; |
-| **FBH65** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FBH65S** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FBH65TF** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FD2G14** | Eltako | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
-| **FD62NP-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FD62NPN-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FDG14** | Eltako | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
-| **FFT60** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
-| **FFTE** | Eltako | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
-| **FGW14** | Eltako | Bus Gateway | RS485 bus |  | *detected only* | &ndash; | &ndash; |
-| **FHD60SB** | Eltako | Twilight and daylight sensor | wireless | 1 | sensor | `A5-06-01` | &ndash; |
-| **FHK14** | Eltako | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
-| **FJ62/12-36V DC** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FJ62NP-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FL62-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FL62NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FLC61NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FLGTF** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02`, `A5-09-0C` | &ndash; |
-| **FLT58** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
-| **FMH1W** | Eltako | Wireless single button | wireless | 1 | binary_sensor | `F6-01-01` | &ndash; |
-| **FMSR14** | Eltako | Multisensor relay | RS485 bus |  | *detected only* | &ndash; | &ndash; |
-| **FMZ14** | Eltako | Relay (multifunction) | RS485 bus | 1 | light | `M5-38-08` | `F6-02-01` |
-| **FMZ61** | Eltako | Relay (multifunction) | wireless | 1 | light | `M5-38-08` | `F6-02-01` |
-| **FR62-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FR62NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSB14** | Eltako | Cover | RS485 bus | 2 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSB61-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSB61NP-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSDG14** | Eltako | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
-| **FSG14_1_10V** | Eltako | Dimming for electr. ballasts (1-10V) | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FSM60B** | Eltako | Digital input with battery status | wireless | 1 | binary_sensor | `A5-30-01` | &ndash; |
-| **FSR14** | Eltako | Relay | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR14M_2x** | Eltako | Relay (2 channels, with metering) | RS485 bus | 2 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
-| **FSR14_1x** | Eltako | Relay (1 channel) | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR14_2x** | Eltako | Relay (2 channels) | RS485 bus | 2 | light | `M5-38-08` | `A5-38-08` |
-| **FSR14_4x** | Eltako | Relay (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61/8-24V UC** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61G-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61LN-230V** | Eltako | Relay | wireless | 2 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSSA-230V** | Eltako | Socket switch actuator | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSU14** | Eltako | Clock/timer module | RS485 bus |  | *detected only* | &ndash; | &ndash; |
-| **FSUD-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSVA-230V-10A** | Eltako | Socket switch actuator | wireless | 1 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
-| **FT55** | Eltako | Wireless 4-way pushbutton | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
-| **FTFSB** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
-| **FTK** | Eltako | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
-| **FTKE** | Eltako | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
-| **FTR78S** | Eltako | Thermostat | wireless | 1 | sensor | `A5-10-03` | &ndash; |
-| **FTS14EM** | Eltako | Wired inputs (switches, contacts) | RS485 bus | 1 | binary_sensor | `A5-08-01`, `D5-00-01`, `F6-02-01`, `F6-02-02`, `F6-10-00` | &ndash; |
-| **FUD14** | Eltako | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUD14_800W** | Eltako | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUD61NP-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUD61NPN-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUTH** | Eltako | Temperature sensor and controller | wireless | 1 | sensor | `A5-10-06`, `A5-10-12` | &ndash; |
-| **FWG14MS** | Eltako | Weather Station Gateway | RS485 bus | 1 | sensor | `A5-13-01` | &ndash; |
-| **FWS61** | Eltako | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
-| **FWZ14_65A** | Eltako | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
-| **MS** | Eltako | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
-| **WMS** | Eltako | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
+| **F3Z14D** | ELTAKO | Electricity/Gas/Water Meter | RS485 bus | 3 | sensor | `A5-12-01`, `A5-12-02`, `A5-12-03` | &ndash; |
+| **F4HK14** | ELTAKO | Heating/Cooling (4 channels) | RS485 bus | 4 | climate | `A5-10-06` | `A5-10-06` |
+| **F4SR14_LED** | ELTAKO | Relay for LED (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
+| **F4T55E** | ELTAKO | Wireless 4-way pushbutton (E-Design55) | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
+| **FABH65S** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FAE14SSR** | ELTAKO | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
+| **FB55EB** | ELTAKO | Occupancy sensor | wireless | 1 | binary_sensor | `A5-07-01` | &ndash; |
+| **FBH65** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FBH65S** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FBH65TF** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FD2G14** | ELTAKO | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
+| **FD62NP-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FD62NPN-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FDG14** | ELTAKO | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
+| **FFT60** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
+| **FFTE** | ELTAKO | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
+| **FGW14** | ELTAKO | Bus Gateway | RS485 bus |  | *detected only* | &ndash; | &ndash; |
+| **FHD60SB** | ELTAKO | Twilight and daylight sensor | wireless | 1 | sensor | `A5-06-01` | &ndash; |
+| **FHK14** | ELTAKO | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
+| **FJ62/12-36V DC** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FJ62NP-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FL62-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FL62NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FLC61NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FLGTF** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02`, `A5-09-0C` | &ndash; |
+| **FLT58** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
+| **FMH1W** | ELTAKO | Wireless single button | wireless | 1 | binary_sensor | `F6-01-01` | &ndash; |
+| **FMSR14** | ELTAKO | Multisensor relay | RS485 bus |  | *detected only* | &ndash; | &ndash; |
+| **FMZ14** | ELTAKO | Relay (multifunction) | RS485 bus | 1 | light | `M5-38-08` | `F6-02-01` |
+| **FMZ61** | ELTAKO | Relay (multifunction) | wireless | 1 | light | `M5-38-08` | `F6-02-01` |
+| **FR62-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FR62NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSB14** | ELTAKO | Cover | RS485 bus | 2 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSB61-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSB61NP-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSDG14** | ELTAKO | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
+| **FSG14_1_10V** | ELTAKO | Dimming for electr. ballasts (1-10V) | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FSM60B** | ELTAKO | Digital input with battery status | wireless | 1 | binary_sensor | `A5-30-01` | &ndash; |
+| **FSR14** | ELTAKO | Relay | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14M_2x** | ELTAKO | Relay (2 channels, with metering) | RS485 bus | 2 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
+| **FSR14_1x** | ELTAKO | Relay (1 channel) | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14_2x** | ELTAKO | Relay (2 channels) | RS485 bus | 2 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14_4x** | ELTAKO | Relay (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61/8-24V UC** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61G-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61LN-230V** | ELTAKO | Relay | wireless | 2 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSSA-230V** | ELTAKO | Socket switch actuator | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSU14** | ELTAKO | Clock/timer module | RS485 bus |  | *detected only* | &ndash; | &ndash; |
+| **FSUD-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSVA-230V-10A** | ELTAKO | Socket switch actuator | wireless | 1 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
+| **FT55** | ELTAKO | Wireless 4-way pushbutton | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
+| **FTFSB** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
+| **FTK** | ELTAKO | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
+| **FTKE** | ELTAKO | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
+| **FTR78S** | ELTAKO | Thermostat | wireless | 1 | sensor | `A5-10-03` | &ndash; |
+| **FTS14EM** | ELTAKO | Wired inputs (switches, contacts) | RS485 bus | 1 | binary_sensor | `A5-08-01`, `D5-00-01`, `F6-02-01`, `F6-02-02`, `F6-10-00` | &ndash; |
+| **FUD14** | ELTAKO | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD14_800W** | ELTAKO | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD61NP-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD61NPN-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUTH** | ELTAKO | Temperature sensor and controller | wireless | 1 | sensor | `A5-10-06`, `A5-10-12` | &ndash; |
+| **FWG14MS** | ELTAKO | Weather Station Gateway | RS485 bus | 1 | sensor | `A5-13-01` | &ndash; |
+| **FWS61** | ELTAKO | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
+| **FWZ14_65A** | ELTAKO | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
+| **MS** | ELTAKO | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
+| **WMS** | ELTAKO | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
 
 </details>
 
@@ -259,9 +272,9 @@ and [multiple gateway support](docs/multiple-gateway-support/readme.md).
 | `F6-02-01` | 2-part Rocker switch, Application Style 1 (European, bottom switches | binary_sensor, switch | climate, light, switch | F4T55E, FMZ14, FMZ61, FT55, FTS14EM |
 | `F6-02-02` | 2-part Rocker switch, Application Style 2 (US, top switches on) | binary_sensor, switch | climate, light, switch | FTS14EM |
 | `F6-10-00` | Windows handle | binary_sensor, sensor | &ndash; | FFTE, FTK, FTKE, FTS14EM |
-| `G5-3F-7F` | Eltako Shutters | cover | &ndash; | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
-| `H5-3F-7F` | Eltako Shutter Command | &ndash; | cover | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
-| `M5-38-08` | Eltako Gateway Switching - This is implemented pretty rudimentary | light, switch | &ndash; | F4SR14_LED, FL62-230V, FL62NP-230V, FLC61NP-230V, FMZ14, FMZ61, FR62-230V, FR62NP-230V, FSR14, FSR14M_2x, FSR14_1x, FSR14_2x, FSR14_4x, FSR61-230V, FSR61/8-24V UC, FSR61G-230V, FSR61LN-230V, FSR61NP-230V, FSSA-230V, FSVA-230V-10A |
+| `G5-3F-7F` | ELTAKO Shutters | cover | &ndash; | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
+| `H5-3F-7F` | ELTAKO Shutter Command | &ndash; | cover | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
+| `M5-38-08` | ELTAKO Gateway Switching - This is implemented pretty rudimentary | light, switch | &ndash; | F4SR14_LED, FL62-230V, FL62NP-230V, FLC61NP-230V, FMZ14, FMZ61, FR62-230V, FR62NP-230V, FSR14, FSR14M_2x, FSR14_1x, FSR14_2x, FSR14_4x, FSR61-230V, FSR61/8-24V UC, FSR61G-230V, FSR61LN-230V, FSR61NP-230V, FSSA-230V, FSVA-230V-10A |
 
 </details>
 
@@ -295,7 +308,7 @@ The complete table of contents is in [docs/](docs/readme.md).
 A good place to start:
 
 * [Example setup: wiring and teach-in of Series 14 devices](docs/01_getting_started/readme.md)
-* [Simple Eltako setup](docs/simple_eltako_setup.md)
+* [Simple ELTAKO setup](docs/simple_eltako_setup.md)
 * [Configuration explained](docs/update_home_assistant_configuration.md)
 * [Plug & play](docs/plug-and-play/readme.md)
 * [Lights](docs/lights-tutorial/readme.md) &middot;
@@ -306,7 +319,8 @@ A good place to start:
 * [Logging](docs/logging/readme.md) and
   [telegram analysis](docs/telegram-analysis/readme.md)
 * [Web ui](docs/web-ui/readme.md) &middot;
-  [Device tests](docs/device-tests/readme.md)
+  [Device tests](docs/device-tests/readme.md) &middot;
+  [Simulation without hardware](docs/simulation/readme.md)
 * [Change log](changes.md)
 
 ---
@@ -316,7 +330,13 @@ A good place to start:
 [Architecture](docs/architecture/readme.md) explains
 how the integration is put together and where to start.
 
-There are two ready-to-use environments for manual testing:
+Only what Home Assistant loads by file name (`const.py`, `config_flow.py`, the entity platforms)
+sits at the top of [`custom_components/eltako/`](custom_components/eltako); everything else is grouped by
+what it does &ndash; `core/` (gateway, entity base, startup), `config/`, `catalog/`, `observation/`,
+`simulation/`, `tools/`, `frontend/`. Each subpackage's `__init__.py` lists its modules in one line
+each, and [The layout](docs/architecture/readme.md#the-layout) says which group a new module belongs in.
+
+There are three ready-to-use environments for manual testing:
 
 * **[Development container](docs/dev-container/readme.md)** &ndash;
   `cd dev && ./start.sh` starts a Home Assistant with the integration mounted live, a seeded admin user
@@ -324,6 +344,11 @@ There are two ready-to-use environments for manual testing:
   and 24 h of example telegram history. Optionally with InfluxDB + Grafana (`./start.sh analytics`).
 * **[Standalone runtime](docs/standalone/readme.md)** &ndash;
   runs `custom_components/eltako` unchanged **without** Home Assistant, for tests, analysis and calibration.
+* **[Simulation](docs/simulation/readme.md)** &ndash;
+  no hardware at all: a simulated FAM14, USB300 or LAN gateway with virtual devices, one click for a
+  complete example installation. The detection picks the devices up like real ones, and switching a
+  simulated light really switches the entity. Also on the command line
+  (`python -m eltako_standalone simulate starter`).
 
 Testing through a Home Assistant instance is slow, so the repository carries unit and component tests which
 give quick feedback. They live in [`tests/`](tests),
@@ -350,7 +375,7 @@ documentation cannot silently drift away from the code.
 * [Eltako14Bus Python library](https://github.com/grimmpp/eltako14bus) &ndash; serial communication with FAM14 and FGW14-USB.
 * [Python EnOcean](https://github.com/kipe/enocean) &ndash; serial communication with the USB300 and other ESP3 devices.
 * [esp2_gateway_adapter](https://github.com/grimmpp/esp2_gateway_adapter) &ndash; makes ESP3 compatible with the rest of the integration, which works on ESP2.
-* [Eltako PCT14](https://www.eltako.com/en/software-pct14/) &ndash; for programming and configuring Series 14 devices natively (not required, but its exports can be imported).
+* [ELTAKO PCT14](https://www.eltako.com/en/software-pct14/) &ndash; for programming and configuring Series 14 devices natively (not required, but its exports can be imported).
 * [EnOcean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager) &ndash; for inventorying and managing EnOcean devices (not required, but its projects can be imported).
 
 # Useful Home Assistant add-ons
@@ -362,11 +387,11 @@ documentation cannot silently drift away from the code.
 
 # External documentation
 
-* [Full setup journey and automation project with Eltako](https://github.com/cvanlabe/Eltako-home-automation/tree/main) from [Cedric Van Labeke](https://github.com/cvanlabe) &ndash; **recommended**
+* [Full setup journey and automation project with ELTAKO](https://github.com/cvanlabe/ELTAKO-home-automation/tree/main) from [Cedric Van Labeke](https://github.com/cvanlabe) &ndash; **recommended**
 * [Home Assistant developer docs](https://developers.home-assistant.io/)
 * [EnOcean Equipment Profiles &ndash; EEP 2.1](https://www.trio2sys.fr/images/media/EnOcean_Equipment_Profiles_EEP2.1.pdf)
 * [EnOcean Equipment Profiles &ndash; EEP v2.6.7](https://www.enocean-alliance.org/wp-content/uploads/2017/05/EnOcean_Equipment_Profiles_EEP_v2.6.7_public.pdf)
-* [Eltako technical specification of devices](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) &ndash; contains the mapping of EEPs to devices
+* [ELTAKO technical specification of devices](https://www.eltako.com/fileadmin/downloads/de/Gesamtkatalog/Eltako_Gesamtkatalog_KapT_low_res.pdf) &ndash; contains the mapping of EEPs to devices
 * [OpenHAB binding for EnOcean](https://github.com/fruggy83/openocean)
 
 # Contribution and support
@@ -377,7 +402,7 @@ development and test environment &ndash; which is where support in the form of d
 
 You can contribute by:
 
-* Helping users in the Home Assistant community ([Eltako "Baureihe 14 &ndash; RS485" (EnOcean) debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging))
+* Helping users in the Home Assistant community ([ELTAKO "Baureihe 14 &ndash; RS485" (EnOcean) debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging))
 * Reporting [issues](https://github.com/grimmpp/home-assistant-eltako/issues)
 * Creating [pull requests](https://github.com/grimmpp/home-assistant-eltako/pulls)
 * Providing [documentation](docs)
@@ -389,10 +414,10 @@ You can contribute by:
 Thanks to [chrysn](https://gitlab.com/chrysn) and [Johannes Bosecker](https://github.com/JBosecker), who
 initiated the first version of this code, made it publicly available on their GitLab repositories and shared
 it in the Home Assistant community
-([Eltako "Baureihe 14 &ndash; RS485" (EnOcean) debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging)).
+([ELTAKO "Baureihe 14 &ndash; RS485" (EnOcean) debugging](https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging)).
 This fork was decoupled because of many fundamental changes to the original repository.
 
 Big thanks as well to [Cedric Van Labeke](https://github.com/cvanlabe), who provides a very good
-[documentation](https://github.com/cvanlabe/Eltako-home-automation/tree/main) and helped with the first steps
+[documentation](https://github.com/cvanlabe/ELTAKO-home-automation/tree/main) and helped with the first steps
 into this world, and to [LHBL2003](https://github.com/LHBL2003), who is eagerly testing and pushing things to
 a good quality with pull requests and issues.

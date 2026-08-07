@@ -39,7 +39,7 @@ class TestItExistsAndIsReachable(ArchitectureDocTestCase):
 
     def test_the_help_page_offers_it(self):
         """The web ui lists the docs from the generated index - it has to be in there."""
-        from custom_components.eltako import help_catalog
+        from custom_components.eltako.catalog import help_catalog
 
         paths = {document['path'] for document in help_catalog.get_documentation()}
 
@@ -75,32 +75,57 @@ class TestEveryNamedThingExists(ArchitectureDocTestCase):
     SEARCH_DIRS = ('custom_components/eltako', 'tests', 'eltako_standalone', 'eltako_standalone/tests')
 
     def test_named_modules_exist(self):
+        """`core/gateway.py` as well as `gateway.py` - a path in the document must resolve."""
         missing = []
-        for name in sorted(set(re.findall(r'`([a-z_]+\.py)`', self.doc))):
+        for name in sorted(set(re.findall(r'`([a-z_]+(?:/[a-z_]+)*\.py)`', self.doc))):
             if not any(os.path.isfile(os.path.join(ROOT, directory, name)) for directory in self.SEARCH_DIRS):
                 missing.append(name)
 
         self.assertEqual([], missing)
 
+    def test_the_subpackages_are_described(self):
+        """Whoever adds a subpackage has to say in the document what belongs in it."""
+        package = os.path.join(ROOT, 'custom_components', 'eltako')
+        subpackages = sorted(name for name in os.listdir(package)
+                             if os.path.isfile(os.path.join(package, name, '__init__.py')))
+
+        self.assertGreaterEqual(len(subpackages), 4, msg=str(subpackages))
+        for name in subpackages:
+            self.assertIn(f'{name}/', self.doc, msg=f'{name}/ is not described in the document')
+
+    def test_every_module_is_in_a_documented_place(self):
+        """A module at the top level either is one Home Assistant loads by name, or it is lost."""
+        package = os.path.join(ROOT, 'custom_components', 'eltako')
+        from custom_components.eltako.const import PLATFORMS
+
+        allowed = {'__init__.py', 'const.py', 'config_flow.py', 'datetime.py'}
+        allowed |= {f'{platform}.py' for platform in PLATFORMS}
+
+        unexpected = [name for name in sorted(os.listdir(package))
+                      if name.endswith('.py') and name not in allowed]
+
+        self.assertEqual([], unexpected,
+                         msg='these belong in a subpackage - see "The layout" in the document')
+
     def test_named_symbols_exist_where_claimed(self):
         expected = {
-            'custom_components/eltako/gateway.py': [
+            'custom_components/eltako/core/gateway.py': [
                 'EnOceanGateway', '_handle_received_message', '_callback_send_message_to_serial_bus',
                 '_callback_receive_message_from_serial_bus', 'query_for_base_id_and_version',
                 '_record_telegram'],
-            'custom_components/eltako/device.py': ['EltakoEntity', 'value_changed'],
-            'custom_components/eltako/eltako_integration_init.py': [
+            'custom_components/eltako/core/entity.py': ['EltakoEntity', 'value_changed'],
+            'custom_components/eltako/core/integration.py': [
                 'EltakoFrontendView', 'async_setup_entry', 'async_reload_entry'],
             'custom_components/eltako/const.py': [
                 'ELTAKO_GLOBAL_EVENT_BUS_ID', 'SIGNAL_RECEIVE_MESSAGE', 'GatewayDeviceType', 'PLATFORMS'],
-            'custom_components/eltako/config_helpers.py': [
+            'custom_components/eltako/config/config_helpers.py': [
                 'get_bus_event_type', 'DEFAULT_GENERAL_SETTINGS', 'async_get_home_assistant_config'],
-            'custom_components/eltako/general_settings.py': ['SETTING_DESCRIPTORS', 'LOCKED_SETTINGS'],
-            'custom_components/eltako/device_catalog.py': ['DEVICE_CATALOG'],
-            'custom_components/eltako/device_tests.py': ['is_wired'],
-            'custom_components/eltako/gateway_config.py': ['async_load_ui_gateways'],
-            'custom_components/eltako/bus_members.py': ['async_setup_registry'],
-            'custom_components/eltako/device_activity.py': ['async_setup_activity_tracker'],
+            'custom_components/eltako/config/general_settings.py': ['SETTING_DESCRIPTORS', 'LOCKED_SETTINGS'],
+            'custom_components/eltako/catalog/device_catalog.py': ['DEVICE_CATALOG'],
+            'custom_components/eltako/tools/device_tests.py': ['is_wired'],
+            'custom_components/eltako/config/gateway_config.py': ['async_load_ui_gateways'],
+            'custom_components/eltako/observation/bus_members.py': ['async_setup_registry'],
+            'custom_components/eltako/observation/device_activity.py': ['async_setup_activity_tracker'],
             'custom_components/eltako/frontend/lib/form.js': ['renderFields', 'readFields'],
         }
         missing = []
@@ -116,8 +141,8 @@ class TestEveryNamedThingExists(ArchitectureDocTestCase):
         self.assertEqual([], missing)
 
     def test_the_storage_keys_are_the_real_ones(self):
-        from custom_components.eltako import (bus_members, device_activity, gateway_config,
-                                              general_settings)
+        from custom_components.eltako.observation import bus_members, device_activity
+        from custom_components.eltako.config import gateway_config, general_settings
 
         for module in (bus_members, device_activity, gateway_config, general_settings):
             self.assertIn(module.STORAGE_KEY, self.doc,
@@ -175,9 +200,9 @@ class TestTheStartupOrderMatchesTheCode(ArchitectureDocTestCase):
     def test_the_steps_appear_in_the_documented_order(self):
         import inspect
 
-        from custom_components.eltako import eltako_integration_init
+        from custom_components.eltako.core import integration
 
-        source = inspect.getsource(eltako_integration_init.async_setup)
+        source = inspect.getsource(integration.async_setup)
         steps = ['async_load_ui_gateways', 'async_get_home_assistant_config',
                  'async_load_overrides', 'register_websockets', 'async_setup_registry',
                  'async_setup_activity_tracker', 'async_setup_telegram_logger',

@@ -13,18 +13,30 @@ import unittest
 from unittest import TestCase
 
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'custom_components', 'eltako')
+PACKAGE = 'custom_components.eltako'
 
-# modules which are imported with `import *` somewhere in the integration
-STAR_IMPORT_MODULES = {
-    '.const': 'custom_components.eltako.const',
-    '.device': 'custom_components.eltako.device',
-    '.gateway': 'custom_components.eltako.gateway',
-    '.config_helpers': 'custom_components.eltako.config_helpers',
-    'eltakobus.eep': 'eltakobus.eep',
-    'eltakobus.message': 'eltakobus.message',
-    'eltakobus.util': 'eltakobus.util',
-    'homeassistant.const': 'homeassistant.const',
-}
+
+def _modules_of(directory: str):
+    """Every module of the integration, subpackages included, as (label, path, package)."""
+    for current, directories, files in os.walk(directory):
+        directories[:] = [name for name in directories
+                          if name not in ('__pycache__', 'frontend', 'grafana')]
+        relative = os.path.relpath(current, directory)
+        package = PACKAGE if relative == '.' else f'{PACKAGE}.{relative.replace(os.sep, ".")}'
+        for file in sorted(files):
+            if file.endswith('.py'):
+                label = file if relative == '.' else os.path.join(relative, file)
+                yield label, os.path.join(current, file), package
+
+
+def _absolute(module: str, level: int, package: str) -> str:
+    """`from ..const import *` in custom_components.eltako.core -> custom_components.eltako.const"""
+    if not level:
+        return module
+    parts = package.split('.')
+    if level > 1:
+        parts = parts[:-(level - 1)]
+    return '.'.join(parts + ([module] if module else []))
 
 
 def _names_of_module(module_name: str) -> set[str]:
@@ -49,10 +61,9 @@ class NameCollector(ast.NodeVisitor):
             self.defined.add((alias.asname or alias.name).split('.')[0])
 
     def visit_ImportFrom(self, node):
-        module = ('.' * (node.level or 0)) + (node.module or '')
         for alias in node.names:
             if alias.name == '*':
-                self.star_imports.append(module)
+                self.star_imports.append((node.module or '', node.level or 0))
             else:
                 self.defined.add(alias.asname or alias.name)
 
@@ -112,10 +123,7 @@ class TestNoUndefinedNames(TestCase):
         star_cache = {}
         problems = []
 
-        for file in sorted(os.listdir(COMPONENT_DIR)):
-            if not file.endswith('.py'):
-                continue
-            path = os.path.join(COMPONENT_DIR, file)
+        for file, path, package in _modules_of(COMPONENT_DIR):
             with open(path, encoding='utf-8') as handle:
                 tree = ast.parse(handle.read(), filename=path)
 
@@ -123,8 +131,8 @@ class TestNoUndefinedNames(TestCase):
             collector.visit(tree)
 
             available = set(collector.defined) | builtin_names
-            for module in collector.star_imports:
-                target = STAR_IMPORT_MODULES.get(module, module.lstrip('.'))
+            for module, level in collector.star_imports:
+                target = _absolute(module, level, package)
                 if target not in star_cache:
                     star_cache[target] = _names_of_module(target)
                 available |= star_cache[target]

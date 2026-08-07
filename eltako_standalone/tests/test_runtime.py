@@ -52,7 +52,7 @@ def test_incoming_telegram_updates_state(config_dir):
     async def scenario():
         runtime = await _booted(config_dir)
         from eltakobus.message import RPSMessage
-        from custom_components.eltako.websocket import get_gateways
+        from custom_components.eltako.core.websocket import get_gateways
 
         gateway = get_gateways(runtime.hass)[0]
         # rocker switch FF-BB-0A-1B presses top-right (0x70)
@@ -70,7 +70,7 @@ def test_control_light_sends_telegram(config_dir):
     async def scenario():
         runtime = await _booted(config_dir)
         from eltako_standalone.entity_api import async_call_entity
-        from custom_components.eltako.websocket import get_gateways
+        from custom_components.eltako.core.websocket import get_gateways
 
         gateway = get_gateways(runtime.hass)[0]
         sent = []
@@ -94,7 +94,7 @@ def test_state_restore_across_restart(config_dir):
     async def first_run():
         runtime = await _booted(config_dir)
         from eltakobus.message import RPSMessage
-        from custom_components.eltako.websocket import get_gateways
+        from custom_components.eltako.core.websocket import get_gateways
 
         gateway = get_gateways(runtime.hass)[0]
         gateway._handle_received_message(RPSMessage(b"\xff\xbb\x0a\x1b", 0x30, b"\x70"))

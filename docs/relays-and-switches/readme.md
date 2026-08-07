@@ -1,12 +1,12 @@
-# Integrated Relays and Switches with Eltako FSR14*, FSR61, ...
+# Integrated Relays and Switches with ELTAKO FSR14*, FSR61, ...
 
 This tutorial describes how to configure a switches for e.g. lights, electric socket, ... to power on and off devices connected so that they can be monitored and controlled additionally from Home Assistant.
 
 <img src="fsr14m-2x.png" width="50%">
 
-## Configure Home Assistant (Eltako FSR14*, FUD14*, FSR61*, ...)
+## Configure Home Assistant (ELTAKO FSR14*, FUD14*, FSR61*, ...)
 
-Every Eltako devices which shall be represented in Home Assistant need to be entered into the Home Assistant configuration (`/config/configuration.yaml`). Find details about how to configure Home Assistant for this integration manually [here](../update_home_assistant_configuration.md). You can also auto-generate the configuration by using [EnOcean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager)
+Every ELTAKO devices which shall be represented in Home Assistant need to be entered into the Home Assistant configuration (`/config/configuration.yaml`). Find details about how to configure Home Assistant for this integration manually [here](../update_home_assistant_configuration.md). You can also auto-generate the configuration by using [EnOcean Device Manager (eo_man)](https://github.com/grimmpp/enocean-device-manager)
 
 For lights or switches you need to create an entries in the light or switch section. You need to specify the id/address of the device so that Home Assistant knows when a status update/change comes by and when it needs to react on it. In addition we need to specify the id/address of the sender button in Home Assistant. A good pattern for the sender id/address is to use a base id + the same local id of the light. EEPs define the type of telegram. 
 

@@ -6,9 +6,9 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
 from homeassistant.components.cover import CoverEntityFeature
 from custom_components.eltako.cover import EltakoCover
-from custom_components.eltako.device import EltakoEntity
+from custom_components.eltako.core.entity import EltakoEntity
 from eltakobus import *
-from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
+from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)

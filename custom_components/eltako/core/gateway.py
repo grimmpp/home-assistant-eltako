@@ -62,6 +62,20 @@ from ..observation.bus_members import note_telegram
 from ..observation.device_activity import get_activity_tracker
 
 import threading
+import time
+from collections import deque
+from contextlib import contextmanager
+
+
+class BusBusyError(RuntimeError):
+    """Another operation has the bus for itself right now."""
+
+
+# How long a command waits for a busy bus before it is dropped. A bus scan takes minutes; a
+# switch command which arrives that late is worse than none, so it expires (and says so).
+BUS_DEFER_SECONDS = 20
+# an upper bound for the queue, so a long scan cannot pile up telegrams without end
+BUS_DEFERRED_LIMIT = 64
 
 # The base id request of a FAM14 locks the bus and disables the receive callback while it runs.
 # If it does not answer, reception stays blocked - so it must not wait forever.
@@ -128,6 +142,16 @@ class EnOceanGateway:
         self._original_dev_name = dev_name
         self._attr_dev_name = config_helpers.get_gateway_name(self._original_dev_name, self.dev_type.value, self.dev_id)
 
+        # Exclusive access to the RS485 bus. Reading the memory of the devices, writing a
+        # teach-in and the base id request of a FAM14 all lock the bus in the library and
+        # switch the receive callback off while they run. Nothing else may talk on the bus
+        # then - a telegram in between disturbs the answers of the devices and can make a scan
+        # fail halfway through. See exclusive_bus_access() below.
+        self._bus_lock = threading.Lock()
+        self._bus_busy_reason = None
+        # commands which arrived while the bus was busy: (time, message). They are sent when it
+        # is free again, as long as they are not older than BUS_DEFER_SECONDS.
+        self._deferred_messages: deque = deque(maxlen=BUS_DEFERRED_LIMIT)
         self._reading_memory_of_devices_is_running = threading.Event()
 
         # guards the base id/version query, see query_for_base_id_and_version()
@@ -180,6 +204,12 @@ class EnOceanGateway:
         async with self._base_id_query_lock:
             if self._base_id_query_done:
                 return
+
+            # the request of a FAM14 locks the bus and switches the receive callback off, so it
+            # is one of the operations which need the bus for themselves
+            if not self.try_acquire_bus("base id / version request"):
+                self._base_id_query_done = False    # try again after the next connect
+                return
             self._base_id_query_done = True
 
             LOGGER.debug("[Gateway] [Id: %d] Query for base id and version info.", self.dev_id)
@@ -195,6 +225,8 @@ class EnOceanGateway:
             except Exception as e:  # noqa: BLE001
                 self._base_id_query_done = False
                 LOGGER.warning("[Gateway] [Id: %d] Cannot query base id/version: %s", self.dev_id, e)
+            finally:
+                self.release_bus()
 
 
 
@@ -419,19 +451,117 @@ class EnOceanGateway:
     
 
 
+    ### -----------------------------------------------------------------------------------
+    ### exclusive access to the bus
+    ### -----------------------------------------------------------------------------------
+
+    @property
+    def is_bus_busy(self) -> bool:
+        """True while an operation has the bus for itself (scan, teach-in, base id request)."""
+        return self._bus_busy_reason is not None
+
+    @property
+    def bus_busy_reason(self) -> str | None:
+        """What is occupying the bus right now, for the log and the web ui."""
+        return self._bus_busy_reason
+
+    def try_acquire_bus(self, reason: str) -> bool:
+        """Take the bus for one operation. False if somebody else already has it.
+
+        Deliberately non-blocking: two scans in parallel are not a queueing problem but a
+        mistake, and the caller can say so ('already_running') instead of hanging.
+        """
+        if not self._bus_lock.acquire(blocking=False):
+            LOGGER.warning("[Gateway] [Id: %s] '%s' was refused - the bus is busy with '%s'.",
+                           self.dev_id, reason, self._bus_busy_reason)
+            return False
+        self._bus_busy_reason = reason
+        # the flag is what the web ui and the detection have always looked at
+        self._reading_memory_of_devices_is_running.set()
+        LOGGER.info("[Gateway] [Id: %s] '%s' has the bus - other telegrams wait.",
+                    self.dev_id, reason)
+        return True
+
+    def release_bus(self) -> None:
+        """Give the bus back and send what was waiting for it."""
+        if self._bus_busy_reason is None:
+            return
+        reason = self._bus_busy_reason
+        self._bus_busy_reason = None
+        self._reading_memory_of_devices_is_running.clear()
+        try:
+            self._bus_lock.release()
+        except RuntimeError:        # never acquired - nothing to release
+            pass
+        LOGGER.info("[Gateway] [Id: %s] '%s' released the bus.", self.dev_id, reason)
+        self._send_deferred_messages()
+
+    @contextmanager
+    def exclusive_bus_access(self, reason: str):
+        """`with gateway.exclusive_bus_access('bus scan'):` - raises BusBusyError if occupied."""
+        if not self.try_acquire_bus(reason):
+            raise BusBusyError(f"The bus of gateway {self.dev_id} is busy with "
+                               f"'{self._bus_busy_reason}'.")
+        try:
+            yield self
+        finally:
+            self.release_bus()
+
+    def _defer_message(self, msg: ESP2Message) -> None:
+        """Remember a command which arrived while the bus was busy."""
+        self._deferred_messages.append((time.monotonic(), msg))
+        LOGGER.info("[Gateway] [Id: %s] The bus is busy with '%s' - message %s waits (%d in the "
+                    "queue).", self.dev_id, self._bus_busy_reason, msg,
+                    len(self._deferred_messages))
+
+    def _send_deferred_messages(self) -> None:
+        """Send what waited for the bus. Runs after an exclusive operation finished.
+
+        A command which waited longer than BUS_DEFER_SECONDS is dropped instead of sent: a
+        switch command which arrives minutes late is worse than none, and a bus scan takes
+        minutes. What was dropped is logged - it never disappears silently.
+        """
+        waiting, self._deferred_messages = list(self._deferred_messages), deque(
+            maxlen=BUS_DEFERRED_LIMIT)
+        if not waiting:
+            return
+
+        now = time.monotonic()
+        fresh = [msg for queued_at, msg in waiting if now - queued_at <= BUS_DEFER_SECONDS]
+        expired = len(waiting) - len(fresh)
+        if expired:
+            LOGGER.warning("[Gateway] [Id: %s] %d message(s) waited longer than %d s for the bus "
+                           "and were dropped.", self.dev_id, expired, BUS_DEFER_SECONDS)
+        if not fresh:
+            return
+
+        LOGGER.info("[Gateway] [Id: %s] Sending %d message(s) which waited for the bus.",
+                    self.dev_id, len(fresh))
+        # this can run in the thread of the scan - the sending itself belongs to the event loop
+        for msg in fresh:
+            try:
+                self.hass.add_job(self._callback_send_message_to_serial_bus, msg)
+            except Exception as e:  # noqa: BLE001 - one message must not stop the others
+                LOGGER.warning("[Gateway] [Id: %s] Cannot send the waiting message %s: %s",
+                               self.dev_id, msg, e)
+
     async def read_memory_of_all_bus_members(self):
-        if not self._reading_memory_of_devices_is_running.is_set():
-            await asyncio.to_thread(asyncio.run, self._read_memory_of_all_bus_members())
+        if self.is_bus_busy:
+            LOGGER.info("[Gateway] [Id: %s] Reading the device memories was skipped - the bus is "
+                        "busy with '%s'.", self.dev_id, self.bus_busy_reason)
+            return
+        await asyncio.to_thread(asyncio.run, self._read_memory_of_all_bus_members())
 
 
     async def _read_memory_of_all_bus_members(self):
+        if not self.try_acquire_bus("reading the device memories"):
+            return
         try:
-            self._reading_memory_of_devices_is_running.set()
             await request_memory_of_all_devices(self._bus)
         except Exception as e:
             LOGGER.exception(f"[Gateway] [Id: {self.dev_id}] {e}")
         finally:
-            self._reading_memory_of_devices_is_running.clear()
+            self.release_bus()
 
 
 
@@ -583,17 +713,36 @@ class EnOceanGateway:
             self.dispatcher_disconnect_handle = None
 
     def request_repeater_mode(self):
+        # this goes past _callback_send_message_to_serial_bus straight onto the bus, so it needs
+        # its own check - it is a question to the gateway and cannot be queued sensibly
+        if self.is_bus_busy:
+            LOGGER.info("[Gateway] [Id: %s] The repeater mode request was skipped - the bus is "
+                        "busy with '%s'.", self.dev_id, self.bus_busy_reason)
+            return
         self.hass.create_task(
             self._bus.send_repeater_mode_request()
         )
 
     def set_repeater_mode(self, mode):
+        if self.is_bus_busy:
+            raise BusBusyError(f"The repeater mode cannot be set: the bus of gateway "
+                               f"{self.dev_id} is busy with '{self.bus_busy_reason}'.")
         self.hass.create_task(
             self._bus.send_repeater_mode(mode)
         )
 
     def _callback_send_message_to_serial_bus(self, msg):
-        """Callback method call from HA when receiving events from serial bus."""
+        """Send one telegram. Called from the dispatcher and by the deferred queue.
+
+        While an exclusive operation has the bus (a scan, a teach-in, the base id request of a
+        FAM14), nothing else may be put on it: the devices answer the running operation, and a
+        telegram in between disturbs those answers. Such a command is therefore queued and sent
+        when the bus is free again - see _send_deferred_messages.
+        """
+        if self.is_bus_busy and isinstance(msg, ESP2Message):
+            self._defer_message(msg)
+            return
+
         if self._bus.is_active():
             if isinstance(msg, ESP2Message):
                 LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())

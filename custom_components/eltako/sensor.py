@@ -41,13 +41,13 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
 
-from .device import *
-from .config_helpers import *
-from .gateway import EnOceanGateway
+from .core.entity import *
+from .config.config_helpers import *
+from .core.gateway import EnOceanGateway
 from .const import *
-from . import get_gateway_from_hass, get_device_config_for_gateway
-from . import config_helpers
-from .virtual_network_gateway import VirtualNetworkGateway
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
+from .config import config_helpers
+from .core.virtual_network_gateway import VirtualNetworkGateway
 
 DEFAULT_DEVICE_NAME_WINDOW_HANDLE = "Window handle"
 DEFAULT_DEVICE_NAME_WEATHER_STATION = "Weather station"

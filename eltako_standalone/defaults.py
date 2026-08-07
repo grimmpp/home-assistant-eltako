@@ -73,7 +73,7 @@ async def async_seed_settings(hass) -> dict:
     BEFORE the integration is set up, because the store is read there.
     """
     from custom_components.eltako.const import CONF_GERNERAL_SETTINGS, DOMAIN
-    from custom_components.eltako.general_settings import STORAGE_KEY, STORAGE_VERSION
+    from custom_components.eltako.config.general_settings import STORAGE_KEY, STORAGE_VERSION
     from homeassistant.helpers.storage import Store
 
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)

@@ -13,12 +13,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 
-from .device import *
-from . import config_helpers 
-from .config_helpers import DeviceConf
-from .gateway import EnOceanGateway
+from .core.entity import *
+from .config import config_helpers
+from .config.config_helpers import DeviceConf
+from .core.gateway import EnOceanGateway
 from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS, DOMAIN, MANUFACTURER, LOGGER
-from . import get_gateway_from_hass, get_device_config_for_gateway
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 import asyncio
 
 async def async_setup_entry(

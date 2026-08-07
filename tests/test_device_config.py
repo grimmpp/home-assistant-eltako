@@ -1,12 +1,12 @@
 """Devices can be declared in configuration.yaml and created through the web ui."""
 import unittest
-from unittest import IsolatedAsyncioTestCase, TestCase
+from unittest import IsolatedAsyncioTestCase, TestCase, mock
 
 import voluptuous as vol
 
 from tests.mocks import *
 
-from custom_components.eltako import device_config
+from custom_components.eltako.config import device_config
 from custom_components.eltako.const import *
 
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, Platform
@@ -36,7 +36,7 @@ class TestFormDescriptor(TestCase):
 
     def test_eep_options_come_from_the_schemas(self):
         """The offered EEPs must not drift apart from the supported ones."""
-        from custom_components.eltako.schema import LightSchema
+        from custom_components.eltako.config.schema import LightSchema
 
         light = [p for p in device_config.get_form_descriptor()['platforms'] if p['platform'] == 'light'][0]
         eep_field = [f for f in light['fields'] if f['name'] == CONF_EEP][0]
@@ -188,9 +188,15 @@ class HassMockForDevices:
             CONF_ID: gateway_id, CONF_DEVICE_TYPE: 'fam14', CONF_NAME: 'FAM14',
             CONF_DEVICES: yaml_devices or {}}]}}}
         self.config_entries = self
+        # the entries this hass knows - only needed by the calls which work on *every*
+        # gateway instead of one given config entry
+        self.entries = []
 
     def async_update_entry(self, entry, options=None, **kwargs):
         entry.options = options
+
+    def async_entries(self, domain=None):
+        return list(self.entries)
 
 
 class TestUiDeviceCrud(IsolatedAsyncioTestCase):
@@ -221,6 +227,47 @@ class TestUiDeviceCrud(IsolatedAsyncioTestCase):
 
         await device_config.async_remove_ui_device(self.hass, self.entry, 'light', '00-00-00-01')
         self.assertEqual(self._stored('light'), [])
+
+    async def test_remove_all_empties_every_platform_of_every_gateway(self):
+        """The button 'remove all & search again' - a fresh start for the detection."""
+        self.hass.entries = [self.entry]
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+        await device_config.async_add_ui_device(self.hass, self.entry, 'binary_sensor', {
+            CONF_ID: 'FE-DB-DA-04', CONF_EEP: 'F6-02-01', CONF_NAME: 'Button'})
+
+        result = await device_config.async_remove_all_ui_devices(self.hass)
+
+        self.assertEqual(result['removed'], 2)
+        self.assertEqual(self._stored('light'), [])
+        self.assertEqual(self._stored('binary_sensor'), [])
+        self.assertEqual({device['platform'] for device in result['devices']},
+                         {'light', 'binary_sensor'})
+
+    async def test_remove_all_without_any_device_is_not_an_error(self):
+        self.hass.entries = [self.entry]
+
+        result = await device_config.async_remove_all_ui_devices(self.hass)
+
+        self.assertEqual(result, {'removed': 0, 'devices': []})
+
+    async def test_remove_all_of_one_gateway_leaves_the_others_alone(self):
+        other = ConfigEntryWithOptions()
+        other.data = {CONF_GATEWAY_DESCRIPTION: 'FGW14 - fgw14usb (Id: 2)'}
+        self.hass.entries = [self.entry, other]
+        await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
+        await device_config.async_add_ui_device(self.hass, other, 'light', dict(self.LIGHT))
+
+        result = await device_config.async_remove_all_ui_devices(self.hass, gateway_id=1)
+
+        self.assertEqual(result['removed'], 1)
+        self.assertEqual(self._stored('light'), [])
+        self.assertEqual(len((other.options.get(CONF_UI_DEVICES) or {}).get('light', [])), 1)
+
+    async def test_remove_all_of_an_unknown_gateway_is_rejected(self):
+        self.hass.entries = [self.entry]
+
+        with self.assertRaises(vol.Invalid):
+            await device_config.async_remove_all_ui_devices(self.hass, gateway_id=99)
 
     async def test_the_eep_and_the_sender_can_be_changed(self):
         await device_config.async_add_ui_device(self.hass, self.entry, 'light', dict(self.LIGHT))
@@ -416,3 +463,89 @@ class TestMergeOfBothSources(TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestTeachInOfADevice(unittest.IsolatedAsyncioTestCase):
+    """Teaching a device in from the web ui - the way its kind needs it.
+
+    A device on the RS485 bus gets the sender written into its memory; a wireless actuator has
+    to be put into its teach-in mode by hand and then takes the sender from a telegram.
+    """
+
+    class Entry:
+        def __init__(self, devices):
+            self.options = {CONF_UI_DEVICES: devices}
+            self.entry_id = 'entry'
+            self.title = 'gw'
+            self.data = {CONF_GATEWAY_DESCRIPTION: 'FAM14 - fam14 (Id: 1)'}
+
+    def setUp(self):
+        self.sent = []
+        self.gateway = mock.Mock()
+        self.gateway.dev_id = 1
+        self.gateway.send_message = self.sent.append
+        self.devices = {
+            'light': [
+                {CONF_ID: '00-00-00-01', CONF_EEP: 'M5-38-08', CONF_NAME: 'Relay',
+                 CONF_SENDER: {CONF_ID: '00-00-B0-01', CONF_EEP: 'A5-38-08'}},
+                {CONF_ID: 'FF-AA-80-05', CONF_EEP: 'M5-38-08', CONF_NAME: 'Wireless relay',
+                 CONF_SENDER: {CONF_ID: 'FF-AA-80-15', CONF_EEP: 'A5-38-08'}},
+            ],
+            'sensor': [{CONF_ID: 'FF-AA-DD-81', CONF_EEP: 'A5-04-02', CONF_NAME: 'Sensor'}],
+        }
+        self.entry = self.Entry(self.devices)
+
+    def connection(self):
+        connection = mock.Mock()
+        connection.results = []
+        connection.errors = []
+        connection.send_result = lambda _id, result: connection.results.append(result)
+        connection.send_error = lambda _id, code, message: connection.errors.append((code, message))
+        return connection
+
+    async def call(self, address: str, hass=None):
+        from custom_components.eltako.config import device_config
+
+        connection = self.connection()
+        hass = hass or mock.Mock()
+        with mock.patch.object(device_config, '_find_gateway_entry', return_value=self.entry), \
+             mock.patch('custom_components.eltako.core.integration.get_gateway_from_hass',
+                        return_value=self.gateway), \
+             mock.patch.object(device_config, 'get_devices_of_gateway',
+                               return_value=self.devices):
+            await device_config.ws_device_teach_in.__wrapped__.__wrapped__(
+                hass, connection, {'id': 1, 'gateway_id': 1, 'address': address})
+        return connection
+
+    async def test_a_bus_device_is_written_into_its_memory(self):
+        from custom_components.eltako.observation import bus_members
+
+        with mock.patch.object(bus_members, 'async_teach_in_senders',
+                               new=mock.AsyncMock(return_value=[{'status': 'written'}])) as teach:
+            connection = await self.call('00-00-00-01')
+
+        self.assertEqual([], connection.errors)
+        self.assertEqual('bus_memory', connection.results[0]['kind'])
+        self.assertEqual([], self.sent, "a bus device is programmed, not sent to")
+        teach.assert_awaited_once()
+
+    async def test_a_wireless_actuator_gets_the_teach_in_telegram(self):
+        connection = await self.call('FF-AA-80-05')
+
+        self.assertEqual([], connection.errors)
+        self.assertEqual('telegram', connection.results[0]['kind'])
+        self.assertEqual(1, len(self.sent))
+        # the payload of A5-38-08 out of catalog/teach_in.py, sent from the sender address
+        self.assertEqual(b'\xff\xaa\x80\x15', self.sent[0].address)
+        self.assertEqual(b'\xe0\x40\x0d\x80', self.sent[0].data)
+
+    async def test_a_sensor_cannot_be_taught_in(self):
+        connection = await self.call('FF-AA-DD-81')
+
+        self.assertEqual('no_sender', connection.errors[0][0])
+        self.assertEqual([], self.sent)
+
+    async def test_an_unknown_address_is_reported(self):
+        connection = await self.call('11-22-33-44')
+
+        self.assertEqual('unknown_device', connection.errors[0][0])

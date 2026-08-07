@@ -10,10 +10,10 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 
 from tests.mocks import *
 
-from custom_components.eltako import config_helpers
+from custom_components.eltako.config import config_helpers
 from custom_components.eltako.const import *
 from custom_components.eltako.cover import EltakoCover
-from custom_components.eltako.device import EltakoEntity
+from custom_components.eltako.core.entity import EltakoEntity
 from custom_components.eltako.select import RepeaterMode
 
 from eltakobus.eep import G5_3F_7F, H5_3F_7F

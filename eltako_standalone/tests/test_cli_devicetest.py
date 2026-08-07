@@ -21,7 +21,7 @@ def parse(*argv):
 
 
 def test_every_test_of_the_backend_has_a_subcommand():
-    from custom_components.eltako.device_tests import TEST_RUNNERS
+    from custom_components.eltako.tools.device_tests import TEST_RUNNERS
 
     parser = build_parser()
     devicetest = next(action for action in parser._subparsers._group_actions[0].choices.values()
@@ -67,7 +67,7 @@ def _run_cli(args, runner):
     """_cmd_devicetest with a faked runner - what params does it build?"""
     from eltako_standalone import cli
 
-    with mock.patch.dict("custom_components.eltako.device_tests.TEST_RUNNERS",
+    with mock.patch.dict("custom_components.eltako.tools.device_tests.TEST_RUNNERS",
                          {args.devicetest: runner}):
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -150,7 +150,7 @@ def test_json_output_is_machine_readable():
 
 
 def test_list_prints_every_test_without_touching_the_hardware():
-    from custom_components.eltako.device_tests import TEST_DESCRIPTORS
+    from custom_components.eltako.tools.device_tests import TEST_DESCRIPTORS
     from eltako_standalone import cli
 
     buffer = io.StringIO()

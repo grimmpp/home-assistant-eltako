@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-labelledby="title desc">
+  <title id="title">What the integration stores, where, and which module writes it</title>
+  <desc id="desc">Four Stores under .storage - general settings, gateways, bus members and device activity - each written by one module. Devices created in the web ui are the exception: they live in the options of their gateway's config entry, because writing them triggers the reload that turns them into entities.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .soft  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .odd   { fill: #E3EEF7; stroke: #0064AF; stroke-width: 1.5; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .hd    { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; letter-spacing: .04em; }
+      .note  { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .body  { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monob { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0064AF; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="430"/>
+  <text class="h1" x="40" y="30">Persistence &#8212; four Stores, and one deliberate exception</text>
+
+  <text class="hd" x="40" y="60">WRITTEN BY</text>
+  <text class="hd" x="320" y="60">STORED AS</text>
+  <text class="hd" x="610" y="60">WHAT IT HOLDS</text>
+
+  <!-- 1 -->
+  <rect class="box" x="40" y="70" width="240" height="48" rx="8"/>
+  <text class="mono" x="54" y="99">config/general_settings.py</text>
+  <path class="flow" d="M280,94 L316,94" marker-end="url(#arrow)"/>
+  <rect class="soft" x="320" y="70" width="250" height="48" rx="8"/>
+  <text class="monob" x="334" y="99">eltako_general_settings</text>
+  <path class="flow" d="M570,94 L606,94" marker-end="url(#arrow)"/>
+  <text class="body" x="610" y="92">Setting overrides made in the web ui</text>
+  <text class="note" x="610" y="108">they win over configuration.yaml</text>
+
+  <!-- 2 -->
+  <rect class="box" x="40" y="126" width="240" height="48" rx="8"/>
+  <text class="mono" x="54" y="155">config/gateway_config.py</text>
+  <path class="flow" d="M280,150 L316,150" marker-end="url(#arrow)"/>
+  <rect class="soft" x="320" y="126" width="250" height="48" rx="8"/>
+  <text class="monob" x="334" y="155">eltako_gateways</text>
+  <path class="flow" d="M570,150 L606,150" marker-end="url(#arrow)"/>
+  <text class="body" x="610" y="148">Gateways created in the web ui</text>
+  <text class="note" x="610" y="164">merged into the configuration at startup</text>
+
+  <!-- 3 -->
+  <rect class="box" x="40" y="182" width="240" height="48" rx="8"/>
+  <text class="mono" x="54" y="211">observation/bus_members.py</text>
+  <path class="flow" d="M280,206 L316,206" marker-end="url(#arrow)"/>
+  <rect class="soft" x="320" y="182" width="250" height="48" rx="8"/>
+  <text class="monob" x="334" y="211">eltako_bus_members</text>
+  <path class="flow" d="M570,206 L606,206" marker-end="url(#arrow)"/>
+  <text class="body" x="610" y="204">Bus scan results and memory images</text>
+  <text class="note" x="610" y="220">a scan locks the bus for minutes &#8212; so it is kept</text>
+
+  <!-- 4 -->
+  <rect class="box" x="40" y="238" width="240" height="48" rx="8"/>
+  <text class="mono" x="54" y="267">observation/device_activity.py</text>
+  <path class="flow" d="M280,262 L316,262" marker-end="url(#arrow)"/>
+  <rect class="soft" x="320" y="238" width="250" height="48" rx="8"/>
+  <text class="monob" x="334" y="267">eltako_device_activity</text>
+  <path class="flow" d="M570,262 L606,262" marker-end="url(#arrow)"/>
+  <text class="body" x="610" y="260">Which address reported, how often, when last</text>
+  <text class="note" x="610" y="276">pruned after 180 days, at most 2000 addresses</text>
+
+  <!-- 5 - the exception -->
+  <rect class="box" x="40" y="294" width="240" height="64" rx="8"/>
+  <text class="mono" x="54" y="331">config/device_config.py</text>
+  <path class="flow" d="M280,326 L316,326" marker-end="url(#arrow)"/>
+  <rect class="odd" x="320" y="294" width="250" height="64" rx="8"/>
+  <text class="monob" x="334" y="318">config entry options</text>
+  <text class="mono" x="334" y="338">ui_devices</text>
+  <text class="note" x="334" y="352">not a Store &#8212; on purpose</text>
+  <path class="flow" d="M570,326 L606,326" marker-end="url(#arrow)"/>
+  <text class="body" x="610" y="316">Devices created in the web ui</text>
+  <text class="note" x="610" y="334">They live in the options of their gateway&#8217;s entry</text>
+  <text class="note" x="610" y="350">because writing them triggers the reload that</text>
+  <text class="note" x="610" y="366">turns them into entities.</text>
+
+  <text class="note" x="40" y="396">All four Stores sit under .storage/ in the Home Assistant configuration directory. Deleting one is the supported way out of a broken</text>
+  <text class="note" x="40" y="414">state: it never loses anything which is not re-derivable, except the settings somebody typed.</text>
+</svg>

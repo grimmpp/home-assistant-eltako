@@ -64,7 +64,7 @@ def _fake_bus(gateway, on_send=None):
 
 
 def _gateway(runtime, gateway_id):
-    from custom_components.eltako.websocket import get_gateways
+    from custom_components.eltako.core.websocket import get_gateways
     return next(gw for gw in get_gateways(runtime.hass) if gw.dev_id == gateway_id)
 
 
@@ -75,7 +75,7 @@ class TestResolveCovers:
     def _resolve(self, config_dir, addresses, senders):
         async def scenario():
             runtime = await _booted(config_dir)
-            from custom_components.eltako.device_tests import resolve_covers
+            from custom_components.eltako.tools.device_tests import resolve_covers
             try:
                 return resolve_covers(runtime.hass, 1, addresses, senders)
             finally:
@@ -137,7 +137,7 @@ def test_cover_test_runs_with_explicit_addresses(two_gateway_config_dir):
     """End to end: an actuator which is not in the configuration is driven."""
     async def scenario():
         runtime = await _booted(two_gateway_config_dir)
-        from custom_components.eltako.device_tests import run_cover_test
+        from custom_components.eltako.tools.device_tests import run_cover_test
 
         sent = []
         _fake_bus(_gateway(runtime, 1), on_send=sent.append)
@@ -155,7 +155,7 @@ def test_cover_test_runs_with_explicit_addresses(two_gateway_config_dir):
 
 
 def test_parse_sequence_and_default():
-    from custom_components.eltako.device_tests import _parse_sequence, default_cover_sequence
+    from custom_components.eltako.tools.device_tests import _parse_sequence, default_cover_sequence
 
     assert _parse_sequence("up:25, pause:2, down:25, stop") == \
         [("up", 25.0), ("pause", 2.0), ("down", 25.0), ("stop", 0.0)]
@@ -170,7 +170,7 @@ def test_parse_sequence_and_default():
 def test_burst_test_all_messages_received(two_gateway_config_dir):
     async def scenario():
         runtime = await _booted(two_gateway_config_dir)
-        from custom_components.eltako.device_tests import run_burst_test
+        from custom_components.eltako.tools.device_tests import run_burst_test
 
         gw1, gw2 = _gateway(runtime, 1), _gateway(runtime, 2)
         # everything gateway 1 sends is "heard" by gateway 2 (radio link)
@@ -193,7 +193,7 @@ def test_burst_test_all_messages_received(two_gateway_config_dir):
 def test_burst_test_reports_missing_messages(two_gateway_config_dir):
     async def scenario():
         runtime = await _booted(two_gateway_config_dir)
-        from custom_components.eltako.device_tests import run_burst_test
+        from custom_components.eltako.tools.device_tests import run_burst_test
 
         gw1, gw2 = _gateway(runtime, 1), _gateway(runtime, 2)
         dropped = {"count": 0}
@@ -220,7 +220,7 @@ def test_burst_test_reports_missing_messages(two_gateway_config_dir):
 def test_cover_test_measures_travel_times(two_gateway_config_dir):
     async def scenario():
         runtime = await _booted(two_gateway_config_dir)
-        from custom_components.eltako.device_tests import run_cover_test
+        from custom_components.eltako.tools.device_tests import run_cover_test
         from eltakobus.eep import G5_3F_7F, H5_3F_7F
 
         gw1 = _gateway(runtime, 1)
@@ -264,7 +264,7 @@ def test_cover_test_measures_travel_times(two_gateway_config_dir):
 def test_cover_test_detects_missing_reaction(two_gateway_config_dir):
     async def scenario():
         runtime = await _booted(two_gateway_config_dir)
-        from custom_components.eltako.device_tests import run_cover_test
+        from custom_components.eltako.tools.device_tests import run_cover_test
 
         _fake_bus(_gateway(runtime, 1))    # the actuator never answers
 
@@ -283,7 +283,7 @@ def test_manager_and_websocket_flow(two_gateway_config_dir):
     async def scenario():
         runtime = await _booted(two_gateway_config_dir)
         from homeassistant.components.websocket_api import ActiveConnection, async_handle_message
-        from custom_components.eltako.device_tests import get_manager
+        from custom_components.eltako.tools.device_tests import get_manager
 
         gw1, gw2 = _gateway(runtime, 1), _gateway(runtime, 2)
         _fake_bus(gw1, on_send=gw2._callback_receive_message_from_serial_bus)
@@ -296,7 +296,7 @@ def test_manager_and_websocket_flow(two_gateway_config_dir):
                                    {"id": 1, "type": "eltako/device_tests/info"})
         info = messages[-1]["result"]
         # every test the backend can run is offered (order = TEST_DESCRIPTORS)
-        from custom_components.eltako.device_tests import TEST_DESCRIPTORS
+        from custom_components.eltako.tools.device_tests import TEST_DESCRIPTORS
         assert [test["id"] for test in info["tests"]] == \
             [descriptor["id"] for descriptor in TEST_DESCRIPTORS]
         assert {"burst", "cover"} <= {test["id"] for test in info["tests"]}

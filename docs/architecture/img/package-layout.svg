@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650" width="900" height="650" role="img" aria-labelledby="title desc">
+  <title id="title">The layout of custom_components/eltako and the direction of its imports</title>
+  <desc id="desc">Five layers stacked top to bottom: the modules Home Assistant loads by file name, then core, then config and observation side by side, then catalog, then const.py. Imports point downwards. Below them, outside that chain: tools, simulation, frontend and grafana.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .lane  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .base  { fill: #0064AF; stroke: #0064AF; stroke-width: 1.5; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .h2    { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0064AF; }
+      .h2w   { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #FFFFFF; }
+      .note  { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .notew { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #D6E8F5; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monos { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #5B7285; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+      .rule  { stroke: #D7E6F2; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="650"/>
+  <text class="h1" x="40" y="34">custom_components/eltako/ &#8212; what is where, and which way the imports point</text>
+
+  <!-- layer 1: loaded by name -->
+  <rect class="lane" x="40" y="64" width="820" height="76" rx="10"/>
+  <text class="h2" x="56" y="88">loaded by Home Assistant by file name</text>
+  <text class="mono" x="56" y="110">__init__.py    config_flow.py    manifest.json    strings.json    services.yaml</text>
+  <text class="mono" x="56" y="128">light   switch   cover   climate   sensor   binary_sensor   button   select</text>
+  <text class="note" x="700" y="128">one platform each</text>
+
+  <path class="flow" d="M450,140 L450,160" marker-end="url(#arrow)"/>
+  <text class="note" x="462" y="156">imports</text>
+
+  <!-- layer 2: core -->
+  <rect class="lane" x="40" y="164" width="820" height="76" rx="10"/>
+  <text class="h2" x="56" y="188">core/ &#8212; what runs: startup, hardware, entity base, websocket api</text>
+  <text class="mono" x="56" y="210">integration.py    gateway.py    entity.py    websocket.py</text>
+  <text class="mono" x="56" y="228">onboarding.py    virtual_network_gateway.py</text>
+
+  <path class="flow" d="M450,240 L450,260" marker-end="url(#arrow)"/>
+
+  <!-- layer 3: config + observation -->
+  <rect class="lane" x="40" y="264" width="820" height="108" rx="10"/>
+  <rect class="box" x="54" y="276" width="390" height="84" rx="8"/>
+  <text class="h2" x="68" y="298">config/</text>
+  <text class="note" x="132" y="298">where a configuration comes from</text>
+  <text class="mono" x="68" y="320">schema   config_helpers   device_config</text>
+  <text class="mono" x="68" y="336">gateway_config   general_settings</text>
+  <text class="mono" x="68" y="352">config_import   config_check</text>
+
+  <rect class="box" x="456" y="276" width="390" height="84" rx="8"/>
+  <text class="h2" x="470" y="298">observation/</text>
+  <text class="note" x="578" y="298">listens, never influences a device</text>
+  <text class="mono" x="470" y="320">enocean_logger   bus_members</text>
+  <text class="mono" x="470" y="336">device_activity   timeseries</text>
+  <text class="mono" x="470" y="352">telegram_suggestions</text>
+
+  <path class="flow" d="M450,372 L450,392" marker-end="url(#arrow)"/>
+
+  <!-- layer 4: catalog -->
+  <rect class="lane" x="40" y="396" width="820" height="70" rx="10"/>
+  <text class="h2" x="56" y="420">catalog/ &#8212; what is known about devices</text>
+  <text class="mono" x="56" y="442">device_catalog.py    teach_in.py    help_catalog.py</text>
+  <text class="note" x="470" y="442">the knowledge the frontend must not contain</text>
+
+  <path class="flow" d="M450,466 L450,486" marker-end="url(#arrow)"/>
+
+  <!-- layer 5: const -->
+  <rect class="base" x="40" y="490" width="820" height="56" rx="10"/>
+  <text class="h2w" x="56" y="514">const.py</text>
+  <text class="notew" x="128" y="514">the shared vocabulary</text>
+  <text class="notew" x="56" y="534">constants &#183; signals &#183; GatewayDeviceType &#183; PLATFORMS &#183; websocket command names &#183; INTEGRATION_DIR</text>
+
+  <!-- outside the chain -->
+  <line class="rule" x1="40" y1="566" x2="860" y2="566"/>
+  <text class="note" x="40" y="586">outside that chain &#8212; wired in by core/integration.py, and nothing else imports from tools/</text>
+
+  <rect class="box" x="40" y="596" width="196" height="44" rx="8"/>
+  <text class="h2" x="54" y="616">tools/</text>
+  <text class="monos" x="54" y="632">discovery, scans, device tests</text>
+
+  <rect class="box" x="248" y="596" width="196" height="44" rx="8"/>
+  <text class="h2" x="262" y="616">simulation/</text>
+  <text class="monos" x="262" y="632">hardware which is not there</text>
+
+  <rect class="box" x="456" y="596" width="196" height="44" rx="8"/>
+  <text class="h2" x="470" y="616">frontend/</text>
+  <text class="monos" x="470" y="632">the web ui, ES modules</text>
+
+  <rect class="box" x="664" y="596" width="196" height="44" rx="8"/>
+  <text class="h2" x="678" y="616">grafana/</text>
+  <text class="monos" x="678" y="632">the shipped dashboards</text>
+</svg>

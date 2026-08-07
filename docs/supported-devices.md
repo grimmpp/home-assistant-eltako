@@ -2,7 +2,7 @@
 
 *This page is generated from the code by [`generate_docs.py`](../generate_docs.py) &ndash; do not edit it by hand.*
 
-The integration knows **68 device types** and **26 EnOcean Equipment Profiles**, of which **24** can become a Home Assistant entity on one of **6 platforms**. It is not limited to Eltako hardware - any device which speaks one of these profiles works.
+The integration knows **68 device types** and **26 EnOcean Equipment Profiles**, of which **24** can become a Home Assistant entity on one of **6 platforms**. It is not limited to ELTAKO hardware - any device which speaks one of these profiles works.
 
 The **Help** page of the web ui shows the same lists for the version you actually run.
 
@@ -29,74 +29,74 @@ long as they speak one of the profiles below.
 
 | Device | Brand | What it is | Connection | Addresses | Platform | EEP | Sender EEP |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **F3Z14D** | Eltako | Electricity/Gas/Water Meter | RS485 bus | 3 | sensor | `A5-12-01`, `A5-12-02`, `A5-12-03` | &ndash; |
-| **F4HK14** | Eltako | Heating/Cooling (4 channels) | RS485 bus | 4 | climate | `A5-10-06` | `A5-10-06` |
-| **F4SR14_LED** | Eltako | Relay for LED (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
-| **F4T55E** | Eltako | Wireless 4-way pushbutton (E-Design55) | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
-| **FABH65S** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FAE14SSR** | Eltako | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
-| **FB55EB** | Eltako | Occupancy sensor | wireless | 1 | binary_sensor | `A5-07-01` | &ndash; |
-| **FBH65** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FBH65S** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FBH65TF** | Eltako | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
-| **FD2G14** | Eltako | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
-| **FD62NP-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FD62NPN-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FDG14** | Eltako | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
-| **FFT60** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
-| **FFTE** | Eltako | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
-| **FGW14** | Eltako | Bus Gateway | RS485 bus |  | *detected only* | &ndash; | &ndash; |
-| **FHD60SB** | Eltako | Twilight and daylight sensor | wireless | 1 | sensor | `A5-06-01` | &ndash; |
-| **FHK14** | Eltako | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
-| **FJ62/12-36V DC** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FJ62NP-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FL62-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FL62NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FLC61NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FLGTF** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02`, `A5-09-0C` | &ndash; |
-| **FLT58** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
-| **FMH1W** | Eltako | Wireless single button | wireless | 1 | binary_sensor | `F6-01-01` | &ndash; |
-| **FMSR14** | Eltako | Multisensor relay | RS485 bus |  | *detected only* | &ndash; | &ndash; |
-| **FMZ14** | Eltako | Relay (multifunction) | RS485 bus | 1 | light | `M5-38-08` | `F6-02-01` |
-| **FMZ61** | Eltako | Relay (multifunction) | wireless | 1 | light | `M5-38-08` | `F6-02-01` |
-| **FR62-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FR62NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSB14** | Eltako | Cover | RS485 bus | 2 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSB61-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSB61NP-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSDG14** | Eltako | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
-| **FSG14_1_10V** | Eltako | Dimming for electr. ballasts (1-10V) | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FSM60B** | Eltako | Digital input with battery status | wireless | 1 | binary_sensor | `A5-30-01` | &ndash; |
-| **FSR14** | Eltako | Relay | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR14M_2x** | Eltako | Relay (2 channels, with metering) | RS485 bus | 2 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
-| **FSR14_1x** | Eltako | Relay (1 channel) | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR14_2x** | Eltako | Relay (2 channels) | RS485 bus | 2 | light | `M5-38-08` | `A5-38-08` |
-| **FSR14_4x** | Eltako | Relay (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61/8-24V UC** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61G-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61LN-230V** | Eltako | Relay | wireless | 2 | light | `M5-38-08` | `A5-38-08` |
-| **FSR61NP-230V** | Eltako | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSSA-230V** | Eltako | Socket switch actuator | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FSU14** | Eltako | Clock/timer module | RS485 bus |  | *detected only* | &ndash; | &ndash; |
-| **FSUD-230V** | Eltako | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
-| **FSVA-230V-10A** | Eltako | Socket switch actuator | wireless | 1 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
-| **FT55** | Eltako | Wireless 4-way pushbutton | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
-| **FTFSB** | Eltako | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
-| **FTK** | Eltako | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
-| **FTKE** | Eltako | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
-| **FTR78S** | Eltako | Thermostat | wireless | 1 | sensor | `A5-10-03` | &ndash; |
-| **FTS14EM** | Eltako | Wired inputs (switches, contacts) | RS485 bus | 1 | binary_sensor | `A5-08-01`, `D5-00-01`, `F6-02-01`, `F6-02-02`, `F6-10-00` | &ndash; |
-| **FUD14** | Eltako | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUD14_800W** | Eltako | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUD61NP-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUD61NPN-230V** | Eltako | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
-| **FUTH** | Eltako | Temperature sensor and controller | wireless | 1 | sensor | `A5-10-06`, `A5-10-12` | &ndash; |
-| **FWG14MS** | Eltako | Weather Station Gateway | RS485 bus | 1 | sensor | `A5-13-01` | &ndash; |
-| **FWS61** | Eltako | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
-| **FWZ14_65A** | Eltako | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
-| **MS** | Eltako | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
-| **WMS** | Eltako | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
+| **F3Z14D** | ELTAKO | Electricity/Gas/Water Meter | RS485 bus | 3 | sensor | `A5-12-01`, `A5-12-02`, `A5-12-03` | &ndash; |
+| **F4HK14** | ELTAKO | Heating/Cooling (4 channels) | RS485 bus | 4 | climate | `A5-10-06` | `A5-10-06` |
+| **F4SR14_LED** | ELTAKO | Relay for LED (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
+| **F4T55E** | ELTAKO | Wireless 4-way pushbutton (E-Design55) | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
+| **FABH65S** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FAE14SSR** | ELTAKO | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
+| **FB55EB** | ELTAKO | Occupancy sensor | wireless | 1 | binary_sensor | `A5-07-01` | &ndash; |
+| **FBH65** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FBH65S** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FBH65TF** | ELTAKO | Light, temperature and occupancy sensor | wireless | 1 | sensor | `A5-08-01` | &ndash; |
+| **FD2G14** | ELTAKO | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
+| **FD62NP-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FD62NPN-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FDG14** | ELTAKO | Dali Gateway | RS485 bus | 16 | light | `A5-38-08` | `A5-38-08` |
+| **FFT60** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
+| **FFTE** | ELTAKO | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
+| **FGW14** | ELTAKO | Bus Gateway | RS485 bus |  | *detected only* | &ndash; | &ndash; |
+| **FHD60SB** | ELTAKO | Twilight and daylight sensor | wireless | 1 | sensor | `A5-06-01` | &ndash; |
+| **FHK14** | ELTAKO | Heating/Cooling | RS485 bus | 2 | climate | `A5-10-06` | `A5-10-06` |
+| **FJ62/12-36V DC** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FJ62NP-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FL62-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FL62NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FLC61NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FLGTF** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02`, `A5-09-0C` | &ndash; |
+| **FLT58** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
+| **FMH1W** | ELTAKO | Wireless single button | wireless | 1 | binary_sensor | `F6-01-01` | &ndash; |
+| **FMSR14** | ELTAKO | Multisensor relay | RS485 bus |  | *detected only* | &ndash; | &ndash; |
+| **FMZ14** | ELTAKO | Relay (multifunction) | RS485 bus | 1 | light | `M5-38-08` | `F6-02-01` |
+| **FMZ61** | ELTAKO | Relay (multifunction) | wireless | 1 | light | `M5-38-08` | `F6-02-01` |
+| **FR62-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FR62NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSB14** | ELTAKO | Cover | RS485 bus | 2 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSB61-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSB61NP-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSDG14** | ELTAKO | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
+| **FSG14_1_10V** | ELTAKO | Dimming for electr. ballasts (1-10V) | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FSM60B** | ELTAKO | Digital input with battery status | wireless | 1 | binary_sensor | `A5-30-01` | &ndash; |
+| **FSR14** | ELTAKO | Relay | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14M_2x** | ELTAKO | Relay (2 channels, with metering) | RS485 bus | 2 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
+| **FSR14_1x** | ELTAKO | Relay (1 channel) | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14_2x** | ELTAKO | Relay (2 channels) | RS485 bus | 2 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14_4x** | ELTAKO | Relay (4 channels) | RS485 bus | 4 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61/8-24V UC** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61G-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61LN-230V** | ELTAKO | Relay | wireless | 2 | light | `M5-38-08` | `A5-38-08` |
+| **FSR61NP-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSSA-230V** | ELTAKO | Socket switch actuator | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSU14** | ELTAKO | Clock/timer module | RS485 bus |  | *detected only* | &ndash; | &ndash; |
+| **FSUD-230V** | ELTAKO | Cover | wireless | 1 | cover | `G5-3F-7F` | `H5-3F-7F` |
+| **FSVA-230V-10A** | ELTAKO | Socket switch actuator | wireless | 1 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
+| **FT55** | ELTAKO | Wireless 4-way pushbutton | wireless | 1 | binary_sensor | `F6-02-01` | &ndash; |
+| **FTFSB** | ELTAKO | Temperature and Humidity Sensor | wireless | 1 | sensor | `A5-04-02` | &ndash; |
+| **FTK** | ELTAKO | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
+| **FTKE** | ELTAKO | Window/door contact | wireless | 1 | binary_sensor | `F6-10-00` | &ndash; |
+| **FTR78S** | ELTAKO | Thermostat | wireless | 1 | sensor | `A5-10-03` | &ndash; |
+| **FTS14EM** | ELTAKO | Wired inputs (switches, contacts) | RS485 bus | 1 | binary_sensor | `A5-08-01`, `D5-00-01`, `F6-02-01`, `F6-02-02`, `F6-10-00` | &ndash; |
+| **FUD14** | ELTAKO | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD14_800W** | ELTAKO | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD61NP-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD61NPN-230V** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUTH** | ELTAKO | Temperature sensor and controller | wireless | 1 | sensor | `A5-10-06`, `A5-10-12` | &ndash; |
+| **FWG14MS** | ELTAKO | Weather Station Gateway | RS485 bus | 1 | sensor | `A5-13-01` | &ndash; |
+| **FWS61** | ELTAKO | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
+| **FWZ14_65A** | ELTAKO | Electricity Meter | RS485 bus | 1 | sensor | `A5-12-01` | &ndash; |
+| **MS** | ELTAKO | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
+| **WMS** | ELTAKO | Weather Station | wireless | 1 | sensor | `A5-13-01` | &ndash; |
 
 ## EnOcean Equipment Profiles (EEP)
 
@@ -128,9 +128,9 @@ telegram is decoded, logged and can be analysed, but no platform turns it into a
 | `F6-02-01` | 2-part Rocker switch, Application Style 1 (European, bottom switches | binary_sensor, switch | climate, light, switch | F4T55E, FMZ14, FMZ61, FT55, FTS14EM |
 | `F6-02-02` | 2-part Rocker switch, Application Style 2 (US, top switches on) | binary_sensor, switch | climate, light, switch | FTS14EM |
 | `F6-10-00` | Windows handle | binary_sensor, sensor | &ndash; | FFTE, FTK, FTKE, FTS14EM |
-| `G5-3F-7F` | Eltako Shutters | cover | &ndash; | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
-| `H5-3F-7F` | Eltako Shutter Command | &ndash; | cover | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
-| `M5-38-08` | Eltako Gateway Switching - This is implemented pretty rudimentary | light, switch | &ndash; | F4SR14_LED, FL62-230V, FL62NP-230V, FLC61NP-230V, FMZ14, FMZ61, FR62-230V, FR62NP-230V, FSR14, FSR14M_2x, FSR14_1x, FSR14_2x, FSR14_4x, FSR61-230V, FSR61/8-24V UC, FSR61G-230V, FSR61LN-230V, FSR61NP-230V, FSSA-230V, FSVA-230V-10A |
+| `G5-3F-7F` | ELTAKO Shutters | cover | &ndash; | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
+| `H5-3F-7F` | ELTAKO Shutter Command | &ndash; | cover | FJ62/12-36V DC, FJ62NP-230V, FSB14, FSB61-230V, FSB61NP-230V, FSUD-230V |
+| `M5-38-08` | ELTAKO Gateway Switching - This is implemented pretty rudimentary | light, switch | &ndash; | F4SR14_LED, FL62-230V, FL62NP-230V, FLC61NP-230V, FMZ14, FMZ61, FR62-230V, FR62NP-230V, FSR14, FSR14M_2x, FSR14_1x, FSR14_2x, FSR14_4x, FSR61-230V, FSR61/8-24V UC, FSR61G-230V, FSR61LN-230V, FSR61NP-230V, FSSA-230V, FSVA-230V-10A |
 
 ## Gateways
 

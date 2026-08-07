@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" width="900" height="440" role="img" aria-labelledby="title desc">
+  <title id="title">The web ui: everything a page needs comes from the backend over the websocket api</title>
+  <desc id="desc">Left of a dashed boundary, the python side: the catalog modules, the schemas and the observers feed the websocket api. Right of it, the frontend: the shell with its lib modules, and a page as a plain object with the lifecycle load, render, afterRender. No domain knowledge crosses the boundary into javascript.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .soft  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .base  { fill: #0064AF; stroke: #0064AF; }
+      .chip  { fill: #E3EEF7; stroke: #0064AF; stroke-width: 1.2; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .h2    { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0064AF; }
+      .h2w   { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #FFFFFF; }
+      .hd    { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; letter-spacing: .04em; }
+      .note  { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .notew { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #D6E8F5; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monow { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #FFFFFF; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+      .edge  { stroke: #0064AF; stroke-width: 2; stroke-dasharray: 7 5; fill: none; }
+      .ctr   { text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="440"/>
+  <text class="h1" x="40" y="30">The web ui &#8212; plain ES modules, and one rule that shapes all of it</text>
+
+  <text class="hd" x="40" y="56">PYTHON &#8212; WHERE THE KNOWLEDGE LIVES</text>
+  <text class="hd" x="500" y="56">JAVASCRIPT &#8212; WHERE IT IS RENDERED</text>
+
+  <!-- boundary -->
+  <path class="edge" d="M470,62 L470,344"/>
+  <text class="h2 ctr" x="470" y="368" transform="rotate(0 470 368)">no domain knowledge crosses this line</text>
+
+  <!-- backend sources -->
+  <rect class="box" x="40" y="66" width="195" height="40" rx="7"/>
+  <text class="mono" x="54" y="84">catalog/device_catalog.py</text>
+  <text class="note" x="54" y="99">devices, EEPs, models</text>
+
+  <rect class="box" x="245" y="66" width="195" height="40" rx="7"/>
+  <text class="mono" x="259" y="84">catalog/teach_in.py</text>
+  <text class="note" x="259" y="99">teach-in payloads</text>
+
+  <rect class="box" x="40" y="114" width="195" height="40" rx="7"/>
+  <text class="mono" x="54" y="132">config/schema.py</text>
+  <text class="note" x="54" y="147">which EEP a platform takes</text>
+
+  <rect class="box" x="245" y="114" width="195" height="40" rx="7"/>
+  <text class="mono" x="259" y="132">observation/*</text>
+  <text class="note" x="259" y="147">telegrams, statistics, hints</text>
+
+  <path class="flow" d="M137,154 L137,176" marker-end="url(#arrow)"/>
+  <path class="flow" d="M342,154 L342,176" marker-end="url(#arrow)"/>
+
+  <rect class="base" x="40" y="180" width="400" height="66" rx="8"/>
+  <text class="monow" x="56" y="204">eltako/*</text>
+  <text class="notew" x="120" y="204">43 websocket commands</text>
+  <text class="notew" x="56" y="224">core/websocket.py registers the shared ones, every feature</text>
+  <text class="notew" x="56" y="240">module its own through register_websocket_commands()</text>
+
+  <text class="note" x="40" y="268">Form descriptors, EEP lists, device templates and suggestions are all built here</text>
+  <text class="note" x="40" y="286">and sent over ready to render. When you are about to type an EEP or a device</text>
+  <text class="note" x="40" y="304">name into a .js file, put it in a catalog module and send it over instead.</text>
+  <text class="note" x="40" y="328">Several tests enforce exactly that.</text>
+
+  <!-- arrow across the boundary -->
+  <path class="flow" d="M440,213 L498,213" marker-end="url(#arrow)"/>
+
+  <!-- frontend -->
+  <rect class="soft" x="500" y="66" width="360" height="88" rx="8"/>
+  <text class="h2" x="514" y="88">frontend/eltako-panel.js</text>
+  <text class="note" x="514" y="106">the shell: navigation, routing, shared state, live subscription</text>
+  <text class="mono" x="514" y="128">lib/api.js   lib/form.js</text>
+  <text class="mono" x="514" y="146">lib/styles.js   lib/utils.js</text>
+
+  <path class="flow" d="M680,154 L680,178" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="500" y="182" width="360" height="112" rx="8"/>
+  <text class="h2" x="514" y="204">pages/*.js</text>
+  <text class="note" x="596" y="204">a page is a plain object</text>
+  <text class="mono" x="514" y="222">{id, title, icon, modes, load, render, afterRender}</text>
+
+  <rect class="chip" x="514" y="234" width="104" height="46" rx="6"/>
+  <text class="mono ctr" x="566" y="254">load(ctx)</text>
+  <text class="note ctr" x="566" y="270">ask the backend</text>
+
+  <path class="flow" d="M618,257 L630,257" marker-end="url(#arrow)"/>
+
+  <rect class="chip" x="632" y="234" width="104" height="46" rx="6"/>
+  <text class="mono ctr" x="684" y="254">render(ctx)</text>
+  <text class="note ctr" x="684" y="270">return the html</text>
+
+  <path class="flow" d="M736,257 L748,257" marker-end="url(#arrow)"/>
+
+  <rect class="chip" x="750" y="234" width="96" height="46" rx="6"/>
+  <text class="mono ctr" x="798" y="254">afterRender</text>
+  <text class="note ctr" x="798" y="270">attach listeners</text>
+
+  <text class="note" x="500" y="314">Add a page by writing the file and adding it to PAGES.</text>
+  <text class="note" x="500" y="332">visible(ctx) hides it conditionally, modes decides simple / expert.</text>
+
+  <!-- footer -->
+  <rect class="soft" x="40" y="382" width="820" height="44" rx="8"/>
+  <text class="note" x="56" y="402">No build step, no dependencies, no framework &#8212; open a file, edit it, reload. Served by EltakoFrontendView with</text>
+  <text class="note" x="56" y="418">Cache-Control: no-cache, because browsers cache ES modules heuristically and your edits would stay invisible.</text>
+</svg>

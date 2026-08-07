@@ -7,7 +7,7 @@ import voluptuous as vol
 from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
-from custom_components.eltako import config_helpers, general_settings
+from custom_components.eltako.config import config_helpers, general_settings
 from custom_components.eltako.const import *
 
 
@@ -232,7 +232,7 @@ class TestGroupsAndLogLevels(IsolatedAsyncioTestCase):
             self.assertIn(group['id'], used, msg=f"group '{group['id']}' has no setting")
 
     async def test_log_level_settings_exist_for_every_category(self):
-        from custom_components.eltako.enocean_logger import LOG_LEVEL_SETTINGS
+        from custom_components.eltako.observation.enocean_logger import LOG_LEVEL_SETTINGS
 
         hass = hass_with()
         await general_settings.async_load_overrides(hass)

@@ -11,7 +11,7 @@ from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako.const import *
-from custom_components.eltako.websocket import get_gateways, _get_configured_gateways
+from custom_components.eltako.core.websocket import get_gateways, _get_configured_gateways
 
 
 class TestGatewayLookup(TestCase):

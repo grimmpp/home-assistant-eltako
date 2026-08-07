@@ -13,7 +13,7 @@ import yaml
 
 from eltakobus.eep import A5_38_08, CentralCommandDimming, CentralCommandSwitching, F6_02_01
 
-from custom_components.eltako.device_tests import (
+from custom_components.eltako.tools.device_tests import (
     build_switch_telegrams, get_configured_actuators, resolve_actuators)
 from custom_components.eltako.const import DATA_ELTAKO, ELTAKO_CONFIG
 

@@ -1,6 +1,6 @@
-# Eltako Standalone
+# ELTAKO Standalone
 
-Runs the Eltako integration **without Home Assistant** - as a daemon with the
+Runs the ELTAKO integration **without Home Assistant** - as a daemon with the
 same web ui, or as a fast command line tool for testing and calibration.
 
 > Full documentation: **[docs/standalone](../docs/standalone/readme.md)**
@@ -28,8 +28,10 @@ A config folder (default `~/.eltako-standalone`, override with `--config` or
 `ELTAKO_CONFIG_DIR`) that works like the Home Assistant one:
 
 ```text
-<config>/configuration.yaml    the same `eltako:` section as in Home Assistant
-<config>/.storage/             settings/gateways/devices created in the web ui
+<config>/configuration.yaml         the same `eltako:` section as in Home Assistant
+<config>/.storage/                  settings/gateways/devices created in the web ui
+<config>/eltako-standalone.log      process log of `serve`/`run` (like home-assistant.log)
+<config>/enocean_telegrams.jsonl    telegram recording (on by default)
 ```
 
 Minimal `configuration.yaml`:
@@ -61,7 +63,7 @@ ui gateways and ui devices.
 ## Web ui
 
 ```text
-python -m eltako_standalone serve [--host 0.0.0.0] [--port 8123] [--token SECRET]
+python -m eltako_standalone serve [--host 0.0.0.0] [--port 8124] [--token SECRET]
 ```
 
 Serves the **same web ui** as inside Home Assistant (overview, telegram live
@@ -189,12 +191,12 @@ Start InfluxDB and Grafana (no Home Assistant involved):
 cd dev && ./start-analytics.sh          # docker compose --profile analytics up -d influxdb grafana
 ```
 
-Two dashboards are provisioned automatically (folder *Eltako*, tag `eltako`):
+Two dashboards are provisioned automatically (folder *ELTAKO*, tag `eltako`):
 
-* **Eltako - Telegram overview** - telegram rate by direction and gateway, most active
+* **ELTAKO - Telegram overview** - telegram rate by direction and gateway, most active
   addresses, distribution over message type and EEP, and a table of the addresses which are
   not configured yet. This is the Grafana home dashboard.
-* **Eltako - Device analysis** - any decoded EEP value over time (temperature, humidity,
+* **ELTAKO - Device analysis** - any decoded EEP value over time (temperature, humidity,
   illumination, meter reading, ...), switching states of the actuators, when each address was
   heard from last, telegrams per hour and area, and the average repeater level per address.
 
@@ -243,16 +245,16 @@ pytest tests                       # the tests of the integration, unchanged
 
 ## How it works / limits
 
-- `runtime.py` puts `hass_shim/` at the front of `sys.path`, so
+* `runtime.py` puts `hass_shim/` at the front of `sys.path`, so
   `import homeassistant` resolves to the shim, then calls the normal
   `async_setup` / `async_setup_entry` of the integration. Config entries are
   created automatically for every configured gateway.
-- Entity states live in a small state machine and are persisted on shutdown
+* Entity states live in a small state machine and are persisted on shutdown
   (`RestoreEntity` works like in Home Assistant).
-- The web server implements the small websocket protocol subset the frontend
+* The web server implements the small websocket protocol subset the frontend
   uses (`auth_required/auth_ok`, `result`, `event`, `unsubscribe_events`).
-- Not implemented (because the integration does not use it standalone):
+* Not implemented (because the integration does not use it standalone):
   automations, scripts, recorder/history, HA cloud, other integrations.
-- The shim mirrors the HA API of the version the integration is developed
+* The shim mirrors the HA API of the version the integration is developed
   against. When the integration starts using a new HA API, the shim needs the
   matching addition - the standalone tests catch that immediately.

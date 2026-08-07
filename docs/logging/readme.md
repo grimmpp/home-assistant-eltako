@@ -1,6 +1,6 @@
 # Logging
 
-This part is about how to get access to the logs of Home Assistant Eltako Integration to e.g. check
+This part is about how to get access to the logs of Home Assistant ELTAKO Integration to e.g. check
 * what telegrams have been received
 * what events have been sent
 * if there have been any problems occurred 

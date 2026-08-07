@@ -5,7 +5,30 @@ import asyncio
 from eltako_standalone.runtime import EltakoRuntime
 from eltako_standalone.server import StandaloneServer
 
-PORT = 18124
+PORT = 18124        # far away from anything a developer runs by hand
+
+
+def test_the_default_port_is_not_the_one_of_home_assistant():
+    """8123 belongs to Home Assistant, and sharing it shares the origin in the browser.
+
+    The service worker of the Home Assistant frontend stays registered for that origin and keeps
+    serving its cached app shell - the standalone web ui then looks like a Home Assistant which
+    never finishes starting, which is a confusing bug to chase.
+    """
+    from eltako_standalone.cli import DEFAULT_PORT, build_parser
+    from eltako_standalone.server import StandaloneServer
+    import inspect
+
+    assert DEFAULT_PORT == 8124
+    assert DEFAULT_PORT != 8123
+
+    args = build_parser().parse_args(['serve'])
+    assert args.port == DEFAULT_PORT
+    # and it can still be chosen freely
+    assert build_parser().parse_args(['serve', '--port', '8123']).port == 8123
+
+    signature = inspect.signature(StandaloneServer.__init__)
+    assert signature.parameters['port'].default == DEFAULT_PORT
 
 
 def test_http_and_websocket(config_dir):

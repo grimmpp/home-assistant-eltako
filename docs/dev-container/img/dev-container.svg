@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520" role="img" aria-labelledby="title desc">
+  <title id="title">What the development container starts, what is mounted into it and how a real gateway reaches it</title>
+  <desc id="desc">The repository on the host provides the integration code, ha.yaml and the Grafana dashboards, all mounted live into the containers. start.sh runs Home Assistant; start.sh analytics adds InfluxDB and Grafana. A real USB gateway is passed through on Linux and published over TCP with socat on macOS and Windows.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .soft  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .base  { fill: #0064AF; stroke: #0064AF; }
+      .opt   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; stroke-dasharray: 6 4; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .h2    { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0064AF; }
+      .h2w   { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #FFFFFF; }
+      .hd    { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; letter-spacing: .04em; }
+      .note  { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .notew { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #D6E8F5; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monow { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #FFFFFF; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+      .dash  { stroke: #0064AF; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+      .ctr   { text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="520"/>
+  <text class="h1" x="40" y="30">The development container &#8212; a finished installation, mounted live from the repository</text>
+
+  <!-- host / repository -->
+  <text class="hd" x="40" y="58">THE REPOSITORY ON YOUR MACHINE</text>
+  <rect class="soft" x="40" y="66" width="250" height="132" rx="10"/>
+  <rect class="box" x="54" y="80" width="222" height="34" rx="6"/>
+  <text class="mono" x="66" y="101">custom_components/eltako</text>
+  <rect class="box" x="54" y="120" width="222" height="34" rx="6"/>
+  <text class="mono" x="66" y="141">ha.yaml</text>
+  <text class="note" x="126" y="141">25 example devices</text>
+  <rect class="box" x="54" y="160" width="222" height="30" rx="6"/>
+  <text class="mono" x="66" y="180">grafana/dashboards/</text>
+
+  <path class="flow" d="M290,132 L330,132" marker-end="url(#arrow)"/>
+  <text class="note" x="292" y="124">mounted</text>
+
+  <!-- home assistant container -->
+  <rect class="base" x="334" y="66" width="330" height="132" rx="10"/>
+  <text class="h2w" x="350" y="90">homeassistant</text>
+  <text class="notew" x="456" y="90">container &#183; ./start.sh</text>
+  <text class="notew" x="350" y="112">Onboarding done, admin / admin seeded, the ELTAKO</text>
+  <text class="notew" x="350" y="128">config entry provisioned, the panel in the sidebar.</text>
+  <text class="notew" x="350" y="150">24 h of example telegram history are already recorded.</text>
+  <text class="monow" x="350" y="176">http://localhost:8123</text>
+  <text class="notew" x="350" y="192">The seed is copied only into an empty config volume.</text>
+
+  <path class="dash" d="M664,132 L704,132" marker-end="url(#arrow)"/>
+
+  <!-- analytics -->
+  <rect class="opt" x="708" y="66" width="152" height="132" rx="10"/>
+  <text class="h2" x="722" y="90">InfluxDB 2</text>
+  <text class="mono" x="722" y="108">:8086</text>
+  <text class="h2" x="722" y="134">Grafana</text>
+  <text class="mono" x="722" y="152">:3000</text>
+  <text class="note" x="722" y="176">./start.sh</text>
+  <text class="note" x="722" y="190">analytics</text>
+
+  <text class="note" x="708" y="220">Five dashboards provisioned</text>
+  <text class="note" x="708" y="236">from the same files that ship</text>
+  <text class="note" x="708" y="252">with the integration.</text>
+
+  <!-- what a change needs -->
+  <text class="hd" x="40" y="240">WHAT A CHANGE NEEDS</text>
+  <rect class="box" x="40" y="250" width="310" height="46" rx="8"/>
+  <text class="mono" x="54" y="270">frontend/**</text>
+  <text class="note" x="54" y="288">reload the browser &#8212; served with no-cache</text>
+
+  <rect class="box" x="40" y="304" width="310" height="46" rx="8"/>
+  <text class="mono" x="54" y="324">**/*.py  and  ha.yaml</text>
+  <text class="note" x="54" y="342">docker compose restart homeassistant</text>
+
+  <rect class="box" x="40" y="358" width="310" height="46" rx="8"/>
+  <text class="mono" x="54" y="378">settings in the web ui</text>
+  <text class="note" x="54" y="396">nothing &#8212; applied immediately</text>
+
+  <!-- real gateway -->
+  <text class="hd" x="380" y="240">REACHING A REAL USB GATEWAY</text>
+  <rect class="soft" x="380" y="250" width="480" height="72" rx="8"/>
+  <text class="h2" x="394" y="272">Linux &#8212; pass the device through</text>
+  <text class="mono" x="394" y="292">devices: [ /dev/ttyUSB0 ]  in docker-compose.yml</text>
+  <text class="note" x="394" y="312">The container sees the port as if it were the host.</text>
+
+  <rect class="soft" x="380" y="332" width="480" height="90" rx="8"/>
+  <text class="h2" x="394" y="354">macOS and Windows &#8212; publish it over TCP</text>
+  <text class="note" x="394" y="374">Docker has no usb access there. dev/share-serial.sh publishes the</text>
+  <text class="mono" x="394" y="394">port with socat</text>
+  <text class="note" x="480" y="394">and the gateway is configured as</text>
+  <text class="mono" x="394" y="414">lan-gw-esp2</text>
+  <text class="note" x="466" y="414">pointing at the host.</text>
+
+  <rect class="soft" x="40" y="440" width="820" height="58" rx="8"/>
+  <text class="note" x="56" y="462">Without any gateway everything works except live telegrams: the configuration pages, the device catalog, the hierarchy, the import</text>
+  <text class="note" x="56" y="480">and the recorded example history. The demo devices stay &#8222;unavailable&#8220; and the serial connection keeps retrying &#8212; that is expected.</text>
+</svg>

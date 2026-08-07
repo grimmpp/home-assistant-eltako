@@ -9,9 +9,9 @@ import os
 import unittest
 from unittest import TestCase
 
-from custom_components.eltako import config_helpers
+from custom_components.eltako.config import config_helpers
 from custom_components.eltako.const import CONF_GATEWAY_DESCRIPTION, CONF_SERIAL_PATH
-from custom_components.eltako.timeseries import record_to_line_protocol
+from custom_components.eltako.observation.timeseries import record_to_line_protocol
 
 DEV_DIR = os.path.join(os.path.dirname(__file__), '..', 'dev')
 SEED_CONFIG = os.path.join(DEV_DIR, 'seed', 'config')

@@ -2,10 +2,9 @@
   "config": {
     "step": {
       "user": {
-        "title": "Eltako",
-        "description": "Nothing has to be entered here. The recommended option sets the integration up and looks for your gateways itself - the Eltako panel then appears in the sidebar, where gateways and devices are configured.",
+        "title": "Add a gateway",
+        "description": "The integration itself is already set up - installing it asks nothing and does not get this far. The ELTAKO panel in the sidebar is where gateways, devices and settings are configured; this dialog only adds another gateway.",
         "menu_options": {
-          "auto": "Set up and detect my gateways automatically (recommended)",
           "detect": "Set up a gateway of my configuration",
           "new_gateway": "Add a gateway by hand"
         }
@@ -22,13 +21,13 @@
         }
       },
       "detect": {
-        "title": "Select the path to your Eltako gateway",
+        "title": "Select the path to your ELTAKO gateway",
         "data": {
           "path": "USB gateway path"
         }
       },
       "manual": {
-        "title": "Enter the path to your Eltako gateway",
+        "title": "Enter the path to your ELTAKO gateway",
         "data": {
           "path": "USB gateway path"
         }
@@ -42,6 +41,41 @@
       "invalid_gateway_path": "Invalid gateway path",
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
       "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ELTAKO settings",
+        "description": "These settings belong to the whole integration - the same ones the 'Settings' page of the ELTAKO web ui offers. A value changed here takes effect immediately and overrides the `general_settings` section of your `configuration.yaml`."
+      },
+      "general": {
+        "title": "General",
+        "description": "{help}"
+      },
+      "plug_and_play": {
+        "title": "Plug & Play",
+        "description": "{help}"
+      },
+      "web_ui": {
+        "title": "Web UI",
+        "description": "{help}"
+      },
+      "telegram_log": {
+        "title": "Telegram recording",
+        "description": "{help}"
+      },
+      "timeseries": {
+        "title": "Timeseries export (Grafana)",
+        "description": "{help}"
+      },
+      "log_levels": {
+        "title": "Log levels of telegrams",
+        "description": "{help}"
+      }
+    },
+    "error": {
+      "invalid_setting": "This value is not accepted for that setting"
     }
   },
   "services": {

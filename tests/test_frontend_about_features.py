@@ -9,7 +9,7 @@ import os
 import re
 from unittest import TestCase
 
-from custom_components.eltako import config_helpers
+from custom_components.eltako.config import config_helpers
 
 REPO = os.path.dirname(os.path.dirname(__file__))
 ABOUT_JS = os.path.join(REPO, 'custom_components', 'eltako', 'frontend', 'pages', 'about.js')

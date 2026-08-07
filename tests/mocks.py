@@ -1,8 +1,8 @@
 import asyncio
 from typing import Any
 
-from custom_components.eltako.config_helpers import *
-from custom_components.eltako.gateway import EnOceanGateway
+from custom_components.eltako.config.config_helpers import *
+from custom_components.eltako.core.gateway import EnOceanGateway
 class BusMock():
 
     def __init__(self):
@@ -30,6 +30,9 @@ class BusMock():
             'origin': origin,
             'context': context
         })
+
+    # the real event bus has both - Home Assistant itself calls async_fire from callbacks
+    async_fire = fire
 
 class HassMock():
         

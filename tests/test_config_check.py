@@ -10,8 +10,8 @@ from unittest import mock
 
 import yaml
 
-from custom_components.eltako import config_check
-from custom_components.eltako.config_check import (
+from custom_components.eltako.config import config_check
+from custom_components.eltako.config.config_check import (
     SEVERITY_ERROR, SEVERITY_INFO, SEVERITY_WARNING, check_configuration)
 from custom_components.eltako.const import DATA_ELTAKO, ELTAKO_CONFIG
 

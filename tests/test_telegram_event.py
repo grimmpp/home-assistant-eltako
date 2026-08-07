@@ -24,7 +24,7 @@ class TestTelegramEvent(TestCase):
 
     def receive(self, gateway, telegram):
         """The dispatcher needs a real event loop, the mocked hass has none."""
-        with mock.patch('custom_components.eltako.gateway.dispatcher_send'):
+        with mock.patch('custom_components.eltako.core.gateway.dispatcher_send'):
             gateway._callback_receive_message_from_serial_bus(telegram)
 
     def fired_telegram_events(self, gateway):

@@ -12,7 +12,7 @@ import voluptuous as vol
 from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
-from custom_components.eltako import plug_and_play
+from custom_components.eltako.tools import plug_and_play
 from custom_components.eltako.const import *
 
 from homeassistant.const import CONF_ID, CONF_NAME
@@ -58,7 +58,7 @@ class TestAddresses(TestCase):
 
     def test_addresses_are_valid_for_the_schema(self):
         """Everything which is generated has to pass the validation of the device config."""
-        from custom_components.eltako import device_config
+        from custom_components.eltako.config import device_config
 
         device_config.validate_device('light', {
             CONF_ID: plug_and_play.local_address(4), CONF_EEP: 'M5-38-08',
@@ -216,7 +216,7 @@ class TestMdnsDiscovery(TestCase):
         self.assertIn('_tcm515._tcp.local.', plug_and_play.MDNS_SERVICE_TYPES)
 
     def test_a_lan_candidate_becomes_a_valid_gateway_configuration(self):
-        from custom_components.eltako import gateway_config
+        from custom_components.eltako.config import gateway_config
 
         candidate = plug_and_play.describe_mdns_candidate(self.SMARTCONN)
         validated = gateway_config.validate_gateway(plug_and_play.build_gateway(candidate, 7))
@@ -227,7 +227,7 @@ class TestMdnsDiscovery(TestCase):
         self.assertNotIn(CONF_SERIAL_PATH, validated)
 
     def test_a_serial_candidate_becomes_a_valid_gateway_configuration(self):
-        from custom_components.eltako import gateway_config
+        from custom_components.eltako.config import gateway_config
 
         candidate = plug_and_play.describe_candidate('/dev/ttyUSB0', {'device_type': 'fam14'})
         validated = gateway_config.validate_gateway(plug_and_play.build_gateway(candidate, 3))
@@ -485,14 +485,14 @@ class TestSettings(TestCase):
     ONCE_A_DAY = 24 * 60
 
     def test_disabled_by_default(self):
-        from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
+        from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
 
         self.assertFalse(plug_and_play.is_enabled(DEFAULT_GENERAL_SETTINGS))
 
     def test_it_runs_once_a_day_by_default(self):
         """Probing the ports and reading a bus is not free, and a gateway is plugged in rarely."""
-        from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
-        from custom_components.eltako.schema import GeneralSettings
+        from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
+        from custom_components.eltako.config.schema import GeneralSettings
 
         self.assertEqual(plug_and_play.get_interval(DEFAULT_GENERAL_SETTINGS), self.ONCE_A_DAY)
         # the yaml default must not drift apart from it
@@ -500,7 +500,7 @@ class TestSettings(TestCase):
                          self.ONCE_A_DAY)
 
     def test_the_setting_is_part_of_the_schema(self):
-        from custom_components.eltako.schema import GeneralSettings
+        from custom_components.eltako.config.schema import GeneralSettings
 
         validated = GeneralSettings.ENTITY_SCHEMA({CONF_PLUG_AND_PLAY: True,
                                                    CONF_PLUG_AND_PLAY_INTERVAL: 5})
@@ -509,7 +509,7 @@ class TestSettings(TestCase):
         self.assertEqual(validated[CONF_PLUG_AND_PLAY_INTERVAL], 5)
 
     def test_a_weekly_interval_is_still_allowed(self):
-        from custom_components.eltako.schema import GeneralSettings
+        from custom_components.eltako.config.schema import GeneralSettings
 
         validated = GeneralSettings.ENTITY_SCHEMA({CONF_PLUG_AND_PLAY_INTERVAL: 7 * self.ONCE_A_DAY})
 
@@ -517,7 +517,7 @@ class TestSettings(TestCase):
 
     def test_the_web_ui_offers_the_setting(self):
         """The checkbox of the configuration and the button of the overview page are one switch."""
-        from custom_components.eltako import general_settings
+        from custom_components.eltako.config import general_settings
 
         names = [descriptor['name'] for descriptor in general_settings.SETTING_DESCRIPTORS]
         self.assertIn(CONF_PLUG_AND_PLAY, names)
@@ -528,7 +528,7 @@ class TestSettings(TestCase):
             self.assertIn(descriptor['group'], groups)
 
     def test_the_setting_can_be_validated_like_any_other(self):
-        from custom_components.eltako import general_settings
+        from custom_components.eltako.config import general_settings
 
         self.assertTrue(general_settings.validate_setting(CONF_PLUG_AND_PLAY, True))
         with self.assertRaises(vol.Invalid):
@@ -611,6 +611,66 @@ class TestPeriodicDetection(TestCase):
         self.assertIsNone(plug_and_play.get_state(self.hass)['unsubscribe'])
 
 
+class TestDetectGateways(IsolatedAsyncioTestCase):
+    """`async_detect_gateways` - the read-only stage 1, and that its two sources overlap."""
+
+    class Hass:
+        def __init__(self):
+            self.data = {}
+
+        async def async_add_executor_job(self, func, *args):
+            return func(*args)
+
+    async def test_serial_probe_and_mdns_browse_run_in_parallel(self):
+        """The mDNS browse has a fixed window of several seconds - it must hide inside the
+        time the serial probe takes anyway, not come on top of it. Each source waits for the
+        other one to have started: sequential execution deadlocks and fails the timeout."""
+        import asyncio
+        from unittest import mock
+
+        from custom_components.eltako.tools import gateway_scan
+
+        probe_started, mdns_started = asyncio.Event(), asyncio.Event()
+
+        async def probe(hass, ports):
+            probe_started.set()
+            await asyncio.wait_for(mdns_started.wait(), timeout=1)
+            return {'/dev/ttyUSB0': {'device_type': 'fam14', 'baud_rate': 57600}}
+
+        async def mdns(hass):
+            mdns_started.set()
+            await asyncio.wait_for(probe_started.wait(), timeout=1)
+            return []
+
+        with mock.patch.object(gateway_scan, 'scan',
+                               return_value={'ports': [{'device': '/dev/ttyUSB0', 'free': True}]}), \
+             mock.patch.object(plug_and_play, 'async_probe_ports', probe), \
+             mock.patch.object(plug_and_play, 'async_discover_mdns_gateways', mdns):
+            result = await plug_and_play.async_detect_gateways(self.Hass())
+
+        self.assertEqual(result['ports_probed'], 1)
+        self.assertEqual(result['mdns_found'], 0)
+        self.assertEqual(len(result['gateways_detected']), 1)
+        self.assertEqual(result['gateways_detected'][0]['device_type'], 'fam14')
+
+    async def test_mdns_can_be_switched_off(self):
+        """The CLI `detect --port` asks for exactly one stick - browsing the network then
+        only costs time."""
+        from unittest import mock
+
+        from custom_components.eltako.tools import gateway_scan
+
+        async def must_not_run(hass):
+            raise AssertionError("mDNS was browsed although include_mdns is False")
+
+        with mock.patch.object(gateway_scan, 'scan', return_value={'ports': []}), \
+             mock.patch.object(plug_and_play, 'async_discover_mdns_gateways', must_not_run):
+            result = await plug_and_play.async_detect_gateways(self.Hass(), include_mdns=False)
+
+        self.assertEqual(result['gateways_detected'], [])
+        self.assertEqual(result['mdns_found'], 0)
+
+
 class TestState(IsolatedAsyncioTestCase):
 
     async def test_status_of_a_fresh_installation(self):
@@ -661,7 +721,7 @@ class TestConfiguredAddresses(IsolatedAsyncioTestCase):
             entry.options = options
 
     async def test_yaml_devices_senders_and_ui_devices_are_all_known(self):
-        from custom_components.eltako import device_config
+        from custom_components.eltako.config import device_config
 
         entry = self.Entry({CONF_UI_DEVICES: {'sensor': [
             {CONF_ID: 'FF-AA-80-05', CONF_EEP: 'A5-04-02'}]}})
@@ -675,7 +735,7 @@ class TestConfiguredAddresses(IsolatedAsyncioTestCase):
         self.assertIn('00-00-00-01', addresses['by_gateway'][1])
 
     async def test_a_detected_device_does_not_shadow_a_configured_one(self):
-        from custom_components.eltako import device_config
+        from custom_components.eltako.config import device_config
 
         hass = self.Hass([self.Entry()])
         addresses = device_config.get_configured_addresses(hass)

@@ -13,24 +13,17 @@ from homeassistant.components.button import (
 from homeassistant.const import Platform
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType
 
-from .device import *
-from . import config_helpers
-from .gateway import EnOceanGateway
+from .core.entity import *
+from .config import config_helpers
+from .core.gateway import EnOceanGateway
 from .const import *
-from . import get_gateway_from_hass, get_device_config_for_gateway
-
-EEP_WITH_TEACH_IN_BUTTONS = {
-    A5_10_06: b'\x40\x30\x0D\x85',  # climate
-    A5_10_12: b'\x40\x90\x0D\x80',  # climate
-    A5_38_08: b'\xE0\x40\x0D\x80',  # light
-    H5_3F_7F: b'\xFF\xF8\x0D\x80',  # cover
-    # F6_02_01  # What button to take?
-    # F6_02_02
-}
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
+from .catalog.teach_in import get_teach_in_payload, supports_teach_in_button
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -59,7 +52,7 @@ async def async_setup_entry(
                             dev_config = config_helpers.DeviceConf(entity_config)
                             sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
-                            if sender_config.eep in EEP_WITH_TEACH_IN_BUTTONS.keys():
+                            if supports_teach_in_button(sender_config.eep):
                                 entities.append(TeachInButton(platform, gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
                         except Exception as e:
                             LOGGER.warning("[%s] Could not load configuration", platform)
@@ -107,7 +100,7 @@ class TeachInButton(AbstractButton):
         """
 
         controller_address, _ = self.sender_id
-        msg = Regular4BSMessage(address=controller_address, data=EEP_WITH_TEACH_IN_BUTTONS[self.sender_eep], outgoing=True, status=0x80)
+        msg = Regular4BSMessage(address=controller_address, data=get_teach_in_payload(self.sender_eep), outgoing=True, status=0x80)
         self.send_message(msg)
 
 class GatewayReconnectButton(AbstractButton):
@@ -168,5 +161,10 @@ class GatewayReadAllDevicesButton(AbstractButton):
         )
 
     async def async_press(self) -> None:
-        """Reconnect serial bus"""
+        """Read the memories of every device on the bus."""
+        # only one operation at a time may talk on the bus - saying so is better than a button
+        # which looks like it did something
+        if self.gateway.is_bus_busy:
+            raise HomeAssistantError(f"The bus is busy with '{self.gateway.bus_busy_reason}' - "
+                                     f"while that runs no other telegram may go over it.")
         await self.gateway.read_memory_of_all_bus_members()

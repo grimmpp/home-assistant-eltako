@@ -17,7 +17,7 @@ In order to get supported by creating the configuration and managing your device
 After you have finished the configuration changes **don't forget to restart Home Assistant so that the changes will be applied.** Hint: You can trigger the restart in the menu of File Editor.
 
 ## Schema of the configuration file:
-If the documentation might be outdated and not complete you can always find the truth in [schema.py](../custom_components/eltako/schema.py).
+If the documentation might be outdated and not complete you can always find the truth in [schema.py](../custom_components/eltako/config/schema.py).
 
 A device inside a device type alway consists of
 * id - This is the address of the device on the bus

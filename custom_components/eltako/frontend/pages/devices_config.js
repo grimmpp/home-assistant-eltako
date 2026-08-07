@@ -279,14 +279,16 @@ export const page = {
 
   _deviceRow(device, indent = false, senderBadge = "") {
     return `
-      <tr class="${this._activityOf(device) ? "" : "unknown-row"} ${indent ? "channel-row" : ""}"
+      <tr class="${this._activityOf(device) ? "" : "unknown-row"} ${indent ? "channel-row" : ""} ${
+            device.simulated ? "simulated-row" : ""}"
           data-address="${escapeHtml(device.address)}"
           data-external="${escapeHtml(device.external_address || "")}"
           data-sender="${escapeHtml((device.sender || {}).id || "")}">
         <td class="mono">${indent ? '<span class="tree">└</span>' : ""}${escapeHtml(device.address)}
           ${device.external_address && device.external_address !== device.address
             ? `<span class="hint">extern ${escapeHtml(device.external_address)}</span>` : ""}</td>
-        <td>${escapeHtml(device.name || "")}</td>
+        <td>${escapeHtml(device.name || "")}
+          ${device.simulated ? `<span class="tag simulated" title="No hardware: this device is simulated (see the simulation page)">simulated</span>` : ""}</td>
         <td>${escapeHtml(device.platform)}</td>
         <td class="mono">${escapeHtml(device.eep || "-")}</td>
         <td class="mono">${device.sender ? escapeHtml(device.sender.id || "") : "-"} ${senderBadge}
@@ -385,6 +387,13 @@ export const page = {
     }
     const detectedFor = (predicate) => [...detectedSensors.values()].filter(predicate)
       .sort((a, b) => a.sensor_id.localeCompare(b.sensor_id));
+
+    // only one operation at a time may talk on a bus. While one runs the buttons are disabled
+    // and say what is going on - a scan, a teach-in or the base id request of a FAM14.
+    const busyLabel = (gw) => {
+      const reason = ((ctx.state.busMembers || {}).busy_with || {})[String(gw.id)];
+      return reason ? reason : "scanning bus";
+    };
 
     for (const gw of busGateways) {
       const gwMembers = members.filter((m) => String(m.gateway_id) === String(gw.id));
@@ -500,11 +509,13 @@ export const page = {
       }
 
       sections.push(`
-        <h3 class="bus-heading">${escapeHtml(gw.name)} <span class="hint-inline">RS485 bus,
+        <h3 class="bus-heading">${escapeHtml(gw.name)}
+          ${gw.simulated ? `<span class="tag simulated" title="No hardware: this bus is simulated">simulated</span>` : ""}
+          <span class="hint-inline">RS485 bus,
           ${gwMembers.length} position${gwMembers.length === 1 ? "" : "s"} detected</span>
           ${gw.ha_device_id ? `<button class="action small" data-ha-device="${escapeHtml(gw.ha_device_id)}">open device</button>` : ""}
           ${((ctx.state.busMembers || {}).scans_running || {})[String(gw.id)]
-            ? `<button class="action small" disabled>scanning bus&hellip;</button>`
+            ? `<button class="action small" disabled title="While this runs no other telegram may go over the bus - the buttons come back afterwards.">${escapeHtml(busyLabel(gw))}&hellip;</button>`
             : `<button class="action small primary" data-bus-scan="${escapeHtml(gw.id)}">scan bus &amp; read memory</button>
                <button class="action small" data-teach-in="${escapeHtml(gw.id)}">check &amp; teach in HA senders</button>`}</h3>
         ${rows.length ? `<div class="table-wrapper"><table>
@@ -539,6 +550,7 @@ export const page = {
       radioRows.push(`
         <tr class="bus-device-row">
           <td colspan="11"><b>${escapeHtml(gw.name)}</b>
+            ${gw.simulated ? `<span class="tag simulated" title="No hardware: this gateway is simulated">simulated</span>` : ""}
             <span class="hint-inline">wireless gateway, ${escapeHtml(gw.type)}, base id ${escapeHtml(gw.base_id)}</span>
             <span class="pill ${gw.connected ? "on" : "off"}">${gw.connected ? "connected" : "disconnected"}</span>
             ${gw.ha_device_id ? `<button class="action small" data-ha-device="${escapeHtml(gw.ha_device_id)}">open device</button>` : ""}</td>

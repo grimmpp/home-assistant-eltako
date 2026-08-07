@@ -1,6 +1,6 @@
 /**
  * Access to the websocket api of the Eltako integration.
- * Backend: custom_components/eltako/websocket.py and enocean_logger.py
+ * Backend: custom_components/eltako/core/websocket.py and observation/enocean_logger.py
  */
 
 export const WS = {
@@ -13,6 +13,8 @@ export const WS = {
   DEVICE_ADD: "eltako/devices/add",
   DEVICE_UPDATE: "eltako/devices/update",
   DEVICE_REMOVE: "eltako/devices/remove",
+  DEVICE_REMOVE_ALL: "eltako/devices/remove_all",
+  DEVICE_TEACH_IN: "eltako/devices/teach_in",
   SEND_TELEGRAM: "eltako/send_telegram",
   SEND_TELEGRAM_FORM: "eltako/send_telegram_form",
   BUS_MEMBERS: "eltako/bus/members",
@@ -26,6 +28,17 @@ export const WS = {
   GATEWAY_SCAN: "eltako/gateways/scan",
   PNP_STATUS: "eltako/plug_and_play/status",
   PNP_RUN: "eltako/plug_and_play/run",
+  SIMULATOR_FORM: "eltako/simulator/form",
+  SIMULATOR_PRESET: "eltako/simulator/preset",
+  SIMULATOR_GATEWAY_ADD: "eltako/simulator/gateway_add",
+  SIMULATOR_GATEWAY_REMOVE: "eltako/simulator/gateway_remove",
+  SIMULATOR_BASE_ID: "eltako/simulator/base_id",
+  SIMULATOR_DEVICE_ADD: "eltako/simulator/device_add",
+  SIMULATOR_DEVICE_UPDATE: "eltako/simulator/device_update",
+  SIMULATOR_DEVICE_REMOVE: "eltako/simulator/device_remove",
+  SIMULATOR_TRIGGER: "eltako/simulator/trigger",
+  SIMULATOR_TEACH_IN: "eltako/simulator/teach_in",
+  SIMULATOR_ACTIVATE: "eltako/simulator/activate",
   HELP_CATALOG: "eltako/help/catalog",
   SETTINGS_GET: "eltako/settings/get",
   SETTINGS_SET: "eltako/settings/set",

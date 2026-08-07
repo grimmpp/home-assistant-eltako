@@ -17,8 +17,8 @@ import unittest
 
 from homeassistant.components.sensor import SensorEntityDescription
 
-import custom_components.eltako.eltako_integration_init as integration_init
-from custom_components.eltako import gateway_config
+import custom_components.eltako.core.integration as integration_init
+from custom_components.eltako.config import gateway_config
 from custom_components.eltako.sensor import GatewayReceivedMessagesInActiveSession
 
 # units Home Assistant accepts for a sensor without a device class

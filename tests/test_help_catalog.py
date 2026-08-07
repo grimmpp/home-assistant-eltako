@@ -9,7 +9,7 @@ sources - rather than pinning the contents, which would defeat the purpose.
 import os
 from unittest import TestCase
 
-from custom_components.eltako import device_catalog, help_catalog
+from custom_components.eltako.catalog import device_catalog, help_catalog
 from custom_components.eltako.const import PLATFORMS, GatewayDeviceType
 
 
@@ -37,7 +37,7 @@ class TestPlatforms(TestCase):
 
     def test_the_eeps_come_from_the_schema(self):
         """Spot check against a schema which is read directly."""
-        from custom_components.eltako.schema import LightSchema
+        from custom_components.eltako.config.schema import LightSchema
 
         light = next(p for p in help_catalog.get_platforms() if p['platform'] == 'light')
 
@@ -161,7 +161,8 @@ class TestGateways(TestCase):
         by_type = {gateway['gateway_type']: gateway for gateway in self.gateways}
 
         self.assertEqual('FAM14', by_type['fam14']['hw_type'])
-        self.assertEqual('Eltako', by_type['fam14']['brand'])
+        # the brand is a display value and is written in capitals, like everywhere in the ui
+        self.assertEqual('ELTAKO', by_type['fam14']['brand'])
 
     def test_every_gateway_links_to_documentation(self):
         for gateway in self.gateways:
@@ -211,7 +212,7 @@ class TestDocumentation(TestCase):
         self.assertEqual(
             help_catalog.scan_documentation(), shipped,
             msg='docs_index.json is stale - regenerate it with '
-                '`python -m custom_components.eltako.help_catalog`')
+                '`python -m custom_components.eltako.catalog.help_catalog`')
 
     def test_the_documentation_survives_without_the_checkout(self):
         """The HACS case: no docs directory, the shipped index takes over."""

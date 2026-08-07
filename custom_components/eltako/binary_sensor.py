@@ -15,11 +15,12 @@ from homeassistant.helpers.typing import ConfigType
 
 import time
 
-from .device import *
+from .core.entity import *
 from .const import *
-from .gateway import EnOceanGateway
-from .schema import CONF_EEP_SUPPORTED_BINARY_SENSOR
-from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+from .core.gateway import EnOceanGateway
+from .config.schema import CONF_EEP_SUPPORTED_BINARY_SENSOR
+from .config import config_helpers
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 
 import json
 

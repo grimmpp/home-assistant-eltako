@@ -42,7 +42,7 @@
       "section": "01_getting_started"
     },
     {
-      "title": "How to configure Eltako FLGTF",
+      "title": "How to configure ELTAKO FLGTF",
       "path": "docs/flgtf_temp_humidity_air_quality/readme.md",
       "section": "flgtf_temp_humidity_air_quality"
     },
@@ -62,12 +62,12 @@
       "section": "simple_eltako_setup.md"
     },
     {
-      "title": "Integrated Relays and Switches with Eltako FSR14*, FSR61, ...",
+      "title": "Integrated Relays and Switches with ELTAKO FSR14*, FSR61, ...",
       "path": "docs/relays-and-switches/readme.md",
       "section": "relays-and-switches"
     },
     {
-      "title": "Lights in Home Assistant Eltako Integration",
+      "title": "Lights in Home Assistant ELTAKO Integration",
       "path": "docs/lights-tutorial/readme.md",
       "section": "lights-tutorial"
     },
@@ -102,6 +102,11 @@
       "section": "service-send-message"
     },
     {
+      "title": "Simulation - gateways and devices without hardware",
+      "path": "docs/simulation/readme.md",
+      "section": "simulation"
+    },
+    {
       "title": "Standalone runtime - the integration without Home Assistant",
       "path": "docs/standalone/readme.md",
       "section": "standalone"
@@ -117,6 +122,11 @@
       "section": "teach_in_buttons"
     },
     {
+      "title": "Testing with real hardware",
+      "path": "docs/hardware-testing/readme.md",
+      "section": "hardware-testing"
+    },
+    {
       "title": "Update Home Assistant Configuration",
       "path": "docs/update_home_assistant_configuration.md",
       "section": "update_home_assistant_configuration.md"
@@ -127,7 +137,12 @@
       "section": "gateway_usage"
     },
     {
-      "title": "Web UI of the Eltako Integration",
+      "title": "Version 2.2 — Introducing Version 2",
+      "path": "docs/version-2-introduction.md",
+      "section": "version-2-introduction.md"
+    },
+    {
+      "title": "Web UI of the ELTAKO Integration",
       "path": "docs/web-ui/readme.md",
       "section": "web-ui"
     },

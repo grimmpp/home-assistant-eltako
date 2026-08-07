@@ -55,7 +55,7 @@ python -m eltako_standalone devicetest config --json
 
 The answer to *"Home Assistant sends but nothing happens"*: the test switches every selected
 switch or light with the sender of the configuration and waits for the status telegram of the
-actuator. An Eltako actuator only answers a command whose sender is **taught into** it, so an
+actuator. An ELTAKO actuator only answers a command whose sender is **taught into** it, so an
 answer proves the whole chain - configuration, gateway, radio/bus, teach-in - and the round trip
 time comes along for free (a value far above ~0.5 s points at an overloaded bus).
 
@@ -114,10 +114,18 @@ The sequence understands `up`, `down`, `stop` and `pause`, each with seconds
 (`up:25,pause:2,down:25`). Actuator and sender addresses are paired by position; a single sender
 is applied to all actuators.
 
+## A test does not start while the bus is busy
+
+A test which sends telegrams measures how long the answer takes. While a **bus scan**, the
+**teach-in of the HA senders** or the base id request of a FAM14 has the RS485 bus, telegrams to
+that gateway are queued and sent afterwards - which would turn every measured answer time into
+a made-up number. So a test on such a gateway is refused with the reason ("Gateway 1 is busy
+with 'bus scan' ...") instead of started. Wait until the scan is through, then start it.
+
 ## Where the results come from
 
-Backend: [`custom_components/eltako/device_tests.py`](../../custom_components/eltako/device_tests.py)
-and [`config_check.py`](../../custom_components/eltako/config_check.py). Both are part of the
+Backend: [`custom_components/eltako/tools/device_tests.py`](../../custom_components/eltako/tools/device_tests.py)
+and [`config/config_check.py`](../../custom_components/eltako/config/config_check.py). Both are part of the
 integration, so the tests work in Home Assistant and in the
 [standalone runtime](../standalone/readme.md) alike - the web ui talks to them through the
 websocket commands `eltako/device_tests/*`, the CLI calls the same runners directly.

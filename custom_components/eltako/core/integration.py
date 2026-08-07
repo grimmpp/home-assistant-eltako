@@ -26,7 +26,7 @@ from ..config import config_helpers, config_import, device_config, gateway_confi
 from ..config.schema import CONFIG_SCHEMA
 from ..observation import bus_members, device_activity
 from ..observation.enocean_logger import async_setup_telegram_logger, is_telegram_logging_enabled
-from ..tools import device_tests, gateway_scan, plug_and_play
+from ..tools import device_tests, gateway_scan, plug_and_play, serial_bridge
 from .. import simulation
 
 LOG_PREFIX_INIT = "Eltako Integration Setup"
@@ -78,6 +78,9 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     # functional device tests (burst, cover travel times) - they run against the gateways
     # of this runtime, so they work in Home Assistant as well as standalone
     device_tests.register_websocket_commands(hass)
+    # bridge a serial port of another machine in as a pty - the way a usb gateway reaches a
+    # container on macOS/windows without losing the automatic detection (docs/hardware-bridge)
+    serial_bridge.register_websocket_commands(hass)
     simulation.register_websocket_commands(hass)
 
     # Virtual gateways and devices (no hardware). Loaded after the configuration was read: the
@@ -314,12 +317,20 @@ def migrate_old_gateway_descriptions(hass: HomeAssistant):
 
 
 def get_gateway_from_hass(hass: HomeAssistant, config_entry: ConfigEntry) -> EnOceanGateway:
+    """The gateway of a config entry, or None if that entry has none.
 
-    g_id = "gateway_"+str(config_helpers.get_id_from_gateway_name(config_entry.data[CONF_GATEWAY_DESCRIPTION]))
-    if g_id in hass.data[DATA_ELTAKO]:
-        return hass.data[DATA_ELTAKO][g_id]
-    else:
+    The entry of the integration itself carries no gateway description at all, so asking for its
+    gateway is a legitimate question with the answer 'none' - it must not raise.
+    """
+    description = config_entry.data.get(CONF_GATEWAY_DESCRIPTION)
+    if not description:
         return None
+
+    try:
+        g_id = "gateway_" + str(config_helpers.get_id_from_gateway_name(description))
+    except Exception:   # noqa: BLE001 - a description without an id in it
+        return None
+    return hass.data.get(DATA_ELTAKO, {}).get(g_id)
 
 
 def set_gateway_to_hass(hass: HomeAssistant, gateway: EnOceanGateway) -> None:
@@ -352,13 +363,32 @@ def get_device_config_for_gateway(hass: HomeAssistant, config_entry: ConfigEntry
     return device_config.get_merged_device_config(hass, config_entry, yaml_devices)
 
 
-async def async_setup_hub_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Set up the gateway-less entry of the integration itself.
+def async_rename_legacy_core_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Give the core entry its name on installations which were set up before it had one.
 
-    'Add integration' creates this one without asking for anything. It exists so that Home
-    Assistant sets the component up at all - that is what brings the web ui into the sidebar
-    and the websocket api behind it. From there gateways and devices are configured
-    graphically, or in `configuration.yaml` for whoever prefers files.
+    It used to be titled like the integration itself, which read as if it were a device. A
+    title the user picked is never touched - only the two defaults this integration ever gave
+    it are replaced.
+    """
+    if config_entry.title not in OLD_CORE_TITLES:
+        return
+
+    try:
+        hass.config_entries.async_update_entry(config_entry, title=CORE_TITLE)
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Renamed the entry of the integration itself from "
+                    f"'{config_entry.title}' to '{CORE_TITLE}'.")
+    except Exception as e:  # noqa: BLE001 - a name is never worth a failing setup
+        LOGGER.debug(f"[{LOG_PREFIX_INIT}] Cannot rename the core entry: {e}")
+
+
+async def async_setup_core_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Set up the core entry - the integration itself, without any gateway.
+
+    'Add integration' creates this one without asking for anything. It is the base component
+    everything else needs: it makes Home Assistant load the integration at all, which is what
+    brings the web ui into the sidebar, the websocket api behind it and the automatic
+    detection. Gateways are hardware and get an entry each, next to this one; they are
+    configured in the web ui, or in `configuration.yaml` for whoever prefers files.
 
     Right after it was added the detection runs once, so a gateway which is plugged in shows up
     on its own. The flag is set by the config flow and consumed here: repeating this on every
@@ -371,6 +401,7 @@ async def async_setup_hub_entry(hass: HomeAssistant, config_entry: ConfigEntry) 
     LOGGER.info(f"[{LOG_PREFIX_INIT}] Integration set up. The web ui is in the sidebar, "
                 f"gateways and devices are configured there.")
 
+    async_rename_legacy_core_entry(hass, config_entry)
     await onboarding.async_setup_onboarding(hass, config_entry)
 
     if hass.data.setdefault(DATA_ELTAKO, {}).pop(DATA_INITIAL_DETECTION, False):
@@ -402,8 +433,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # The entry of the integration itself: it carries no gateway. Everything it provides - the
     # web ui, the websocket api, the detection - was already set up in async_setup(), so there
     # is nothing to do here. Gateways get their own entries.
-    if config_entry.data.get(CONF_HUB):
-        return await async_setup_hub_entry(hass, config_entry)
+    if config_entry.data.get(CONF_CORE_ENTRY):
+        return await async_setup_core_entry(hass, config_entry)
 
 
     # Read the config
@@ -532,7 +563,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, config_entry: Co
     addresses = {identifier for domain, identifier in device_entry.identifiers if domain == DOMAIN}
 
     # the entry of the integration itself owns no device - nothing here can belong to it
-    if config_entry.data.get(CONF_HUB):
+    if config_entry.data.get(CONF_CORE_ENTRY):
         return True
 
     yaml_devices = config_helpers.get_device_config(
@@ -561,7 +592,7 @@ async def async_remove_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     """The integration lost an entry - take the web ui with it if it was the last one.
 
     An integration without a single entry is not configured anymore: Home Assistant shows no
-    hub on its page, and a panel which stays in the sidebar until the next restart is a dead
+    entry on its page, and a panel which stays in the sidebar until the next restart is a dead
     link into nothing. Adding the integration again brings it back right away
     (`async_setup_entry`), so this is not a one way door.
 
@@ -583,7 +614,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     """Unload Eltako config entry."""
 
     # the entry of the integration itself has no gateway and no platforms
-    if config_entry.data.get(CONF_HUB):
+    if config_entry.data.get(CONF_CORE_ENTRY):
         return True
 
     # The platforms need to be unloaded as well, otherwise a reload would add all entities

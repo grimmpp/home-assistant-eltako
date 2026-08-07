@@ -15,7 +15,7 @@ from eltakobus.util import AddressExpression
 from homeassistant.const import CONF_ID
 
 from custom_components.eltako.const import *
-from custom_components.eltako.enocean_logger import EnOceanTelegramLogger, CSV_COLUMNS
+from custom_components.eltako.observation.enocean_logger import EnOceanTelegramLogger, CSV_COLUMNS
 
 from tests.mocks import GatewayMock
 from tests.test_enocean_logger import HassDataMock, get_general_settings
@@ -60,7 +60,7 @@ class TestRssiLogging(unittest.TestCase):
 
     def test_conversion_wrapper_is_installed(self):
         from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
-        import custom_components.eltako.gateway  # noqa: F401 - installs the wrapper
+        import custom_components.eltako.core.gateway  # noqa: F401 - installs the wrapper
 
         self.assertTrue(getattr(
             ESP3SerialCommunicator.convert_esp3_to_esp2_message.__func__, '_adds_rssi', False))

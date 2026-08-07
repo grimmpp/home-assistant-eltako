@@ -13,10 +13,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 
-from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
-from .config_helpers import DeviceConf
-from .device import *
-from .gateway import EnOceanGateway
+from .config import config_helpers
+
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
+from .config.config_helpers import DeviceConf
+from .core.entity import *
+from .core.gateway import EnOceanGateway
 from .const import *
 
 

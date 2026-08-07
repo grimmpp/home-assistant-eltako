@@ -3,11 +3,11 @@
 This example is about how to trigger complex automations in home assistant by wall-mounted rocker switches.
 
 <img src="./rocker_switch_automation_config.png" height="300px">
-<img src="./Eltako-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
+<img src="./ELTAKO-F4T55E-wg.jpg" alt="Home Assistant Automation" height="100"/>
 
 ## Register switch and check incomging telegrams and events in logs
 
-First of all you need to register your switch in the Home assistant Configuration ``/config/configuration.yaml``. Those switches are declared as `binary_sensor` and their EEP is `F6-02-01`. For more details about how to define the Home Assistant Eltako Integration configuration check out the [documentation how to write the configuration](../update_home_assistant_configuration.md) or if you are interested in auto-generating your configuration check out [enocean-device-manager](https://github.com/grimmpp/enocean-device-manager). 
+First of all you need to register your switch in the Home assistant Configuration ``/config/configuration.yaml``. Those switches are declared as `binary_sensor` and their EEP is `F6-02-01`. For more details about how to define the Home Assistant ELTAKO Integration configuration check out the [documentation how to write the configuration](../update_home_assistant_configuration.md) or if you are interested in auto-generating your configuration check out [enocean-device-manager](https://github.com/grimmpp/enocean-device-manager). 
 The the declaration in the configuration you need to know the id or enocean address of your switch. You can find the address of your switches on a sticker at the back or you can just push a button and check the incoming telegrams in the logs. ([Here](../logging/readme.md) you can find how to use logging. debugging must be enabled for eltako to see the incoming telegram: `etlako: debug`)
 
 See example snipped to declare your switch:
@@ -142,7 +142,7 @@ logger:
     eltako: debug
 ```
 
-In this example the sender id ``00-00-B0-01`` for the light must be registered in the corresponding relay e.g. via [Eltako Software PCT14](https://www.eltako.com/en/software-pct14/). Don't forget to choose function type ``51`` for software controlled command.
+In this example the sender id ``00-00-B0-01`` for the light must be registered in the corresponding relay e.g. via [ELTAKO Software PCT14](https://www.eltako.com/en/software-pct14/). Don't forget to choose function type ``51`` for software controlled command.
 
 Code for detecting the switch and firing the event can be found in function ``value_changed`` in [binary_sensor.py](../../custom_components/eltako/binary_sensor.py).
 

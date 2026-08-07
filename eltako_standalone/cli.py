@@ -5,11 +5,16 @@
     python -m eltako_standalone listen     print the live telegram stream
     python -m eltako_standalone send       send a telegram (raw or built from an EEP)
     python -m eltako_standalone scan       list serial ports incl. gateway suggestions
+    python -m eltako_standalone detect     probe the ports: which gateway is behind them?
+    python -m eltako_standalone bridge     share a serial port over tcp (publish / attach)
     python -m eltako_standalone devices    list all entities with their state
     python -m eltako_standalone state      show one entity
     python -m eltako_standalone control    invoke an action (turn_on, set_cover_position, ...)
     python -m eltako_standalone devicetest functional tests against the hardware
                                            (config, actuator, burst, cover - see `devicetest list`)
+    python -m eltako_standalone simulate   gateways and devices without hardware (starter, list,
+                                           gateway, device, set, trigger, interval, teach-in,
+                                           deactivate)
 
 Everything runs against a config folder (--config, default ~/.eltako-standalone)
 which works exactly like the Home Assistant one: configuration.yaml with the
@@ -27,6 +32,73 @@ import signal
 import sys
 
 DEFAULT_CONFIG_DIR = os.environ.get("ELTAKO_CONFIG_DIR", "~/.eltako-standalone")
+
+#: port of the web ui. Deliberately next to, and not on, the 8123 of Home Assistant - see the
+#: comment at the `serve` parser below.
+DEFAULT_PORT = 8124
+
+# The process log of the daemon commands, next to configuration.yaml and the telegram log -
+# the config folder mirrors the Home Assistant one, and there `home-assistant.log` lives in
+# the same place. Same rotation bounds as the telegram log.
+LOG_FILENAME = "eltako-standalone.log"
+LOG_MAX_BYTES = 10 * 1024 * 1024
+LOG_BACKUP_COUNT = 3
+
+
+class _ConsoleQuiet(logging.Filter):
+    """Keep the terminal readable without muting the log file.
+
+    The integration logs a lot on INFO, which used to be silenced with logger levels
+    (`logging.getLogger("eltako").setLevel(...)`) - but a logger level gates **every**
+    handler, so it would empty the file as well. This filter sits on the console handler
+    only: the terminal stays as quiet as before, the file gets everything the root level
+    lets through.
+    """
+
+    THRESHOLDS = (("eltako_standalone", logging.WARNING),
+                  ("eltako", logging.ERROR))       # order matters: longest prefix first
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        for prefix, threshold in self.THRESHOLDS:
+            if record.name == prefix or record.name.startswith(prefix + "."):
+                return record.levelno >= threshold
+        return record.levelno >= logging.WARNING
+
+
+def _setup_logging(args) -> None:
+    """Console as before; `serve` and `run` additionally write <config>/eltako-standalone.log.
+
+    Only the daemon commands get the file: a `scan` or `state` is over in a second and its
+    output belongs on the terminal, appending it to the log of the running daemon would only
+    interleave two processes in one file.
+    """
+    log_format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    formatter = logging.Formatter(log_format)
+
+    console = logging.StreamHandler()
+    console.setFormatter(formatter)
+    if not args.debug:
+        console.addFilter(_ConsoleQuiet())
+    handlers: list[logging.Handler] = [console]
+
+    log_path = None
+    if args.command in ("serve", "run"):
+        from logging.handlers import RotatingFileHandler
+
+        config_dir = os.path.expanduser(args.config)
+        os.makedirs(config_dir, exist_ok=True)
+        log_path = os.path.join(config_dir, LOG_FILENAME)
+        file_handler = RotatingFileHandler(log_path, maxBytes=LOG_MAX_BYTES,
+                                           backupCount=LOG_BACKUP_COUNT, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        handlers.append(file_handler)
+
+    # the root level must pass what the file wants to keep - the console is narrowed by its
+    # filter, not by the root level
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
+                        format=log_format, handlers=handlers, force=True)
+    if log_path:
+        logging.getLogger("eltako_standalone").info("Process log: %s", log_path)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -46,7 +118,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     serve = sub.add_parser("serve", help="start runtime + web ui")
     serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8123)
+    # NOT 8123: that is the port of Home Assistant. Sharing it means sharing the origin, and the
+    # browser then mixes the two - the service worker of the Home Assistant frontend stays
+    # registered for localhost:8123 and serves its cached app shell instead of this web ui.
+    serve.add_argument("--port", type=int, default=DEFAULT_PORT,
+                       help=f"port of the web ui (default {DEFAULT_PORT}; 8123 belongs to Home "
+                            f"Assistant)")
     serve.add_argument("--token", default=None,
                        help="require this access token (default: no auth, bind localhost)")
 
@@ -68,6 +145,33 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan = sub.add_parser("scan", help="list serial ports (no runtime, fast)")
     scan.add_argument("--json", action="store_true")
+
+    detect = sub.add_parser(
+        "detect", help="probe the free serial ports and report which gateway is behind them")
+    detect.add_argument("--json", action="store_true")
+    detect.add_argument("--port", action="append", dest="ports", metavar="PATH", default=None,
+                        help="probe exactly this port instead of scanning (repeatable) - use "
+                             "it for a bridged pty, which no glob finds")
+
+    bridge = sub.add_parser(
+        "bridge", help="share a serial port with another machine or a container")
+    bridge_sub = bridge.add_subparsers(dest="bridge_command", required=True)
+
+    bridge_publish = bridge_sub.add_parser(
+        "publish", help="offer a local serial port on a tcp port (run this where the stick is)")
+    bridge_publish.add_argument("device", help="e.g. /dev/cu.usbserial-AQ028YCS or COM3")
+    bridge_publish.add_argument("baud_rate", type=int, help="9600 (FAM-USB) or 57600")
+    bridge_publish.add_argument("--port", type=int, default=5100, help="tcp port (default 5100)")
+    bridge_publish.add_argument("--host", default="0.0.0.0", help="interface to bind")
+
+    bridge_attach = bridge_sub.add_parser(
+        "attach", help="connect to a published port and expose it as a pty (run this where "
+                       "the gateway is expected, e.g. in the container)")
+    bridge_attach.add_argument("host", help="the machine running 'bridge publish'")
+    bridge_attach.add_argument("--port", type=int, default=5100)
+    bridge_attach.add_argument("--link", default="/dev/ttyUSB0",
+                               help="path the pty is symlinked to (default /dev/ttyUSB0) - the "
+                                    "detection globs /dev/ttyUSB*, so keep that shape")
 
     devices = sub.add_parser("devices", help="list all entities with state")
     devices.add_argument("--json", action="store_true")
@@ -158,24 +262,114 @@ def build_parser() -> argparse.ArgumentParser:
 
     devicetest_sub.add_parser("list", help="list the available device tests")
 
+    ### simulation: gateways and devices without hardware. The same functions the simulation
+    ### page of the web ui calls (custom_components/eltako/simulation/service.py).
+    simulate = sub.add_parser(
+        "simulate", help="gateways and devices without hardware (see `simulate list`)")
+    simulate_sub = simulate.add_subparsers(dest="simulate", required=True)
+
+    starter = simulate_sub.add_parser(
+        "starter", help="create the starter set: LAN gateway, USB300 and FAM14 with example devices")
+    starter.add_argument("--gateways", default=None,
+                         help="comma separated presets to create (default all): lan, usb300, fam14")
+    starter.add_argument("--without-devices", action="store_true",
+                         help="create the gateways only, without the example devices")
+
+    simulate_list = simulate_sub.add_parser("list", help="show the whole simulation")
+    simulate_list.add_argument("--json", action="store_true")
+
+    sim_gateway = simulate_sub.add_parser("gateway", help="add or remove a simulated gateway")
+    sim_gateway.add_argument("action", choices=["add", "remove"])
+    sim_gateway.add_argument("--type", dest="gateway_type", default=None,
+                             help="gateway type to simulate, e.g. fam14, enocean-usb300, mgw-lan")
+    sim_gateway.add_argument("--name", default=None)
+    sim_gateway.add_argument("--gateway", type=int, default=None,
+                             help="gateway id (required for 'remove')")
+    sim_gateway.add_argument("--with-devices", action="store_true",
+                             help="also add the example devices")
+
+    sim_device = simulate_sub.add_parser("device", help="add or remove a simulated device")
+    sim_device.add_argument("action", choices=["add", "remove", "examples"])
+    sim_device.add_argument("--gateway", type=int, required=True,
+                            help="gateway id - a simulated one, or a real one whose telegrams are "
+                                 "really transmitted")
+    sim_device.add_argument("--platform", default=None,
+                            help="sensor, binary_sensor, light, switch, cover, climate")
+    sim_device.add_argument("--eep", default=None, help="profile of the device, e.g. A5-04-02")
+    sim_device.add_argument("--sender-eep", default=None,
+                            help="profile Home Assistant controls an actuator with, e.g. A5-38-08")
+    sim_device.add_argument("--name", default=None)
+    sim_device.add_argument("--hw-type", default=None, help="device of the catalog, e.g. FSR14_4x")
+    sim_device.add_argument("--address", default=None,
+                            help="address of the device (default: the next free one)")
+
+    sim_trigger = simulate_sub.add_parser(
+        "trigger", help="let a simulated device send its telegram now")
+    sim_trigger.add_argument("--gateway", type=int, required=True, help="simulated gateway id")
+    sim_trigger.add_argument("--address", required=True, help="address of the simulated device")
+    sim_trigger.add_argument("--value", action="append", default=[], metavar="NAME=VALUE",
+                             help="value it reports, e.g. --value temperature=21.5")
+    sim_trigger.add_argument("--teach-in", action="store_true",
+                             help="send the profile teach-in telegram instead (a sensor announces "
+                                  "what it is: 4BS with function/type/manufacturer, 1BS learn "
+                                  "telegram, RPS button press)")
+    sim_trigger.add_argument("--eltako-teach-in", action="store_true",
+                             help="send the Eltako teach-in telegram of the sender profile instead "
+                                  "- the one the teach-in button of Home Assistant sends so that "
+                                  "an actuator takes that sender into its memory")
+
+    sim_interval = simulate_sub.add_parser(
+        "interval", help="let a device send its telegram over and over again (like a real sensor)")
+    sim_interval.add_argument("--gateway", type=int, required=True, help="simulated gateway id")
+    sim_interval.add_argument("--address", required=True, help="address of the simulated device")
+    sim_interval.add_argument("--seconds", type=int, required=True,
+                              help="seconds between two telegrams, 0 switches it off")
+    sim_interval.add_argument("--wait", type=float, default=0.0,
+                              help="keep the runtime alive for this many seconds afterwards, so "
+                                   "the telegrams are actually sent (default 0)")
+
+    sim_teach = simulate_sub.add_parser(
+        "teach-in", help="teach a sender (also a real one) into a simulated actuator")
+    sim_teach.add_argument("--gateway", type=int, required=True, help="simulated gateway id")
+    sim_teach.add_argument("--address", required=True, help="address of the simulated actuator")
+    sim_teach.add_argument("--sender", required=True,
+                           help="address of the sender which shall control it, e.g. FF-AA-BB-CC")
+    sim_teach.add_argument("--sender-eep", default=None,
+                           help="profile that sender speaks, e.g. F6-02-01 (default: the one of "
+                                "Home Assistant)")
+    sim_teach.add_argument("--name", default=None, help="what that sender is, e.g. 'wall switch'")
+    sim_teach.add_argument("--remove", action="store_true",
+                           help="remove that sender instead of teaching it in")
+
+    sim_activate = simulate_sub.add_parser(
+        "deactivate", help="switch the simulation off: its devices are taken out of Home "
+                           "Assistant (they are kept and can still be edited)")
+    sim_activate.add_argument("--on", action="store_true",
+                              help="activate it again instead: gateways and devices are put back")
+
+    sim_set = simulate_sub.add_parser("set", help="change the values a simulated device reports")
+    sim_set.add_argument("--gateway", type=int, required=True)
+    sim_set.add_argument("--address", required=True)
+    sim_set.add_argument("--value", action="append", default=[], metavar="NAME=VALUE",
+                         help="e.g. --value temperature=21.5 --value humidity=45")
+    sim_set.add_argument("--name", default=None, help="rename the device")
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.WARNING,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    if not args.debug:
-        # keep the CLI output clean, the integration logs a lot on INFO
-        logging.getLogger("eltako").setLevel(logging.ERROR)
-        logging.getLogger("eltako_standalone").setLevel(logging.WARNING)
+    _setup_logging(args)
 
     from .runtime import install_shim
     install_shim()
 
     if args.command == "scan":
         return _cmd_scan(args)          # no runtime needed
+    if args.command == "detect":
+        return _cmd_detect(args)        # no runtime needed
+    if args.command == "bridge":
+        return _cmd_bridge(args)        # no runtime needed
     if args.command == "test":
         return _cmd_test(args)          # no runtime needed
     try:
@@ -215,7 +409,7 @@ def _exit(exit_code: int) -> int:
 ### ---------------------------------------------------------------------------
 
 def _cmd_scan(args) -> int:
-    from custom_components.eltako.gateway_scan import scan_serial_ports
+    from custom_components.eltako.tools.gateway_scan import scan_serial_ports
 
     ports = scan_serial_ports()
     if args.json:
@@ -229,6 +423,94 @@ def _cmd_scan(args) -> int:
         print(f"{port['device']:35s} {port.get('name') or '':45s} types: {types}")
         if port.get("hint"):
             print(f"{'':35s} {port['hint']}")
+    return 0
+
+
+def _cmd_detect(args) -> int:
+    """The serial half of plug & play, on its own: probe the ports, report, create nothing.
+
+    No runtime is booted - probing only needs the ports, and starting a runtime would occupy
+    the very port that is to be probed.
+    """
+    from custom_components.eltako.tools import gateway_scan, plug_and_play
+
+    if args.ports:
+        # a bridged pty lives outside of the globs the scan uses, so it is passed explicitly
+        candidates = [{'device': path, 'name': 'given on the command line'}
+                      for path in args.ports]
+        skipped = []
+    else:
+        ports = gateway_scan.scan_serial_ports()
+        candidates = plug_and_play.ports_to_probe({'ports': ports}, set())
+        probed = {port['device'] for port in candidates}
+        skipped = [port for port in ports if port['device'] not in probed]
+
+    detected = plug_and_play.probe_ports(candidates) if candidates else {}
+    result = {
+        'probed': [port['device'] for port in candidates],
+        'skipped': [port['device'] for port in skipped],
+        'detected': [dict(plug_and_play.describe_candidate(device, detection), serial_path=device)
+                     for device, detection in detected.items()],
+    }
+
+    if args.json:
+        print(json.dumps(result, indent=2, default=str))
+        return 0
+
+    if not candidates:
+        print("No port to probe. Ports whose usb descriptor fits no gateway are skipped - "
+              "pass one explicitly with --port.")
+        return 0
+
+    print(f"Probed {len(candidates)} port(s): {', '.join(result['probed'])}")
+    if skipped:
+        print(f"Skipped: {', '.join(result['skipped'])}")
+    if not detected:
+        print("\nNo gateway answered.")
+        return 1
+
+    print()
+    for candidate in result['detected']:
+        confidence = "detected" if candidate['confident'] else "SUGGESTED, please confirm"
+        print(f"{candidate['serial_path']:35s} {candidate['device_type']:12s} "
+              f"{candidate['hw_type']}  [{confidence}]")
+        print(f"{'':35s} {candidate['reason']}")
+    return 0
+
+
+def _cmd_bridge(args) -> int:
+    """Run a bridge in the foreground until Ctrl+C - the CLI face of `tools.serial_bridge`."""
+    import time
+
+    from custom_components.eltako.tools import serial_bridge
+
+    try:
+        if args.bridge_command == "publish":
+            bridge = serial_bridge.publish(args.device, args.baud_rate, args.port, args.host)
+            print(f"Publishing {args.device} ({args.baud_rate} baud) on {args.host}:{args.port}")
+            print(f"  attach it with:  python -m eltako_standalone bridge attach "
+                  f"<this host> --port {args.port}")
+        else:
+            bridge = serial_bridge.attach(args.host, args.port, args.link)
+            print(f"{bridge.path} -> {args.host}:{args.port}")
+            print("  configure a gateway with this path, or run 'detect --port "
+                  f"{bridge.path}'")
+    except serial_bridge.SerialBridgeError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+    print("Ctrl+C stops the bridge.\n")
+    try:
+        while bridge.is_running:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        status = bridge.status()
+        bridge.stop()
+        print(f"\nStopped. {status['bytes_from_device']} bytes from the device, "
+              f"{status['bytes_to_device']} bytes to it, "
+              f"{status['connections']} connection(s).")
     return 0
 
 
@@ -285,6 +567,8 @@ async def _async_main(args) -> int:
             return await _cmd_control(runtime, args)
         if args.command == "devicetest":
             return await _cmd_devicetest(runtime, args)
+        if args.command == "simulate":
+            return await _cmd_simulate(runtime, args)
         return 2
     finally:
         await runtime.async_stop()
@@ -310,7 +594,7 @@ async def _apply_startup_imports(runtime, args) -> None:
     if not files:
         return
 
-    from custom_components.eltako.config_import import async_import
+    from custom_components.eltako.config.config_import import async_import
 
     for path, overrides in files:
         try:
@@ -374,9 +658,9 @@ async def _cmd_serve(runtime, args) -> int:
 
 async def _ensure_telegram_logger(runtime):
     """listen works even when telegram recording is disabled in the settings."""
-    from custom_components.eltako import config_helpers
+    from custom_components.eltako.config import config_helpers
     from custom_components.eltako.const import CONF_LOG_ENOCEAN_TELEGRAMS
-    from custom_components.eltako.enocean_logger import (
+    from custom_components.eltako.observation.enocean_logger import (
         async_setup_telegram_logger, get_telegram_logger)
 
     logger = get_telegram_logger(runtime.hass)
@@ -419,7 +703,7 @@ async def _cmd_listen(runtime, args) -> int:
 
 
 def _find_gateway(runtime, gateway_id: int):
-    from custom_components.eltako.websocket import get_gateways
+    from custom_components.eltako.core.websocket import get_gateways
 
     return next((gw for gw in get_gateways(runtime.hass) if gw.dev_id == gateway_id), None)
 
@@ -453,7 +737,7 @@ def _parse_kv(pairs: list[str]) -> dict:
 
 
 async def _cmd_send(runtime, args) -> int:
-    from custom_components.eltako.websocket import build_eep_telegram, parse_raw_esp2
+    from custom_components.eltako.core.websocket import build_eep_telegram, parse_raw_esp2
 
     gateway = _find_gateway(runtime, args.gateway)
     if gateway is None:
@@ -556,7 +840,7 @@ async def _cmd_devicetest(runtime, args) -> int:
     """
     import asyncio as _asyncio
 
-    from custom_components.eltako.device_tests import TEST_DESCRIPTORS, TEST_RUNNERS
+    from custom_components.eltako.tools.device_tests import TEST_DESCRIPTORS, TEST_RUNNERS
 
     if args.devicetest == "list":
         for descriptor in TEST_DESCRIPTORS:
@@ -632,6 +916,197 @@ def _print_config_findings(result: dict, args) -> None:
         where = f" {finding['name']} ({finding['device']})" if finding["device"] else ""
         gateway = f" [gateway {finding['gateway_id']}]" if finding["gateway_id"] is not None else ""
         print(f"  {finding['severity'].upper():7}{gateway}{where}: {finding['message']}")
+
+
+### ---------------------------------------------------------------------------
+### simulation
+### ---------------------------------------------------------------------------
+
+async def _cmd_simulate(runtime, args) -> int:
+    """Gateways and devices without hardware, on the command line.
+
+    Calls the very same functions as the simulation page of the web ui
+    (custom_components/eltako/simulation/service.py), so both sides can never drift apart.
+    """
+    from custom_components.eltako import simulation
+    from custom_components.eltako.simulation.core import SimulationError
+
+    hass = runtime.hass
+    try:
+        if args.simulate == "starter":
+            keys = [key.strip() for key in args.gateways.split(",")] if args.gateways else None
+            result = await simulation.async_add_preset(
+                hass, keys, with_devices=not args.without_devices)
+            for gateway in result["created"]:
+                print(f"created gateway {gateway['gateway_id']} ({gateway['device_type']}), "
+                      f"base id {gateway['base_id']}, {len(gateway['devices'])} device(s)")
+            for skipped in result["skipped"]:
+                print(f"skipped {skipped['key']}: {skipped['reason']}")
+            print(f"{len(result['created'])} gateway(s), {result['device_count']} device(s). "
+                  f"Run the detection to configure them: the button 'Search devices' in the web "
+                  f"ui, or restart with plug & play enabled.")
+            return 0
+
+        if args.simulate == "list":
+            return _print_simulation(simulation.get_overview(hass), args)
+
+        if args.simulate == "gateway":
+            if args.action == "add":
+                result = await simulation.async_add_gateway(hass, args.gateway_type, args.name)
+                print(f"created simulated {result['device_type']} with id {result['gateway_id']} "
+                      f"(base id {result['base_id']}, "
+                      f"{'bus gateway' if result['bus_gateway'] else 'wireless transceiver'})")
+                if args.with_devices:
+                    devices = await simulation.async_add_preset_devices(hass, result['gateway_id'])
+                    for device in devices:
+                        print(f"  {device['address']:12} {device['platform']:14} {device['eep']}")
+                return 0
+            if args.gateway is None:
+                print("--gateway <id> is required to remove a gateway", file=sys.stderr)
+                return 2
+            result = await simulation.async_remove_gateway(hass, args.gateway)
+            print(f"removed gateway {args.gateway}: {result['removed_devices']} simulated "
+                  f"device(s), {result['removed_config_entries']} config entry/entries")
+            return 0
+
+        if args.simulate == "device":
+            if args.action == "examples":
+                devices = await simulation.async_add_preset_devices(hass, args.gateway)
+                for device in devices:
+                    print(f"{device['address']:12} {device['platform']:14} {device['eep']}")
+                return 0
+            if args.action == "add":
+                if not args.platform or not args.eep:
+                    print("--platform and --eep are required", file=sys.stderr)
+                    return 2
+                device = await simulation.async_add_device(hass, args.gateway, {
+                    'platform': args.platform, 'eep': args.eep, 'sender_eep': args.sender_eep,
+                    'name': args.name, 'hw_type': args.hw_type, 'address': args.address})
+                print(f"added {device['platform']} {device['address']} ({device['eep']})"
+                      f"{f', sender {device['sender_id']}' if device.get('sender_id') else ''}")
+                return 0
+            if not args.address:
+                print("--address is required to remove a device", file=sys.stderr)
+                return 2
+            removed = await simulation.async_remove_device(hass, args.gateway, args.address)
+            print("removed" if removed else "no such simulated device")
+            return 0 if removed else 1
+
+        if args.simulate == "set":
+            changes = {}
+            if args.value:
+                changes['state'] = _parse_kv(args.value)
+            if args.name:
+                changes['name'] = args.name
+            device = await simulation.async_update_device(hass, args.gateway, args.address, changes)
+            print(f"{device['address']} reports "
+                  f"{', '.join(f'{key}={value}' for key, value in device['state'].items() if not key.startswith('_'))}")
+            return 0
+
+        if args.simulate == "teach-in":
+            if args.remove:
+                result = await simulation.async_forget_sender(hass, args.gateway, args.address,
+                                                              args.sender)
+                print(f"{args.sender} does not control {args.address} anymore"
+                      if result["removed"] else f"{args.sender} did not control {args.address}")
+                return 0 if result["removed"] else 1
+            result = await simulation.async_teach_in(hass, args.gateway, args.address,
+                                                    args.sender, args.sender_eep, args.name)
+            sender = result["sender"]
+            print(f"{sender['id']} ({sender.get('eep') or 'profile of Home Assistant'}) controls "
+                  f"{args.address} from now on")
+            if not result["understood"]:
+                print("  note: the simulation does not understand that profile - the sender is "
+                      "stored, but nothing will answer", file=sys.stderr)
+            print("  senders: " + ", ".join(
+                f"{entry['id']}{f' ({entry['eep']})' if entry.get('eep') else ''}"
+                for entry in result["device"]["senders"]))
+            return 0
+
+        if args.simulate == "deactivate":
+            result = await simulation.async_set_active(hass, args.on)
+            if result["active"]:
+                print(f"the simulation is active: {result['gateways']} gateway(s) and "
+                      f"{result['devices']} device(s) are back in Home Assistant, "
+                      f"{result['repeating_count']} send on their own")
+            else:
+                print(f"the simulation is deactivated: {result['devices']} device(s) and "
+                      f"{result['gateways']} gateway entry/entries were taken out of Home "
+                      f"Assistant - nothing is lost, {result['devices_with_interval']} device(s) "
+                      f"keep their interval")
+            return 0
+
+        if args.simulate == "interval":
+            device = await simulation.async_set_interval(hass, args.gateway, args.address,
+                                                         args.seconds)
+            if device["repeating"]:
+                print(f"{device['address']} sends its telegram every {device['interval']} s")
+            else:
+                print(f"{device['address']} does not send on its own anymore")
+            if args.wait > 0:
+                print(f"keeping the runtime alive for {args.wait:.0f} s ...")
+                await asyncio.sleep(args.wait)
+                overview = simulation.get_overview(hass)
+                for gateway in overview["gateways"]:
+                    for entry in gateway["devices"]:
+                        if entry["address"] == device["address"]:
+                            print(f"sent {entry['sent_count']} telegram(s) in total")
+            return 0
+
+        if args.simulate == "trigger":
+            result = await simulation.async_trigger(
+                hass, args.gateway, args.address, _parse_kv(args.value) if args.value else None,
+                'eltako_teach_in' if args.eltako_teach_in else
+                'teach_in' if args.teach_in else 'state')
+            print(f"sent {result['kind']} telegram of {result['address']}: {result['telegram']}")
+            print(f"  hex {result['hex']}")
+            if result['state']:
+                print(f"  values {', '.join(f'{key}={value}' for key, value in result['state'].items())}")
+            return 0
+    except SimulationError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    return 2
+
+
+def _print_simulation(overview: dict, args) -> int:
+    if getattr(args, "json", False):
+        print(json.dumps(overview, indent=2, default=str))
+        return 0
+
+    if overview.get("active") is False:
+        print("THE SIMULATION IS DEACTIVATED - nothing of it is in Home Assistant "
+              "(`simulate deactivate --on` puts it back)\n")
+
+    if not overview["gateways"]:
+        print("Nothing is simulated yet. `simulate starter` creates a LAN gateway, a USB300 and "
+              "a FAM14 with example devices.")
+        return 0
+
+    for gateway in overview["gateways"]:
+        kind = "bus gateway" if gateway["bus_gateway"] else "wireless transceiver"
+        state = "ready" if gateway["connected"] else "not set up" if not gateway["set_up"] \
+            else "not connected"
+        print(f"gateway {gateway['id']}: {gateway['name']} ({gateway['device_type']}, {kind}) "
+              f"base id {gateway['base_id']} - {state}")
+        for device in gateway["devices"]:
+            values = ", ".join(f"{key}={value}" for key, value in (device["state"] or {}).items()
+                               if not key.startswith("_"))
+            sender = f" sender {device['sender_id']} ({device['sender_eep']})" \
+                if device.get("sender_id") else ""
+            repeating = f" every {device['interval']}s" if device.get("interval") else ""
+            print(f"  {device['address']:12} {device['platform']:14} {device['eep']:9}"
+                  f"{sender}{repeating}")
+            print(f"  {'':12} {device['name']}{f' [{values}]' if values else ''}")
+            taught_in = device.get("taught_in") or []
+            if taught_in:
+                print(f"  {'':12} taught in: " + ", ".join(
+                    f"{entry['id']}{f' ({entry['eep']})' if entry.get('eep') else ''}"
+                    f"{f' - {entry['name']}' if entry.get('name') else ''}"
+                    for entry in taught_in))
+    print(f"\n{len(overview['gateways'])} simulated gateway(s), {overview['device_count']} device(s).")
+    return 0
 
 
 if __name__ == "__main__":

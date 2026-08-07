@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 580" width="900" height="580" role="img" aria-labelledby="title desc">
+  <title id="title">Startup: async_setup once for the integration, async_setup_entry once per config entry</title>
+  <desc id="desc">Left: the ten ordered steps of async_setup, of which the first three form a chain - ui gateways, then the configuration, then the ui settings. Right: the two kinds of config entry - the core entry which carries no hardware, and one gateway entry per piece of hardware, which builds the gateway and forwards to the entity platforms.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .lane  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .step  { fill: #FFFFFF; stroke: #C7DDEC; stroke-width: 1; }
+      .chain { fill: #E3EEF7; stroke: #0064AF; stroke-width: 1.2; }
+      .base  { fill: #0064AF; stroke: #0064AF; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .h2    { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0064AF; }
+      .h2w   { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #FFFFFF; }
+      .note  { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .notew { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #D6E8F5; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monoh { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .num   { font: 600 10px system-ui, -apple-system, sans-serif; fill: #FFFFFF; text-anchor: middle; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="580"/>
+  <text class="h1" x="40" y="30">Startup &#8212; Home Assistant calls the integration twice, and the difference matters</text>
+
+  <rect class="base" x="40" y="46" width="820" height="34" rx="8"/>
+  <text class="h2w" x="56" y="68">Home Assistant loads the integration</text>
+  <text class="notew" x="336" y="68">because a config entry exists, or because `eltako:` is in configuration.yaml</text>
+
+  <path class="flow" d="M240,80 L240,104" marker-end="url(#arrow)"/>
+  <path class="flow" d="M665,80 L665,104" marker-end="url(#arrow)"/>
+
+  <!-- left: async_setup -->
+  <rect class="lane" x="40" y="108" width="400" height="432" rx="10"/>
+  <text class="monoh" x="56" y="132">async_setup(hass, config)</text>
+  <text class="note" x="56" y="150">once, for the integration &#8212; the order is load-bearing</text>
+
+  <rect class="chain" x="54" y="166" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="179" r="9"/><text class="num" x="70" y="183">1</text>
+  <text class="mono" x="88" y="183">gateway_config.async_load_ui_gateways()</text>
+
+  <rect class="chain" x="54" y="198" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="211" r="9"/><text class="num" x="70" y="215">2</text>
+  <text class="mono" x="88" y="215">config_helpers.async_get_home_assistant_config()</text>
+
+  <rect class="chain" x="54" y="230" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="243" r="9"/><text class="num" x="70" y="247">3</text>
+  <text class="mono" x="88" y="247">general_settings.async_load_overrides()</text>
+
+  <rect class="step" x="54" y="262" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="275" r="9"/><text class="num" x="70" y="279">4</text>
+  <text class="mono" x="88" y="279">register_websockets() + one per feature</text>
+
+  <rect class="step" x="54" y="294" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="307" r="9"/><text class="num" x="70" y="311">5</text>
+  <text class="mono" x="88" y="311">simulation.async_setup_registry()</text>
+
+  <rect class="step" x="54" y="326" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="339" r="9"/><text class="num" x="70" y="343">6</text>
+  <text class="mono" x="88" y="343">bus_members.async_setup_registry()</text>
+
+  <rect class="step" x="54" y="358" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="371" r="9"/><text class="num" x="70" y="375">7</text>
+  <text class="mono" x="88" y="375">device_activity.async_setup_activity_tracker()</text>
+
+  <rect class="step" x="54" y="390" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="403" r="9"/><text class="num" x="70" y="407">8</text>
+  <text class="mono" x="88" y="407">async_setup_telegram_logger()</text>
+
+  <rect class="step" x="54" y="422" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="435" r="9"/><text class="num" x="70" y="439">9</text>
+  <text class="mono" x="88" y="439">plug_and_play.async_setup_detection()</text>
+
+  <rect class="step" x="54" y="454" width="372" height="26" rx="6"/>
+  <circle class="base" cx="70" cy="467" r="9"/><text class="num" x="70" y="471">10</text>
+  <text class="mono" x="88" y="471">async_register_frontend()</text>
+
+  <text class="note" x="54" y="502">Steps 1&#8211;3 are a chain: ui gateways &#8594; configuration &#8594; ui settings.</text>
+  <text class="note" x="54" y="520">Swap any two and the integration silently reads stale values.</text>
+
+  <!-- right: the config entries -->
+  <rect class="lane" x="470" y="108" width="390" height="432" rx="10"/>
+  <text class="monoh" x="486" y="132">async_setup_entry(hass, config_entry)</text>
+  <text class="note" x="486" y="150">once per config entry &#8212; and there are two kinds</text>
+
+  <rect class="box" x="484" y="166" width="362" height="98" rx="8"/>
+  <text class="h2" x="498" y="188">core entry &#8212; &#8222;ELTAKO Core&#8220;</text>
+  <text class="mono" x="498" y="208">CONF_CORE_ENTRY  &#183;  async_setup_core_entry()</text>
+  <text class="note" x="498" y="228">Carries no hardware. It is what makes Home Assistant</text>
+  <text class="note" x="498" y="244">load the integration &#8212; which brings the web ui, the</text>
+  <text class="note" x="498" y="258">websocket api and the automatic detection with it.</text>
+
+  <rect class="box" x="484" y="280" width="362" height="112" rx="8"/>
+  <text class="h2" x="498" y="302">gateway entry &#8212; one per piece of hardware</text>
+  <text class="mono" x="498" y="322">CONF_GATEWAY_DESCRIPTION</text>
+  <text class="note" x="498" y="342">builds the EnOceanGateway (serial port or host),</text>
+  <text class="note" x="498" y="358">then forwards to every platform of const.PLATFORMS</text>
+  <text class="note" x="498" y="378">A reload re-runs only this part.</text>
+
+  <path class="flow" d="M665,392 L665,414" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="484" y="418" width="362" height="62" rx="8"/>
+  <text class="h2" x="498" y="440">entity platforms</text>
+  <text class="mono" x="498" y="462">light  switch  cover  climate  sensor  button  ...</text>
+
+  <text class="note" x="486" y="502">Writing anything into the options of an entry reloads</text>
+  <text class="note" x="486" y="520">its gateway &#8212; that is how a new device becomes an entity.</text>
+</svg>

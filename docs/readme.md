@@ -1,4 +1,4 @@
-# Home Assistant Eltako Integration Documentation
+# Home Assistant ELTAKO Integration Documentation
 
 ## Content
 
@@ -25,7 +25,7 @@
   * [Example Configuration `ha.yaml`](../ha.yaml)
 
 * **Meta Information**
-  * [Metadata file/Manifest of Eltako Integration](../custom_components/eltako/manifest.json)
+  * [Metadata file/Manifest of ELTAKO Integration](../custom_components/eltako/manifest.json)
 
 * **Features and Use Cases**
   * [Logging](./logging/readme.md)
@@ -37,6 +37,7 @@
   * [Automations triggered by Wall-Mounted EnOcean Switches](./rocker_switch/readme.md)
   * [Reacting on Incoming Telegrams in Automations (Event `eltako_global_event_bus`)](./telegram-events/readme.md)
   * [Device Tests: Configuration Check, Teach-In Test, Burst Test, Cover Travel Times](./device-tests/readme.md)
+  * [Simulation: Gateways and Devices without Hardware](./simulation/readme.md)
   * [Teach-In Buttons](./teach_in_buttons/readme.md)
   * [Sending Arbitrary EnOcean Messages](./service-send-message/readme.md)
     * [Auto-generated List of EEP Parameters](./service-send-message/eep-params.md)
@@ -46,9 +47,11 @@
 
 * **Development**
   * [Architecture - how this integration is built](architecture/readme.md)
+  * [Websocket api - every command of the web ui, with its parameters](architecture/websocket-api.md)
   * [Generating the documentation](../generate_docs.py) - the supported devices and EEPs are rendered from the code (`python generate_docs.py`)
   * [Development container (Home Assistant + example data + Grafana)](dev-container/readme.md)
   * [Standalone runtime (without Home Assistant)](standalone/readme.md)
+  * [Testing with real hardware](hardware-testing/readme.md) &ndash; both ways to put a real gateway in front of the automatic detection, and the one rule that breaks everything else
   * [Analysing telegrams with Grafana](grafana/readme.md)
 * **Testing**
   * [Testing (on Landing Page)](../README.md)

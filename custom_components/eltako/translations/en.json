@@ -1,0 +1,87 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a gateway",
+        "description": "The integration itself is already set up - installing it asks nothing and does not get this far. The Eltako panel in the sidebar is where gateways, devices and settings are configured; this dialog only adds another gateway.",
+        "menu_options": {
+          "detect": "Set up a gateway of my configuration",
+          "new_gateway": "Add a gateway by hand"
+        }
+      },
+      "new_gateway": {
+        "title": "Add a gateway",
+        "description": "Serial ports found: {ports}\n{error}",
+        "data": {
+          "device_type": "Gateway type",
+          "serial_path": "Serial port or host",
+          "id": "Gateway id",
+          "name": "Name (optional)",
+          "base_id": "Base id (optional, it is queried from the hardware)"
+        }
+      },
+      "detect": {
+        "title": "Select the path to your Eltako gateway",
+        "data": {
+          "path": "USB gateway path"
+        }
+      },
+      "manual": {
+        "title": "Enter the path to your Eltako gateway",
+        "data": {
+          "path": "USB gateway path"
+        }
+      }
+    },
+    "error": {
+      "invalid_gateway_path": "No valid gateway found for this path",
+      "invalid_gateway": "The gateway could not be added with these settings"
+    },
+    "abort": {
+      "invalid_gateway_path": "Invalid gateway path",
+      "already_configured": "This gateway is already configured",
+      "single_instance_allowed": "Already configured. Only a single configuration possible."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Eltako settings",
+        "description": "These settings belong to the whole integration - the same ones the 'Settings' page of the Eltako web ui offers. A value changed here takes effect immediately and overrides the `general_settings` section of your `configuration.yaml`."
+      },
+      "general": {
+        "title": "General",
+        "description": "{help}"
+      },
+      "plug_and_play": {
+        "title": "Plug & Play",
+        "description": "{help}"
+      },
+      "web_ui": {
+        "title": "Web UI",
+        "description": "{help}"
+      },
+      "telegram_log": {
+        "title": "Telegram recording",
+        "description": "{help}"
+      },
+      "timeseries": {
+        "title": "Timeseries export (Grafana)",
+        "description": "{help}"
+      },
+      "log_levels": {
+        "title": "Log levels of telegrams",
+        "description": "{help}"
+      }
+    },
+    "error": {
+      "invalid_setting": "This value is not accepted for that setting"
+    }
+  },
+  "services": {
+    "clear_telegram_log": {
+      "name": "Clear telegram log",
+      "description": "Resets the statistics and the live buffer of the EnOcean telegram logger. The telegram log file is not modified."
+    }
+  }
+}

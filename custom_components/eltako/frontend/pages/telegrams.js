@@ -5,9 +5,11 @@ import {
   decodedToText, download, escapeHtml, formatDecoded, formatNumber, formatTime, matchesFilter,
   timestampForFilename, toCsv,
 } from "../lib/utils.js";
+import { collectValues, decidesTheFields, descriptorFor, fieldControl, fieldLabel, infoOf,
+         relevantFields } from "../lib/telegram_form.js";
 
 const CSV_COLUMNS = [
-  "seq", "timestamp", "direction", "gateway_id", "gateway_name", "msg_type", "org", "address", "local_address",
+  "seq", "timestamp", "direction", "gateway_id", "gateway_name", "simulated", "msg_type", "org", "address", "local_address",
   "known", "role", "eep", "device_name", "entity_ids", "area", "status", "data", "raw",
   "decoded_eep", "decoded_source", "decoded",
 ];
@@ -177,10 +179,13 @@ export const page = {
       const detailId = `telegram-detail-${telegram.seq}-${index}`;
       const eep = this._eep(telegram);
       return `
-        <tr data-detail="${detailId}" class="${telegram.known ? "" : "unknown-row"}">
+        <tr data-detail="${detailId}" class="${telegram.known ? "" : "unknown-row"} ${
+              telegram.simulated ? "simulated-row" : ""}">
           <td class="mono">${formatTime(telegram.timestamp)}</td>
           <td class="dir ${escapeHtml(telegram.direction)}">${telegram.direction === "outgoing" ? "&#8593; out" : "&#8595; in"}</td>
-          <td>${escapeHtml(telegram.gateway_name || telegram.gateway_id)}</td>
+          <td>${escapeHtml(telegram.gateway_name || telegram.gateway_id)}
+            ${telegram.simulated
+              ? `<span class="tag simulated" title="This telegram was produced by the simulation - no hardware was involved">simulated</span>` : ""}</td>
           <td class="mono">${escapeHtml(telegram.address || "-")}
             ${telegram.local_address && telegram.local_address !== telegram.address
               ? `<span class="hint">bus ${escapeHtml(telegram.local_address)}</span>` : ""}</td>
@@ -224,7 +229,7 @@ export const page = {
     const form = ctx.state.sendForm;
     if (!form) return "";
     const descriptor = ctx.state.sendFormDescriptor || { gateways: [], eeps: [] };
-    const eep = descriptor.eeps.find((candidate) => candidate.eep === form.eep) || { fields: [] };
+    const eep = descriptorFor(descriptor, form.eep) || { fields: [], field_info: [] };
 
     return `
       <div class="form-card" id="send-form">
@@ -267,12 +272,19 @@ export const page = {
               <input id="send-sender" class="mono" value="${escapeHtml(form.senderId)}" placeholder="00-00-B0-01" />
               <span class="field-help">Local id for bus gateways, base id + offset for transceivers.</span>
             </div>
-            ${eep.fields.map((field) => `
+            ${relevantFields(eep, form.fields).map((field) => {
+              const info = infoOf(eep, field);
+              return `
               <div class="field">
-                <label for="send-field-${escapeHtml(field)}">${escapeHtml(field)}</label>
-                <input id="send-field-${escapeHtml(field)}" data-send-field="${escapeHtml(field)}"
-                       value="${escapeHtml(form.fields[field] ?? "")}" placeholder="0" />
-              </div>`).join("")}`}
+                <label for="send-field-${escapeHtml(field)}">${fieldLabel(eep, field)}</label>
+                ${fieldControl(eep, form.fields, field,
+                               `id="send-field-${escapeHtml(field)}" class="send-field"`)}
+                ${info.help ? `<span class="field-help">${escapeHtml(info.help)}</span>` : ""}
+              </div>`;
+            }).join("")}
+            ${eep.sendable === false ? `<div class="field" style="grid-column: 1 / -1">
+              <span class="field-help">This profile can only be decoded - the library has no
+                encoder for it, so no telegram can be built.</span></div>` : ""}`}
         </div>
         ${form.error ? `<div class="notice warn">${escapeHtml(form.error)}</div>` : ""}
         ${form.result ? `<div class="notice">Sent: <code>${escapeHtml(form.result.telegram)}</code>
@@ -307,8 +319,15 @@ export const page = {
     });
     root.getElementById("send-sender")?.addEventListener("input", (event) => { form.senderId = event.target.value; });
     root.getElementById("send-raw")?.addEventListener("input", (event) => { form.raw = event.target.value; });
-    root.querySelectorAll("[data-send-field]").forEach((input) => {
-      input.addEventListener("input", (event) => { form.fields[input.dataset.sendField] = event.target.value; });
+    root.querySelectorAll(".send-field").forEach((input) => {
+      const remember = (event) => { form.fields[input.dataset.field] = event.target.value; };
+      input.addEventListener("input", remember);
+      input.addEventListener("change", (event) => {
+        remember(event);
+        // one field can decide which other fields the profile reads at all (switch or dim)
+        const descriptor = descriptorFor(ctx.state.sendFormDescriptor, form.eep);
+        if (decidesTheFields(descriptor, input.dataset.field)) ctx.requestContentRender(true);
+      });
     });
     root.getElementById("send-close").addEventListener("click", () => {
       ctx.state.sendForm = null;
@@ -316,8 +335,14 @@ export const page = {
     });
     root.getElementById("send-submit").addEventListener("click", async () => {
       const payload = { gateway_id: Number(form.gatewayId) };
-      if (form.mode === "raw") payload.raw = form.raw;
-      else Object.assign(payload, { sender_id: form.senderId, eep: form.eep, fields: form.fields });
+      if (form.mode === "raw") {
+        payload.raw = form.raw;
+      } else {
+        const descriptor = descriptorFor(ctx.state.sendFormDescriptor, form.eep);
+        // only the fields the profile really reads, and the start values for the untouched ones
+        Object.assign(payload, { sender_id: form.senderId, eep: form.eep,
+                                 fields: collectValues(descriptor, form.fields) });
+      }
       const result = await ctx.api.call(WS.SEND_TELEGRAM, payload);
       form.result = result;
       form.error = result ? null : ((ctx.api.lastError || {}).message || "Sending failed.");
@@ -374,7 +399,8 @@ export const page = {
       if (state.onlyUnknown && telegram.known) return false;
       return matchesFilter(state.telegramFilter, [
         telegram.address, telegram.local_address, telegram.device_name, telegram.eep, telegram.msg_type,
-        telegram.data, telegram.gateway_name, (telegram.entity_ids || []).join(" "),
+        telegram.data, telegram.gateway_name, telegram.simulated ? "simulated" : "",
+        (telegram.entity_ids || []).join(" "),
         telegram.teach_in_profile, telegram.decoded_eep, decodedToText(telegram.decoded),
       ]);
     });

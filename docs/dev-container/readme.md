@@ -5,6 +5,8 @@ analysis stack - started with one command, on Linux, macOS and Windows.
 
 Everything lives in [`dev/`](../../dev/).
 
+![The development container: the repository is mounted live into a seeded Home Assistant, with InfluxDB and Grafana as an optional second stack](img/dev-container.svg)
+
 ## Quick start
 
 ```bash
@@ -32,8 +34,8 @@ The container starts with a finished installation - no onboarding, no manual set
 
 * **Admin user** `admin`/`admin` and the completed onboarding are seeded into the config
   volume on the very first start.
-* **The Eltako integration is already set up**: the config entry of the demo gateway exists,
-  the *Eltako* panel is in the sidebar right away.
+* **The ELTAKO integration is already set up**: the config entry of the demo gateway exists,
+  the *ELTAKO* panel is in the sidebar right away.
 * **Example configuration**: the repository file [`ha.yaml`](../../ha.yaml) is mounted and
   included as a Home Assistant package - one FGW14-USB bus gateway with example devices for
   every platform (lights, dimmer, switches, covers, climate, sensors, wired and wireless
@@ -115,7 +117,7 @@ open.
 
 #### Creating the gateway in the web ui
 
-1. Open the **Eltako** panel in the sidebar, page **Overview**.
+1. Open the **ELTAKO** panel in the sidebar, page **Overview**.
 2. Click **+ Add gateway**. The port list is read freshly on every click, so a stick which was
    plugged in afterwards is there.
 3. Fill in the form:
@@ -184,7 +186,7 @@ hierarchy, the import and the recorded example history. The configured demo devi
 ./start-analytics.sh        # only InfluxDB + Grafana, without Home Assistant
 ```
 
-Five dashboards are provisioned into the folder *Eltako* (tag `eltako`), the overview is the
+Five dashboards are provisioned into the folder *ELTAKO* (tag `eltako`), the overview is the
 home dashboard. They ship with the integration
 (`custom_components/eltako/grafana/dashboards/`), so they are versioned together with the data
 model they query:
@@ -213,7 +215,7 @@ Two ways, both from the same files:
   are simply there, nothing to click.
 * **Any other Grafana** (a NAS, Grafana Cloud, a hand-made container): press **Sync
   dashboards** in the live telegram view of the web ui. It pushes them through the Grafana
-  HTTP API, creates the folder *Eltako* and points the panels at the InfluxDB datasource which
+  HTTP API, creates the folder *ELTAKO* and points the panels at the InfluxDB datasource which
   actually exists there. For that, set *Grafana URL* and *Grafana API token* in the settings
   (a service account token with the role **Editor**; `admin:admin` also works for a test
   setup). The result names every dashboard with a link.

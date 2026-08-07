@@ -2,11 +2,11 @@ import unittest
 import os
 from tests.mocks import *
 from unittest import mock, IsolatedAsyncioTestCase, TestCase
-from custom_components.eltako.config_helpers import async_get_home_assistant_config
-from custom_components.eltako.schema import CONFIG_SCHEMA, GatewaySchema
-from custom_components.eltako.gateway import *
+from custom_components.eltako.config.config_helpers import async_get_home_assistant_config
+from custom_components.eltako.config.schema import CONFIG_SCHEMA, GatewaySchema
+from custom_components.eltako.core.gateway import *
 from custom_components.eltako.const import *
-from custom_components.eltako import config_helpers
+from custom_components.eltako.config import config_helpers
 from homeassistant.const import CONF_DEVICE, Platform
 
 import yaml

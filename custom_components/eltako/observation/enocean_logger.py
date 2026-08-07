@@ -899,7 +899,13 @@ class EnOceanTelegramLogger:
         return None
 
     def _collect_devices_from_config(self) -> dict[str, dict]:
-        """Build address -> device information from the yaml configuration."""
+        """Build address -> device information from the configuration of every gateway.
+
+        Both sources count: `configuration.yaml` and the web ui. Reading only the yaml left the
+        **sender** addresses of devices created in the web ui unknown - and a sender is what
+        Home Assistant transmits with, so its own commands came back as telegrams of an
+        unconfigured device and were offered as "newly discovered" ones.
+        """
         device_map: dict[str, dict] = {}
         config = self._get_config()
 
@@ -907,7 +913,7 @@ class EnOceanTelegramLogger:
             gateway_id = gateway_config.get(CONF_ID)
             base_id = self._get_gateway_base_id(gateway_id, gateway_config.get(CONF_BASE_ID))
 
-            for platform, devices in (gateway_config.get(CONF_DEVICES, {}) or {}).items():
+            for platform, devices in (self._devices_of_gateway(gateway_config) or {}).items():
                 for device in devices or []:
                     name = device.get(CONF_NAME) or ""
                     area = device.get(CONF_AREA)
@@ -937,6 +943,17 @@ class EnOceanTelegramLogger:
                                                 area, 'cooling_mode_sender')
 
         return device_map
+
+    def _devices_of_gateway(self, gateway_config: dict) -> dict:
+        """Devices of one gateway from `configuration.yaml` AND from the web ui."""
+        yaml_devices = gateway_config.get(CONF_DEVICES, {}) or {}
+        try:
+            from ..config.device_config import get_devices_of_gateway
+
+            return get_devices_of_gateway(self.hass, gateway_config.get(CONF_ID)) or yaml_devices
+        except Exception as e:  # noqa: BLE001 - without config entries the yaml is all there is
+            LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Web ui devices are not available: {e}")
+            return yaml_devices
 
     def _add_device_to_map(self, device_map: dict[str, dict], base_id: AddressExpression | None, gateway_id: int,
                            platform: str, device_id: str | None, eep: str | None, name: str, area: str | None,

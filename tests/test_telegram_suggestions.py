@@ -6,8 +6,8 @@ suggestions cannot drift away from the schemas and the device catalog of the int
 import unittest
 from unittest import TestCase
 
-from custom_components.eltako import telegram_suggestions as suggestions
-from custom_components.eltako.telegram_suggestions import (
+from custom_components.eltako.observation import telegram_suggestions as suggestions
+from custom_components.eltako.observation.telegram_suggestions import (
     best_candidate,
     devices_for_eep,
     enrich_unknown,
@@ -209,7 +209,7 @@ class TestRobustness(TestCase):
 
     def test_every_catalogued_eep_is_reachable_by_a_message_type(self):
         """A device of the catalog which can never be suggested would be a gap."""
-        from custom_components.eltako.device_catalog import DEVICE_CATALOG
+        from custom_components.eltako.catalog.device_catalog import DEVICE_CATALOG
 
         reachable = {eep for eeps in suggestions.EEP_BY_MESSAGE_TYPE.values() for eep in eeps}
         # actuator profiles (M5/G5/H5) are not received from an unknown device - they belong to

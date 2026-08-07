@@ -59,7 +59,7 @@ handful of values, a sensor a wide spread, and a stuck device exactly one.
 
 ## Which dashboard for what
 
-Five dashboards, folder **Eltako**, tag `eltako`. They ship with the integration
+Five dashboards, folder **ELTAKO**, tag `eltako`. They ship with the integration
 (`custom_components/eltako/grafana/dashboards/`) and are versioned together with the data
 model above.
 
@@ -158,7 +158,7 @@ Grafana is not a live view - it queries a database. Two things have to be right:
 Then a telegram appears within seconds of arriving - the export flushes every 5 seconds or
 every 500 telegrams, whichever comes first.
 
-For a real live view use the **Live telegrams** page of the Eltako web ui: it is pushed over
+For a real live view use the **Live telegrams** page of the ELTAKO web ui: it is pushed over
 a websocket and shows every telegram the moment it arrives, decoded. Grafana is the right tool
 as soon as you ask about the past or want to aggregate.
 
@@ -182,7 +182,7 @@ Two ways, both from the same files:
   are simply there.
 * **Any other Grafana** (NAS, Grafana Cloud, hand-made container): the button **Sync
   dashboards** on the *Live telegrams* page pushes them through the Grafana HTTP API. It
-  creates the folder *Eltako* and points every panel at the InfluxDB datasource which actually
+  creates the folder *ELTAKO* and points every panel at the InfluxDB datasource which actually
   exists there. Needs *Grafana URL* and *Grafana API token* in the settings (a service account
   token with the role **Editor**; `admin:admin` also works for a test setup). The result lists
   every dashboard with a link.

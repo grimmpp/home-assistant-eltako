@@ -79,7 +79,7 @@ class EltakoRuntime:
         from homeassistant.helpers.storage import Store
         from homeassistant.helpers import restore_state
 
-        import custom_components.eltako.eltako_integration_init as integration
+        import custom_components.eltako.core.integration as integration
         self._integration = integration
 
         hass = HomeAssistant(self.config_dir, loop=asyncio.get_event_loop())
@@ -138,14 +138,26 @@ class EltakoRuntime:
         from custom_components.eltako.const import (
             DATA_ELTAKO, ELTAKO_CONFIG, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION,
             CONF_SERIAL_PATH, DOMAIN)
-        from custom_components.eltako import gateway_config
+        from homeassistant.const import CONF_ID, CONF_NAME
+        from custom_components.eltako.config import gateway_config
         from homeassistant.config_entries import ConfigEntry
 
         config = self.hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
         existing = {entry.data.get(CONF_GATEWAY_DESCRIPTION)
                     for entry in self.hass.config_entries.async_entries(DOMAIN)}
 
+        # a deactivated simulation stays out of the runtime: its gateways must not be set up
+        # again on the next start (see custom_components/eltako/simulation)
+        from custom_components.eltako import simulation
+
+        simulation_off = not simulation.get_registry(self.hass).active \
+            if simulation.get_registry(self.hass) is not None else False
+
         for gateway in config.get(CONF_GATEWAY, []) or []:
+            if simulation_off and simulation.is_simulated_config(gateway):
+                LOGGER.debug("Simulation is deactivated - gateway '%s' is not set up.",
+                             gateway.get(CONF_NAME) or gateway.get(CONF_ID))
+                continue
             try:
                 description = gateway_config.get_description(gateway)
             except Exception:  # noqa: BLE001 - one malformed gateway must not stop the rest
@@ -208,7 +220,7 @@ class EltakoRuntime:
         the integration cannot block on it (the process exit reaps it).
         """
         from custom_components.eltako.const import DATA_ELTAKO
-        from custom_components.eltako.gateway import EnOceanGateway
+        from custom_components.eltako.core.gateway import EnOceanGateway
 
         gateways = [value for value in (self.hass.data.get(DATA_ELTAKO, {}) or {}).values()
                     if isinstance(value, EnOceanGateway)]

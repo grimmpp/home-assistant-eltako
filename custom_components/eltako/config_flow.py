@@ -7,16 +7,19 @@ import ipaddress
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_ID, CONF_NAME
+from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.selector import selector
 
-from . import gateway
-from . import config_helpers
-from . import gateway_config
+from .core import gateway
+from .config import config_helpers
+from .config import gateway_config
+from .config import general_settings
 from .const import *
-from .schema import CONFIG_SCHEMA
+from .config.schema import CONFIG_SCHEMA
 
 LOGGER_PREFIX_CONFIG_FLOW = "config_flow"
+LOGGER_PREFIX_OPTIONS_FLOW = "options_flow"
 
 class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the Eltako config flows."""
@@ -28,6 +31,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the Eltako config flow."""
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
+        """The 'Configure' button on the Home Assistant integration page."""
+        return EltakoOptionsFlowHandler()
+
     def is_input_available(self, user_input) -> bool:
         LOGGER.debug("[%s] Check available data", LOGGER_PREFIX_CONFIG_FLOW)
         if user_input is not None:
@@ -37,32 +46,41 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return False
 
     async def async_step_user(self, user_input=None):
-        """Entry point. Nothing has to be entered here.
+        """Entry point. Nothing has to be entered here, and nothing is asked.
 
-        The first option sets the integration up as it is and lets it look for the hardware
-        itself - that is the way this integration is meant to be installed. The two manual
-        paths stay for everyone who wants to name their gateway right away: one for a gateway
-        which is already declared in configuration.yaml (or was created in the web ui) but is
-        not set up in Home Assistant yet, one for defining a new one here.
+        Home Assistant does not load a custom integration which has no config entry and no
+        `eltako:` section in the yaml - so copying the files and restarting cannot bring the
+        web ui into the sidebar, whatever the integration does. Adding the integration is what
+        loads it, and that is the whole reason this step exists: it must therefore be over as
+        fast as it can be. So the first time it runs it asks nothing at all and sets the
+        integration up as it is (`async_step_auto`) - the panel appears, the detection runs,
+        and everything else is done in the web ui.
+
+        There is deliberately no menu entry for "set up automatically" anymore: it is not a
+        choice, it is what installing means, so it happens without being asked for. Only once
+        the integration is there does this step become a menu, and then it is about *gateways*:
+        picking up one which is declared in the configuration but not set up in Home Assistant
+        yet, or defining a new one by hand. Both are also on the overview page of the web ui.
         """
         LOGGER.debug("[%s] config_flow user step started.", LOGGER_PREFIX_CONFIG_FLOW)
 
+        if not self._core_entry_exists():
+            return await self.async_step_auto()
+
         menu_options = {}
-        if not self._hub_exists():
-            menu_options["auto"] = "Set up and detect my gateways automatically (recommended)"
         if await self._async_get_available_gateways():
             menu_options["detect"] = "Set up a gateway of my configuration"
         menu_options["new_gateway"] = "Add a gateway by hand"
 
         if list(menu_options) == ["new_gateway"]:
-            # the hub is there and there is nothing to pick up - only the wizard is left
+            # nothing to pick up - only the wizard is left
             return await self.async_step_new_gateway()
 
         return self.async_show_menu(step_id="user", menu_options=menu_options)
 
-    def _hub_exists(self) -> bool:
+    def _core_entry_exists(self) -> bool:
         """True if the integration itself is already set up (the gateway-less entry)."""
-        return any(entry.data.get(CONF_HUB)
+        return any(entry.data.get(CONF_CORE_ENTRY)
                    for entry in self.hass.config_entries.async_entries(DOMAIN))
 
     async def async_step_auto(self, user_input=None):
@@ -82,12 +100,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         LOGGER.debug("[%s] Setting up the integration and requesting the initial detection.",
                      LOGGER_PREFIX_CONFIG_FLOW)
 
-        await self.async_set_unique_id(HUB_UNIQUE_ID)
+        await self.async_set_unique_id(CORE_UNIQUE_ID)
         self._abort_if_unique_id_configured()
 
         self.hass.data.setdefault(DATA_ELTAKO, {})[DATA_INITIAL_DETECTION] = True
 
-        return self.async_create_entry(title=HUB_TITLE, data={CONF_HUB: True})
+        return self.async_create_entry(title=CORE_TITLE, data={CONF_CORE_ENTRY: True})
 
     async def async_step_ui_gateway(self, data: dict):
         """A gateway was created in the web ui - create its config entry directly."""
@@ -141,7 +159,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 })
 
         # suggest the free serial ports of the scan, but allow any input
-        from .gateway_scan import scan_serial_ports
+        from .tools.gateway_scan import scan_serial_ports
         ports = await self.hass.async_add_executor_job(scan_serial_ports)
         port_hints = ", ".join(port['device'] for port in ports) or "no serial port found"
 
@@ -297,3 +315,140 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Create an entry for the provided configuration."""
         LOGGER.debug("[%s] Create Gateway Entry", LOGGER_PREFIX_CONFIG_FLOW)
         return self.async_create_entry(title=user_input[CONF_GATEWAY_DESCRIPTION], data=user_input)
+
+
+### ---------------------------------------------------------------------------
+### options flow: the general settings, editable from the integration page
+### ---------------------------------------------------------------------------
+
+def _editable_descriptors(group_id: str) -> list[dict]:
+    """The settings of one group which may be changed from here.
+
+    Locked settings (currently only 'enable_frontend') are left out on purpose: a Home
+    Assistant form has no read-only field, and offering a switch which silently does nothing
+    is worse than not offering it. They stay visible in the web ui and in configuration.yaml.
+    """
+    return [descriptor for descriptor in general_settings.SETTING_DESCRIPTORS
+            if descriptor['group'] == group_id and not descriptor.get('locked')]
+
+
+def _selector_for(descriptor: dict):
+    """Turn one setting descriptor into the matching Home Assistant form field."""
+    kind = descriptor.get('type')
+    if kind == 'boolean':
+        return selector({'boolean': {}})
+    if kind == 'number':
+        number = {'mode': 'box', 'step': 'any'}
+        if 'min' in descriptor:
+            number['min'] = descriptor['min']
+        if 'max' in descriptor:
+            number['max'] = descriptor['max']
+        return selector({'number': number})
+    if kind == 'select':
+        return selector({'select': {'options': [str(option) for option in descriptor['options']],
+                                    'mode': 'dropdown'}})
+    return selector({'text': {}})
+
+
+def _schema_for(descriptors: list[dict], values: dict) -> vol.Schema:
+    """Form for one group of settings, pre-filled with the values which are in effect.
+
+    The field keys are the *labels* of the settings, not their names. This integration ships no
+    translations, and Home Assistant falls back to the raw key for a field it cannot translate -
+    'Record EnOcean telegrams' reads better there than 'log_enocean_telegrams', and it keeps the
+    labels of the web ui and of this form the same text.
+    """
+    fields = {}
+    for descriptor in descriptors:
+        value = values.get(descriptor['name'])
+        if value is None:
+            value = '' if descriptor.get('type') == 'text' else vol.UNDEFINED
+        fields[vol.Optional(descriptor['label'], default=value)] = _selector_for(descriptor)
+    return vol.Schema(fields)
+
+
+def _help_for(group_id: str, descriptors: list[dict]) -> str:
+    """Markdown shown above the form: what the group is about and what each setting does."""
+    group_help = next((help_text for identifier, _label, help_text in SETTING_GROUPS
+                       if identifier == group_id), '')
+    lines = [group_help] if group_help else []
+    lines += [f"- **{descriptor['label']}**: {descriptor['help']}"
+              for descriptor in descriptors if descriptor.get('help')]
+    return "\n".join(lines)
+
+
+class EltakoOptionsFlowHandler(config_entries.OptionsFlow):
+    """Change the general settings of the integration from the Home Assistant ui.
+
+    Same settings, same storage and same precedence as the 'Settings' page of the web ui (see
+    config/general_settings.py): whatever is changed here is stored as an override and takes
+    effect right away. They belong to the integration as a whole, not to one gateway, so every
+    entry of this integration offers the same form.
+
+    Only values which actually differ from the ones currently in effect are stored. Saving a
+    form therefore does not turn every setting of that group into an override, which would
+    silently detach them from `configuration.yaml`.
+    """
+
+    async def async_step_init(self, user_input=None):
+        return self.async_show_menu(
+            step_id='init',
+            menu_options={group_id: label for group_id, label, _help in SETTING_GROUPS},
+        )
+
+    async def _async_group_step(self, group_id: str, user_input=None):
+        descriptors = _editable_descriptors(group_id)
+        effective = config_helpers.get_general_settings_from_configuration(self.hass)
+        errors = {}
+
+        if user_input is not None:
+            by_label = {descriptor['label']: descriptor['name'] for descriptor in descriptors}
+            validated = {}
+            for label, value in user_input.items():
+                name = by_label.get(label)
+                if name is None:
+                    continue        # not part of this group - cannot happen through the ui
+                try:
+                    validated[name] = general_settings.validate_setting(name, value)
+                except vol.Invalid as e:
+                    LOGGER.warning("[%s] Invalid value for '%s': %s",
+                                   LOGGER_PREFIX_OPTIONS_FLOW, name, e)
+                    errors[label] = 'invalid_setting'
+
+            if not errors:
+                changed = {name: value for name, value in validated.items()
+                           if value != effective.get(name)}
+                if changed:
+                    LOGGER.info("[%s] Changed on the integration page: %s",
+                                LOGGER_PREFIX_OPTIONS_FLOW,
+                                ', '.join(f'{name}={value!r}' for name, value in changed.items()))
+                    await general_settings.async_set_overrides(self.hass, changed)
+                    await general_settings.async_apply_settings(self.hass)
+                # the settings are not part of the entry options - keep those as they are
+                return self.async_create_entry(title='', data=dict(self.config_entry.options))
+
+            effective = {**effective, **{by_label[label]: value
+                                         for label, value in user_input.items()
+                                         if label in by_label}}
+
+        return self.async_show_form(
+            step_id=group_id,
+            data_schema=_schema_for(descriptors, effective),
+            errors=errors,
+            description_placeholders={'help': _help_for(group_id, descriptors)},
+        )
+
+
+def _group_step(group_id: str):
+    """One `async_step_<group>` method - the menu above jumps to them by name."""
+    async def step(self, user_input=None):
+        return await self._async_group_step(group_id, user_input)
+
+    step.__name__ = f'async_step_{group_id}'
+    return step
+
+
+# Built from SETTING_GROUPS so that a new group appears in this form as well, instead of being
+# reachable in the web ui only.
+for _group_id, _label, _help in SETTING_GROUPS:
+    setattr(EltakoOptionsFlowHandler, f'async_step_{_group_id}', _group_step(_group_id))

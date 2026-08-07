@@ -362,7 +362,7 @@ async def async_apply_settings(hass: HomeAssistant) -> dict:
         LOGGER.error(f"[{LOG_PREFIX_SETTINGS}] Cannot apply the sidebar setting: {e}", exc_info=True)
 
     for entry in hass.config_entries.async_entries(DOMAIN):
-        if entry.data.get(CONF_HUB):
+        if entry.data.get(CONF_CORE_ENTRY):
             continue                # the entry of the integration itself has no gateway
         hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
         result['reloaded_gateways'] += 1

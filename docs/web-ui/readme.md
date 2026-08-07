@@ -1,4 +1,4 @@
-# Web UI of the Eltako Integration
+# Web UI of the ELTAKO Integration
 
 The integration brings its own web ui (Home Assistant panel). It is part of the integration
 (folder [`custom_components/eltako/frontend`](../../custom_components/eltako/frontend)) &ndash; there is
@@ -8,7 +8,7 @@ talk to the integration through the Home Assistant websocket connection.
 ## It is there by default
 
 **Nothing has to be configured.** As soon as the integration is set up in Home Assistant
-(*Settings &rarr; Devices & services &rarr; Add integration &rarr; Eltako*), the entry **Eltako** is in the
+(*Settings &rarr; Devices & services &rarr; Add integration &rarr; ELTAKO*), the entry **ELTAKO** is in the
 sidebar &ndash; visible for administrators only. There is no `configuration.yaml` involved, and the
 settings of the integration are edited on the *Settings* page of this panel.
 
@@ -82,13 +82,14 @@ e.g. `/eltako#/telegrams`. The *View* column says in which of the two views a pa
 
 | Page | Url | View | Content |
 |---|---|---|---|
-| **My devices** | `/eltako#/home` | simple | All devices as cards, grouped by room: state, on/off and up/down for what can be operated, rename, move to another room, remove. Plus the automatic detection ("Search devices"), a reduced add form and the devices which were discovered but are not set up yet. |
+| **My devices** | `/eltako#/home` | simple | All devices as cards, grouped by room: state, on/off and up/down for what can be operated, rename, move to another room, remove. Plus the automatic detection ("Search devices"), **"Remove all & search again"** (deletes every device created here and detects from scratch - for a configuration which drifted; asks first, names the number, keeps the gateways and everything from `configuration.yaml`), a reduced add form and the devices which were discovered but are not set up yet. |
 | **Overview** | `/eltako#/overview` | expert | One tile per gateway (type, protocol, base id, connection, serial path, recorded telegrams) with "edit gateway" and "remove gateway" for gateways created here, counters for devices, entities and telegram rate, the [plug & play](../plug-and-play/readme.md) push button with the report of the last detection run, the serial port scan, entities per platform and the configured areas. |
-| **Control** | `/eltako#/control` | both | Use the configured devices: switch, dim, move covers, adjust temperatures. |
+| **Control** | `/eltako#/control` | both | Use the configured devices: switch, dim, move covers, adjust temperatures. Grouped by room, and inside a room ordered by what a row is for - lights, sockets, covers, heating, then the buttons (teach-in, reconnect). A teach-in button carries the same name as its device, so every row says which kind it is. Sensors are hidden until "show sensors" is ticked. Every device additionally has **"telegram&hellip;"**: the values of its profile as input fields - dropdowns with names ("on", "up", "closed"), numbers with their unit and range - and a send button. For an actuator that is the profile of its **sender** (what it listens to), for a sensor its own. An actuator whose sender is not in its memory carries a **"teach in"** button; the teach-in button *entities* are left out here, their action sits in the row of the device itself. |
 | **Devices** | `/eltako#/devices` | expert | All configured devices of all gateways with their source (yaml / web ui), the hierarchical view of every RS485 bus incl. the passively detected bus members and the active bus scan, add/edit/remove, the import of `.eodm` projects, PCT14 exports and yaml - and the **unknown devices**: addresses which sent telegrams but are not configured yet, incl. their EEP (from a 4BS teach-in telegram if available, otherwise guessed). One click opens the device form prefilled. |
-| **Live telegrams** | `/eltako#/telegrams` | expert | Live stream of all telegrams: time, direction, gateway, address, device name, entity ids, EEP, message type, raw data and decoded values. Filterable by text, direction and "only unknown", can be paused, exported as CSV, and a click on a row shows the complete record. Telegrams can be sent from here as well. |
+| **Live telegrams** | `/eltako#/telegrams` | expert | Live stream of all telegrams: time, direction, gateway, address, device name, entity ids, EEP, message type, raw data and decoded values. A telegram which comes from a [simulated](../simulation/readme.md) gateway is marked as such. Filterable by text, direction and "only unknown", can be paused, exported as CSV, and a click on a row shows the complete record. Telegrams can be sent from here as well. |
 | **Statistics** | `/eltako#/statistics` | expert | One row per EnOcean address: number of telegrams (incoming/outgoing), average/min/max interval, first/last seen, message types, platform, area, entity ids, current state and the last decoded values. Sortable and exportable. |
 | **Tests** | `/eltako#/tests` | expert | [Functional device tests](../device-tests/readme.md) against the real hardware: configuration check, teach-in test, burst test, cover travel times. |
+| **Simulation** | `/eltako#/simulation` | expert | [Gateways and devices without hardware](../simulation/readme.md): create a simulated LAN gateway, USB300 or FAM14 (starter set in one click), put virtual devices behind it, define the values they report, trigger their telegrams, let them send periodically on their own and announce their profile (teach-in) with one button. Simulated devices are marked as such in every list. |
 | **Settings** | `/eltako#/settings` | expert | The general settings of the integration, editable. Values changed here are stored as overrides which win over `configuration.yaml`. |
 | **Help** | `/eltako#/help` | both | Documentation and tutorials, plus every supported device, EEP, gateway and platform. The lists are compiled by the backend from the device catalog, the platform schemas and the EEP registry of `eltakobus`, so they always match the version you run. |
 | **About** | `/eltako#/about` | both | Information about the integration: version, Home Assistant version, gateways, devices/entities, the feature list and the dependencies. |
@@ -113,12 +114,18 @@ custom_components/eltako/
         pages/telegrams.js
         pages/devices.js          # 'Statistics'
         pages/tests.js
+        pages/simulation.js       # 'Simulation' - gateways and devices without hardware
         pages/settings.js
         pages/help.js
         pages/about.js
-    websocket.py                  # backend: general information about the integration
-    enocean_logger.py             # backend: telegram recording, statistics and live stream
+    core/websocket.py             # backend: general information about the integration
+    observation/enocean_logger.py # backend: telegram recording, statistics and live stream
+    simulation/websocket.py       # backend: the simulation page
 ```
+
+Which backend module answers a page is not arbitrary: every feature registers the websocket
+commands of its own page. The layout of the python side is described in
+[the architecture guide](../architecture/readme.md#the-layout).
 
 Every page module exports one object with this contract:
 
@@ -167,8 +174,16 @@ into both.
 | `eltako/telegram_log/clear` | resets statistics and buffer |
 | `eltako/telegram_log/refresh_devices` | rebuilds the list of known devices |
 
-All commands require an administrator, except the three legacy commands `eltako/info`,
-`eltako/configured_gateways` and `eltako/potential_usb_ports`.
+Those are the ones the main pages use. There are **55 in total** - the bus scan, the device tests,
+the simulation, the configuration import, the serial bridge and the settings have their own.
+
+**&rarr; [The full reference](../architecture/websocket-api.md)**: every command with its
+parameters, what it answers, which module owns it, and how to call one by hand against a running
+Home Assistant.
+
+Almost all of them require an administrator. The exceptions are the three legacy commands
+`eltako/info`, `eltako/configured_gateways` and `eltako/potential_usb_ports`, and the four
+`device_tests/*` commands.
 
 ## Development
 

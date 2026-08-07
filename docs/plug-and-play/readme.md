@@ -10,12 +10,12 @@ three steps and only ever uses information which is unambiguous:
 Everything which stays ambiguous is **listed with its reason** instead of being guessed - it remains
 a manual decision on the *Devices* page.
 
-Implementation: [`custom_components/eltako/plug_and_play.py`](../../custom_components/eltako/plug_and_play.py)
+Implementation: [`custom_components/eltako/tools/plug_and_play.py`](../../custom_components/eltako/tools/plug_and_play.py)
 
 ## It runs once when the integration is installed
 
 **Adding the integration is the whole setup**: *Settings &rarr; Devices & services &rarr; Add integration
-&rarr; Eltako* and pick the first option. Nothing is asked for - no gateway, no serial port, no yaml.
+&rarr; ELTAKO* and pick the first option. Nothing is asked for - no gateway, no serial port, no yaml.
 The entry which is created carries no gateway at all; it is the integration itself, and it starts one
 detection run right away. Every gateway which is found beyond doubt gets its own entry a few seconds
 later, and the [web ui](../web-ui/readme.md) shows the run while it happens.
@@ -48,7 +48,7 @@ The switch of the configuration sits as a **push button on the overview page** o
 the three stages of a run:
 
 | Button | What it does |
-|---|---|
+| --- | --- |
 | **Plug & Play on/off** | Stores the setting (like the checkbox) and starts a detection run right away when it is switched on. |
 | **Detect now** | One single run without changing the setting. |
 | **Detect + re-read all buses** | Additionally reads the bus of *every* bus gateway again - also of those which were read before. The bus is locked while it is read. |
@@ -60,8 +60,9 @@ sits below it.
 
 ## 1. Which gateway is there?
 
-Two sources: the serial ports are probed **actively**, and LAN gateways which announce themselves via
-**mDNS** are picked up. Both tables are ported from the `SerialPortDetector` and the
+Two sources, searched **in parallel**: the serial ports are probed **actively**, and LAN gateways
+which announce themselves via **mDNS** are picked up - the fixed mDNS listening window hides inside
+the seconds the port probe takes anyway. Both tables are ported from the `SerialPortDetector` and the
 `LanServiceDetector` of the [EnOcean Device Manager](https://github.com/grimmpp/enocean-device-manager)
 (same author, MIT), so both tools find the same gateways.
 
@@ -70,7 +71,7 @@ Two sources: the serial ports are probed **actively**, and LAN gateways which an
 Every port which is **not** used by one of the configured gateways is opened and asked:
 
 | Gateway | How it is recognized | Created automatically |
-|---|---|---|
+| --- | --- | --- |
 | **FAM14** | only its adapter echoes back what is written to it | yes |
 | **USB300 / ESP3 stick** | answers an ESP3 base id request (57600 baud) | yes |
 | **FAM-USB** | answers an ESP2 base id request (9600 baud) | yes |
@@ -87,7 +88,7 @@ and it is stored automatically.
 ### What is never touched
 
 * a port which one of our gateways uses (running or configured but not set up yet)
-* a port whose usb descriptor is known but fits no Eltako/EnOcean gateway - Home Assistant
+* a port whose usb descriptor is known but fits no ELTAKO/EnOcean gateway - Home Assistant
   installations usually carry more sticks (Zigbee, Z-Wave, ...) and those belong to another
   integration. A port **without** a usb descriptor is probed, because inside a container only the
   device nodes are passed through and the descriptor of a FAM14 cannot be read there.
@@ -100,7 +101,7 @@ Yes &ndash; a LAN gateway which publishes an mDNS/bonjour service is picked up i
 probing involved. The browsed service types and the names behind them:
 
 | Service | Name contains | Gateway type | Created automatically |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `_bsc-sc-socket._tcp` | `SmartConn` | `lan` (ESP3 over TCP) | yes |
 | `_tcm515._tcp` | `EUL` | `eul_lan` | yes |
 | `_bsc-sc-socket._tcp` | `Virtual-Network-Gateway-Adapter` | `lan-gw-esp2` | **no** - only suggested |
@@ -108,7 +109,7 @@ probing involved. The browsed service types and the names behind them:
 A service which states its own type *and* name identifies itself, which is a far better proof than the
 FGW14-USB test - therefore those gateways are created with their ip address and port. The reverse
 bridge is the exception: **this integration publishes it itself**
-([`virtual_network_gateway.py`](../../custom_components/eltako/virtual_network_gateway.py)) so that the
+([`core/virtual_network_gateway.py`](../../custom_components/eltako/core/virtual_network_gateway.py)) so that the
 EnOcean Device Manager can connect to Home Assistant. Creating a gateway for it would connect Home
 Assistant to itself, so it is only offered with a "+ add" button (for the case that it belongs to
 another installation).
@@ -125,7 +126,7 @@ Assistant - no second socket is opened.
 
 A bus gateway gets the discovery of every position plus the complete memory of every device - the same
 paced scan the button *scan bus & read memory* of the device page runs
-([`bus_members.py`](../../custom_components/eltako/bus_members.py)).
+([`observation/bus_members.py`](../../custom_components/eltako/observation/bus_members.py)).
 
 Reading the memory **locks the bus for minutes**, therefore it happens **once**: the periodic check
 skips a bus which was already scanned (also across a restart - the memory images are persisted).
@@ -136,8 +137,8 @@ Reading it again is the explicit button *Detect + re-read all buses*.
 Only devices whose profile is certain. Three sources, in decreasing order of certainty:
 
 | Source | Why it is unambiguous |
-|---|---|
-| **Bus position** | the discovery reply names the model, the model maps to exactly one device class and the [device catalog](../../custom_components/eltako/device_catalog.py) knows its platform and EEP. A multi channel device (e.g. an FSR14-4x) becomes one device per channel; the sender ids follow the convention of the EnOcean Device Manager (`00-00-B0-<bus position>`). |
+| --- | --- |
+| **Bus position** | the discovery reply names the model, the model maps to exactly one device class and the [device catalog](../../custom_components/eltako/catalog/device_catalog.py) knows its platform and EEP. A multi channel device (e.g. an FSR14-4x) becomes one device per channel; the sender ids follow the convention of the EnOcean Device Manager (`00-00-B0-<bus position>`). |
 | **Device memory** | a sender which is taught into a bus actuator - its key function names the EEP (e.g. `..._ACCORDING_EEP_A5_10_06_...`, push buttons `F6-02-01`). |
 | **Teach-in telegram** | an address which sent a 4BS teach-in telegram: the telegram *states* the EEP (confidence `confirmed`). Needs the telegram recording to be enabled. |
 
@@ -164,7 +165,7 @@ device models.
 ## Websocket api
 
 | Command | Result |
-|---|---|
+| --- | --- |
 | `eltako/plug_and_play/status` | enabled, interval, whether a run is active, its current stage/step and the report (of the running or of the last run) |
 | `eltako/plug_and_play/run` | starts a run in the background. `enable: true/false` additionally switches the setting on/off, `rescan_bus: true` reads every bus again |
 

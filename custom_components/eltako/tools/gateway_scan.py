@@ -44,7 +44,7 @@ SYSFS_FIELDS = {
 # so this is a hint and never an automatism.
 KNOWN_DEVICES = [
     ("enocean programmer", [GatewayDeviceType.GatewayEltakoFAMUSB.value, GatewayDeviceType.EnOceanUSB300.value],
-     "EnOcean USB stick / programmer - this descriptor is used by the Eltako FAM-USB (ESP2 at "
+     "EnOcean USB stick / programmer - this descriptor is used by the ELTAKO FAM-USB (ESP2 at "
      "9600 baud) and by ESP3 sticks (57600 baud). Such devices expose TWO ports (if00/if01, e.g. "
      "...600 and ...601) and only the SECOND one carries the telegrams - a FAM-USB answers on "
      "if01. If the gateway stays disconnected, use the other port."),
@@ -52,7 +52,7 @@ KNOWN_DEVICES = [
      "EnOcean USB300 transceiver (ESP3, 57600 baud)."),
     ("FT232R", [GatewayDeviceType.GatewayEltakoFGW14USB.value, GatewayDeviceType.GatewayEltakoFAM14.value,
                 GatewayDeviceType.GatewayEltakoFAMUSB.value],
-     "FTDI serial adapter - used by Eltako FGW14-USB and FAM14 (both ESP2 at 57600 baud) and by "
+     "FTDI serial adapter - used by ELTAKO FGW14-USB and FAM14 (both ESP2 at 57600 baud) and by "
      "the FAM-USB (ESP2 at 9600 baud). The type cannot be detected from the usb descriptor."),
     ("FT2232", [GatewayDeviceType.GatewayEltakoFGW14USB.value],
      "FTDI dual port adapter. Only one of its ports is usually connected to the bus."),
@@ -120,6 +120,24 @@ def _pretty_name(descriptor: str) -> str:
     return name.replace("_", " ")
 
 
+# pyserial fills the fields it cannot answer with this placeholder instead of leaving them
+# empty. Taking it for a real descriptor would be worse than knowing nothing: a port whose
+# descriptor is known but fits no gateway is skipped by the probe (see
+# `plug_and_play.ports_to_probe`), so 'n/a' would silently exclude exactly the ports the
+# container exception is meant to cover - inside a container sysfs holds no usb information,
+# but pyserial still lists every /dev/ttyUSB* with description 'n/a'.
+PYSERIAL_UNKNOWN = 'n/a'
+
+
+def _pyserial_value(port, *attributes) -> str | None:
+    """First attribute of a pyserial port which carries real information."""
+    for attribute in attributes:
+        value = getattr(port, attribute, None)
+        if value and value.strip().lower() != PYSERIAL_UNKNOWN:
+            return value
+    return None
+
+
 def _pyserial_ports() -> list[dict]:
     """Serial ports enumerated by pyserial - works on linux, macOS and windows."""
     try:
@@ -132,10 +150,10 @@ def _pyserial_ports() -> list[dict]:
         for port in list_ports.comports():
             ports.append({
                 'device': port.device,
-                'manufacturer': getattr(port, 'manufacturer', None),
-                'product': getattr(port, 'product', None) or getattr(port, 'description', None),
-                'serial_number': getattr(port, 'serial_number', None),
-                'interface_name': getattr(port, 'interface', None),
+                'manufacturer': _pyserial_value(port, 'manufacturer'),
+                'product': _pyserial_value(port, 'product', 'description'),
+                'serial_number': _pyserial_value(port, 'serial_number'),
+                'interface_name': _pyserial_value(port, 'interface'),
             })
     except Exception as e:  # noqa: BLE001 - enumeration must never break the scan
         LOGGER.debug(f"[{LOG_PREFIX_SCAN}] pyserial enumeration failed: {e}")
@@ -153,13 +171,16 @@ def scan_serial_ports() -> list[dict]:
         return ports.setdefault(os.path.realpath(device), {
             'device': device, 'by_id': None, 'by_path': None, 'descriptor': None,
             'name': os.path.basename(device), 'interface': None,
-            'suggested_device_types': [], 'hint': "",
+            'suggested_device_types': [], 'hint': "", 'device_node': False,
         })
 
-    # 1) the device nodes themselves - the only source which also works inside a container
+    # 1) the device nodes themselves - the only source which also works inside a container.
+    # `device_node` remembers that a port matched one of the globs above, which is what makes
+    # it a candidate at all: inside a container a passed-through gateway carries no usb
+    # information whatsoever, so being one of these nodes is the only thing left to go by.
     for pattern in DEVICE_GLOBS:
         for device in glob.glob(pattern):
-            entry_for(device)
+            entry_for(device)['device_node'] = True
 
     # 1b) pyserial enumeration - the globs and udev above are linux specific, this also
     # finds COM3 on windows and /dev/cu.usbserial-* on macOS (relevant for the standalone
@@ -259,7 +280,7 @@ def scan(hass: HomeAssistant) -> dict:
         'gateways_without_port': missing,
         'device_types': [t.value for t in GatewayDeviceType],
         'hint': "Add a gateway in your configuration.yaml and then create it in Home Assistant "
-                "under Settings -> Devices & Services -> Add integration -> Eltako.",
+                "under Settings -> Devices & Services -> Add integration -> ELTAKO.",
     }
 
 

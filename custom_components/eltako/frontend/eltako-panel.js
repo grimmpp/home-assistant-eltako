@@ -5,8 +5,8 @@
  * shared data and the live telegram subscription) and loads the sub pages from './pages'.
  *
  * Everything is plain javascript (ES modules), no build step and no dependencies.
- * The backend is implemented in custom_components/eltako/websocket.py and
- * custom_components/eltako/enocean_logger.py.
+ * The backend is implemented in custom_components/eltako/core/websocket.py and
+ * custom_components/eltako/observation/enocean_logger.py.
  */
 
 import { EltakoApi, WS } from "./lib/api.js";
@@ -20,6 +20,7 @@ import { page as devicesConfigPage } from "./pages/devices_config.js";
 import { page as telegramsPage } from "./pages/telegrams.js";
 import { page as statisticsPage } from "./pages/devices.js";
 import { page as testsPage } from "./pages/tests.js";
+import { page as simulationPage } from "./pages/simulation.js";
 import { page as settingsPage } from "./pages/settings.js";
 import { page as helpPage } from "./pages/help.js";
 import { page as aboutPage } from "./pages/about.js";
@@ -30,7 +31,7 @@ import { page as aboutPage } from "./pages/about.js";
 // 'unknown devices' has no page of its own anymore - the addresses which are not configured
 // yet are the last block of the device page, next to everything else which exists on the bus.
 const PAGES = [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
-               testsPage, settingsPage, helpPage, aboutPage]
+               testsPage, simulationPage, settingsPage, helpPage, aboutPage]
   .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
 
 /**
@@ -272,7 +273,9 @@ class EltakoPanel extends HTMLElement {
       this._refreshTimer = setInterval(async () => {
         // While a form is open the periodic refresh must not re-render the content -
         // it would wipe everything the user has typed (e.g. the name of a new gateway).
+        // Pages with their own forms answer that question themselves (page.isEditing).
         if (this.state.editor || this.state.gatewayEditor || this.state.sendForm) return;
+        if (page.isEditing && page.isEditing(this._context())) return;
         if (page.load) await page.load(this._context());
         this._render();
       }, page.refreshMs);
@@ -404,7 +407,7 @@ class EltakoPanel extends HTMLElement {
           <nav id="nav"></nav>
           <!-- outside of header and nav so it can be centred over the height of the whole
                white bar, not just over the row with the title -->
-          <img class="brand-logo" src="${LOGO_URL}" alt="Eltako"
+          <img class="brand-logo" src="${LOGO_URL}" alt="ELTAKO"
                data-fallback="${LOGO_URL_FALLBACK}"
                onerror="if (this.dataset.fallback) { this.src = this.dataset.fallback;
                           this.dataset.fallback = ''; } else { this.style.display = 'none'; }" />

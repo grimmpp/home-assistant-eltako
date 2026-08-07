@@ -243,10 +243,26 @@ def _has_usb_descriptor(port: dict) -> bool:
                 or port.get('by_id'))
 
 
+def _could_carry_a_gateway(port: dict) -> bool:
+    """Whether a port without any usb information is worth opening at all.
+
+    Only relevant for ports which carry no descriptor - with one, the rules below decide. A
+    linux device node (`/dev/ttyUSB*`, `ttyACM*`, `ttyAMA*`) qualifies even when it says
+    nothing about itself, because that is exactly the situation inside a container: the node
+    is passed through, sysfs is not.
+
+    Everything else at this point comes from the pyserial enumeration on a developer machine,
+    where macOS lists its built-in services as serial ports - `/dev/cu.Bluetooth-Incoming-Port`
+    and `/dev/cu.debug-console` are openable, silent and would therefore be reported as an
+    FGW14-USB, which is noise rather than a finding.
+    """
+    return bool(port.get('device_node')) or _is_usb_port(port)
+
+
 def ports_to_probe(scan: dict, configured_paths: set[str]) -> list[dict]:
     """Ports which may be opened by the probe.
 
-    Three rules, all of them protecting something which is already working:
+    Four rules, all of them protecting something which is already working:
 
     * a port which one of our gateways uses is never touched - opening it would interrupt its
       reception. `scan['ports']` marks the ports of the *running* gateways, `configured_paths`
@@ -254,8 +270,10 @@ def ports_to_probe(scan: dict, configured_paths: set[str]) -> list[dict]:
     * a port whose usb descriptor is known but does not fit any Eltako/EnOcean gateway is
       skipped. Home Assistant installations usually carry more sticks (Zigbee, Z-Wave, ...)
       and those belong to another integration.
-    * a port without any usb descriptor is probed: inside a container only the device nodes
-      are passed through, so the descriptor of a FAM14 is simply not readable there.
+    * a port without any usb descriptor is probed **if it could carry a gateway** - inside a
+      container only the device nodes are passed through, so the descriptor of a FAM14 is
+      simply not readable there. A built-in port of the host machine is not probed, see
+      `_could_carry_a_gateway`.
 
     A port which another program holds open cannot be opened a second time (pyserial locks it
     exclusively), so a stick which is in use is skipped by the probe itself as well.
@@ -270,9 +288,14 @@ def ports_to_probe(scan: dict, configured_paths: set[str]) -> list[dict]:
             continue
         if os.path.realpath(str(port.get('device') or '')) in claimed:
             continue
-        if _has_usb_descriptor(port) and not port.get('suggested_device_types'):
-            LOGGER.debug(f"[{LOG_PREFIX_PNP}] {port.get('device')} "
-                         f"({port.get('name')}) is no known gateway descriptor - not probed.")
+        if _has_usb_descriptor(port):
+            if not port.get('suggested_device_types'):
+                LOGGER.debug(f"[{LOG_PREFIX_PNP}] {port.get('device')} "
+                             f"({port.get('name')}) is no known gateway descriptor - not probed.")
+                continue
+        elif not _could_carry_a_gateway(port):
+            LOGGER.debug(f"[{LOG_PREFIX_PNP}] {port.get('device')} carries no usb information "
+                         f"and is no device node - not probed.")
             continue
         candidates.append(port)
     return candidates
@@ -699,6 +722,52 @@ def _set_step(hass: HomeAssistant, stage: str | None, step: str | None) -> None:
         LOGGER.info(f"[{LOG_PREFIX_PNP}] {step}")
 
 
+async def async_detect_gateways(hass: HomeAssistant, include_mdns: bool = True) -> dict:
+    """Stage 1 on its own: which gateways are there? Creates nothing, reads no bus.
+
+    `async_run` answers "set up what is connected", which is the right thing in a house but
+    the wrong thing when the question is only *whether the detection recognizes this stick*:
+    a run creates config entries and reads the bus of every new bus gateway, which locks it
+    for minutes. This is the read-only half - it opens the free ports, asks them, and reports
+    what it found. Safe to call repeatedly.
+
+    Used by the websocket command `eltako/plug_and_play/probe`, by the CLI (`detect`) and by
+    the tests. The result carries the same candidate dicts `async_run` would act on, so a
+    caller can feed one straight into `build_gateway`.
+    """
+    from .gateway_scan import scan as scan_ports
+
+    scan = await hass.async_add_executor_job(scan_ports, hass)
+    probe_list = ports_to_probe(scan, configured_serial_paths(hass))
+    ports_by_device = {str(port.get('device')): port for port in probe_list}
+
+    # the serial probe and the mDNS browse know nothing of each other and each occupies its
+    # own executor thread - run them at the same time, so the fixed browse window of
+    # MDNS_BROWSE_SECONDS hides inside the seconds the probe takes anyway
+    detected, lan_candidates = await asyncio.gather(
+        async_probe_ports(hass, probe_list) if probe_list
+        else asyncio.sleep(0, result={}),
+        async_discover_mdns_gateways(hass) if include_mdns
+        else asyncio.sleep(0, result=[]),
+    )
+
+    candidates = [describe_candidate(device, detection, ports_by_device.get(device))
+                  for device, detection in detected.items()]
+    candidates.extend(lan_candidates)
+
+    return {
+        'ports_scanned': len(scan.get('ports') or []),
+        'ports_probed': len(probe_list),
+        'ports_skipped': [port['device'] for port in (scan.get('ports') or [])
+                          if port.get('device') not in ports_by_device],
+        'mdns_found': len(lan_candidates),
+        'gateways_detected': candidates,
+        # a candidate which is only suggested needs a human to confirm its type - an
+        # FGW14-USB cannot be told apart from any other silent serial device
+        'gateways_suggested': [c for c in candidates if not c['confident']],
+    }
+
+
 async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
                     add_devices: bool = True) -> dict:
     """One complete plug & play pass. Returns the report.
@@ -710,7 +779,6 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
     from ..observation import bus_members
     from ..config import device_config
     from .. import simulation
-    from .gateway_scan import scan as scan_ports
     from ..core.websocket import get_gateways
 
     state = get_state(hass)
@@ -731,21 +799,14 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
 
     try:
         ### 1) which gateway is plugged in or announces itself on the network?
-        scan = await hass.async_add_executor_job(scan_ports, hass)
-        candidates = []
-        probe_list = ports_to_probe(scan, configured_serial_paths(hass))
-        if probe_list:
-            _set_step(hass, STAGE_PORTS, f"Probing {len(probe_list)} free serial port(s)")
-            detected = await async_probe_ports(hass, probe_list)
-            ports_by_device = {str(port.get('device')): port for port in probe_list}
-            candidates.extend(describe_candidate(device, detection, ports_by_device.get(device))
-                              for device, detection in detected.items())
-        report['ports_probed'] = len(probe_list)
-
-        _set_step(hass, STAGE_PORTS, "Listening for LAN gateways which announce themselves (mDNS)")
-        lan_candidates = await async_discover_mdns_gateways(hass)
-        candidates.extend(lan_candidates)
-        report['mdns_found'] = len(lan_candidates)
+        # one call for both sources - `async_detect_gateways` probes the free serial ports and
+        # browses mDNS **in parallel**, so this stage costs max(probe, browse), not their sum
+        _set_step(hass, STAGE_PORTS, "Probing the free serial ports and listening for "
+                                     "LAN gateways (mDNS) in parallel")
+        detection = await async_detect_gateways(hass)
+        candidates = list(detection['gateways_detected'])
+        report['ports_probed'] = detection['ports_probed']
+        report['mdns_found'] = detection['mdns_found']
 
         report['gateways_detected'] = list(candidates)
         report['gateways_suggested'] = [candidate for candidate in candidates
@@ -764,29 +825,36 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
             except vol.Invalid as e:
                 report['warnings'].append(f"{candidate['hw_type']} on {where}: {e}")
 
-        ### 3) read the bus of the bus gateways
+        ### 3) read the bus of the bus gateways - every bus in parallel: each one is its own
+        ### serial or tcp connection with its own lock, they cannot talk over each other. The
+        ### wall clock of this stage is the slowest bus, not the sum of all of them.
         gateways = get_gateways(hass)
-        for gateway in gateways:
-            if not GatewayDeviceType.is_bus_gateway(gateway.dev_type):
-                continue
-            if getattr(gateway, 'is_simulated', False):
-                # a simulated bus has no device memory to read; its devices are known anyway
-                # (they are taken over as candidates in the next step)
-                continue
-            gateway_id = gateway.dev_id
-            if not rescan_bus and _bus_was_read(hass, bus_members, gateway_id):
-                continue
-            _set_step(hass, STAGE_BUS, f"Reading the bus of gateway {gateway_id} "
+        bus_targets = [gateway for gateway in gateways
+                       if GatewayDeviceType.is_bus_gateway(gateway.dev_type)
+                       # a simulated bus has no device memory to read; its devices are known
+                       # anyway (they are taken over as candidates in the next step)
+                       and not getattr(gateway, 'is_simulated', False)
+                       and (rescan_bus or not _bus_was_read(hass, bus_members, gateway.dev_id))]
+        if bus_targets:
+            names = ", ".join(str(gateway.dev_id) for gateway in bus_targets)
+            _set_step(hass, STAGE_BUS, f"Reading the bus of gateway(s) {names} "
                                        f"(this can take a few minutes)")
-            read = await _async_read_bus(hass, bus_members, gateway)
-            report['buses_read'].append(read)
-            if read.get('finished'):
-                scanned = state.setdefault('scanned_gateways', [])
-                if gateway_id not in scanned:
-                    scanned.append(gateway_id)
-            else:
-                report['warnings'].append(f"The bus scan of gateway {gateway_id} did not finish "
-                                          f"within {BUS_SCAN_TIMEOUT} s.")
+            watcher = asyncio.ensure_future(
+                _watch_bus_progress(hass, bus_members, [g.dev_id for g in bus_targets]))
+            try:
+                reads = await asyncio.gather(
+                    *[_async_read_bus(hass, bus_members, gateway) for gateway in bus_targets])
+            finally:
+                watcher.cancel()
+            for gateway, read in zip(bus_targets, reads):
+                report['buses_read'].append(read)
+                if read.get('finished'):
+                    scanned = state.setdefault('scanned_gateways', [])
+                    if gateway.dev_id not in scanned:
+                        scanned.append(gateway.dev_id)
+                else:
+                    report['warnings'].append(f"The bus scan of gateway {gateway.dev_id} did "
+                                              f"not finish within {BUS_SCAN_TIMEOUT} s.")
 
         ### 4) add every device which is identified without any doubt
         _set_step(hass, STAGE_DEVICES, "Collecting the devices which can be identified")
@@ -917,6 +985,28 @@ def _bus_was_read(hass: HomeAssistant, bus_members, gateway_id: int) -> bool:
                if member.get('gateway_id') == gateway_id)
 
 
+async def _watch_bus_progress(hass: HomeAssistant, bus_members, gateway_ids: list[int]) -> None:
+    """Mirror the progress of the running scans into the step text, once a second.
+
+    The overview page shows `step` live, so this is all it takes for "how far is it?" -
+    several parallel scans become one line ("gateway 1: position 11/14, memory 23/56 ·
+    gateway 3: position 2/8"). Cancelled by the caller when the last scan is done.
+    """
+    try:
+        while True:
+            await asyncio.sleep(1)
+            parts = []
+            for gateway_id in gateway_ids:
+                progress = bus_members.get_scan_progress(gateway_id)
+                if progress:
+                    parts.append(f"gateway {gateway_id}: "
+                                 f"{bus_members.describe_scan_progress(progress)}")
+            if parts:
+                _set_step(hass, STAGE_BUS, f"Reading the bus - {' · '.join(parts)}")
+    except asyncio.CancelledError:
+        pass
+
+
 async def _async_read_bus(hass: HomeAssistant, bus_members, gateway) -> dict:
     """Discovery plus complete memory of every device of one bus. Blocks the bus while running."""
     registry = bus_members.get_registry(hass)
@@ -926,18 +1016,16 @@ async def _async_read_bus(hass: HomeAssistant, bus_members, gateway) -> dict:
     if not positions:
         positions = list(range(1, 65))      # a fresh bus was not polled yet
 
-    try:
-        if gateway._reading_memory_of_devices_is_running.is_set():
-            return {'gateway_id': gateway.dev_id, 'finished': False, 'reason': 'already_running'}
-    except Exception:   # noqa: BLE001
-        pass
-
-    bus_members.start_bus_scan_thread(hass, gateway, positions)
+    # only one operation may talk on the bus at a time - a scan which is refused here is not an
+    # error, it means somebody else (a scan started by hand, a teach-in) already has it
+    if not bus_members.start_bus_scan_thread(hass, gateway, positions):
+        return {'gateway_id': gateway.dev_id, 'finished': False, 'reason': 'already_running',
+                'busy_with': getattr(gateway, 'bus_busy_reason', None)}
 
     finished = False
     for _ in range(BUS_SCAN_TIMEOUT):
         await asyncio.sleep(1)
-        if not gateway._reading_memory_of_devices_is_running.is_set():
+        if not gateway.is_bus_busy:
             finished = True
             break
     await asyncio.sleep(BUS_SCAN_SETTLE)
@@ -1070,10 +1158,13 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
         return
     websocket_api.async_register_command(hass, ws_plug_and_play_status)
     websocket_api.async_register_command(hass, ws_plug_and_play_run)
+    websocket_api.async_register_command(hass, ws_plug_and_play_probe)
     domain_data[WS_PNP_REGISTERED] = True
 
 
 def get_status(hass: HomeAssistant) -> dict:
+    from ..observation import bus_members
+
     settings = config_helpers.get_general_settings_from_configuration(hass)
     state = get_state(hass)
     return {
@@ -1084,6 +1175,9 @@ def get_status(hass: HomeAssistant) -> dict:
         'step': state.get('step'),
         'stage': state.get('stage'),
         'stages': list(STAGES),
+        # counters of every bus scan which runs right now (percent, position x/y, memory
+        # rows) - the structured form of the step text, for a progress bar
+        'bus_scans': bus_members.get_scan_progress(),
         'started_at': state.get('started_at'),
         'last_run': state.get('last_run'),
         'last_report': state.get('last_report'),
@@ -1138,3 +1232,19 @@ async def ws_plug_and_play_run(hass: HomeAssistant, connection, msg) -> None:
 
     hass.async_create_task(async_run(hass, rescan_bus=bool(msg.get('rescan_bus'))))
     connection.send_result(msg['id'], {'started': True, 'status': get_status(hass)})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_PLUG_AND_PLAY_PROBE,
+    vol.Optional('include_mdns', default=True): bool,
+})
+@websocket_api.async_response
+async def ws_plug_and_play_probe(hass: HomeAssistant, connection, msg) -> None:
+    """Detect only - create nothing, read no bus. Answers "would this stick be recognized?".
+
+    Unlike RUN this one is awaited: without the bus scan a probe takes seconds, and the caller
+    (cli, test, a REST client) wants the answer, not a background task to poll.
+    """
+    result = await async_detect_gateways(hass, include_mdns=bool(msg.get('include_mdns', True)))
+    connection.send_result(msg['id'], result)

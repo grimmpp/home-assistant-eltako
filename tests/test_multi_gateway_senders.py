@@ -11,7 +11,8 @@ from unittest import TestCase, mock
 from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
-from custom_components.eltako import config_helpers, device as device_module
+from custom_components.eltako.config import config_helpers
+from custom_components.eltako.core import entity as device_module
 from custom_components.eltako.const import *
 from custom_components.eltako.light import EltakoDimmableLight
 

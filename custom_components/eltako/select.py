@@ -12,14 +12,17 @@ from homeassistant.components.select import (
 from homeassistant import config_entries
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
 
-from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
-from .config_helpers import DeviceConf
-from .device import *
-from .gateway import EnOceanGateway
+from .config import config_helpers
+
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
+from .config.config_helpers import DeviceConf
+from .core.entity import *
+from .core.gateway import EnOceanGateway, BusBusyError
 from .const import *
 
 
@@ -183,7 +186,13 @@ class RepeaterMode(EltakoEntity, SelectEntity, RestoreEntity):
         if option == "Level 1": level = 1
         if option == "Level 2": level = 2
 
-        self.gateway.set_repeater_mode(level)
+        try:
+            self.gateway.set_repeater_mode(level)
+        except BusBusyError as e:
+            # while a scan or a teach-in has the bus, nothing else may talk on it. The option
+            # keeps its old value so that it shows what the gateway really does.
+            LOGGER.warning(f"[{self._attr_ha_platform} {self.unique_id}] {e}")
+            raise HomeAssistantError(str(e)) from e
 
         self._attr_current_option = option
         self.schedule_update_ha_state()

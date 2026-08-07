@@ -2,23 +2,37 @@
 from enum import Enum
 from strenum import StrEnum
 import logging
+import os
 
 from typing import Final
 
 from homeassistant.const import Platform
 
 DOMAIN: Final = "eltako"
+
+# custom_components/eltako/ - the directory this file sits in and the only thing HACS installs.
+# Every module which has to find a shipped file (manifest.json, docs_index.json, frontend/,
+# grafana/) resolves it from here instead of from its own __file__, which moves when a module
+# moves into another subpackage.
+INTEGRATION_DIR: Final = os.path.dirname(os.path.abspath(__file__))
 DATA_ELTAKO: Final = "eltako"
 DATA_ENTITIES: Final = "entities"
 DATA_TELEGRAM_LOGGER: Final = "telegram_logger"
 DATA_DEVICE_ACTIVITY: Final = "device_activity"
 DATA_SETTINGS_OVERRIDES: Final = "settings_overrides"
+# {'entry_id': ..., 'pending': bool} of the one-time redirect into the web ui (core/onboarding.py)
+DATA_ONBOARDING: Final = "onboarding"
+# True if 'configuration.yaml' has an `eltako:` section - then the integration is configured by
+# file and the web ui does not disappear with the last config entry (core/integration.py)
+DATA_YAML_CONFIGURED: Final = "yaml_configured"
 DATA_SETTINGS_STORE: Final = "settings_store"
 # NOTE: keys must not start with "gateway" - the gateway objects themselves are stored under
 # "gateway_<id>" and are collected by prefix in several places.
 DATA_UI_GATEWAYS: Final = "ui_gateway_definitions"
 DATA_GATEWAY_STORE: Final = "ui_gateway_store"
 DATA_BUS_MEMBERS: Final = "bus_members"
+# virtual devices of the simulator gateways (see simulator.py)
+DATA_SIMULATOR: Final = "simulator_registry"
 # senders of wireless devices which are taught into more than one gateway,
 # (platform, device address) -> list of {id, eep, gateway_id}. See config_helpers.
 DATA_ADDITIONAL_SENDERS: Final = "additional_senders"
@@ -28,7 +42,7 @@ DATA_PORT_FINGERPRINT_STORE: Final = "port_fingerprint_store"
 DATA_PLUG_AND_PLAY: Final = "plug_and_play"
 ELTAKO_GATEWAY: Final = "gateway"
 ELTAKO_CONFIG: Final = "config"
-MANUFACTURER: Final = "Eltako"
+MANUFACTURER: Final = "ELTAKO"
 
 ERROR_INVALID_GATEWAY_PATH: Final = "Invalid gateway path"
 ERROR_NO_SERIAL_PATH_AVAILABLE: Final = "No serial path available. Try to reconnect your usb plug."
@@ -54,6 +68,10 @@ CONF_SENSOR: Final = "sensor"
 CONF_GERNERAL_SETTINGS: Final = "general_settings"
 CONF_SHOW_DEV_ID_IN_DEV_NAME: Final = "show_dev_id_in_dev_name"
 CONF_ENABLE_FRONTEND: Final = "enable_frontend"
+# Whether the web ui gets an entry in the Home Assistant sidebar. Independent of
+# CONF_ENABLE_FRONTEND: hidden means the panel is still served under its url (and still
+# reachable from the integration page), it just does not take up a place in the navigation.
+CONF_SHOW_PANEL_IN_SIDEBAR: Final = "show_panel_in_sidebar"
 CONF_ENABLE_TEST_PAGE: Final = "enable_test_page"
 CONF_ENABLE_TEACH_IN_BUTTONS: Final = "enable_teach_in_buttons"
 
@@ -70,12 +88,21 @@ CONF_FAST_STATUS_CHANGE: Final = "fast_status_change"
 CONF_PLUG_AND_PLAY: Final = "plug_and_play"
 CONF_PLUG_AND_PLAY_INTERVAL: Final = "plug_and_play_interval"
 
-### The integration itself as a config entry, without any gateway. It is what "Add integration"
-### creates: the panel appears, the detection runs, and every gateway which is found gets its own
-### entry. Nothing has to be entered by hand. (See config_flow.async_step_auto)
-CONF_HUB: Final = "hub"
-HUB_UNIQUE_ID: Final = "eltako_hub"
-HUB_TITLE: Final = "Eltako"
+### The core of the integration as a config entry, without any gateway: the web ui, the
+### websocket api behind it and the automatic detection. It is what "Add integration" creates,
+### it carries no hardware, and every gateway which is found gets its own entry next to it.
+### Nothing has to be entered by hand. (See config_flow.async_step_auto)
+###
+### The two stored values keep their old wording on purpose - they sit in the config entries of
+### every existing installation. Renaming them would turn the core entry of an upgraded system
+### into an unrecognised one (no gateway description -> setup fails) or create a second one.
+CONF_CORE_ENTRY: Final = "hub"                  # key in the entry data - do not rename
+CORE_UNIQUE_ID: Final = "eltako_hub"            # unique id of that entry - do not rename
+CORE_TITLE: Final = "ELTAKO Core"
+# what the entry was called before it got a name of its own - it was simply the name of the
+# integration. An installation which still shows one of these is renamed on the next start; a
+# title the user picked themselves is left alone.
+OLD_CORE_TITLES: Final = ("Eltako", "ELTAKO")
 # set by the config flow, consumed once by async_setup_entry: run the detection right after
 # the integration was added, but not again on every restart (reading a bus locks it)
 DATA_INITIAL_DETECTION: Final = "run_initial_detection"
@@ -102,6 +129,15 @@ CONF_ROOM_SENSOR: Final = "room_sensor"
 CONF_OFF_TEMPERATURE: Final = "off_temperature"
 
 CONF_VIRTUAL_NETWORK_GATEWAY: Final = "Virtual ESP2 Reverse Network Bridge"
+
+### Simulation (see simulator.py / simulator_core.py): a gateway of a normal type whose
+### hardware does not exist - its devices are simulated in this process. The flag is part of
+### the gateway configuration, so a simulated gateway can be of every supported type: a
+### simulated FAM14 is a bus gateway, a simulated USB300 a wireless transceiver.
+CONF_SIMULATED: Final = "simulated"
+# The names, prefixes and address rules of the simulation are NOT defined here: they live in
+# tools/simulator_core.py, which knows nothing about Home Assistant so that it can be moved
+# into a library of its own. Whoever needs them imports them from there.
 
 CONF_GATEWAY_DESCRIPTION_PATTERN: Final = ""
 
@@ -195,6 +231,14 @@ PANEL_WEBCOMPONENT: Final = "eltako-panel"
 PANEL_STATIC_URL: Final = "/eltako_frontend"        # url the frontend folder is served under
 PANEL_JS_FILE: Final = "eltako-panel.js"            # entry point of the frontend
 
+### First start: right after the integration was installed the web ui is opened once, so that
+### nobody has to find it in the sidebar first. The tiny module below is loaded into the Home
+### Assistant frontend for exactly that one navigation and removed again. (See core/onboarding.py)
+PANEL_ONBOARDING_JS_FILE: Final = "eltako-onboarding.js"
+PANEL_ONBOARDING_JS_URL: Final = f"{PANEL_STATIC_URL}/{PANEL_ONBOARDING_JS_FILE}"
+# stored in the data of the core entry: the web ui was opened once already
+CONF_ONBOARDING_SHOWN: Final = "onboarding_shown"
+
 ### Devices which are created through the web ui (stored in the options of the config entry)
 CONF_UI_DEVICES: Final = "ui_devices"
 
@@ -205,9 +249,13 @@ WS_DEVICE_LIST: Final = "eltako/devices/list"
 WS_DEVICE_ADD: Final = "eltako/devices/add"
 WS_DEVICE_UPDATE: Final = "eltako/devices/update"
 WS_DEVICE_REMOVE: Final = "eltako/devices/remove"
+# drop every device created in the web ui - the counterpart of a fresh detection run
+WS_DEVICE_REMOVE_ALL: Final = "eltako/devices/remove_all"
+WS_DEVICE_TEACH_IN: Final = "eltako/devices/teach_in"
 WS_DEVICE_ACTIVITY: Final = "eltako/devices/activity"
 WS_DEVICE_ACTIVITY_CLEAR: Final = "eltako/devices/activity_clear"
 WS_HELP_CATALOG: Final = "eltako/help/catalog"
+WS_ONBOARDING_CONSUME: Final = "eltako/onboarding/consume"
 WS_SETTINGS_GET: Final = "eltako/settings/get"
 WS_SETTINGS_SET: Final = "eltako/settings/set"
 WS_SETTINGS_RESET: Final = "eltako/settings/reset"
@@ -219,11 +267,30 @@ WS_GATEWAY_UPDATE: Final = "eltako/gateways/update"
 WS_GATEWAY_REMOVE: Final = "eltako/gateways/remove"
 WS_PLUG_AND_PLAY_STATUS: Final = "eltako/plug_and_play/status"
 WS_PLUG_AND_PLAY_RUN: Final = "eltako/plug_and_play/run"
+# only detects, and creates nothing - the counterpart of RUN for a test of the detection
+WS_PLUG_AND_PLAY_PROBE: Final = "eltako/plug_and_play/probe"
+# serial bridge: publish a serial port over tcp / attach a published port as a pty
+WS_BRIDGE_LIST: Final = "eltako/bridge/list"
+WS_BRIDGE_START: Final = "eltako/bridge/start"
+WS_BRIDGE_STOP: Final = "eltako/bridge/stop"
 WS_BUS_MEMBERS: Final = "eltako/bus/members"
 WS_BUS_READ_MEMORY: Final = "eltako/bus/read_memory"
 WS_BUS_TEACH_IN_SENDERS: Final = "eltako/bus/teach_in_senders"
 WS_SEND_TELEGRAM: Final = "eltako/send_telegram"
 WS_SEND_TELEGRAM_FORM: Final = "eltako/send_telegram_form"
+
+### Simulation: gateways and devices without any hardware (simulator.py)
+WS_SIMULATOR_FORM: Final = "eltako/simulator/form"
+WS_SIMULATOR_PRESET: Final = "eltako/simulator/preset"
+WS_SIMULATOR_GATEWAY_ADD: Final = "eltako/simulator/gateway_add"
+WS_SIMULATOR_GATEWAY_REMOVE: Final = "eltako/simulator/gateway_remove"
+WS_SIMULATOR_BASE_ID: Final = "eltako/simulator/base_id"
+WS_SIMULATOR_TEACH_IN: Final = "eltako/simulator/teach_in"
+WS_SIMULATOR_ACTIVATE: Final = "eltako/simulator/activate"
+WS_SIMULATOR_DEVICE_ADD: Final = "eltako/simulator/device_add"
+WS_SIMULATOR_DEVICE_UPDATE: Final = "eltako/simulator/device_update"
+WS_SIMULATOR_DEVICE_REMOVE: Final = "eltako/simulator/device_remove"
+WS_SIMULATOR_TRIGGER: Final = "eltako/simulator/trigger"
 
 ### source of a config flow which was started from the web ui
 SOURCE_UI_GATEWAY: Final = "ui_gateway"
@@ -289,7 +356,7 @@ class GatewayDeviceType(str, Enum):
 
     @classmethod
     def is_transceiver(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN, 
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN,
                             GatewayDeviceType.LAN_ESP2, GatewayDeviceType.MGW_LAN, GatewayDeviceType.EUL_LAN]
 
     @classmethod

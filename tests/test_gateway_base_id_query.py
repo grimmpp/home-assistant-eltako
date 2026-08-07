@@ -12,7 +12,7 @@ from unittest import IsolatedAsyncioTestCase
 from tests.mocks import *
 
 from custom_components.eltako.const import GatewayDeviceType
-from custom_components.eltako.gateway import BASE_ID_REQUEST_TIMEOUT
+from custom_components.eltako.core.gateway import BASE_ID_REQUEST_TIMEOUT
 
 
 class BusMockWithRequests(EltakoBusMock):
@@ -97,7 +97,7 @@ class TestBaseIdQuery(IsolatedAsyncioTestCase):
         bus = BusMockWithRequests(hang=True)
         gateway = self.create_gateway(bus)
 
-        import custom_components.eltako.gateway as gateway_module
+        import custom_components.eltako.core.gateway as gateway_module
         original = gateway_module.BASE_ID_REQUEST_TIMEOUT
         gateway_module.BASE_ID_REQUEST_TIMEOUT = 0.05
         try:

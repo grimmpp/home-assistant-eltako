@@ -103,7 +103,7 @@ const FEATURE_GROUPS = [
         text: "The event <code>eltako_global_event_bus</code> reports each telegram with its external sender address - also for devices which are not configured.",
         doc: "telegram-events/readme.md" },
       { title: "Send message service",
-        text: "One service per gateway sends any telegram, e.g. to control an Eltako actuator from a non-EnOcean sensor.",
+        text: "One service per gateway sends any telegram, e.g. to control an ELTAKO actuator from a non-EnOcean sensor.",
         doc: "service-send-message/readme.md" },
       { title: "Blueprints",
         text: "Ready-made automations for dimming, switching and central on/off with EnOcean rocker switches - also for lights of other protocols (Zigbee, WiFi)." },
@@ -121,6 +121,9 @@ const FEATURE_GROUPS = [
       { title: "Device tests",
         text: "Configuration check (sends nothing), teach-in test of the actuators, link reliability and the travel times of covers - against the real hardware, in the web ui or on the command line.",
         doc: "device-tests/readme.md", setting: "enable_test_page" },
+      { title: "Simulation without hardware",
+        text: "A simulated FAM14, USB300 or LAN gateway with virtual devices: define the values a sensor reports, trigger its telegram or let it repeat periodically, announce its profile (teach-in) and switch a simulated light - the detection takes them over like real devices. Simulated devices are marked as such everywhere.",
+        doc: "simulation/readme.md" },
       { title: "Standalone runtime",
         text: "The same integration code runs without Home Assistant (own web ui, InfluxDB export) - for tests on a laptop or in production.",
         doc: "standalone/readme.md" },
@@ -154,7 +157,7 @@ const ABOUT_STYLES = `
 export const page = {
   id: "about",
   title: "About",
-  subtitle: "Information about the Home Assistant Eltako integration",
+  subtitle: "Information about the Home Assistant ELTAKO integration",
   icon: "mdi:information-outline",
   glyph: "ℹ",
   modes: ["user", "expert"],
@@ -173,15 +176,15 @@ export const page = {
       <div class="notice warn">
         <h3>${icon("mdi:account-group-outline", "☆")} Community variant</h3>
         <p><strong>This is a community-maintained open source project (MIT license) and NOT an
-          official product of Eltako GmbH.</strong> It is developed and supported by the community
+          official product of ELTAKO GmbH.</strong> It is developed and supported by the community
           in its spare time &ndash; without any warranty and without official support by
-          Eltako GmbH. Please report problems in the issue tracker of the project, not to the
-          Eltako support.</p>
+          ELTAKO GmbH. Please report problems in the issue tracker of the project, not to the
+          ELTAKO support.</p>
       </div>
 
       <div class="notice">
-        <h3>${escapeHtml(info.name || "Eltako")} &mdash; EnOcean / Eltako Baureihe 14 for Home Assistant</h3>
-        <p>This integration connects Eltako series 14 devices (RS485 bus) and EnOcean devices in general to
+        <h3>${escapeHtml(info.name || "ELTAKO")} &mdash; EnOcean / ELTAKO Baureihe 14 for Home Assistant</h3>
+        <p>This integration connects ELTAKO series 14 devices (RS485 bus) and EnOcean devices in general to
           Home Assistant. It reads the status of all bus members, controls actuators, exposes sensors and
           rocker switches for automations, and can record and analyse the EnOcean traffic.</p>
       </div>

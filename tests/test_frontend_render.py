@@ -94,7 +94,11 @@ for (const file of readdirSync(`${frontendDir}/pages`).filter((name) => name.end
   // 1) nothing loaded yet: this is what the page shows first
   // 2) the fixture of this page (if there is one): the populated view
   const states = [['empty', initialState]];
-  if (fixtures[page.id]) states.push(['fixture', { ...initialState, ...fixtures[page.id] }]);
+  // fixtures of this page: '<id>' plus optional variants '<id>_<something>' (e.g. an open form)
+  for (const key of Object.keys(fixtures).filter((name) => name === page.id
+                                                || name.startsWith(`${page.id}_`))) {
+    states.push([key === page.id ? 'fixture' : key, { ...initialState, ...fixtures[key] }]);
+  }
 
   for (const [label, state] of states) {
     let html;
@@ -125,11 +129,11 @@ console.log(JSON.stringify({ problems, rendered }, null, 1));
 
 def build_fixtures() -> dict:
     """Realistic state per page - as far as possible from the real backend."""
-    from custom_components.eltako.device_tests import TEST_DESCRIPTORS
-    from custom_components.eltako.help_catalog import build_catalog
+    from custom_components.eltako.tools.device_tests import TEST_DESCRIPTORS
+    from custom_components.eltako.catalog.help_catalog import build_catalog
 
     integration_info = {
-        'domain': 'eltako', 'name': 'Eltako', 'version': '2.2.0',
+        'domain': 'eltako', 'name': 'ELTAKO', 'version': '2.2.0',
         'home_assistant_version': '2026.7.2', 'iot_class': 'local_push',
         'issue_tracker': 'https://example.invalid/issues',
         'requirements': ['eltako14bus==0.0.82', 'esp2-gateway-adapter==0.2.21'],
@@ -180,7 +184,7 @@ def build_fixtures() -> dict:
 
     # the simple device page of the user mode: configured devices, the form descriptor of the
     # real backend and an address which is not configured yet
-    from custom_components.eltako.device_config import get_form_descriptor
+    from custom_components.eltako.config.device_config import get_form_descriptor
 
     device_form = get_form_descriptor()
     device_form['areas'] = ['Kitchen', 'Living room']
@@ -214,8 +218,107 @@ def build_fixtures() -> dict:
         'summary': {},
     }
 
+    # the simulation page: the descriptor of the real backend plus two simulated gateways
+    from custom_components.eltako.simulation import core as simulation_core
+    from custom_components.eltako.simulation.service import describe_platforms
+
+    def simulated_gateway(gateway_id: int, device_type: str, name: str) -> dict:
+        model = simulation_core.SimulationModel()
+        gateway = model.add_gateway(gateway_id, device_type, name)
+        devices = simulation_core.add_preset_devices(gateway)
+        # an actuator with a real wall switch taught into it
+        for device in devices:
+            if device.is_actuator:
+                device.teach_in('FF-AA-BB-CC', 'F6-02-01', 'Real wall switch')
+                device.interval = 30
+                break
+        return {'id': gateway_id, 'name': name, 'device_type': device_type,
+                'bus_gateway': gateway.is_bus_gateway, 'base_id': gateway.base_id,
+                'description': f'{name} - {device_type} (Id: {gateway_id})',
+                'serial_path': f'simulator-{gateway_id}', 'source': 'ui', 'set_up': True,
+                'live': True, 'connected': True,
+                'devices': [device.describe() for device in devices]}
+
+    real_host = {**simulated_gateway(1, 'fgw14usb', 'FGW14-USB (real)'), 'simulated': False}
+    simulation = {
+        'gateways': [real_host,
+                     simulated_gateway(2, 'fam14', 'Simulated FAM14'),
+                     simulated_gateway(3, 'enocean-usb300', 'Simulated USB300')],
+        'device_count': 3 * len(simulation_core.DEVICE_PRESETS),
+        'platforms': describe_platforms(),
+        'presets': simulation_core.describe_gateway_presets({'fam14'}),
+        'device_presets': simulation_core.describe_device_presets(),
+        'gateway_types': ['fam14', 'enocean-usb300', 'mgw-lan'],
+        'active': True,
+        'paused': False,
+        'repeating_count': 1,
+        'interval_suggestions': list(simulation_core.INTERVAL_SUGGESTIONS),
+        'interval_range': [simulation_core.MIN_INTERVAL_SECONDS,
+                           simulation_core.MAX_INTERVAL_SECONDS],
+        'seen_addresses': [{'address': 'FF-AA-BB-CC', 'count': 12,
+                            'last_seen': '2026-08-06T10:00:00', 'simulated': False}],
+        'sender_eeps': sorted(simulation_core.SENDER_DECODERS),
+        'real_gateways': [{'id': 1, 'name': 'FGW14-USB (real)', 'device_type': 'fgw14usb',
+                           'base_id': 'FF-AA-80-00', 'hosting': True},
+                          {'id': 4, 'name': 'USB300 (real)', 'device_type': 'enocean-usb300',
+                           'base_id': 'FF-BB-10-00', 'hosting': False}],
+        'hint': 'A simulated gateway needs no hardware.',
+    }
+
+    # the devices page with a live RS485 bus - once free, once while an exclusive operation has
+    # it (then the scan buttons are replaced by what is going on)
+    bus_gateway_info = {**integration_info, 'gateways': [
+        {'id': 1, 'name': 'FAM14', 'type': 'fam14', 'device_type': 'fam14',
+         'base_id': 'FF-AA-80-00', 'serial_path': '/dev/ttyUSB0', 'connected': True,
+         'ha_device_id': 'gw1'}]}
+    bus_members = {
+        'members': [{'gateway_id': 1, 'bus_address': 1, 'device_class': 'FSR14_4x',
+                     'description': 'FSR14/4x - 4 channel relay', 'is_fam': False,
+                     'memory_rows_read': 26, 'memory_size': 26, 'taught_in': [
+                         {'sensor_id': 'FE-DC-BA-98', 'role': 'sensor', 'channel': 1,
+                          'key_function': 51, 'function_group': 2}]}],
+        'scans_running': {}, 'busy_with': {},
+    }
+
+    # the free send form of the telegram page, opened with a profile whose fields depend on
+    # each other (A5-38-08 switches or dims)
+    from custom_components.eltako.core.websocket import get_eep_descriptors
+
+    send_form_descriptor = {
+        'gateways': [{'id': 1, 'name': 'FAM14', 'base_id': 'FF-AA-80-00'}],
+        'eeps': get_eep_descriptors(),
+    }
+
     return {
         'about': {'integrationInfo': integration_info},
+        'telegrams_send_form': {
+            'integrationInfo': integration_info,
+            'sendFormDescriptor': send_form_descriptor,
+            'sendForm': {'gatewayId': 1, 'mode': 'eep', 'eep': 'A5-38-08',
+                         'senderId': '00-00-B0-01', 'fields': {'command': '2'}, 'raw': '',
+                         'result': None, 'error': None},
+        },
+        'devices': {'integrationInfo': bus_gateway_info, 'configuredDevices': home_devices,
+                    'busMembers': bus_members, 'statistics': home_statistics},
+        # while a scan or a teach-in has the bus, the page says so instead of offering the buttons
+        'devices_bus_busy': {'integrationInfo': bus_gateway_info,
+                             'configuredDevices': home_devices, 'statistics': home_statistics,
+                             'busMembers': {**bus_members, 'scans_running': {'1': True},
+                                            'busy_with': {'1': 'teaching in the senders'}}},
+        'simulation': {'integrationInfo': integration_info, 'simulation': simulation},
+        # the same page with an open "add device" form and a note of the last telegram
+        'simulation_editing': {'integrationInfo': integration_info, 'simulation': simulation,
+                               'simulationNewGateway': {},
+                               'simulationNewDevice': {'gatewayId': 2, 'platform': 'sensor',
+                                                       'eep': 'A5-04-02', 'name': ''},
+                               'simulationTeachIn': '2|00-00-00-01',
+                               'simulationNotes': {'2|00-00-00-05': {'style': 'ok',
+                                                                     'text': 'Telegram sent'}},
+                               'simulationMessage': 'Created 1 gateway.'},
+        # the paused simulation shows its banner instead of sending anything
+        'simulation_off': {'integrationInfo': integration_info,
+                           'simulation': {**simulation, 'active': False, 'paused': True,
+                                          'repeating_count': 0}},
         'home': {'integrationInfo': integration_info, 'configuredDevices': home_devices,
                  'deviceForm': device_form, 'statistics': home_statistics},
         'help': {'helpCatalog': build_catalog(), 'helpFilter': ''},
@@ -270,5 +373,11 @@ class TestEveryPageRenders(unittest.TestCase):
         """Without a fixture only the loading branch would be checked."""
         report = self.report()
 
-        for page_id in ('about', 'help', 'tests'):
+        for page_id in ('about', 'help', 'tests', 'simulation', 'devices'):
             self.assertIn(f'{page_id}:fixture', report['rendered'])
+        # the simulation page with an open form and a triggered telegram, and the devices page
+        # while an exclusive operation has the bus
+        for variant in ('simulation_editing', 'simulation_off'):
+            self.assertIn(f'simulation:{variant}', report['rendered'])
+        self.assertIn('devices:devices_bus_busy', report['rendered'])
+        self.assertIn('telegrams:telegrams_send_form', report['rendered'])

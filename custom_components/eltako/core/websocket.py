@@ -178,15 +178,33 @@ async def ws_configured_gateways(hass: HomeAssistant, connection, msg):
 
 ### sending arbitrary telegrams ------------------------------------------------------------
 
+def _is_sendable(eep: str, defaults: dict) -> bool:
+    """Whether a telegram of this profile can be built at all.
+
+    Not every EEP of the library can be encoded - a few are decode-only (`A5-09-0C`, the air
+    quality profile of the FLGTF, raises "NOT IMPLEMENTED"). A form which can only fail is
+    worse than none, so the web ui leaves those out instead of offering a send button.
+    """
+    try:
+        build_eep_telegram('FF-AA-80-01', eep, defaults)
+        return True
+    except Exception:   # noqa: BLE001 - whatever the library complains about: it cannot be sent
+        return False
+
+
 def get_eep_descriptors() -> list[dict]:
     """All EEPs of the eltakobus library with the fields of their constructor.
 
-    The web ui builds the input fields of the send form from this list. The description is
-    the same one the device form uses, so the dropdowns of both forms read identically.
+    The web ui builds the input fields of the send form from this list - the free form on the
+    telegram page as well as the send fields of every device on the control page. `defaults`
+    holds a usable start value per field (the same ones a simulated device starts with), so an
+    opened form is filled with a telegram which can be sent as it is instead of a row of zeros
+    - and 0 is not a valid state for every profile.
     """
     from eltakobus.eep import EEP
 
     from ..config.device_config import describe_eep
+    from ..simulation.core import conditional_fields, default_state, describe_fields
 
     result = []
     def walk(cls):
@@ -196,7 +214,14 @@ def get_eep_descriptors() -> list[dict]:
                 fields = CENTRAL_COMMAND_FIELDS if eep_string == 'A5-38-08' else \
                     [param.name for param in inspect.signature(sub.__init__).parameters.values()
                      if param.name != 'self' and param.kind == param.POSITIONAL_OR_KEYWORD]
+                defaults = default_state(eep_string)
                 result.append({'eep': eep_string, 'fields': list(fields),
+                               'defaults': defaults,
+                               # what the values mean: named options, units, ranges - the form
+                               # offers a dropdown instead of a number nobody can guess
+                               'field_info': describe_fields(eep_string, list(fields), sub),
+                               'conditional': conditional_fields(eep_string),
+                               'sendable': _is_sendable(eep_string, defaults),
                                'description': describe_eep(eep_string)})
             walk(sub)
     walk(EEP)

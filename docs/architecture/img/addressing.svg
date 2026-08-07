@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520" role="img" aria-labelledby="title desc">
+  <title id="title">Addresses and dispatcher channels: what the gateway publishes and what it transmits</title>
+  <desc id="desc">Receiving: a frame reaches the gateway, which publishes it on two dispatcher channels - one carrying the local address for the entities of that gateway, one carrying the global address, base id plus local address, which every entity subscribes to. Nothing is forwarded before the base id is known. Sending goes back through the dispatcher, and only the gateway whose base id matches actually transmits.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0064AF"/>
+    </marker>
+    <style>
+      .bg    { fill: #FFFFFF; }
+      .box   { fill: #FFFFFF; stroke: #9EC3DE; stroke-width: 1.5; }
+      .soft  { fill: #F0F6FA; stroke: #D7E6F2; stroke-width: 1.5; }
+      .base  { fill: #0064AF; stroke: #0064AF; }
+      .warn  { fill: #FFF6E5; stroke: #E0A030; stroke-width: 1.5; }
+      .h1    { font: 600 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .h2    { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0064AF; }
+      .h3    { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .sec   { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #12324A; }
+      .note  { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #5B7285; }
+      .warnt { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #6B4A10; }
+      .mono  { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #12324A; }
+      .monob { font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0064AF; }
+      .flow  { stroke: #0064AF; stroke-width: 2; fill: none; }
+      .ctr   { text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="520"/>
+  <text class="h1" x="40" y="30">Addresses and channels &#8212; what the gateway publishes, and what it transmits</text>
+
+  <text class="sec" x="40" y="58">Receiving &#8212; one telegram, two dispatcher channels</text>
+
+  <rect class="box" x="40" y="72" width="150" height="80" rx="8"/>
+  <text class="h3 ctr" x="115" y="102">Bus / radio</text>
+  <text class="note ctr" x="115" y="122">ESP2 or ESP3 frame</text>
+  <text class="note ctr" x="115" y="138">on a serial port</text>
+
+  <path class="flow" d="M190,112 L212,112" marker-end="url(#arrow)"/>
+
+  <rect class="soft" x="216" y="72" width="186" height="80" rx="8"/>
+  <text class="h3 ctr" x="309" y="98">EnOceanGateway</text>
+  <text class="note ctr" x="309" y="118">owns the serial port,</text>
+  <text class="note ctr" x="309" y="134">translates ESP2 / ESP3,</text>
+  <text class="note ctr" x="309" y="148">rewrites the address</text>
+
+  <path class="flow" d="M402,96 L424,90" marker-end="url(#arrow)"/>
+  <path class="flow" d="M402,128 L424,134" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="428" y="72" width="266" height="34" rx="6"/>
+  <text class="mono" x="440" y="87">gwId receive_message</text>
+  <text class="note" x="440" y="101">local address &#183; only this gateway&#8217;s entities</text>
+
+  <rect class="box" x="428" y="118" width="266" height="34" rx="6"/>
+  <text class="mono" x="440" y="133">ELTAKO_GLOBAL_EVENT_BUS_ID</text>
+  <text class="note" x="440" y="147">global address &#183; every entity subscribes here</text>
+
+  <path class="flow" d="M694,89 L716,105" marker-end="url(#arrow)"/>
+  <path class="flow" d="M694,135 L716,119" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="720" y="72" width="140" height="80" rx="8"/>
+  <text class="h3 ctr" x="790" y="100">Entities</text>
+  <text class="note ctr" x="790" y="118">and</text>
+  <text class="h3 ctr" x="790" y="138">Observers</text>
+
+  <!-- addressing -->
+  <rect class="soft" x="40" y="170" width="400" height="88" rx="8"/>
+  <text class="h2" x="56" y="192">local address</text>
+  <text class="monob" x="56" y="216">00-00-00-05</text>
+  <text class="note" x="56" y="236">How a device appears on the RS485 bus. Only the</text>
+  <text class="note" x="56" y="252">entities of that one gateway see this channel.</text>
+
+  <rect class="soft" x="460" y="170" width="400" height="88" rx="8"/>
+  <text class="h2" x="476" y="192">global address</text>
+  <text class="monob" x="476" y="216">FF-AA-80-05</text>
+  <text class="note" x="600" y="216">= base id + local address</text>
+  <text class="note" x="476" y="236">How the same device appears over the air. This is why a</text>
+  <text class="note" x="476" y="252">device taught into several gateways is <tspan class="h3">one</tspan> entity, not one each.</text>
+
+  <!-- the trap -->
+  <rect class="warn" x="40" y="274" width="820" height="48" rx="8"/>
+  <text class="warnt" x="56" y="294">Nothing is forwarded before the base id is known &#8212; the rewrite would be wrong. query_for_base_id_and_version() runs on every</text>
+  <text class="warnt" x="56" y="312">connect and is guarded by a lock: on a FAM14 it locks the bus, and two concurrent requests deadlock and stop all reception silently.</text>
+
+  <!-- sending -->
+  <text class="sec" x="40" y="352">Sending &#8212; the reverse direction goes through the dispatcher too, so an automation can observe it</text>
+
+  <rect class="box" x="40" y="366" width="187" height="72" rx="8"/>
+  <text class="mono ctr" x="133" y="396">entity.send_message()</text>
+  <text class="note ctr" x="133" y="416">light, switch, cover,</text>
+  <text class="note ctr" x="133" y="430">climate &#8230;</text>
+
+  <path class="flow" d="M227,402 L249,402" marker-end="url(#arrow)"/>
+
+  <rect class="soft" x="251" y="366" width="187" height="72" rx="8"/>
+  <text class="mono ctr" x="344" y="396">gwId send_message</text>
+  <text class="note ctr" x="344" y="416">the dispatcher signal &#8212;</text>
+  <text class="note ctr" x="344" y="430">observable from outside</text>
+
+  <path class="flow" d="M438,402 L460,402" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="462" y="366" width="187" height="72" rx="8"/>
+  <text class="h3 ctr" x="555" y="392">every gateway</text>
+  <text class="note ctr" x="555" y="412">receives the signal, but only</text>
+  <text class="note ctr" x="555" y="428">the matching base id transmits</text>
+
+  <path class="flow" d="M649,402 L671,402" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="673" y="366" width="187" height="72" rx="8"/>
+  <text class="h3 ctr" x="766" y="392">Bus / radio</text>
+  <text class="note ctr" x="766" y="412">_record_telegram(OUTGOING)</text>
+  <text class="note ctr" x="766" y="428">then bus.send(msg)</text>
+
+  <text class="note" x="40" y="462">collect_additional_senders() repeats a command with the sender of every gateway the device is taught into &#8212; a transceiver only</text>
+  <text class="note" x="40" y="480">transmits telegrams whose sender address lies inside its own base id range, so each gateway needs its own sender variant.</text>
+  <text class="note" x="40" y="504">Bus gateways transmit whatever address they are given, which is why the burst test refuses to run on a transceiver.</text>
+</svg>

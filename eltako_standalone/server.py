@@ -27,7 +27,7 @@ SHELL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shell")
 
 
 class StandaloneServer:
-    def __init__(self, hass, host: str = "127.0.0.1", port: int = 8123,
+    def __init__(self, hass, host: str = "127.0.0.1", port: int = 8124,
                  token: str | None = None):
         self.hass = hass
         self.host = host

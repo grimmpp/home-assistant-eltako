@@ -46,7 +46,7 @@ services:
     volumes:
       - ha_config:/config
       - ../custom_components/eltako:/config/custom_components/eltako
-      - ../ha.yaml:/config/ha.yaml:ro
+#      - ../ha.yaml:/config/ha.yaml:ro
       - ../blueprints/automation/eltako:/config/blueprints/automation/eltako:ro
     ports:
       - "8123:8123"

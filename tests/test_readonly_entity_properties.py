@@ -8,6 +8,11 @@ happens inside an event listener the value silently never updates.
 This was a real bug in five places (four in sensor.py, one in datetime.py); two of them were
 additionally hidden by an `except AttributeError: pass`. A static test finds the next one
 before it reaches a device.
+
+Only **entity** classes are checked. `state`, `available` or `options` are ordinary attribute
+names; a plain model class (a simulated device, a descriptor) may write them and does not
+inherit any property. `_entity_classes()` therefore resolves who derives from an entity base
+first, transitively and across modules.
 """
 import ast
 import os
@@ -37,35 +42,92 @@ def python_files() -> list[str]:
     return sorted(files)
 
 
+def _base_names(node: ast.ClassDef) -> set[str]:
+    names = set()
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            names.add(base.id)
+        elif isinstance(base, ast.Attribute):
+            names.add(base.attr)
+    return names
+
+
+def _entity_classes(trees: dict) -> set[str]:
+    """Every class of the integration which (transitively) derives from an entity base.
+
+    A base whose name ends in 'Entity' is one - that is how Home Assistant names them
+    (SensorEntity, RestoreEntity, ...) and how this integration names its own (EltakoEntity).
+    """
+    classes = [node for tree in trees.values() for node in ast.walk(tree)
+               if isinstance(node, ast.ClassDef)]
+    entities = {node.name for node in classes
+                if any(name.endswith('Entity') for name in _base_names(node))}
+    entities |= {node.name for node in classes if node.name.endswith('Entity')}
+
+    growing = True
+    while growing:
+        growing = False
+        for node in classes:
+            if node.name not in entities and _base_names(node) & entities:
+                entities.add(node.name)
+                growing = True
+    return entities
+
+
 class TestNoWriteToReadOnlyProperty(TestCase):
 
     def test_no_assignment_to_a_read_only_entity_property(self):
-        offenders = []
+        trees = {}
         for path in python_files():
             with open(path, encoding='utf-8') as handle:
-                source = handle.read()
-            tree = ast.parse(source, filename=path)
-            for node in ast.walk(tree):
-                if not isinstance(node, (ast.Assign, ast.AugAssign)):
-                    continue
-                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                for target in targets:
-                    if (isinstance(target, ast.Attribute)
-                            and isinstance(target.value, ast.Name)
-                            and target.value.id == 'self'
-                            and target.attr in READ_ONLY_PROPERTIES):
-                        offenders.append(
-                            f"{os.path.relpath(path, INTEGRATION_DIR)}:{node.lineno} "
-                            f"self.{target.attr} = ...  -> use self._attr_{target.attr}")
+                trees[path] = ast.parse(handle.read(), filename=path)
 
-        self.assertEqual(offenders, [], msg="Assignment to a read-only entity property:\n  "
-                                            + "\n  ".join(offenders))
+        entities = _entity_classes(trees)
+        offenders = []
+        for path, tree in trees.items():
+            for class_node in [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]:
+                if class_node.name not in entities:
+                    continue
+                for node in ast.walk(class_node):
+                    if not isinstance(node, (ast.Assign, ast.AugAssign)):
+                        continue
+                    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                    for target in targets:
+                        if (isinstance(target, ast.Attribute)
+                                and isinstance(target.value, ast.Name)
+                                and target.value.id == 'self'
+                                and target.attr in READ_ONLY_PROPERTIES):
+                            offenders.append(
+                                f"{os.path.relpath(path, INTEGRATION_DIR)}:{node.lineno} "
+                                f"self.{target.attr} = ...  -> use self._attr_{target.attr}")
+
+        self.assertEqual(sorted(set(offenders)), [],
+                         msg="Assignment to a read-only entity property:\n  "
+                             + "\n  ".join(sorted(set(offenders))))
+
+    def test_it_looks_at_entity_classes_only(self):
+        """Guard for the scoping: a plain model class may own an attribute called `state`."""
+        trees = {'x.py': ast.parse('class SimulatedDevice:\n'
+                                   '    def f(self):\n'
+                                   '        self.state = 1\n'
+                                   'class MySensor(SensorEntity):\n'
+                                   '    pass\n'
+                                   'class Derived(MySensor):\n'
+                                   '    pass\n')}
+
+        entities = _entity_classes(trees)
+
+        self.assertNotIn('SimulatedDevice', entities)
+        self.assertIn('MySensor', entities)
+        self.assertIn('Derived', entities, msg='inheritance must be followed transitively')
 
     def test_the_detector_would_catch_the_original_bug(self):
         """Guard for the test itself: the pattern which was broken must be detected."""
-        tree = ast.parse("class X:\n"
+        tree = ast.parse("class X(SensorEntity):\n"
                          "    def f(self, event):\n"
                          "        self.native_value = 1\n")
+        self.assertIn('X', _entity_classes({'x.py': tree}))
+
         found = [node for node in ast.walk(tree)
                  if isinstance(node, ast.Assign)
                  and isinstance(node.targets[0], ast.Attribute)

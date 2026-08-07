@@ -21,7 +21,7 @@ def read_settings(config_dir: str) -> dict:
 
 
 def effective_settings(runtime) -> dict:
-    from custom_components.eltako.config_helpers import get_general_settings_from_configuration
+    from custom_components.eltako.config.config_helpers import get_general_settings_from_configuration
 
     return get_general_settings_from_configuration(runtime.hass)
 
@@ -54,7 +54,7 @@ def test_user_changes_are_not_overwritten_on_the_next_start(empty_config_dir):
         await runtime.async_start()
         assert runtime.seeded_settings, "first start must seed"
 
-        from custom_components.eltako import general_settings
+        from custom_components.eltako.config import general_settings
         await general_settings.async_set_overrides(
             runtime.hass, {"timeseries_enabled": False, "grafana_url": ""})
         await runtime.async_stop()
@@ -119,7 +119,7 @@ def test_grafana_url_is_reported_to_the_web_ui(empty_config_dir):
         runtime = EltakoRuntime(empty_config_dir)
         await runtime.async_start()
 
-        from custom_components.eltako.enocean_logger import get_telegram_logger
+        from custom_components.eltako.observation.enocean_logger import get_telegram_logger
         info = get_telegram_logger(runtime.hass).get_info()
 
         assert info["grafana_url"] == "http://localhost:3000"

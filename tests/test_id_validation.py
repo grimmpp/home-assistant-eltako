@@ -6,9 +6,9 @@ from tests.mocks import *
 from homeassistant.const import Platform
 from homeassistant.helpers.entity import Entity
 
-from custom_components.eltako.config_helpers import compare_enocean_ids
+from custom_components.eltako.config.config_helpers import compare_enocean_ids
 from custom_components.eltako.const import GatewayDeviceType
-from custom_components.eltako.device import validate_actuators_dev_and_sender_id
+from custom_components.eltako.core.entity import validate_actuators_dev_and_sender_id
 from custom_components.eltako.switch import EltakoSwitch
 from custom_components.eltako.sensor import (GatewayBaseId, GatewayInfoField,
                                             GatewayLastReceivedMessage,
@@ -36,7 +36,7 @@ class TestActuatorIdValidation(unittest.TestCase):
         return gateway
 
     def collect_warnings(self, entities):
-        with mock.patch('custom_components.eltako.gateway.LOGGER') as logger:
+        with mock.patch('custom_components.eltako.core.gateway.LOGGER') as logger:
             validate_actuators_dev_and_sender_id(entities)
         return [str(call.args[0]) for call in logger.warning.call_args_list]
 

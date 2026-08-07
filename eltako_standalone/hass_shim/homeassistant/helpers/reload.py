@@ -36,7 +36,7 @@ async def async_integration_yaml_config(hass, domain: str):
 
     if domain == "eltako":
         # validate with the schema of the integration - same as Home Assistant does
-        from custom_components.eltako.schema import CONFIG_SCHEMA
+        from custom_components.eltako.config.schema import CONFIG_SCHEMA
         return CONFIG_SCHEMA({domain: raw.get(domain) or {}})
 
     return {domain: raw.get(domain)}

@@ -1,8 +1,8 @@
 from unittest import TestCase, mock
 from tests.mocks import *
 from eltakobus import *
-from custom_components.eltako.gateway import *
-from custom_components.eltako import config_helpers
+from custom_components.eltako.core.gateway import *
+from custom_components.eltako.config import config_helpers
 import yaml
 
 # mock update of Home Assistant

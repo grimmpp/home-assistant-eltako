@@ -233,6 +233,13 @@ export const STYLES = `
   .tag.source-yaml { background: var(--eltako-tint-strong); color: var(--eltako-muted); }
   .tag.source-ui { background: color-mix(in srgb, var(--eltako-accent) 20%, transparent);
                    color: var(--eltako-accent); }
+  /* Simulated: no hardware behind it. Deliberately loud and used in EVERY list, so a
+     simulated device can never be mistaken for a real one. */
+  .tag.simulated { background: var(--eltako-warn); color: #212121; font-weight: 600;
+                   letter-spacing: .02em; }
+  .tag.simulated::before { content: "⚗ "; }
+  /* a row/card of a simulated device carries the same signal without shouting */
+  tr.simulated-row td:first-child { box-shadow: inset 3px 0 0 var(--eltako-warn); }
   /* group rows in eltako brand blue instead of grey */
   tr.bus-device-row td { background: var(--eltako-tint-strong);
                          font-size: .8rem; padding-top: 9px; padding-bottom: 9px; }

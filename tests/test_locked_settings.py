@@ -14,8 +14,8 @@ import os
 import re
 from unittest import TestCase, mock
 
-from custom_components.eltako import config_helpers, general_settings
-from custom_components.eltako.config_helpers import DEFAULT_GENERAL_SETTINGS
+from custom_components.eltako.config import config_helpers, general_settings
+from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
 from custom_components.eltako.const import (CONF_ENABLE_FRONTEND, DATA_ELTAKO, DATA_SETTINGS_OVERRIDES,
                                             ELTAKO_CONFIG, CONF_GERNERAL_SETTINGS)
 

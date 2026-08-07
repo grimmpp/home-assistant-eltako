@@ -57,7 +57,7 @@ async def _booted(config_dir):
 
 
 def _gateway(runtime, gateway_id):
-    from custom_components.eltako.websocket import get_gateways
+    from custom_components.eltako.core.websocket import get_gateways
     return next(gw for gw in get_gateways(runtime.hass) if gw.dev_id == gateway_id)
 
 
@@ -94,7 +94,7 @@ def _answering_bus(gateway, answering: set[str]):
 def _run(config_dir, params, answering):
     async def scenario():
         runtime = await _booted(config_dir)
-        from custom_components.eltako.device_tests import run_actuator_test
+        from custom_components.eltako.tools.device_tests import run_actuator_test
 
         gateway = _gateway(runtime, 1)
         sent = _answering_bus(gateway, answering)
@@ -163,7 +163,7 @@ def test_a_gateway_which_is_not_connected_is_refused(tmp_path):
 
     async def scenario():
         runtime = await _booted(str(tmp_path))
-        from custom_components.eltako.device_tests import run_actuator_test
+        from custom_components.eltako.tools.device_tests import run_actuator_test
         try:
             with pytest.raises(ValueError, match="not connected"):
                 await run_actuator_test(runtime.hass, {"gateway": 1},
@@ -177,7 +177,7 @@ def test_the_configuration_check_sees_the_devices_of_the_runtime(config_dir):
     """The check runs against the same configuration the runtime booted with."""
     async def scenario():
         runtime = await _booted(config_dir)
-        from custom_components.eltako.config_check import check_configuration
+        from custom_components.eltako.config.config_check import check_configuration
         try:
             return check_configuration(runtime.hass)
         finally:

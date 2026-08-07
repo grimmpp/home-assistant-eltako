@@ -1,16 +1,16 @@
 # Multiple Gateway Support
 
-<img src="./HA-Eltako-2Hubs.png" height="365">
+<img src="./HA-ELTAKO-2Hubs.png" height="365">
 
 There are two types of gateways supported:
-1. Eltako gateways based on ESP2 protocol (old) which are e.g. **Eltako FAM14**, **Eltako FGW14-USB**, **Eltako FAM-USB**, ...
+1. ELTAKO gateways based on ESP2 protocol (old) which are e.g. **ELTAKO FAM14**, **ELTAKO FGW14-USB**, **ELTAKO FAM-USB**, ...
 2. Mordern Enocean gateways based ESP3 protocol (new) which is e.g. **EnOcean USB300**, **MGW**, ...
 
 All gateways (hubs) need explicitely configured and devices connected through this gateway to Home Assistant need to be listed below the gateway section. Every gateway needs to have an unique id whicht is an arbritatry number which can be changed and exchanged. This number will be part of the device identifiers. If you want to change a gateway you can keep the id of the previouse gateway and with it all ids and histories of its devices can be kept.
 After you provided the configuration + restart of Home Assistant you can add the gateways as hubs in Home Assistant.
 
 ## Example
-In this example two gateways are connected to Home Assistant. The first one `Eltako FGW14-USB` connected directly to the Eltako RS485 bus builds a bridge for the communication to a light relay. The second one is a wireless transceiver `Eltako FAM-USB` which connects a weather station to Home Assistant.
+In this example two gateways are connected to Home Assistant. The first one `ELTAKO FGW14-USB` connected directly to the ELTAKO RS485 bus builds a bridge for the communication to a light relay. The second one is a wireless transceiver `Eltako FAM-USB` which connects a weather station to Home Assistant.
 ```
 eltako:
   general_settings:

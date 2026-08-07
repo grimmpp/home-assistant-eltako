@@ -10,7 +10,7 @@ This is meant for
 * verifying that telegrams sent by Home Assistant really reach the bus,
 * debugging EEP problems by comparing raw payloads with decoded values.
 
-Everything is implemented in the module [`enocean_logger.py`](../../custom_components/eltako/enocean_logger.py).
+Everything is implemented in the module [`observation/enocean_logger.py`](../../custom_components/eltako/observation/enocean_logger.py).
 
 ## Configuration
 
@@ -45,7 +45,7 @@ effect immediately - the yaml above is only needed if the configuration is kept 
 | `telegram_log_include_polling` | `False` | Bus gateways (FAM14) poll their actuators permanently. Those telegrams are dropped by default because they would flood the log. |
 | `telegram_log_decode_eep` | `True` | Decodes telegrams of configured devices with their EEP and stores the decoded values (e.g. temperature, humidity, button). |
 | `telegram_log_buffer_size` | `500` | Size of the in-memory ring buffer which feeds the live view. `0` disables buffering (file logging and statistics still work). |
-| `enable_frontend` | `True` | The `Eltako` panel in the sidebar, which contains the live view and the statistics. On by default, see [Web UI](../web-ui/readme.md). |
+| `enable_frontend` | `True` | The `ELTAKO` panel in the sidebar, which contains the live view and the statistics. On by default, see [Web UI](../web-ui/readme.md). |
 
 > Changed in the web ui these settings take effect immediately (the telegram logger is re-created).
 > Changed in `configuration.yaml` they need a restart of Home Assistant.
@@ -55,7 +55,7 @@ serial communication is slowed down by disk i/o.
 
 ## Web UI
 
-The sidebar contains the panel **Eltako** (visible for admins only) without any configuration. Two of its
+The sidebar contains the panel **ELTAKO** (visible for admins only) without any configuration. Two of its
 pages belong to the telegram analysis:
 
 * **Live telegrams** – all telegrams as they arrive, including direction, gateway, address, device name,
@@ -111,7 +111,7 @@ Field overview:
 | `msg_type`, `org`, `status`, `data`, `payload`, `raw` | telegram itself. `raw` is the serialized ESP2 frame as hex string |
 | `address` | external EnOcean address (base id of the gateway already added for bus devices) |
 | `local_address` | address on the bus (relative to the base id) if the device is a bus device |
-| `bus_address` | position on the bus for Eltako bus messages (discovery, memory, ...) |
+| `bus_address` | position on the bus for ELTAKO bus messages (discovery, memory, ...) |
 | `known`, `role` | whether the address is configured and as what (`device`, `sender`, `thermostat`, `cooling_mode_sensor`, `cooling_mode_sender`) |
 | `eep`, `device_name`, `entity_ids`, `platforms`, `area` | reference to the configured device and its Home Assistant entities |
 | `decoded` | all values of the decoded EEP (only for known devices with `telegram_log_decode_eep: True`) |

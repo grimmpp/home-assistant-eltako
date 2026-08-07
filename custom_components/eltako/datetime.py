@@ -10,12 +10,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import entity_registry as er
-from custom_components.eltako.eltako_integration_init import get_gateway_from_hass, get_device_config_for_gateway
 
-from .device import *
-from .gateway import EnOceanGateway
+from .core.entity import *
+from .core.gateway import EnOceanGateway
 from .const import *
-from . import get_gateway_from_hass, get_device_config_for_gateway
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 
 
 async def async_setup_entry(

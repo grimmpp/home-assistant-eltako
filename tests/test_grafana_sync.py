@@ -9,9 +9,9 @@ import os
 import unittest
 from unittest import TestCase, mock
 
-from custom_components.eltako import grafana_sync
+from custom_components.eltako.tools import grafana_sync
 from custom_components.eltako.const import CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL
-from custom_components.eltako.timeseries import FIELD_KEYS, TAG_KEYS
+from custom_components.eltako.observation.timeseries import FIELD_KEYS, TAG_KEYS
 
 
 class TestShippedDashboards(TestCase):

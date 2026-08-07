@@ -24,7 +24,7 @@ def _pct14_content() -> str:
 
 
 def test_parse_demo_eodm():
-    from custom_components.eltako.config_import import parse_eodm, eodm_to_config
+    from custom_components.eltako.config.config_import import parse_eodm, eodm_to_config
 
     data = parse_eodm(_example_content())
     gateways, warnings = eodm_to_config(data)
@@ -53,7 +53,7 @@ def test_parse_demo_eodm():
 
 def test_parse_pct14_export():
     """A PCT14 export becomes the FAM14 bus with its actuators and its taught-in senders."""
-    from custom_components.eltako.config_import import parse_import
+    from custom_components.eltako.config.config_import import parse_import
 
     gateways, warnings, detected = parse_import(_pct14_content())
     assert detected == "pct14"
@@ -110,7 +110,7 @@ def test_parse_pct14_export():
 
 def test_pct14_detection_and_broken_xml():
     import voluptuous as vol
-    from custom_components.eltako.config_import import is_pct14, parse_import
+    from custom_components.eltako.config.config_import import is_pct14, parse_import
 
     assert is_pct14(_pct14_content())
     assert not is_pct14(_example_content())
@@ -133,7 +133,7 @@ def test_apply_pct14_import_creates_entities(empty_config_dir):
         runtime = EltakoRuntime(empty_config_dir)
         await runtime.async_start()
 
-        from custom_components.eltako.config_import import async_import
+        from custom_components.eltako.config.config_import import async_import
         from eltako_standalone.entity_api import list_entities
 
         result = await async_import(runtime.hass, _pct14_content(), dry_run=False,
@@ -158,7 +158,7 @@ def test_apply_pct14_import_creates_entities(empty_config_dir):
 
 
 def test_yaml_import_parsing():
-    from custom_components.eltako.config_import import parse_import
+    from custom_components.eltako.config.config_import import parse_import
 
     content = """
 eltako:
@@ -184,7 +184,7 @@ def test_apply_import_creates_entities_and_is_idempotent(empty_config_dir):
         runtime = EltakoRuntime(empty_config_dir)
         await runtime.async_start()
 
-        from custom_components.eltako.config_import import async_import
+        from custom_components.eltako.config.config_import import async_import
         from eltako_standalone.entity_api import list_entities
 
         content = _example_content()
@@ -221,7 +221,7 @@ def test_reimport_merges_new_devices_onto_the_existing_gateway(empty_config_dir)
         runtime = EltakoRuntime(empty_config_dir)
         await runtime.async_start()
 
-        from custom_components.eltako.config_import import async_import
+        from custom_components.eltako.config.config_import import async_import
 
         first = """
 eltako:
@@ -263,7 +263,7 @@ def test_dry_run_reports_plan(empty_config_dir):
         runtime = EltakoRuntime(empty_config_dir)
         await runtime.async_start()
 
-        from custom_components.eltako.config_import import async_import
+        from custom_components.eltako.config.config_import import async_import
 
         preview = await async_import(runtime.hass, _example_content(), dry_run=True)
         assert preview["dry_run"] is True

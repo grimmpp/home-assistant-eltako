@@ -6,7 +6,7 @@
  *   cover - drives the configured covers with a movement sequence and
  *           measures their real travel times (basis for time_closes/time_opens).
  *
- * Backend: custom_components/eltako/device_tests.py (websocket commands
+ * Backend: custom_components/eltako/tools/device_tests.py (websocket commands
  * eltako/device_tests/*). The page is available in Home Assistant and in the standalone
  * runtime; it is shown when the general setting 'enable_test_page' is on (default: on
  * during development). The same tests are available on the command line:

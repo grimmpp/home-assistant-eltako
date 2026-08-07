@@ -1,4 +1,4 @@
-# How to configure Eltako FLGTF
+# How to configure ELTAKO FLGTF
 
 <img src="./FLGTF55-wg.jpg" height="150">
 <img src="./FLGTF-HA-View.png" height="150">
@@ -8,7 +8,7 @@
 ## Supported EEPs by FLGTF
 * **A5-04-02**-telegrams contain **current temperature** and **humidity**
 * **A5-09-0C**-telegrams contain **air quality**. In the [official ESP2 standard](https://www.enocean-alliance.org/wp-content/uploads/2017/05/EnOcean_Equipment_Profiles_EEP_v2.6.7_public.pdf) there are 37 different types of substances which can be put into the message. 
-  Eltako FLGTF only measures **⁠VOC⁠** (Volatile Organic Compounds) in total.
+  ELTAKO FLGTF only measures **⁠VOC⁠** (Volatile Organic Compounds) in total.
 
 ## How to configure in Home Assistant
 

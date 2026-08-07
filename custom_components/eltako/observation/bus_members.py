@@ -66,7 +66,7 @@ def _build_model_map() -> dict:
             key = bytes(model)
             size = getattr(cls, 'size', None)
             if size is not None:
-                by_model_and_size.setdefault((key, size), name)
+                by_model_and_size.setdefault((key, size), []).append(name)
             by_model.setdefault(key, []).append(name)
     return {'by_model_and_size': by_model_and_size, 'by_model': by_model}
 
@@ -82,15 +82,24 @@ HW_TYPE_INFO = {entry['hw_type']: describe_hw_type(entry['hw_type'])
 
 
 def describe_model(model: bytes | None, size: int | None) -> tuple[str | None, str | None]:
-    """Return (device class name, all candidates) for a model of a discovery reply."""
+    """Return (device class name, remaining candidates) for a model of a discovery reply.
+
+    Classes which share their model bytes differ in their size (FSR14_1x/FSR14_4x report 1
+    and 4 addresses, FHK14/F4HK14 2 and 4) - a hit by (model, size) is therefore **exact**
+    and returns no candidate list. This matters downstream: `plug_and_play` refuses to add a
+    device whose model stays ambiguous, and an FSR14_4x which was identified beyond doubt
+    must not be held back only because its model bytes have siblings.
+    """
     if not model:
         return None, None
     key = bytes(model)[:2]
 
-    exact = MODEL_MAP['by_model_and_size'].get((key, size))
-    candidates = MODEL_MAP['by_model'].get(key, [])
-    if exact:
-        return exact, ", ".join(candidates) if len(candidates) > 1 else None
+    exact = MODEL_MAP['by_model_and_size'].get((key, size)) or []
+    if len(exact) == 1:
+        return exact[0], None
+    # several classes with the same size (none today - a future library addition) fall back
+    # to the honest answer: a best guess plus the list a human has to pick from
+    candidates = exact or MODEL_MAP['by_model'].get(key, [])
     if candidates:
         return candidates[0], ", ".join(candidates) if len(candidates) > 1 else None
     return None, None
@@ -499,6 +508,24 @@ class BusMemberRegistry:
         self._schedule_save(delay=0)
 
 
+def _devices_of_gateway(hass: HomeAssistant, gateway_config: dict) -> dict:
+    """Devices of one gateway from `configuration.yaml` AND from the web ui.
+
+    Reading only the yaml section would make every device created in the web ui invisible here
+    - and that is the configuration of an installation which was never touched by hand.
+    """
+    from homeassistant.const import CONF_DEVICES, CONF_ID
+
+    yaml_devices = gateway_config.get(CONF_DEVICES, {}) or {}
+    try:
+        from ..config.device_config import get_devices_of_gateway
+
+        return get_devices_of_gateway(hass, gateway_config.get(CONF_ID)) or yaml_devices
+    except Exception as e:  # noqa: BLE001 - without config entries the yaml is all there is
+        LOGGER.debug(f"[{LOG_PREFIX_BUS}] Web ui devices are not available: {e}")
+        return yaml_devices
+
+
 def _get_configured_bus_devices(hass: HomeAssistant) -> dict:
     """(gateway id, bus address) -> configured device of that position."""
     from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
@@ -507,7 +534,7 @@ def _get_configured_bus_devices(hass: HomeAssistant) -> dict:
     config = (getattr(hass, 'data', None) or {}).get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
     for gateway in config.get(CONF_GATEWAY, []) or []:
         gateway_id = gateway.get(CONF_ID)
-        for platform, devices in (gateway.get(CONF_DEVICES, {}) or {}).items():
+        for platform, devices in (_devices_of_gateway(hass, gateway) or {}).items():
             for device in devices or []:
                 address = str(device.get(CONF_ID, ''))
                 parts = address.split('-')
@@ -635,6 +662,7 @@ async def ws_bus_members(hass: HomeAssistant, connection, msg) -> None:
     registry = get_registry(hass)
     members = []
     scans_running = {}
+    busy_with = {}
     if registry is not None:
         await registry.async_parse_taught_in()
         members = registry.get_members(hass)
@@ -642,13 +670,21 @@ async def ws_bus_members(hass: HomeAssistant, connection, msg) -> None:
     from ..core.websocket import get_gateways
     for gateway in get_gateways(hass):
         try:
-            scans_running[str(gateway.dev_id)] = bool(gateway._reading_memory_of_devices_is_running.is_set())
+            # 'a scan is running' has become 'the bus is busy' - a teach-in and the base id
+            # request block the bus just as much, and the page shows the same thing for them
+            scans_running[str(gateway.dev_id)] = bool(gateway.is_bus_busy)
+            busy_with[str(gateway.dev_id)] = gateway.bus_busy_reason
         except Exception:   # noqa: BLE001
             scans_running[str(gateway.dev_id)] = False
 
     connection.send_result(msg['id'], {
         'members': members,
         'scans_running': scans_running,
+        'busy_with': busy_with,
+        # how far each running scan is - keyed like scans_running, so the page can put the
+        # numbers right next to its "scanning" badge
+        'scan_progress': {str(progress['gateway_id']): progress
+                          for progress in get_scan_progress()},
         'hint': "Detected from the traffic of the gateway (polling, status answers, discovery "
                 "replies) - no bus lock and no active scan needed. Positions without an answer "
                 "are polled by the gateway but did not report yet.",
@@ -679,13 +715,11 @@ async def ws_bus_read_memory(hass: HomeAssistant, connection, msg) -> None:
                               f"Gateway {gateway.dev_id} ({gateway.dev_type}) has no RS485 bus.")
         return
 
-    already_running = False
-    try:
-        already_running = gateway._reading_memory_of_devices_is_running.is_set()
-    except Exception:   # noqa: BLE001
-        pass
-    if already_running:
-        connection.send_result(msg['id'], {'started': False, 'reason': 'already_running'})
+    if getattr(gateway, 'is_bus_busy', False):
+        # a scan, a teach-in or the base id request already has the bus - a second operation
+        # would talk over it
+        connection.send_result(msg['id'], {'started': False, 'reason': 'already_running',
+                                           'busy_with': gateway.bus_busy_reason})
         return
 
     LOGGER.info(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} started from the web ui.")
@@ -708,12 +742,15 @@ async def ws_bus_read_memory(hass: HomeAssistant, connection, msg) -> None:
         if not positions:
             positions = list(range(1, 65))
 
-        start_bus_scan_thread(hass, gateway, positions)
+        if not start_bus_scan_thread(hass, gateway, positions):
+            LOGGER.info(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} was not started - "
+                        f"the bus is busy with '{gateway.bus_busy_reason}'.")
+            return
 
         # wait for the scan thread (runs independently, this only observes it)
         for _ in range(600):
             await asyncio.sleep(1)
-            if not gateway._reading_memory_of_devices_is_running.is_set():
+            if not gateway.is_bus_busy:
                 break
         else:
             LOGGER.warning(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} did not finish "
@@ -764,6 +801,33 @@ TEACH_IN_TIMEOUT = 20       # seconds per device
 SCAN_PAUSE = 0.05           # seconds between two bus requests
 SCAN_EXCHANGE_TIMEOUT = 10  # seconds per request
 
+# Progress of the running scans, gateway id -> counters. Written by the scan thread, read by
+# whoever reports progress (the plug & play status, the bus members websocket). Single item
+# assignments under the GIL, so no lock is needed for a display value. An entry exists
+# exactly while its scan runs - `pop` in the finally of `_scan_bus` is the "finished" signal.
+SCAN_PROGRESS: dict[int, dict] = {}
+
+
+def get_scan_progress(gateway_id: int = None):
+    """Progress of one running scan (dict or None) or of all of them (list)."""
+    if gateway_id is not None:
+        return SCAN_PROGRESS.get(gateway_id)
+    return list(SCAN_PROGRESS.values())
+
+
+def describe_scan_progress(progress: dict) -> str:
+    """One readable line, e.g. 'position 11/14, memory 23/56'.
+
+    Shown while the scan works on a position, so the count is the position **being read**
+    (done + 1) - 'position 0/14' at the very start would read like nothing is happening.
+    """
+    total = progress.get('positions_total') or 0
+    current = min(progress.get('positions_done', 0) + 1, total) if total else '?'
+    line = f"position {current}/{total or '?'}"
+    if progress.get('memory_rows_total'):
+        line += f", memory {progress.get('memory_rows_read', 0)}/{progress['memory_rows_total']}"
+    return line
+
 
 async def _scan_bus(gateway, positions: list[int]) -> None:
     from eltakobus import locking
@@ -773,12 +837,26 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
     bus = gateway._bus
     forward = bus.callback_func
     is_locked = False
+
+    ordered = sorted(positions)
+    total = max(len(ordered), 1)
+    # the denominator is the position count - the memory rows of the current device refine
+    # the fraction of its own position, so the bar does not stall on a device with a large
+    # memory and does not jump when a position turns out to be empty
+    progress = SCAN_PROGRESS[gateway.dev_id] = {
+        'gateway_id': gateway.dev_id, 'positions_total': len(ordered), 'positions_done': 0,
+        'position': None, 'memory_rows_read': None, 'memory_rows_total': None, 'percent': 0,
+        'started_at': _utc_now_iso(),
+    }
     try:
         bus.set_callback(None)
         is_locked = (await locking.lock_bus(bus)) == locking.LOCKED
 
         skip_until = 0
-        for position in sorted(positions):
+        for index, position in enumerate(ordered):
+            progress.update({'position': position, 'positions_done': index,
+                             'memory_rows_read': None, 'memory_rows_total': None,
+                             'percent': int(100 * index / total)})
             if position <= skip_until:
                 continue
             try:
@@ -795,6 +873,9 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
             skip_until = position + reply.reported_size - 1
 
             for line in range(reply.memory_size):
+                progress.update({'memory_rows_read': line + 1, 'memory_rows_total': reply.memory_size,
+                                 'percent': int(100 * (index + (line + 1) / max(reply.memory_size, 1))
+                                                / total)})
                 try:
                     response = await asyncio.wait_for(
                         bus.exchange(EltakoMemoryRequest(reply.reported_address, line), EltakoMemoryResponse,
@@ -808,6 +889,7 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
 
         LOGGER.info(f"[{LOG_PREFIX_BUS}] Paced bus scan of gateway {gateway.dev_id} finished.")
     finally:
+        SCAN_PROGRESS.pop(gateway.dev_id, None)
         if is_locked:
             try:
                 await locking.unlock_bus(bus)
@@ -816,20 +898,60 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
         bus.set_callback(forward)
 
 
-def start_bus_scan_thread(hass: HomeAssistant, gateway, positions: list[int]) -> None:
-    """Run the paced scan in its own thread so that the bus timing cannot be disturbed."""
+def sender_is_taught_in(hass: HomeAssistant, gateway_id: int, address: str,
+                        sender_id: str) -> bool | None:
+    """Is this sender in the memory of that bus position? None when it cannot be told.
+
+    Only a device on the RS485 bus has a memory which can be read, and only after a bus scan.
+    For a wireless actuator there is no way to ask - it answers no such question, which is why
+    a teach-in there is always the manual procedure at the device itself.
+    """
+    parts = str(address or '').upper().split('-')
+    if len(parts) != 4 or parts[:3] != ['00', '00', '00'] or not sender_id:
+        return None
+    registry = get_registry(hass)
+    if registry is None:
+        return None
+
+    position = int(parts[3], 16)
+    wanted = str(sender_id).upper()
+    members = {member['bus_address']: member for member in registry.get_members(hass)
+               if member.get('gateway_id') == gateway_id}
+
+    member = members.get(position)
+    if member is None:
+        return None
+    # a multi-channel device (FSR14/4x) occupies four positions but has **one** memory, at its
+    # first one - the senders of every channel are in there, marked with their channel
+    owner = members.get(member.get('parent_bus_address')) or member
+    if not owner.get('memory_rows_read'):
+        return None         # the memory of this position was never read
+    return any(str(sensor.get('sensor_id', '')).upper() == wanted
+               for sensor in (owner.get('taught_in') or []))
+
+
+def start_bus_scan_thread(hass: HomeAssistant, gateway, positions: list[int]) -> bool:
+    """Run the paced scan in its own thread so that the bus timing cannot be disturbed.
+
+    The bus is taken **before** the thread starts, not inside it: otherwise two scans which are
+    started in the same moment would both pass the check and then talk over each other. False
+    means somebody else has the bus - the caller reports that instead of starting a second one.
+    """
+    if not gateway.try_acquire_bus("bus scan"):
+        return False
+
     def runner():
         try:
-            gateway._reading_memory_of_devices_is_running.set()
             asyncio.run(_scan_bus(gateway, positions))
         except Exception as e:  # noqa: BLE001
             LOGGER.error(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} failed: {e}", exc_info=True)
         finally:
-            gateway._reading_memory_of_devices_is_running.clear()
+            gateway.release_bus()
 
     import threading
     thread = threading.Thread(target=runner, name=f"eltako-bus-scan-gw{gateway.dev_id}", daemon=True)
     thread.start()
+    return True
 
 
 async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str = None) -> list[dict]:
@@ -846,11 +968,20 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
     from eltakobus.util import AddressExpression
     from homeassistant.const import CONF_DEVICES, CONF_ID
 
+    if gateway.is_bus_busy:
+        LOGGER.warning(f"[{LOG_PREFIX_BUS}] Teaching in the senders of gateway {gateway.dev_id} "
+                       f"was refused - the bus is busy with '{gateway.bus_busy_reason}'.")
+        return [{'status': 'busy', 'message': f"The bus is busy with "
+                                              f"'{gateway.bus_busy_reason}' - try again when it "
+                                              f"has finished."}]
+
     config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
     devices_config = {}
     for gateway_config in config.get(CONF_GATEWAY, []) or []:
         if gateway_config.get(CONF_ID) == gateway.dev_id:
-            devices_config = gateway_config.get(CONF_DEVICES, {}) or {}
+            # web ui devices count too - otherwise there is nothing to teach in on an
+            # installation which was configured without a yaml
+            devices_config = _devices_of_gateway(hass, gateway_config)
 
     # collect (local position, channel owner is derived on the bus, sender id, sender eep)
     jobs = []
@@ -881,6 +1012,11 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
         if member and member.get('parent_bus_address'):
             return member['parent_bus_address']
         return position
+
+    if not gateway.try_acquire_bus("teaching in the senders"):
+        return [{'status': 'busy', 'message': f"The bus is busy with "
+                                              f"'{gateway.bus_busy_reason}' - try again when it "
+                                              f"has finished."}]
 
     bus = gateway._bus
     results = []
@@ -921,6 +1057,8 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
             except Exception as e:  # noqa: BLE001
                 LOGGER.error(f"[{LOG_PREFIX_BUS}] Cannot unlock the bus: {e}")
         bus.set_callback(original_callback)
+        # commands which arrived while this was running are sent now
+        gateway.release_bus()
 
     return results
 
@@ -943,8 +1081,10 @@ async def ws_bus_teach_in_senders(hass: HomeAssistant, connection, msg) -> None:
         connection.send_error(msg['id'], 'not_a_bus_gateway',
                               f"Gateway {gateway.dev_id} ({gateway.dev_type}) has no RS485 bus.")
         return
-    if gateway._reading_memory_of_devices_is_running.is_set():
-        connection.send_error(msg['id'], 'scan_running', "A bus scan is running - try again afterwards.")
+    if gateway.is_bus_busy:
+        connection.send_error(msg['id'], 'bus_busy',
+                              f"The bus is busy with '{gateway.bus_busy_reason}' - try again "
+                              f"afterwards. Only one operation may talk on the bus at a time.")
         return
 
     results = await async_teach_in_senders(hass, gateway, msg.get('address'))

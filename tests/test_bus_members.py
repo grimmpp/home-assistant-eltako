@@ -7,10 +7,10 @@ from tests.mocks import *
 from tests.test_device_activity import StoreMock, iso_days_ago
 from tests.test_enocean_logger import HassDataMock, get_general_settings
 
-from custom_components.eltako import bus_members
-from custom_components.eltako.bus_members import BusMemberRegistry, describe_model
+from custom_components.eltako.observation import bus_members
+from custom_components.eltako.observation.bus_members import BusMemberRegistry, describe_model
 from custom_components.eltako.const import *
-from custom_components.eltako.enocean_logger import EnOceanTelegramLogger
+from custom_components.eltako.observation.enocean_logger import EnOceanTelegramLogger
 
 from eltakobus.message import EltakoDiscoveryReply, EltakoPoll, EltakoWrapped4BS
 from eltakobus.util import AddressExpression
@@ -38,9 +38,59 @@ class TestModelDescription(TestCase):
         self.assertEqual(describe_model(b'\xAB\xCD', 2), (None, None))
         self.assertEqual(describe_model(None, 1), (None, None))
 
-    def test_candidates_are_reported(self):
-        _, candidates = describe_model(b'\x04\x01\x72\x00', 4)
-        self.assertIn('FSR14_1x', candidates)
+    def test_an_exact_size_match_is_not_ambiguous(self):
+        """FSR14_1x and FSR14_4x share their model bytes and differ in the size. With the
+        size known the device is identified beyond doubt - reporting candidates anyway made
+        plug & play hold back every FSR14_4x as 'please pick one'."""
+        self.assertEqual(describe_model(b'\x04\x01\x72\x00', 4), ('FSR14_4x', None))
+        self.assertEqual(describe_model(b'\x04\x01\x72\x00', 1), ('FSR14_1x', None))
+
+    def test_every_library_class_is_recognized_beyond_doubt(self):
+        """Audit over every discovery name of the eltakobus library.
+
+        Every class which answers a discovery must be identified by (model, size) without a
+        candidate list - a future library addition which shares model bytes *and* size with
+        an existing class would otherwise silently push every affected device into 'needs a
+        decision' (the FSR14_4x symptom)."""
+        import inspect
+
+        from eltakobus import device as eltako_devices
+
+        for name, cls in inspect.getmembers(eltako_devices, inspect.isclass):
+            for model in (getattr(cls, 'discovery_names', None) or []):
+                size = getattr(cls, 'size', None)
+                if size is None:
+                    continue
+                device_class, candidates = describe_model(bytes(model), size)
+                self.assertEqual(device_class, name,
+                                 msg=f"{name} (model {bytes(model).hex()}, size {size}) "
+                                     f"resolves to {device_class!r}")
+                self.assertIsNone(candidates,
+                                  msg=f"{name} is still reported as ambiguous: {candidates}")
+
+    def test_the_heating_actuators_are_disambiguated_by_size_too(self):
+        """FHK14/F4HK14 are the only other pair sharing their model bytes (audit over every
+        discovery name of the eltakobus library) - same bug, same fix as the FSR14."""
+        self.assertEqual(describe_model(b'\x04\x18\x00\x00', 2), ('FHK14', None))
+        self.assertEqual(describe_model(b'\x04\x18\x00\x00', 4), ('F4HK14', None))
+
+    def test_without_the_size_the_candidates_are_reported(self):
+        device_class, candidates = describe_model(b'\x04\x01\x72\x00', None)
+        self.assertEqual(device_class, 'FSR14_1x')
+        self.assertIn('FSR14_4x', candidates)
+
+    def test_scan_progress_is_described_readably(self):
+        from custom_components.eltako.observation.bus_members import describe_scan_progress
+
+        # the shown count is the position being read (done + 1), so the line never starts
+        # with a 'position 0/14' which reads like a stall
+        self.assertEqual(describe_scan_progress({'positions_done': 0, 'positions_total': 14}),
+                         'position 1/14')
+        self.assertEqual(describe_scan_progress({'positions_done': 3, 'positions_total': 14,
+                                                 'memory_rows_read': 23, 'memory_rows_total': 56}),
+                         'position 4/14, memory 23/56')
+        self.assertEqual(describe_scan_progress({'positions_done': 14, 'positions_total': 14}),
+                         'position 14/14')
 
 
 class TestRegistry(TestCase):
@@ -147,7 +197,7 @@ class TestGatewayFeedsTheRegistry(TestCase):
 
     def test_no_telegram_logger_is_active(self):
         """Precondition of this whole class: recording is disabled."""
-        from custom_components.eltako.enocean_logger import get_telegram_logger
+        from custom_components.eltako.observation.enocean_logger import get_telegram_logger
 
         self.assertIsNone(get_telegram_logger(self.hass))
 
@@ -367,7 +417,7 @@ class TestEoManMapping(TestCase):
     """The eo_man mapping table enriches identified bus devices."""
 
     def test_known_hw_types(self):
-        from custom_components.eltako.bus_members import describe_hw_type
+        from custom_components.eltako.observation.bus_members import describe_hw_type
 
         fsr = describe_hw_type('FSR14_4x')
         self.assertEqual(fsr['description'], 'Relay (4 channels)')
@@ -380,7 +430,7 @@ class TestEoManMapping(TestCase):
         self.assertEqual(fsb['sender_eep'], 'H5-3F-7F')
 
     def test_unknown_hw_type(self):
-        from custom_components.eltako.bus_members import describe_hw_type
+        from custom_components.eltako.observation.bus_members import describe_hw_type
 
         self.assertEqual(describe_hw_type('DOES_NOT_EXIST'), {})
         self.assertEqual(describe_hw_type(None), {})
@@ -388,7 +438,7 @@ class TestEoManMapping(TestCase):
     def test_every_discoverable_bus_device_has_an_entry(self):
         """Every device class the library can detect should be described - otherwise the
         table shows a bare class name without explanation."""
-        from custom_components.eltako.bus_members import HW_TYPE_INFO, MODEL_MAP
+        from custom_components.eltako.observation.bus_members import HW_TYPE_INFO, MODEL_MAP
 
         known = set(HW_TYPE_INFO)
         discoverable = {name for names in MODEL_MAP['by_model'].values() for name in names}

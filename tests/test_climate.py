@@ -5,8 +5,8 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
 from homeassistant.components.climate import HVACMode
 from custom_components.eltako.climate import ClimateController
-from custom_components.eltako.config_helpers import *
-from custom_components.eltako.device import EltakoEntity
+from custom_components.eltako.config.config_helpers import *
+from custom_components.eltako.core.entity import EltakoEntity
 from eltakobus.eep import *
 from eltakobus import *
 

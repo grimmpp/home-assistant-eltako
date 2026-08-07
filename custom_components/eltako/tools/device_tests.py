@@ -135,6 +135,26 @@ def _find_gateway(hass, gateway_id):
     return next((gw for gw in get_gateways(hass) if gw.dev_id == int(gateway_id)), None)
 
 
+# every key under which a test names a gateway it talks to
+GATEWAY_PARAMS = ("gateway", "gateway1", "gateway2")
+
+
+def _check_bus_is_free(hass, params: dict) -> None:
+    """Refuse a test while an exclusive operation has the bus of one of its gateways.
+
+    A test measures answer times, so its telegrams may not be queued behind a bus scan (that
+    would falsify every measurement) - it is stopped before it starts instead.
+    """
+    for key in GATEWAY_PARAMS:
+        if params.get(key) in (None, ""):
+            continue
+        gateway = _find_gateway(hass, params[key])
+        if gateway is not None and getattr(gateway, 'is_bus_busy', False):
+            raise ValueError(f"Gateway {gateway.dev_id} is busy with "
+                             f"'{gateway.bus_busy_reason}'. While that runs no other telegram "
+                             f"may go over its bus - start the test afterwards.")
+
+
 def _is_connected(gateway) -> bool:
     try:
         return bool(gateway._bus.is_active())
@@ -793,6 +813,7 @@ class DeviceTestManager:
     def start(self, test_id: str, params: dict) -> None:
         if self.is_running:
             raise ValueError(f"Test '{self.test_id}' is still running - stop it first.")
+        _check_bus_is_free(self.hass, params)
         runner = TEST_RUNNERS.get(test_id)
         if runner is None:
             raise ValueError(f"Unknown test '{test_id}'. Available: "

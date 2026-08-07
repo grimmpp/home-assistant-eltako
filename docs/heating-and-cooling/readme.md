@@ -7,7 +7,7 @@ This documentation is about how to control a heating like a heat pump which is a
 
 <img src="./HAClimatePanel.png" alt="Home Assistant Climate Panel" height="250"/>
 
-In the following scenario we have an actuator (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room thermostat and the target temperature can be set via control panel (e.g. Eltako FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
+In the following scenario we have an actuator (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room thermostat and the target temperature can be set via control panel (e.g. ELTAKO FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
 
 Both control panels can synchronize themself. If both are use together climate panel in HA sends a telegram to the heater actuator and the thermostat will adapt the taget temperature when it changes. This communication is based on EEP A5-10-06.
 
@@ -21,7 +21,7 @@ In the following picture you can see many possibility how you can combine all th
 
 | Number      | Component   | Description |
 | :---        | :---        | :---        |
-| 1           | Heating and Cooling Actuator | e.g. Eltako FHK14, FAE14SSR ... . This actuator is controlling the heating valve (number 6)|
+| 1           | Heating and Cooling Actuator | e.g. ELTAKO FHK14, FAE14SSR ... . This actuator is controlling the heating valve (number 6)|
 | 2           | Climate Panel | Virtual temperature controller in Home Assistant. <br/>It requires an own address which needs to be entered in the function group 3 of the actuator e.g. via PCT14 programming software. <br/>It's EEP is "A5-10-06". |
 | 3           | Cooling Mode | Physical switch which is connected to FTS14EM and sends frequently (15min) a signal to stay in cooling mode or is off for heating. <br/>Supported EEPs: F6-02-01, F6-02-02, F6-10-00, D5-00-01, A5-08-01, M5-38-08 (FTS14EM contact signals and rocker switches are supported) <br/>In case of a rocker switch the button needs to be defined. 0x70 = top right, x50 = bottom right, 0x30 = top left, 0x10 = bottom left |
 | 4           | Room Temperature Sensor | Sensor sending periodically (every 50 seconds) the current temperature of the room. |
@@ -37,7 +37,7 @@ In the following picture you can see many possibility how you can combine all th
 * In **function group 1 a temperature sensor and controller** is entered which sends frequently the current room temperature.
 * **Optionally**: In **function group 2** a hygrostat/humidity sensor is entered.
 * In **function group 3** address for **Home Assistant Climate Panel** is entered.
-* **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night reduction (-4°K), reduction (-2°K) - Predefined by Eltako). Not optional for FUTH. (See below)
+* **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night reduction (-4°K), reduction (-2°K) - Predefined by ELTAKO). Not optional for FUTH. (See below)
 * **Optionally**: In **function group 4** a rocker switch is entered for changing from heating into **cooling mode**. Preferred solution is to use a physical switch connected to FTS14EM. 
 
 ## Configuration of temperature controller e.g. FUTH
@@ -123,7 +123,7 @@ eltako:
                                       # for rocker switches only
 ```
 
-## Information about Eltako FLGTF
+## Information about ELTAKO FLGTF
 
 <img src="./FLGTF55-wg.jpg" height="150">
 
@@ -146,7 +146,7 @@ eltako:
 
 <img src="./Temp. Sensor - FLGTF.png" height="135">
 
-## Information about Eltako FUTH (Temperature Controller)
+## Information about ELTAKO FUTH (Temperature Controller)
 
 <img src="./FUTH55ED.jpg" height="150">
 

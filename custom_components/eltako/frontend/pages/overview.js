@@ -115,6 +115,8 @@ const PNP_STYLES = `
     display: block; height: 100%; width: 35%; border-radius: 999px;
     background: var(--eltako-accent); animation: pnp-indeterminate 1.6s ease-in-out infinite;
   }
+  /* while a bus scan reports its counters the bar becomes determinate */
+  .pnp-progress.determinate i { animation: none; transition: width .8s ease; }
   .pnp-step-text { font-size: .78rem; color: var(--eltako-accent); margin-top: 8px; }
 
   @keyframes pnp-pulse {
@@ -334,12 +336,7 @@ export const page = {
 
         ${this._renderPnpFlow(ctx, pnp, report)}
 
-        ${running ? `
-          <div class="pnp-progress"><i></i></div>
-          <div class="pnp-step-text">${escapeHtml(pnp.step || "Detection is running")}&hellip;
-            <span class="pnp-hint">${pnp.stage === "bus"
-              ? "the bus is locked meanwhile" : "this page updates itself"}</span>
-          </div>` : ""}
+        ${running ? this._renderRunningBar(pnp) : ""}
 
         <div class="pnp-actions">
           <button id="pnp-run" class="action ${report.started_at ? "" : "primary"}" ${running ? "disabled" : ""}>
@@ -368,6 +365,26 @@ export const page = {
   },
 
   /** The three stages as tiles, connected by arrows which animate while a run is active. */
+  /**
+   * The bar under the stage flow while a run is active. Indeterminate by default; as soon
+   * as a bus scan reports its counters (pnp.bus_scans, filled once a second by the backend)
+   * it becomes a real progress bar - with several buses in parallel it shows their average.
+   */
+  _renderRunningBar(pnp) {
+    const scans = pnp.bus_scans || [];
+    const percent = scans.length
+      ? Math.round(scans.reduce((sum, scan) => sum + (scan.percent || 0), 0) / scans.length)
+      : null;
+    return `
+      <div class="pnp-progress${percent !== null ? " determinate" : ""}">
+        <i${percent !== null ? ` style="width:${Math.max(percent, 2)}%"` : ""}></i></div>
+      <div class="pnp-step-text">${escapeHtml(pnp.step || "Detection is running")}&hellip;
+        ${percent !== null ? `<b>${percent}%</b>` : ""}
+        <span class="pnp-hint">${pnp.stage === "bus"
+          ? "the bus is locked meanwhile" : "this page updates itself"}</span>
+      </div>`;
+  },
+
   _renderPnpFlow(ctx, pnp, report) {
     const stages = this.PNP_STAGES.map((stage, index) => ({
       ...stage, index, ...this._pnpStageResult(stage.id, pnp, report),
@@ -855,6 +872,8 @@ export const page = {
         <div class="tile-head">
           ${icon("mdi:router-wireless", "◉")}
           <span class="tile-title">${escapeHtml(gateway.name)}</span>
+          ${gateway.simulated
+            ? `<span class="tag simulated" title="No hardware: this gateway and its devices are simulated (see the simulation page)">simulated</span>` : ""}
           <span class="spacer" style="flex:1 1 auto"></span>
           ${connected === null || connected === undefined
             ? `<span class="pill">unknown</span>`
@@ -870,7 +889,8 @@ export const page = {
           ["Auto reconnect", escapeHtml(gateway.auto_reconnect)],
           ["Message delay", `${escapeHtml(gateway.message_delay)} s`],
           ["Recorded telegrams", formatNumber(telegramCount)],
-          ["Source", this._gatewaySource(ctx, gateway)],
+          ["Source", this._gatewaySource(ctx, gateway)
+            + (gateway.simulated ? ` <span class="hint">simulated - no hardware</span>` : "")],
         ])}</table>
         <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">
           ${gateway.ha_device_id

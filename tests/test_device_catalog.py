@@ -2,7 +2,7 @@
 import unittest
 from unittest import TestCase
 
-from custom_components.eltako.device_catalog import (
+from custom_components.eltako.catalog.device_catalog import (
     DEVICE_CATALOG,
     describe_hw_type,
     get_device_templates,
@@ -32,7 +32,7 @@ class TestCatalogConsistency(TestCase):
     def test_every_discoverable_bus_device_is_in_the_catalog(self):
         """The catalog replaces the old HW_TYPE_INFO of bus_members - it must still
         describe every device class the eltakobus library can detect."""
-        from custom_components.eltako.bus_members import MODEL_MAP
+        from custom_components.eltako.observation.bus_members import MODEL_MAP
 
         catalog_types = {entry['hw_type'] for entry in DEVICE_CATALOG if entry.get('bus_device')}
         discoverable = {name for names in MODEL_MAP['by_model'].values() for name in names}
@@ -112,7 +112,7 @@ class TestFormDescriptorIntegration(TestCase):
     """The form websocket serves the catalog - the frontend hardcodes nothing."""
 
     def test_every_platform_offers_device_types(self):
-        from custom_components.eltako.device_config import get_form_descriptor
+        from custom_components.eltako.config.device_config import get_form_descriptor
 
         descriptor = get_form_descriptor()
         for platform in descriptor['platforms']:
@@ -120,7 +120,7 @@ class TestFormDescriptorIntegration(TestCase):
             self.assertTrue(platform['device_types'], msg=f"{platform['platform']} has no templates")
 
     def test_template_eeps_validate_against_the_platform_schema(self):
-        from custom_components.eltako.device_config import get_form_descriptor
+        from custom_components.eltako.config.device_config import get_form_descriptor
 
         descriptor = get_form_descriptor()
         for platform in descriptor['platforms']:
@@ -132,7 +132,7 @@ class TestFormDescriptorIntegration(TestCase):
 
     def test_find_hw_type_accepts_the_names_of_other_tools(self):
         """PCT14 and the EnOcean Device Manager write the same device differently."""
-        from custom_components.eltako.device_catalog import find_hw_type
+        from custom_components.eltako.catalog.device_catalog import find_hw_type
 
         # PCT14 uses dashes, the catalog underscores
         self.assertEqual(find_hw_type('FSR14-4x')['hw_type'], 'FSR14_4x')
@@ -150,7 +150,7 @@ class TestFormDescriptorIntegration(TestCase):
         self.assertEqual(find_hw_type(None), {})
 
     def test_switch_reuses_the_light_actuators(self):
-        from custom_components.eltako.device_config import get_form_descriptor
+        from custom_components.eltako.config.device_config import get_form_descriptor
 
         descriptor = get_form_descriptor()
         switch = next(p for p in descriptor['platforms'] if p['platform'] == 'switch')

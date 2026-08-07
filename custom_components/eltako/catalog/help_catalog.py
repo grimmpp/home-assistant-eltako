@@ -37,9 +37,9 @@ EXTERNAL_LINKS: list[dict] = [
     {'title': 'Community forum',
      'url': 'https://community.home-assistant.io/t/eltako-baureihe-14-rs485-enocean-debugging/49712',
      'icon': 'mdi:forum-outline',
-     'description': 'Discussion thread about Eltako series 14 in the Home Assistant forum.'},
-    {'title': 'Eltako PCT14', 'url': 'https://www.eltako.com/en/software-pct14/', 'icon': 'mdi:tools',
-     'description': 'Windows tool of Eltako to configure series 14 devices and their teach-in memory.'},
+     'description': 'Discussion thread about ELTAKO series 14 in the Home Assistant forum.'},
+    {'title': 'ELTAKO PCT14', 'url': 'https://www.eltako.com/en/software-pct14/', 'icon': 'mdi:tools',
+     'description': 'Windows tool of ELTAKO to configure series 14 devices and their teach-in memory.'},
     {'title': 'EnOcean Device Manager', 'url': 'https://github.com/grimmpp/enocean-device-manager',
      'icon': 'mdi:file-tree',
      'description': 'Companion tool of the same author: reads a bus and generates the yaml for this integration.'},
@@ -49,7 +49,7 @@ EXTERNAL_LINKS: list[dict] = [
     # eltako.com moved its product pages into a catalog with numeric category ids; the old
     # /en/product/... paths answer with 404. Category 16 is "Professional Smart Home", which
     # holds the series 14 and the wireless devices. Deep links of a single product still work.
-    {'title': 'Eltako product catalog', 'url': 'https://www.eltako.com/en/catalog/categories/16/',
+    {'title': 'ELTAKO product catalog', 'url': 'https://www.eltako.com/en/catalog/categories/16/',
      'icon': 'mdi:factory',
      'description': 'Product pages of the devices supported here: Professional Smart Home with the series 14.'},
 ]
@@ -129,7 +129,8 @@ def get_platforms() -> list[dict]:
             'platform': platform,
             'eeps': sorted(eeps['eep']),
             'sender_eeps': sorted(eeps['sender_eep']),
-            'description': (definition.__doc__ or '').strip().splitlines()[0] if definition.__doc__ else '',
+            'description': (device_catalog.as_display_text(definition.__doc__).strip().splitlines()[0]
+                            if definition.__doc__ else ''),
         })
     return platforms
 
@@ -163,7 +164,7 @@ def _eep_description(eep_string: str) -> str:
         profile = EEP.find(eep_string)
     except Exception:                      # noqa: BLE001 - an unknown profile is not an error here
         return ''
-    for line in (profile.__doc__ or '').strip().splitlines():
+    for line in device_catalog.as_display_text(profile.__doc__).strip().splitlines():
         if line.strip():
             return line.strip()
     return ''

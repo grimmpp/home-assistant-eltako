@@ -6,7 +6,7 @@ import unittest
 from unittest import TestCase
 
 from custom_components.eltako.const import *
-from custom_components.eltako.timeseries import (
+from custom_components.eltako.observation.timeseries import (
     TimeseriesExporter,
     backfill_log_files,
     create_exporter_from_settings,

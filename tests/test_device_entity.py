@@ -5,10 +5,10 @@ from unittest import mock, IsolatedAsyncioTestCase, TestCase
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
 from custom_components.eltako.cover import EltakoCover
-from custom_components.eltako.device import EltakoEntity
+from custom_components.eltako.core.entity import EltakoEntity
 from eltakobus import *
 
-from custom_components.eltako import config_helpers
+from custom_components.eltako.config import config_helpers
 from homeassistant import core
 
 # mock update of Home Assistant

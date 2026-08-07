@@ -7,6 +7,8 @@ a second, so it is practical for a quick measurement on a real bus.
 Code: [`eltako_standalone/`](../../eltako_standalone/) · in-folder readme:
 [eltako_standalone/README.md](../../eltako_standalone/README.md)
 
+![The standalone runtime: both it and Home Assistant load the same integration package, only the import of homeassistant resolves differently](img/standalone-runtime.svg)
+
 ## Why
 
 | | Home Assistant | Standalone |
@@ -28,10 +30,13 @@ pip install -r eltako_standalone/requirements-standalone.txt   # no homeassistan
 python -m eltako_standalone serve
 ```
 
-Then open **<http://localhost:8123>**. Options:
+Then open **<http://localhost:8124>**. That is deliberately not the 8123 of Home Assistant: on a
+shared port both would share the origin of the browser, and the service worker of the Home
+Assistant frontend keeps serving its cached app shell there - the standalone web ui would look
+like a Home Assistant which never finishes starting. Options:
 
 ```bash
-python -m eltako_standalone serve --host 0.0.0.0 --port 8124 --token SECRET
+python -m eltako_standalone serve --host 0.0.0.0 --port 8200 --token SECRET
 python -m eltako_standalone run                 # headless, no web ui
 ```
 
@@ -47,8 +52,10 @@ A config folder which works like the Home Assistant one (default `~/.eltako-stan
 override with `--config` or `ELTAKO_CONFIG_DIR`):
 
 ```text
-<config>/configuration.yaml    the same `eltako:` section as in Home Assistant
-<config>/.storage/             settings, gateways and devices created in the web ui
+<config>/configuration.yaml         the same `eltako:` section as in Home Assistant
+<config>/.storage/                  settings, gateways and devices created in the web ui
+<config>/eltako-standalone.log      process log of `serve` / `run` (like home-assistant.log)
+<config>/enocean_telegrams.jsonl    the telegram recording (on by default, see below)
 ```
 
 Minimal `configuration.yaml`:
@@ -92,7 +99,7 @@ Start InfluxDB and Grafana (no Home Assistant involved):
 cd dev && ./start-analytics.sh
 ```
 
-Two dashboards are provisioned (folder *Eltako*): *Telegram overview* and *Device analysis*.
+Two dashboards are provisioned (folder *ELTAKO*): *Telegram overview* and *Device analysis*.
 The **Grafana** button in the live telegram view links to them. If no InfluxDB is running the
 exporter reports the connection error in the web ui and keeps retrying - the recording itself
 is unaffected. To import what was recorded before InfluxDB was up, call the service
@@ -160,7 +167,7 @@ is written. Three formats are accepted - which one it is, is detected from the c
 | format | comes from | what is imported |
 | --- | --- | --- |
 | `.eodm` | [EnOcean Device Manager](https://github.com/grimmpp/enocean-device-manager) | every gateway and every device marked *Export to HA* |
-| `.xml` | export of the Eltako **PCT14** tool | the FAM14 of the export as gateway, its bus devices per channel (name, EEP and sender from the device catalog, the descriptions of PCT14 as names) and the senders taught into them as radio pushbuttons, FTS14EM inputs and sensors |
+| `.xml` | export of the ELTAKO **PCT14** tool | the FAM14 of the export as gateway, its bus devices per channel (name, EEP and sender from the device catalog, the descriptions of PCT14 as names) and the senders taught into them as radio pushbuttons, FTS14EM inputs and sensors |
 | `.yaml` | an `eltako:` section | exactly what the file declares |
 
 **All** gateways and devices of the file are imported, also several gateways on one bus.
@@ -185,9 +192,30 @@ catalog does not know are reported in the preview and skipped.
 Use the **`cu.*`** device on macOS, not `tty.*` - the latter blocks until DCD. LAN gateways
 (`address`/`port` instead of `serial_path`) behave identically everywhere.
 
-Devices which register two serial ports (e.g. the Eltako FAM-USB shows up as
+Devices which register two serial ports (e.g. the ELTAKO FAM-USB shows up as
 `...600` and `...601`) only carry the telegrams on **one** of them - usually the second. The
 `scan` command says so in its hint.
+
+## Logging
+
+Three layers, all in the config folder or on the terminal:
+
+* **Process log** &ndash; `serve` and `run` write `<config>/eltako-standalone.log` (10 MB, 3
+  rotated backups), the same lines Home Assistant would put into `home-assistant.log`: INFO
+  and up, DEBUG with `--debug`. The **terminal** stays quiet (warnings and errors only) so the
+  CLI output remains readable - the file is where the detail goes. The quick commands (`scan`,
+  `detect`, `state`, ...) log to the terminal only; they must not interleave their lines into
+  the file of a running daemon.
+* **Telegram log** &ndash; every EnOcean telegram, decoded, as jsonl:
+  `<config>/enocean_telegrams.jsonl`, on by default (see above). Live: the *Telegrams* page or
+  `python -m eltako_standalone listen`.
+* **Timeseries export** &ndash; InfluxDB + Grafana, on by default, see
+  [docs/grafana](../grafana/readme.md).
+
+The fine-grained switches of the integration (`log_level_incoming`, `log_level_bus_messages`,
+`log_level_polling`, ...) work unchanged - set them in the web ui under *About &rarr; Active
+configuration*. They decide what is logged at all; the file/terminal split above decides where
+it lands.
 
 ## Refreshing after a change
 

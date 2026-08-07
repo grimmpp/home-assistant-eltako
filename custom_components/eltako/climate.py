@@ -24,11 +24,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.event import async_track_state_change_event
 
-from .gateway import EnOceanGateway
-from .device import *
+from .core.gateway import EnOceanGateway
+from .core.entity import *
 from .const import *
-from .config_helpers import DeviceConf
-from . import config_helpers, get_gateway_from_hass, get_device_config_for_gateway
+from .config.config_helpers import DeviceConf
+from .config import config_helpers
+from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 
 async def async_setup_entry(
     hass: HomeAssistant,
