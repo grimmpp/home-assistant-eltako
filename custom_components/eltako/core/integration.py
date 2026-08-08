@@ -190,6 +190,11 @@ async def async_register_panel(hass: HomeAssistant, general_settings: dict) -> N
     panel is removed together with the last entry (`async_remove_entry`), and adding one has to
     bring it back without a restart.
     """
+    if not config_helpers.is_frontend_enabled(general_settings):
+        # without the frontend there is no static route serving the panel module - a panel
+        # registered anyway would sit in the sidebar as a dead link ("Unable to load custom
+        # panel"). async_setup_entry calls this directly, so the check has to live here.
+        return
     if async_panel_exists(hass):
         return
 

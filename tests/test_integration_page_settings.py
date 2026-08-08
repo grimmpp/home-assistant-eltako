@@ -153,6 +153,16 @@ class TestThePanelGoesWithTheLastEntry(TestCase):
         self.assertIn(PANEL_URL_PATH, hass.data[DATA_PANELS])
         self.assertTrue(panel_of(hass).show_in_sidebar)
 
+    def test_a_switched_off_web_ui_gets_no_panel(self):
+        """Without the frontend nothing serves the panel module - a panel registered anyway
+        would sit in the sidebar as a dead link ('Unable to load custom panel')."""
+        hass = HassDataMock(config={CONF_GERNERAL_SETTINGS: {CONF_ENABLE_FRONTEND: False}})
+
+        run(integration.async_register_panel(
+            hass, config_helpers.get_general_settings_from_configuration(hass)))
+
+        self.assertNotIn(PANEL_URL_PATH, hass.data.get(DATA_PANELS, {}))
+
     def test_registering_twice_does_not_raise(self):
         """Home Assistant refuses to overwrite a panel - every entry calls this."""
         hass = hass_with_panel()
