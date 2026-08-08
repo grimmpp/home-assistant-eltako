@@ -1,10 +1,9 @@
 """Support for Eltako light sources."""
 from __future__ import annotations
 
-from typing import Any
 
 from eltakobus.util import AddressExpression
-from eltakobus.eep import *
+from eltakobus.eep import A5_10_06, EEP
 
 from homeassistant.components.select import (
     SelectEntity
@@ -15,15 +14,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import entity_registry as er
 
 from .config import config_helpers
 
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 from .config.config_helpers import DeviceConf
-from .core.entity import *
+from .core.entity import (DeviceInfo, EltakoEntity, RestoreEntity, State, log_entities_to_be_added,
+                          validate_actuators_dev_and_sender_id)
 from .core.gateway import EnOceanGateway, BusBusyError
-from .const import *
+from .const import CONF_ROOM_THERMOSTAT, DOMAIN, EVENT_CLIMATE_PRIORITY_SELECTED, LOGGER, MANUFACTURER
 
 
 async def async_setup_entry(
@@ -36,7 +35,7 @@ async def async_setup_entry(
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
-    
+
     # The configuration of the priority selection is part of the climate section, but the
     # entities themselves belong to the select platform. (Otherwise they would get an entity id
     # of the climate domain which collides with the climate entity of the same device.)
@@ -52,7 +51,7 @@ async def async_setup_entry(
                 if thermostat:
                     entities.append(ClimatePriority(Platform.SELECT, gateway, dev_config.id, dev_config.name, dev_config.eep))
 
-            except Exception as e:
+            except Exception as e:   # noqa: BLE001 - one bad device configuration must not stop the platform
                 LOGGER.warning("[%s %s] Could not load configuration", config_platform, str(dev_config.id))
                 LOGGER.critical(e, exc_info=True)
 
@@ -85,7 +84,7 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
                               A5_10_06.ControllerPriority.LIMIT.description]
         self._attr_current_option = A5_10_06.ControllerPriority.AUTO.description
 
-    
+
     def load_value_initially(self, latest_state:State):
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
@@ -93,11 +92,11 @@ class ClimatePriority(EltakoEntity, SelectEntity, RestoreEntity):
             self._attr_current_option = latest_state.state
             if self._attr_current_option in [None, 'unknown']:
                 self._attr_current_option = self.DEFAULT_PRIO
-                
+
         except Exception as e:
             self._attr_current_option = self.DEFAULT_PRIO
             raise e
-        
+
         ## send value to initially set value of climate controller
         self.hass.bus.fire(self.event_id, { "priority": self._attr_current_option })
 
@@ -146,7 +145,7 @@ class RepeaterMode(EltakoEntity, SelectEntity, RestoreEntity):
             model=self.gateway.model,
             via_device=(DOMAIN, self.gateway.serial_path)
         )
-        
+
 
     def load_value_initially(self, latest_state:State):
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
@@ -155,11 +154,11 @@ class RepeaterMode(EltakoEntity, SelectEntity, RestoreEntity):
             self._attr_current_option = latest_state.state
             if self._attr_current_option in [None, 'unknown']:
                 self._attr_current_option = self.DEFAULT_REPEATER_MODE
-                
+
         except Exception as e:
             self._attr_current_option = self.DEFAULT_REPEATER_MODE
             raise e
-        
+
         ## send value to initially set value of climate controller
         self.gateway.request_repeater_mode()
 

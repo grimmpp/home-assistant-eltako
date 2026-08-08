@@ -1,9 +1,9 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import Platform
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import GatewayMock, LatestStateMock
 from homeassistant.helpers.entity import Entity
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, ESP2Message, RPSMessage, Regular4BSMessage
 from custom_components.eltako.switch import EltakoSwitch
 
 
@@ -22,7 +22,7 @@ class TestSwitch(unittest.TestCase):
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'M5-38-08'
-        
+
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
@@ -50,7 +50,7 @@ class TestSwitch(unittest.TestCase):
         switch.value_changed(on_msg)
         self.assertEqual(switch.is_on, True)
         self.assertEqual(switch.state, 'on')
-        
+
         switch.value_changed(off_msg)
         self.assertEqual(switch.is_on, False)
         self.assertEqual(switch.state, 'off')
@@ -95,7 +95,7 @@ class TestSwitch(unittest.TestCase):
         switch.value_changed(on_msg)
         self.assertEqual(switch.is_on, True)
         self.assertEqual(switch.state, 'on')
-        
+
         switch.value_changed(off_msg)
         self.assertEqual(switch.is_on, False)
         self.assertEqual(switch.state, 'off')
@@ -148,7 +148,7 @@ class TestSwitch(unittest.TestCase):
         switch.value_changed(on_msg)
         self.assertEqual(switch.is_on, True)
         self.assertEqual(switch.state, 'on')
-        
+
         switch.value_changed(off_msg)
         self.assertEqual(switch.is_on, False)
         self.assertEqual(switch.state, 'off')

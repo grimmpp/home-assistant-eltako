@@ -19,7 +19,7 @@ from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
 from custom_components.eltako.core import onboarding
 from custom_components.eltako.const import (CONF_ENABLE_FRONTEND, CONF_GERNERAL_SETTINGS,
                                             CONF_CORE_ENTRY, CONF_ONBOARDING_SHOWN, DATA_ELTAKO,
-                                            DATA_ONBOARDING, ELTAKO_CONFIG,
+                                            ELTAKO_CONFIG,
                                             PANEL_ONBOARDING_JS_URL, PANEL_URL_PATH,
                                             WS_ONBOARDING_CONSUME)
 

@@ -469,7 +469,7 @@ async def async_restore_in_home_assistant(hass: HomeAssistant) -> dict:
     """Put the simulation back into Home Assistant: its gateways and its devices."""
     from ..config import device_config, gateway_config
 
-    registry = await async_setup_registry(hass)
+    await async_setup_registry(hass)
 
     created_gateways = 0
     for gateway in get_simulated_gateway_configs(hass):
@@ -541,7 +541,7 @@ async def async_add_preset(hass: HomeAssistant, keys: list[str] = None,
     4-way wall switch and a window contact. A preset whose gateway type is already simulated is
     skipped, so the call can be repeated.
     """
-    registry = await async_setup_registry(hass)
+    await async_setup_registry(hass)
     wanted = [core.find_gateway_preset(key) for key in keys] if keys else list(core.GATEWAY_PRESETS)
     existing_types = {str(gateway.get(CONF_DEVICE_TYPE))
                       for gateway in get_simulated_gateway_configs(hass)}

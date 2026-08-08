@@ -6,4 +6,8 @@ homeassistant
 termcolor
 StrEnum
 esp2-gateway-adapter==0.2.21
+
+# development only - the integration itself needs nothing of this at runtime
+# (its runtime requirements are the 'requirements' list of manifest.json)
 pytest
+ruff

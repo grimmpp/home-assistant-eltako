@@ -2,7 +2,6 @@
 import unittest
 from unittest import TestCase
 
-from tests.mocks import *
 
 from custom_components.eltako.core import websocket
 

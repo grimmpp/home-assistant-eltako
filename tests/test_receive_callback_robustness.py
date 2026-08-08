@@ -9,16 +9,13 @@ the receive callback and killed the reader thread of the library
 import unittest
 from unittest import TestCase
 
-from tests.mocks import *
+from tests.mocks import GatewayMock
 
 from custom_components.eltako.config import config_helpers
-from custom_components.eltako.const import *
 
 from eltakobus.message import (
     EltakoDiscoveryReply,
     EltakoDiscoveryRequest,
-    EltakoMemoryResponse,
-    EltakoMessage,
     RPSMessage,
     Regular4BSMessage,
 )

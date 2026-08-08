@@ -5,7 +5,7 @@ electricity meter) can therefore contain a decimal point - casting that directly
 a ValueError and made Home Assistant drop the entity (github issue #175).
 """
 import unittest
-from tests.mocks import *
+from tests.mocks import AddressExpression, GatewayMock, LatestStateMock
 from unittest import mock
 
 from homeassistant.helpers.entity import Entity
@@ -13,6 +13,7 @@ from homeassistant.const import Platform
 
 from custom_components.eltako.config.config_helpers import parse_number_state
 from custom_components.eltako.sensor import EltakoMeterSensor, SENSOR_DESC_ELECTRICITY_CUMULATIVE
+from eltakobus.eep import EEP
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)

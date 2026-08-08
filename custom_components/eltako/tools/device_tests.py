@@ -36,10 +36,10 @@ from homeassistant.const import CONF_ID
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from ..config import config_helpers
-from ..config.config_check import check_configuration, run_config_test
+from ..config.config_check import run_config_test
 from ..const import (
     CONF_EEP, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS,
-    DATA_ELTAKO, ELTAKO_CONFIG, SIGNAL_RECEIVE_MESSAGE, GatewayDeviceType)
+    SIGNAL_RECEIVE_MESSAGE, GatewayDeviceType)
 from ..core.websocket import get_gateways
 
 LOGGER = logging.getLogger("eltako.device_tests")

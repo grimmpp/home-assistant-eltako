@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from eltakobus.util import AddressExpression
-from eltakobus.eep import *
+from eltakobus.eep import EEP, G5_3F_7F, H5_3F_7F
 
 from homeassistant import config_entries
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature, ATTR_POSITION, ATTR_TILT_POSITION
@@ -13,11 +13,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 
-from .core.entity import *
+from .core.entity import (EltakoEntity, RestoreEntity, State, log_entities_to_be_added,
+                          validate_actuators_dev_and_sender_id)
+from .const import CONF_FAST_STATUS_CHANGE
 from .config import config_helpers
 from .config.config_helpers import DeviceConf
 from .core.gateway import EnOceanGateway
-from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS, DOMAIN, MANUFACTURER, LOGGER
+from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS, LOGGER
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 import asyncio
 
@@ -31,7 +33,7 @@ async def async_setup_entry(
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
-    
+
     platform = Platform.COVER
     if platform in config:
         for entity_config in config[platform]:
@@ -45,11 +47,11 @@ async def async_setup_entry(
                                             dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS), dev_conf.get(CONF_TIME_TILTS),
                                             dev_conf.area))
 
-            except Exception as e:
+            except Exception as e:   # noqa: BLE001 - one bad device configuration must not stop the platform
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
-                
-        
+
+
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
@@ -72,9 +74,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self._time_closes = time_closes
         self._time_opens = time_opens
         self._time_tilts = time_tilts
-        
+
         self._attr_supported_features = (CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP)
-        
+
         if time_tilts is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
 
@@ -117,7 +119,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             else:
                 LOGGER.warning(f"[cover {self.dev_id}] Cannot restore unexpected state '{latest_state.state}'.")
 
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - a state restored from a previous run may no longer fit
             self._attr_current_cover_position = None
             self._attr_current_cover_tilt_position = None
             self._attr_is_opening = None
@@ -127,7 +129,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
 
         self.schedule_update_ha_state()
-        LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: [" 
+        LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: ["
                      + f"is_opening: {self.is_opening}, "
                      + f"is_closing: {self.is_closing}, "
                      + f"is_closed: {self.is_closed}, "
@@ -145,9 +147,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             time = min(self._time_opens + 1, 255)
         else:
             time = 255
-        
+
         address, _ = self._sender_id
-        
+
         if self._sender_eep == H5_3F_7F:
             msg = H5_3F_7F(time, 0x01, 1).encode_message(address)
             self.send_message(msg)
@@ -155,15 +157,15 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         else:
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
             return
-        
+
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_opening = True
             self._attr_is_closing = False
-            
+
             self.schedule_update_ha_state()
-    
+
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
@@ -172,9 +174,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             time = min(self._time_closes + 1, 255)
         else:
             time = 255
-        
+
         address, _ = self._sender_id
-        
+
         if self._sender_eep == H5_3F_7F:
             msg = H5_3F_7F(time, 0x02, 1).encode_message(address)
             self.send_message(msg)
@@ -182,7 +184,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         else:
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
             return
-        
+
         #TODO: ... setting state should be comment out
         # Don't set state instead wait for response from actor so that real state of light is displayed.
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -195,10 +197,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         """Move the cover to a specific position."""
         if self._time_closes is None or self._time_opens is None:
             return
-        
+
         address, _ = self._sender_id
         position = kwargs[ATTR_POSITION]
-        
+
         if self._attr_current_cover_position is None and position not in (0, 100):
             # Without a known position no runtime can be calculated. Only the end positions can
             # be reached blindly - they also recalibrate the position.
@@ -229,14 +231,14 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 command = 0x01
             elif direction == "down":
                 command = 0x02
-            
+
             msg = H5_3F_7F(time, command, 1).encode_message(address)
             self.send_message(msg)
 
         else:
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.COVER, str(self.dev_id), self._sender_eep.eep_string)
             return
-        
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             if direction == "up":
                 self._attr_is_opening = True
@@ -244,9 +246,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             elif direction == "down":
                 self._attr_is_closing = True
                 self._attr_is_opening = False
-                
+
             self.schedule_update_ha_state()
-        
+
 
     def stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
@@ -255,7 +257,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self._sender_eep == H5_3F_7F:
             msg = H5_3F_7F(0, 0x00, 1).encode_message(address)
             self.send_message(msg)
-        
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_closing = False
             self._attr_is_opening = False
@@ -267,14 +269,14 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         """Update the internal state of the cover."""
         try:
             decoded = self.dev_eep.decode_message(msg)
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - a malformed telegram must not kill the entity
             LOGGER.warning("Could not decode message: %s", str(e))
             return
-        
+
         if self.dev_eep in [G5_3F_7F]:
             LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded.__dict__}")
 
-            ## is received as response when button pushed (command was sent) 
+            ## is received as response when button pushed (command was sent)
             ## this message is received directly when the cover starts to move
             ## when the cover results in completely open or close one of the following messages (open or closed) will appear
             if decoded.state == 0x02: # down
@@ -310,7 +312,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     # the initial position.
                     if self._attr_current_cover_position is None:
                         self._attr_current_cover_position = 0
-                    
+
                     self._attr_current_cover_position = min(self._attr_current_cover_position + int(time_in_seconds / self._time_opens * 100.0), 100)
                     if self._time_tilts is not None:
                         self._attr_current_cover_tilt_position = min(self._attr_current_cover_tilt_position + int(decoded.time / self._time_tilts * 100.0), 100)
@@ -321,7 +323,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     # the initial position.
                     if self._attr_current_cover_position is None:
                         self._attr_current_cover_position = 100
-                    
+
                     self._attr_current_cover_position = max(self._attr_current_cover_position - int(time_in_seconds / self._time_closes * 100.0), 0)
                     if self._time_tilts is not None:
                         self._attr_current_cover_tilt_position = max(self._attr_current_cover_tilt_position - int(decoded.time / self._time_tilts * 100.0), 0)
@@ -335,7 +337,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     self._attr_is_opening = False
                     self._attr_is_closing = False
 
-            
+
             LOGGER.debug(f"[cover {self.dev_id}] state: {self.state}, opening: {self.is_opening}, closing: {self.is_closing}, closed: {self.is_closed}, position: {self._attr_current_cover_position}")
 
             self.schedule_update_ha_state()

@@ -28,6 +28,7 @@ const parseAddress = (text) => {
 const formatAddress = (value) =>
   value.toString(16).toUpperCase().padStart(8, "0").match(/.{2}/g).join("-");
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "simulation",
   title: "Simulation",

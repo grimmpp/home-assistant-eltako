@@ -1,11 +1,10 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import EltakoIlluminationSensor
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, Regular4BSMessage
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -13,8 +12,8 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 
 class TestSensor_A5_06_01(unittest.TestCase):
-    
-    
+
+
 
     def create_illumination_sensor(self) -> EltakoIlluminationSensor:
         gateway = GatewayMock()
@@ -23,7 +22,7 @@ class TestSensor_A5_06_01(unittest.TestCase):
         dev_eep = EEP.find("A5-06-01")
         s = EltakoIlluminationSensor(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep)
         return s
-    
+
     def test_illumincation_sensor(self):
         s_ill = self.create_illumination_sensor()
 
@@ -38,4 +37,3 @@ class TestSensor_A5_06_01(unittest.TestCase):
         self.assertEqual(s_ill.native_value, 96.0)
 
 
-        

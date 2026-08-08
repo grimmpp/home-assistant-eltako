@@ -1,11 +1,11 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import (EltakoWindowHandle, SENSOR_DESC_WINDOWHANDLE, STATE_CLOSED,
+                                             STATE_OPEN)
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, RPSMessage
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -23,7 +23,7 @@ class TestSensor(unittest.TestCase):
 
         return ews
 
-    
+
     def test_window_handle(self):
         whs = self.create_window_handle_sensor()
 

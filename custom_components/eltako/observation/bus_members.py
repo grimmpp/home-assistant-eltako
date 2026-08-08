@@ -35,7 +35,9 @@ from homeassistant.helpers.storage import Store
 from eltakobus.message import EltakoDiscoveryReply, EltakoMemoryResponse
 from eltakobus.util import b2s
 
-from ..const import *
+from ..const import (CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION, CONF_SENDER, DATA_BUS_MEMBERS,
+                     DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, WS_BUS_MEMBERS,
+                     WS_BUS_READ_MEMORY, WS_BUS_TEACH_IN_SENDERS)
 from ..catalog.device_catalog import DEVICE_CATALOG, describe_hw_type
 
 if TYPE_CHECKING:
@@ -528,7 +530,7 @@ def _devices_of_gateway(hass: HomeAssistant, gateway_config: dict) -> dict:
 
 def _get_configured_bus_devices(hass: HomeAssistant) -> dict:
     """(gateway id, bus address) -> configured device of that position."""
-    from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
+    from homeassistant.const import CONF_ID, CONF_NAME
 
     result = {}
     config = (getattr(hass, 'data', None) or {}).get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
@@ -966,7 +968,7 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
     from eltakobus.device import create_busobject
     from eltakobus.eep import EEP
     from eltakobus.util import AddressExpression
-    from homeassistant.const import CONF_DEVICES, CONF_ID
+    from homeassistant.const import CONF_ID
 
     if gateway.is_bus_busy:
         LOGGER.warning(f"[{LOG_PREFIX_BUS}] Teaching in the senders of gateway {gateway.dev_id} "

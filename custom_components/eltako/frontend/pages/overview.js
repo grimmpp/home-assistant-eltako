@@ -155,6 +155,7 @@ const PNP_STYLES = `
   .pnp-empty { font-size: .8rem; color: var(--eltako-muted); }
 `;
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "overview",
   title: "Overview",
@@ -257,6 +258,7 @@ export const page = {
       </div>
       ${gateways.length ? `<div class="tiles">${gateways.map((gw) => this._renderGateway(gw, summary, ctx)).join("")}</div>`
                         : `<div class="empty">No gateway is configured yet. Use <b>+ Add gateway</b>.</div>`}
+      ${this._renderGatewaysNotSetUp(ctx, info.gateways_not_set_up || [])}
 
       <h2>Serial ports / USB scan</h2>
       ${this._renderPortScan(ctx)}
@@ -564,6 +566,50 @@ export const page = {
     window.dispatchEvent(new CustomEvent("location-changed"));
   },
 
+  /**
+   * Gateways which are configured here but which Home Assistant never set up.
+   *
+   * A gateway needs both halves: this configuration and a Home Assistant entry. Deleting the
+   * entry alone (on the integration page) used to leave the configuration behind - invisible,
+   * because the list above shows the *running* gateways, and therefore impossible to delete.
+   * Newly deleted entries take their gateway with them (async_remove_gateway_of_entry), so
+   * this section only ever shows what an older version left behind. Both ways out are offered.
+   */
+  _renderGatewaysNotSetUp(ctx, orphans) {
+    if (!orphans.length) return "";
+
+    return `
+      <div class="notice warn" style="margin-top:14px">
+        <b>${orphans.length} gateway${orphans.length === 1 ? " is" : "s are"} configured but not
+        set up.</b> They have no Home Assistant entry, so they are not connected and no device
+        of theirs works - but they still occupy their id and their serial port. Set them up
+        again, or remove them if they are left overs.
+      </div>
+      <div class="tiles">
+        ${orphans.map((gateway) => `
+          <div class="tile">
+            <div class="tile-head">
+              ${icon("mdi:alert-outline", "!")}
+              <span class="tile-title">${escapeHtml(gateway.name || `Gateway ${gateway.id}`)}</span>
+              <span class="spacer" style="flex:1 1 auto"></span>
+              <span class="pill off">not set up</span>
+            </div>
+            <table>${definitionRows([
+              ["Gateway id", `<span class="mono">${escapeHtml(String(gateway.id))}</span>`],
+              ["Type", escapeHtml(gateway.device_type || "-")],
+              ["Base id", `<span class="mono">${escapeHtml(gateway.base_id || "-")}</span>`],
+              ["Connection", `<span class="mono">${escapeHtml(gateway.serial_path || "-")}</span>`],
+            ])}</table>
+            <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">
+              <button class="action small primary" data-repair-gateway="${escapeHtml(String(gateway.id))}"
+                      title="Creates the missing Home Assistant entry so the gateway is set up">set up</button>
+              <button class="action small danger"
+                      data-remove-gateway="${escapeHtml(String(gateway.id))}">remove gateway</button>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  },
+
   /** Wizard for a new gateway: type, connection, id, name, base id. */
   _renderGatewayWizard(ctx) {
     const editor = ctx.state.gatewayEditor;
@@ -579,6 +625,7 @@ export const page = {
     const isEdit = editor.mode === "edit";
     const freePorts = (form.ports || []).filter((port) => port.free);
 
+    /** @type {import("../types.js").FormField[]} */
     const fields = [
       { name: "device_type", label: "Gateway type", type: "select", required: true,
         options: (form.types || []).map((t) => t.device_type),
@@ -751,6 +798,20 @@ export const page = {
           await ctx.loadIntegrationInfo();
           ctx.requestContentRender(true);
         }
+      });
+    });
+
+    // a gateway which is configured but was never set up: set it up again or remove it
+    root.querySelectorAll("button[data-repair-gateway]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const id = button.dataset.repairGateway;
+        button.disabled = true;
+        const result = await ctx.api.call(WS.GATEWAY_REPAIR, { gateway_id: Number(id) });
+        ctx.state.gatewayMessage = result && result.repaired
+          ? `Gateway ${id} was set up again.`
+          : `Gateway ${id} could not be set up (${(result || {}).reason || "unknown reason"}).`;
+        await ctx.loadIntegrationInfo();
+        ctx.requestContentRender(true);
       });
     });
 

@@ -9,18 +9,20 @@ which connects the simulation to the integration:
 * every list of the web ui marks a simulated device (`simulated` flag)
 * the gateway object opens nothing and answers the commands of Home Assistant
 """
-import asyncio
 import unittest
 from unittest import IsolatedAsyncioTestCase, TestCase, mock
 
 import voluptuous as vol
 
-from tests.mocks import *
+from tests.mocks import AddressExpression, ConfigEntryMock, DEFAULT_GENERAL_SETTINGS, GatewayMock, HassMock
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako import simulation
 from custom_components.eltako.config import config_helpers, device_config, gateway_config
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
+                                            CONF_GATEWAY_ADDRESS, CONF_SENDER, CONF_SERIAL_PATH,
+                                            CONF_SIMULATED, DATA_ELTAKO, DATA_SIMULATOR, ELTAKO_CONFIG,
+                                            GatewayDeviceType)
 from custom_components.eltako.simulation import core as sim
 from custom_components.eltako.simulation.store import SimulatorRegistry
 from custom_components.eltako.tools import plug_and_play

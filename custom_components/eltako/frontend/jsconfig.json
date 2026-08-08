@@ -1,0 +1,31 @@
+{
+  // Type checking for the web ui - development aid only. There is no build step: the files
+  // in this folder are served to the browser exactly as they are (see PANEL_STATIC_URL),
+  // "noEmit" makes sure nothing is ever generated from them.
+  //
+  //   npx -y -p typescript@5 tsc -p custom_components/eltako/frontend/jsconfig.json
+  //
+  // VS Code picks this file up on its own and checks while typing.
+  //
+  // The types live in types.d.ts and mirror the responses of the python websocket api.
+  // strict mode is off on purpose: this turns 8000 lines of existing javascript green,
+  // and still catches the mistake which actually happens here - a wrong field name in a
+  // backend response. Tighten it one flag at a time when the code is ready for it.
+  "compilerOptions": {
+    "checkJs": true,
+    "noEmit": true,
+    "allowJs": true,
+
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["**/*.js", "types.d.ts"]
+}

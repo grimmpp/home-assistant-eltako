@@ -1,14 +1,13 @@
 import unittest
-import os
-from tests.mocks import *
-from unittest import mock, IsolatedAsyncioTestCase, TestCase
+from tests.mocks import GatewayMock, LatestStateMock
+from unittest import mock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
 from homeassistant.components.cover import CoverEntityFeature
 from custom_components.eltako.cover import EltakoCover
-from custom_components.eltako.core.entity import EltakoEntity
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, RPSMessage, Regular4BSMessage, asyncio
 from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
+from custom_components.eltako.const import CONF_FAST_STATUS_CHANGE
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -147,7 +146,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_current_cover_position, 100)
         self.assertEqual(ec._attr_current_cover_tilt_position, 100)
 
-        
+
 
     def test_cover_intermediate_cover_positions(self):
         ec = self.create_cover()
@@ -185,7 +184,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x00\x0b\x01\x08\x00\x00\xb1\x06\x00')
-        
+
     def test_close_cover(self):
         ec = self.create_cover()
 
@@ -193,7 +192,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x00\x0b\x02\x08\x00\x00\xb1\x06\x00')
-        
+
     def test_stop_cover(self):
         ec = self.create_cover()
 
@@ -201,7 +200,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x00\x00\x00\x08\x00\x00\xb1\x06\x00')
-        
+
     def test_set_cover_position(self):
         ec = self.create_cover()
 
@@ -222,7 +221,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, True)
         self.last_sent_command = None
-        
+
         ec._attr_current_cover_position = 100
         ec.set_cover_position(position=0)
         self.assertEqual(
@@ -267,7 +266,7 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_closing, False)
         self.assertEqual(ec._attr_is_opening, True)
         self.last_sent_command = None
-        
+
         ec._attr_current_cover_position = 100
         ec.set_cover_position(position=0)
         self.assertEqual(
@@ -298,7 +297,7 @@ class TestCover(unittest.TestCase):
         ec._attr_is_closed = None
         self.assertEqual(ec.is_closed, None)
         self.assertEqual(ec.state, None)
-        
+
         ec.load_value_initially(LatestStateMock('opening', {'current_position': 55, 'current_tilt_position': 20}))
         self.assertEqual(ec.is_closed, False)
         self.assertEqual(ec.is_opening, True)
@@ -312,7 +311,7 @@ class TestCover(unittest.TestCase):
         ec._attr_is_closed = None
         self.assertEqual(ec.is_closed, None)
         self.assertEqual(ec.state, None)
-        
+
         ec.load_value_initially(LatestStateMock('closing', {'current_position': 33, 'current_tilt_position': 10}))
         self.assertEqual(ec.is_closed, False)
         self.assertEqual(ec.is_opening, False)
@@ -326,7 +325,7 @@ class TestCover(unittest.TestCase):
         ec._attr_is_closed = None
         self.assertEqual(ec.is_closed, None)
         self.assertEqual(ec.state, None)
-        
+
         ec.load_value_initially(LatestStateMock('open', {'current_position': 100, 'current_tilt_position': 100}))
         self.assertEqual(ec.is_closed, False)
         self.assertEqual(ec.is_opening, False)

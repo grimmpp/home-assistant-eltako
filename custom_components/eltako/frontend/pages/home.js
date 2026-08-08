@@ -46,6 +46,7 @@ const PLATFORM_LABELS = {
 
 const ROOMLESS = "Without room";
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "home",
   title: "My devices",

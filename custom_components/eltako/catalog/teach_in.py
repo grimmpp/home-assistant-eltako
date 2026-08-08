@@ -8,7 +8,7 @@ help page, the web ui - asks the helpers below instead of repeating the knowledg
 """
 from __future__ import annotations
 
-from eltakobus.eep import *
+from eltakobus.eep import A5_10_06, A5_10_12, A5_38_08, EEP, H5_3F_7F
 
 #: sender EEP -> the data bytes of its teach-in telegram
 EEP_WITH_TEACH_IN_BUTTONS = {
@@ -29,7 +29,7 @@ def _resolve(eep) -> type | None:
         return eep
     try:
         return EEP.find(str(eep).upper())
-    except Exception:
+    except Exception:   # noqa: BLE001 - no teach-in payload for this profile
         return None
 
 

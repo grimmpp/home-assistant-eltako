@@ -123,6 +123,7 @@ function controlsFor(entity) {
   }
 }
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "control",
   title: "Control",

@@ -265,6 +265,7 @@ WS_GRAFANA_SYNC: Final = "eltako/grafana/sync"
 WS_GATEWAY_ADD: Final = "eltako/gateways/add"
 WS_GATEWAY_UPDATE: Final = "eltako/gateways/update"
 WS_GATEWAY_REMOVE: Final = "eltako/gateways/remove"
+WS_GATEWAY_REPAIR: Final = "eltako/gateways/repair"
 WS_PLUG_AND_PLAY_STATUS: Final = "eltako/plug_and_play/status"
 WS_PLUG_AND_PLAY_RUN: Final = "eltako/plug_and_play/run"
 # only detects, and creates nothing - the counterpart of RUN for a test of the detection
@@ -342,7 +343,7 @@ class GatewayDeviceType(str, Enum):
     @classmethod
     def indexOf(cls, value):
         return list(cls).index(value)
-    
+
     @classmethod
     def get_by_index(cls, index):
         return list(cls)[index]
@@ -367,13 +368,13 @@ class GatewayDeviceType(str, Enum):
         # transceiver, it sits on no RS485 bus.
         return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB,
                             GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFGW14USB]
-    
+
     @classmethod
     def is_esp2_gateway(cls, dev_type) -> bool:
-        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB, 
-                            GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFAMUSB, GatewayDeviceType.EltakoFGW14USB, GatewayDeviceType.LAN_ESP2, 
+        return dev_type in [GatewayDeviceType.GatewayEltakoFAM14, GatewayDeviceType.GatewayEltakoFGW14USB, GatewayDeviceType.GatewayEltakoFAMUSB,
+                            GatewayDeviceType.EltakoFAM14, GatewayDeviceType.EltakoFAMUSB, GatewayDeviceType.EltakoFGW14USB, GatewayDeviceType.LAN_ESP2,
                             GatewayDeviceType.VirtualNetworkAdapter]
-    
+
     @classmethod
     def is_lan_gateway(cls, dev_type) -> bool:
         return dev_type in [GatewayDeviceType.LAN, GatewayDeviceType.LAN_ESP2, GatewayDeviceType.MGW_LAN, GatewayDeviceType.EUL_LAN, GatewayDeviceType.VirtualNetworkAdapter]

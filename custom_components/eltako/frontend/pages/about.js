@@ -154,6 +154,7 @@ const ABOUT_STYLES = `
   .feature-list li > .feature-text { grid-column: 1 / -1; grid-row: 2; color: var(--eltako-muted); }
 `;
 
+/** @type {import("../types.js").Page} */
 export const page = {
   id: "about",
   title: "About",
@@ -168,8 +169,9 @@ export const page = {
   },
 
   render(ctx) {
-    const info = ctx.state.integrationInfo || {};
-    const entities = info.entities || {};
+    const info = /** @type {import("../types.js").IntegrationInfo} */
+      (ctx.state.integrationInfo || {});
+    const entities = /** @type {import("../types.js").EntitySummary} */ (info.entities || {});
     const settings = info.general_settings || {};
 
     return `

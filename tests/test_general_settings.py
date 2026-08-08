@@ -4,11 +4,18 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 
 import voluptuous as vol
 
-from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako.config import config_helpers, general_settings
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_ENABLE_FRONTEND, CONF_ENABLE_TEACH_IN_BUTTONS,
+                                            CONF_FAST_STATUS_CHANGE, CONF_GERNERAL_SETTINGS,
+                                            CONF_LOG_ENOCEAN_TELEGRAMS, CONF_LOG_LEVEL_BUS_MESSAGES,
+                                            CONF_LOG_LEVEL_DECODE_ERRORS, CONF_LOG_LEVEL_INCOMING,
+                                            CONF_LOG_LEVEL_OUTGOING, CONF_LOG_LEVEL_POLLING,
+                                            CONF_LOG_LEVEL_UNKNOWN_DEVICES, CONF_TELEGRAM_LOG_BUFFER_SIZE,
+                                            CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT,
+                                            CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB, DATA_ELTAKO,
+                                            DATA_SETTINGS_STORE, TelegramLogLevel)
 
 
 class StoreMock:
@@ -241,7 +248,7 @@ class TestGroupsAndLogLevels(IsolatedAsyncioTestCase):
         for category, setting_name in LOG_LEVEL_SETTINGS.items():
             self.assertIn(setting_name, by_name, msg=category)
             self.assertEqual(by_name[setting_name]['group'], 'log_levels')
-            self.assertEqual(by_name[setting_name]['options'], [l.value for l in TelegramLogLevel])
+            self.assertEqual(by_name[setting_name]['options'], [level.value for level in TelegramLogLevel])
 
     def test_log_levels_are_validated(self):
         self.assertEqual(general_settings.validate_setting(CONF_LOG_LEVEL_INCOMING, 'info'), 'info')

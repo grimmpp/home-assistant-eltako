@@ -1,22 +1,41 @@
-import glob
 """Representation of an Eltako gateway."""
 
-from os.path import basename, normpath
-import pytz
-from datetime import datetime, UTC
-
-import serial
 import asyncio
+import glob
+import threading
+import time
+from collections import deque
+from contextlib import contextmanager
+from datetime import datetime, UTC
+from os.path import basename, normpath
+
+import pytz
+import serial
 
 from eltakobus.serial import RS485SerialInterfaceV2
-from eltakobus.message import *
+from eltakobus.message import (ESP2Message, EltakoDiscoveryRequest, EltakoMessage, EltakoPoll,
+                               EltakoWrapped4BS, EltakoWrappedRPS, RPSMessage, Regular1BSMessage,
+                               Regular4BSMessage, prettify)
 from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
 from eltakobus.device import request_memory_of_all_devices
-from eltakobus import locking
 
 from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
 from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceRegistry
+from homeassistant.config_entries import ConfigEntry
+
+from ..const import (DOMAIN, ELTAKO_GLOBAL_EVENT_BUS_ID, GATEWAY_DEFAULT_NAME, GatewayDeviceType, LOGGER,
+                     MANUFACTURER, SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, SIGNAL_SEND_MESSAGE_SERVICE,
+                     TelegramDirection)
+from ..config import config_helpers
+from ..observation.enocean_logger import POLLING_MESSAGE_TYPES, get_telegram_logger, resolve_addresses
+from ..observation.bus_members import note_telegram
+from ..observation.device_activity import get_activity_tracker
 
 
 def _attach_rssi_to_esp2_conversion():
@@ -47,25 +66,6 @@ def _attach_rssi_to_esp2_conversion():
 
 if not getattr(ESP3SerialCommunicator.convert_esp3_to_esp2_message.__func__, '_adds_rssi', False):
     _attach_rssi_to_esp2_conversion()
-
-from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_MAC
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceRegistry
-from homeassistant.config_entries import ConfigEntry
-
-from ..const import *
-from ..config import config_helpers
-from ..observation.enocean_logger import POLLING_MESSAGE_TYPES, get_telegram_logger, resolve_addresses
-from ..observation.bus_members import note_telegram
-from ..observation.device_activity import get_activity_tracker
-
-import threading
-import time
-from collections import deque
-from contextlib import contextmanager
-
 
 class BusBusyError(RuntimeError):
     """Another operation has the bus for itself right now."""
@@ -105,8 +105,8 @@ class EnOceanGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, 
-                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None, 
+    def __init__(self, general_settings:dict, hass: HomeAssistant,
+                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None,
                  config_entry: ConfigEntry = None):
 
         """Initialize the Eltako gateway."""
@@ -323,7 +323,7 @@ class EnOceanGateway:
             except Exception as e:  # noqa: BLE001 - tracking must never break the bus
                 LOGGER.debug("[Gateway] [Id: %s] Cannot track device activity: %s", self.dev_id, e)
 
-    
+
     # pyserial validates the baud rate even for a socket url, where it is meaningless (the
     # real rate is set on the device by whoever publishes it). -1 of the LAN types is rejected
     # with "Not a valid baudrate", which crashed the reader thread in an endless retry loop.
@@ -364,19 +364,19 @@ class EnOceanGateway:
                                                callback=self._callback_receive_message_from_serial_bus,
                                                delay_message=self._message_delay,
                                                auto_reconnect=self._auto_reconnect)
-            
+
         elif GatewayDeviceType.is_lan_gateway(self.dev_type) and not GatewayDeviceType.is_esp2_gateway(self.dev_type):
-            self._bus = TCP2SerialCommunicator(host=self.serial_path, 
-                                               port=self.port, 
-                                               callback=self._callback_receive_message_from_serial_bus, 
+            self._bus = TCP2SerialCommunicator(host=self.serial_path,
+                                               port=self.port,
+                                               callback=self._callback_receive_message_from_serial_bus,
                                                esp2_translation_enabled=True,
                                                auto_reconnect=self._auto_reconnect)
         else:
-            self._bus = ESP3SerialCommunicator(filename=self.serial_path, 
-                                               callback=self._callback_receive_message_from_serial_bus, 
-                                               esp2_translation_enabled=True, 
+            self._bus = ESP3SerialCommunicator(filename=self.serial_path,
+                                               callback=self._callback_receive_message_from_serial_bus,
+                                               esp2_translation_enabled=True,
                                                auto_reconnect=self._auto_reconnect)
-        
+
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
 
@@ -389,7 +389,7 @@ class EnOceanGateway:
             name= self.dev_name,
             model=self.model,
         )
-        
+
 
     ### address validation functions
 
@@ -399,7 +399,7 @@ class EnOceanGateway:
         elif GatewayDeviceType.is_bus_gateway(self.dev_type):
             return self.sender_id_validation_by_bus_gateway(sender_id, device_name)
         return False
-    
+
 
     def sender_id_validation_by_transmitter(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         # Without a known base id there is nothing to compare against (it is queried from the
@@ -421,7 +421,7 @@ class EnOceanGateway:
 
     def sender_id_validation_by_bus_gateway(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
-    
+
 
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         if GatewayDeviceType.is_transceiver(self.dev_type):
@@ -448,7 +448,7 @@ class EnOceanGateway:
                            f"'{self.dev_name}' ({getattr(self.dev_type, 'value', self.dev_type)}) is a bus gateway and expects "
                            f"00-00-XX-XX.")
         return result
-    
+
 
 
     ### -----------------------------------------------------------------------------------
@@ -558,7 +558,7 @@ class EnOceanGateway:
             return
         try:
             await request_memory_of_all_devices(self._bus)
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - a telegram must never kill the receiving thread
             LOGGER.exception(f"[Gateway] [Id: {self.dev_id}] {e}")
         finally:
             self.release_bus()
@@ -576,7 +576,7 @@ class EnOceanGateway:
             self._bus.start()
 
             self.request_repeater_mode()
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - a telegram must never kill the receiving thread
             LOGGER.exception(f"[Gateway] [Id: {self.dev_id}] {e}")
 
 
@@ -824,62 +824,62 @@ class EnOceanGateway:
 
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
                     dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
-                    
+
                     # events are only fired for frontend
                     self.hass.bus.fire(ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway': {'name': self.dev_name, 'id': self.dev_id}, 'msg': config_helpers.telegram2json(global_msg, local_message)})
-            
-    
+
+
     @property
     def unique_id(self) -> str:
         """Return the unique id of the gateway."""
         return self.serial_path
-    
+
 
     @property
     def serial_path(self) -> str:
         """Return the serial path of the gateway."""
         return self._attr_serial_path
-    
+
 
     @property
     def dev_name(self) -> str:
         """Return the device name of the gateway."""
         return self._attr_dev_name
-    
+
 
     @property
     def dev_id(self) -> int:
         """Return the device id of the gateway."""
         return self._attr_dev_id
-    
+
     @property
     def dev_type(self) -> GatewayDeviceType:
         """Return the device type of the gateway."""
         return self._attr_dev_type
-    
+
 
     @property
     def base_id(self) -> AddressExpression:
         """Return the base id of the gateway."""
         return self._attr_base_id
-    
+
 
     @property
     def model(self) -> str:
         """Return the model of the gateway."""
         return self._attr_model
-    
+
 
     @property
     def identifier(self) -> str:
         """Return the identifier of the gateway."""
         return self._attr_identifier
-    
+
     @property
     def message_delay(self) -> str:
         """Return the message delay of single telegrams to be sent."""
         return str(self._message_delay)
-    
+
     @property
     def is_auto_reconnect_enabled(self) -> str:
         """Return if auto connected is enabled."""

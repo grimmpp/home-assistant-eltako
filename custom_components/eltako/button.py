@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from eltakobus.util import AddressExpression
-from eltakobus.eep import *
+from eltakobus.eep import EEP
 from eltakobus.message import Regular4BSMessage
 
 from homeassistant.components.button import (
@@ -18,10 +18,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import ConfigType
 
-from .core.entity import *
+from .core.entity import EltakoEntity, State, log_entities_to_be_added, validate_actuators_dev_and_sender_id
 from .config import config_helpers
 from .core.gateway import EnOceanGateway
-from .const import *
+from .const import (CONF_ENABLE_TEACH_IN_BUTTONS, CONF_SENDER, DOMAIN, GatewayDeviceType, LOGGER,
+                    MANUFACTURER, PLATFORMS)
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 from .catalog.teach_in import get_teach_in_payload, supports_teach_in_button
 
@@ -35,17 +36,17 @@ async def async_setup_entry(
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
-    
+
     platform = Platform.BUTTON
 
     # if not supported by gateway skip creating teach-in button
     if not gateway.general_settings[CONF_ENABLE_TEACH_IN_BUTTONS]:
         LOGGER.debug("[%s] Teach-in buttons are not supported by gateway %s", Platform.BUTTON, gateway.dev_name)
-    
+
     else:
         # check for temperature controller defined in config as temperature sensor or climate controller
         for platform_id in PLATFORMS:
-            if platform_id in config: 
+            if platform_id in config:
                 for entity_config in config[platform_id]:
                     if CONF_SENDER in entity_config:
                         try:
@@ -54,7 +55,7 @@ async def async_setup_entry(
 
                             if supports_teach_in_button(sender_config.eep):
                                 entities.append(TeachInButton(platform, gateway, dev_config.id, dev_config.name, dev_config.eep, sender_config.id, sender_config.eep))
-                        except Exception as e:
+                        except Exception as e:   # noqa: BLE001 - one bad device configuration must not stop the platform
                             LOGGER.warning("[%s] Could not load configuration", platform)
                             LOGGER.critical(e, exc_info=True)
 

@@ -8,6 +8,7 @@ import { WS } from "../lib/api.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { card, escapeHtml, formatDateTime, formatNumber, matchesFilter, sortRows } from "../lib/utils.js";
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "devices",
   title: "Devices",

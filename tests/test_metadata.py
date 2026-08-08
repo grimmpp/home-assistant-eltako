@@ -1,5 +1,4 @@
 import os
-import sys
 import unittest
 import json
 import site
@@ -11,7 +10,7 @@ class MetadataTest(unittest.TestCase):
           for f in site.getsitepackages():
             if 'site-packages' in f:
                 return f
-            
+
     @classmethod
     def find_lib_folder(cls, lib_name:str):
         dirs = [f for f in os.listdir(cls.get_site_package_folder()) if f.startswith(lib_name.replace('-', '_')+'-')]
@@ -21,14 +20,14 @@ class MetadataTest(unittest.TestCase):
 
     @classmethod
     def get_installed_lib_version(cls, lib_name:str):
-        
+
         dir_name = cls.find_lib_folder(lib_name)
         if dir_name:
             metadata_file = os.path.join(dir_name, 'METADATA')
             with open(metadata_file, 'r') as f:
-                for l in f.readlines():
-                    if l.startswith('Version: '):
-                        return l.replace('Version: ', '').strip()    
+                for line in f.readlines():
+                    if line.startswith('Version: '):
+                        return line.replace('Version: ', '').strip()
             return None
         return None
 
@@ -50,7 +49,7 @@ class MetadataTest(unittest.TestCase):
             if r.startswith('eltako14bus'):
                 return r.split('==')[1].strip()
         return None
-    
+
     @classmethod
     def get_version_of_eltako_integration(cls):
         return cls.get_manifest()['version']
@@ -68,7 +67,7 @@ class MetadataTest(unittest.TestCase):
                 # if this test fails install specified libraries in manifest.json
                 self.assertEqual(required_version, installed_version)
 
-    
+
     def test_check_manifest_and_requirements_match(self):
         manifest = self.get_manifest()
 
@@ -93,5 +92,5 @@ class MetadataTest(unittest.TestCase):
         changes_filename = os.path.join(os.getcwd(), 'changes.md')
         with open(changes_filename, 'r', encoding="utf-8") as f:
             changes_text = f.read()
-        
+
         self.assertTrue( f'## Version {self.get_version_of_eltako_integration()}' in changes_text )

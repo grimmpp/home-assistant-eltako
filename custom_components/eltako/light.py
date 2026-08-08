@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Any
 
 from eltakobus.util import AddressExpression
-from eltakobus.eep import *
+from eltakobus.eep import (A5_38_08, CentralCommandDimming, CentralCommandSwitching, EEP, F6_02_01, F6_02_02,
+                           M5_38_08)
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -16,15 +17,15 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import entity_registry as er
 
 from .config import config_helpers
 
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 from .config.config_helpers import DeviceConf
-from .core.entity import *
+from .core.entity import (EltakoEntity, RestoreEntity, State, log_entities_to_be_added,
+                          validate_actuators_dev_and_sender_id)
 from .core.gateway import EnOceanGateway
-from .const import *
+from .const import CONF_FAST_STATUS_CHANGE, CONF_SENDER, LOGGER
 
 
 async def async_setup_entry(
@@ -37,7 +38,7 @@ async def async_setup_entry(
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
 
     entities: list[EltakoEntity] = []
-    
+
     platform = Platform.LIGHT
     if platform in config:
         for entity_config in config[platform]:
@@ -49,11 +50,11 @@ async def async_setup_entry(
                     entities.append(EltakoDimmableLight(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep, dev_conf.area))
                 elif dev_conf.eep in [M5_38_08]:
                     entities.append(EltakoSwitchableLight(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, sender_config.id, sender_config.eep, dev_conf.area))
-            
-            except Exception as e:
+
+            except Exception as e:   # noqa: BLE001 - one bad device configuration must not stop the platform
                 LOGGER.warning("[%s %s] Could not load configuration", platform, str(dev_conf.id))
                 LOGGER.critical(e, exc_info=True)
-        
+
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
@@ -74,11 +75,11 @@ class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
                     self._attr_is_on = None
 
                 self._attr_brightness = latest_state.attributes.get('brightness', None)
-                
+
         except Exception as e:
             self._attr_is_on = None
             raise e
-        
+
         self.schedule_update_ha_state()
 
         LOGGER.debug(f"[{Platform.LIGHT} {self.dev_id}] value initially loaded: [is_on: {self.is_on}, brightness: {self.brightness}, state: {self.state}]")
@@ -99,9 +100,9 @@ class EltakoDimmableLight(AbstractLightEntity):
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
         brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
-        
+
         address, _ = self._sender_id
-        
+
         if self._sender_eep == A5_38_08:
             dimming = CentralCommandDimming(int(brightness / 255.0 * 100.0), 0, 1, 0, 0, 1)
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
@@ -116,17 +117,17 @@ class EltakoDimmableLight(AbstractLightEntity):
                 action = 3  # 0x70
             else:
                 action = 1
-                
+
             pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
             self.send_message(pressed_msg)
-            
+
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
 
         else:
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
-        
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_brightness = brightness
             self._attr_is_on = True
@@ -136,7 +137,7 @@ class EltakoDimmableLight(AbstractLightEntity):
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
         address, _ = self._sender_id
-        
+
         if self._sender_eep == A5_38_08:
             dimming = CentralCommandDimming(0, 0, 1, 0, 0, 0)
             msg = A5_38_08(command=0x02, dimming=dimming).encode_message(address)
@@ -151,17 +152,17 @@ class EltakoDimmableLight(AbstractLightEntity):
                 action = 2  # 0x50
             else:
                 action = 0
-                
+
             pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
             self.send_message(pressed_msg)
-            
+
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
 
         else:
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
-            
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_brightness = 0
             self._attr_is_on = False
@@ -181,7 +182,7 @@ class EltakoDimmableLight(AbstractLightEntity):
                 LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
                 return
 
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - a malformed telegram must not kill the entity
             LOGGER.warning("[Dimmable Light] Could not decode message: %s %s", type(e), str(e))
             return
 
@@ -189,12 +190,12 @@ class EltakoDimmableLight(AbstractLightEntity):
             if decoded.command == 0x01:
                 if decoded.switching.learn_button != 1:
                     return
-                    
+
                 self._attr_is_on = decoded.switching.switching_command
             elif decoded.command == 0x02:
                 if decoded.dimming.learn_button != 1:
                     return
-                    
+
                 if decoded.dimming.dimming_range == 0:
                     self._attr_brightness = int((decoded.dimming.dimming_value / 100.0) * 255.0)
                 elif decoded.dimming.dimming_range == 1:
@@ -226,7 +227,7 @@ class EltakoSwitchableLight(AbstractLightEntity):
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light source on or sets a specific dimmer value."""
         address, _ = self._sender_id
-        
+
         if self._sender_eep == A5_38_08:
             switching = CentralCommandSwitching(0, 1, 0, 0, 1)
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
@@ -241,10 +242,10 @@ class EltakoSwitchableLight(AbstractLightEntity):
                 action = 3  # 0x70
             else:
                 action = 1
-                
+
             pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
             self.send_message(pressed_msg)
-            
+
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
 
@@ -255,12 +256,12 @@ class EltakoSwitchableLight(AbstractLightEntity):
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = True
             self.schedule_update_ha_state()
-        
+
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light source off."""
         address, _ = self._sender_id
-        
+
         if self._sender_eep == A5_38_08:
             switching = CentralCommandSwitching(0, 1, 0, 0, 0)
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
@@ -275,17 +276,17 @@ class EltakoSwitchableLight(AbstractLightEntity):
                 action = 2  # 0x50
             else:
                 action = 0
-                
+
             pressed_msg = F6_02_01(action, 1, 0, 0).encode_message(address)
             self.send_message(pressed_msg)
-            
+
             released_msg = F6_02_01(action, 0, 0, 0).encode_message(address)
             self.send_message(released_msg)
 
         else:
             LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
-        
+
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
             self._attr_is_on = False
             self.schedule_update_ha_state()
@@ -295,12 +296,13 @@ class EltakoSwitchableLight(AbstractLightEntity):
         """Update the internal state of this device."""
         try:
             decoded = self.dev_eep.decode_message(msg)
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - a malformed telegram must not kill the entity
             LOGGER.warning("[%s %s] Could not decode message: %s", Platform.LIGHT, str(self.dev_id), str(e))
             return
 
         if self.dev_eep in [M5_38_08]:
-            self._attr_is_on = decoded.state == True
+            # the eep decodes the state as a single bit (0/1), not as a bool
+            self._attr_is_on = bool(decoded.state)
             self.schedule_update_ha_state()
 
         else:

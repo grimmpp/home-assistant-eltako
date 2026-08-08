@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from tests.mocks import *
+from tests.mocks import GatewayMock
 
 from homeassistant.const import Platform
 from homeassistant.helpers.entity import Entity
@@ -16,6 +16,7 @@ from custom_components.eltako.sensor import (GatewayBaseId, GatewayInfoField,
                                             StaticInfoField)
 from custom_components.eltako.select import RepeaterMode
 from eltakobus import AddressExpression, b2s
+from eltakobus.eep import EEP
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)

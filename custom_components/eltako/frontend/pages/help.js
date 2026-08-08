@@ -28,6 +28,7 @@ const HELP_STYLES = `
   td .chip { margin: 2px 4px 2px 0; }
 `;
 
+/** @type {import("../types.js").Page} */
 export const page = {
   id: "help",
   title: "Help",
@@ -232,14 +233,15 @@ export const page = {
   },
 
   afterRender(ctx, root) {
-    const search = root.getElementById("help-filter");
+    const search = /** @type {HTMLInputElement} */ (root.getElementById("help-filter"));
     if (!search) return;
 
     search.addEventListener("input", () => {
       ctx.state.helpFilter = search.value;
       // keep the cursor in the field: only the tables below are re-rendered
       ctx.requestContentRender(true);
-      const again = ctx.root ? ctx.root.getElementById("help-filter") : root.getElementById("help-filter");
+      const again = /** @type {HTMLInputElement} */ (ctx.root
+        ? ctx.root.getElementById("help-filter") : root.getElementById("help-filter"));
       if (again && again !== search) {
         again.focus();
         again.setSelectionRange(again.value.length, again.value.length);

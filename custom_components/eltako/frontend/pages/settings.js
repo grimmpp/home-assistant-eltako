@@ -10,6 +10,7 @@ import { WS } from "../lib/api.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { escapeHtml, icon } from "../lib/utils.js";
 
+/** @type {import("../types.js").Page} */
 export const page = {
   id: "settings",
   title: "Settings",
@@ -141,7 +142,7 @@ export const page = {
       });
     }
 
-    root.querySelectorAll("button[data-reset]").forEach((button) => {
+    root.querySelectorAll("button[data-reset]").forEach((/** @type {HTMLButtonElement} */ button) => {
       button.addEventListener("click", async () => {
         const result = await ctx.api.call(WS.SETTINGS_RESET, { names: [button.dataset.reset] });
         if (result) {

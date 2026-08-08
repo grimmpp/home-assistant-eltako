@@ -1,9 +1,9 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import Platform
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import GatewayMock, LatestStateMock
 from homeassistant.helpers.entity import Entity
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, ESP2Message, RPSMessage
 from custom_components.eltako.light import EltakoSwitchableLight
 
 
@@ -22,7 +22,7 @@ class TestSwitchableLight(unittest.TestCase):
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'M5-38-08'
-        
+
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
@@ -48,7 +48,7 @@ class TestSwitchableLight(unittest.TestCase):
         light.value_changed(on_msg)
         self.assertEqual(light.is_on, True)
         self.assertEqual(light.state, 'on')
-        
+
         light.value_changed(off_msg)
         self.assertEqual(light.is_on, False)
         self.assertEqual(light.state, 'off')
@@ -86,7 +86,7 @@ class TestSwitchableLight(unittest.TestCase):
         light.value_changed(on_msg)
         self.assertEqual(light.is_on, True)
         self.assertEqual(light.state, 'on')
-        
+
         light.value_changed(off_msg)
         self.assertEqual(light.is_on, False)
         self.assertEqual(light.state, 'off')
@@ -139,7 +139,7 @@ class TestSwitchableLight(unittest.TestCase):
         light.value_changed(on_msg)
         self.assertEqual(light.is_on, True)
         self.assertEqual(light.state, 'on')
-        
+
         light.value_changed(off_msg)
         self.assertEqual(light.is_on, False)
         self.assertEqual(light.state, 'off')
@@ -175,14 +175,14 @@ class TestSwitchableLight(unittest.TestCase):
     def test_switchable_light_trun_on(self):
         light = self.create_switchable_light()
         light.send_message = self.mock_send_message
-        
+
         # test if command is sent to eltako bus
         self.last_sent_command = []
         light.turn_on()
         self.assertEqual(
             self.last_sent_command[0].body,
             b'k\x07\x01\x00\x00\t\x00\x00\xb0\x01\x00')
-        
+
     def test_switchable_light_trun_off(self):
         light = self.create_switchable_light()
         light.send_message = self.mock_send_message

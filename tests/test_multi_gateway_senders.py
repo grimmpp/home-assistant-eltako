@@ -8,12 +8,13 @@ telegrams arriving several times are fine.
 import unittest
 from unittest import TestCase, mock
 
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako.config import config_helpers
 from custom_components.eltako.core import entity as device_module
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_ID, CONF_SENDER,
+                                            DATA_ADDITIONAL_SENDERS, DATA_ELTAKO)
 from custom_components.eltako.light import EltakoDimmableLight
 
 from eltakobus.eep import EEP

@@ -53,7 +53,11 @@ from homeassistant.components import websocket_api
 from homeassistant.const import CONF_ID, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant, callback
 
-from ..const import *
+from ..const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_ADDRESS,
+                     CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_PORT, CONF_PLUG_AND_PLAY,
+                     CONF_PLUG_AND_PLAY_INTERVAL, CONF_SENDER, CONF_SERIAL_PATH, DATA_ELTAKO,
+                     DATA_PLUG_AND_PLAY, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, SOURCE_UI_GATEWAY,
+                     WS_PLUG_AND_PLAY_PROBE, WS_PLUG_AND_PLAY_RUN, WS_PLUG_AND_PLAY_STATUS)
 from ..config import config_helpers
 from ..catalog.device_catalog import describe_gateway_type
 
@@ -324,9 +328,36 @@ def _label_of(device_type: str) -> tuple[str, str]:
             catalog.get('description') or "")
 
 
+# ESP3 models which the probe cannot tell apart. It proves "an ESP3 gateway answered the base
+# id request" and nothing more - every ESP3 stick answers it the same way. Which model it is
+# stands in the usb descriptor, so the two sources complete each other.
+ESP3_MODELS = {GatewayDeviceType.EnOceanUSB300.value}
+
+
+def refine_esp3_model(device_type: str, port: dict = None) -> str:
+    """Replace the generic ESP3 type by the model the usb descriptor names.
+
+    Without this a USB300 ends up as 'esp3-gateway', which the device catalog knows as the
+    PioTek 'MGW (USB)' - a different manufacturer's product, and a name nobody recognizes on
+    their own stick. Both types behave identically (57600 baud, same ESP3 communicator), so
+    this only affects what the gateway is called and which hardware it is shown as.
+
+    Only the generic type is refined: a probe result which already names a model stays as it
+    is, and a descriptor which suggests no ESP3 model at all leaves it generic - which is the
+    honest answer for an ESP3 stick this integration has no catalog entry for.
+    """
+    if device_type != GatewayDeviceType.ESP3.value:
+        return device_type
+
+    for suggestion in (port or {}).get('suggested_device_types') or []:
+        if suggestion in ESP3_MODELS:
+            return suggestion
+    return device_type
+
+
 def describe_candidate(device: str, detection: dict, port: dict = None) -> dict:
     """One gateway detected on a serial port, ready for the report and for creating it."""
-    device_type = detection['device_type']
+    device_type = refine_esp3_model(detection['device_type'], port)
     hw_type, description = _label_of(device_type)
     return {
         'connection': 'serial',

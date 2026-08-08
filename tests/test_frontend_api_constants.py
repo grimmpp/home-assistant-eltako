@@ -21,7 +21,12 @@ def _api_js_commands() -> dict[str, str]:
     """{name in the WS object: command string} of frontend/lib/api.js."""
     with open(API_JS, encoding='utf-8') as handle:
         content = handle.read()
-    body = content.split('export const WS = {', 1)[1].split('};', 1)[0]
+    # the object may be wrapped in a jsdoc type cast for the type check of the web ui
+    # (`export const WS = /** ... */ ({...})`), so the opening brace is matched instead of
+    # a fixed string
+    body = re.split(r'export const WS\s*=\s*(?:/\*.*?\*/\s*)?\(?\{', content, maxsplit=1,
+                    flags=re.DOTALL)[1]
+    body = re.split(r'\}\)?\s*;', body, maxsplit=1)[0]
     return dict(re.findall(r'(\w+)\s*:\s*"([^"]+)"', body))
 
 

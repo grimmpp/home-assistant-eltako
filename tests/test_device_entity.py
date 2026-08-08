@@ -1,12 +1,10 @@
 import unittest
-import os
-from tests.mocks import *
-from unittest import mock, IsolatedAsyncioTestCase, TestCase
+from tests.mocks import GatewayMock
+from unittest import mock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from custom_components.eltako.cover import EltakoCover
 from custom_components.eltako.core.entity import EltakoEntity
-from eltakobus import *
+from eltakobus import AddressExpression, F6_02_01
 
 from custom_components.eltako.config import config_helpers
 from homeassistant import core

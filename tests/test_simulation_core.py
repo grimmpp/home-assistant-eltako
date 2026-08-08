@@ -464,7 +464,7 @@ class TestActuators(TestCase):
         self.assertAlmostEqual(decoded.target_temperature, 22, delta=0.3)
 
     def test_a_command_for_another_device_is_ignored(self):
-        device = self._actuator('M5-38-08', 'A5-38-08')
+        self._actuator('M5-38-08', 'A5-38-08')    # registers the device on the bus
         foreign = sim.as_incoming(sim.encode_eep_telegram('00-00-B0-09', 'A5-38-08',
                                                           {'command': 1, 'switching_command': 1}))
         # the gateway looks the device up by the sender address, so this never reaches it -

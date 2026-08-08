@@ -30,8 +30,9 @@ import { page as aboutPage } from "./pages/about.js";
 // visible(ctx) hook can additionally hide themselves (e.g. by a general setting).
 // 'unknown devices' has no page of its own anymore - the addresses which are not configured
 // yet are the last block of the device page, next to everything else which exists on the bus.
-const PAGES = [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
-               testsPage, simulationPage, settingsPage, helpPage, aboutPage]
+const PAGES = /** @type {import("./types.js").Page[]} */ (
+  [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
+   testsPage, simulationPage, settingsPage, helpPage, aboutPage])
   .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
 
 /**
@@ -71,6 +72,7 @@ class EltakoPanel extends HTMLElement {
     this._api = null;
     this._connected = false;
     this._narrow = false;
+    /** @type {import("./types.js").HaElement} */
     this._menuButton = null;
     this._mode = this._storedMode();
     // a bookmarked url wins over the stored mode: #/telegrams opens the expert mode even if
@@ -427,13 +429,14 @@ class EltakoPanel extends HTMLElement {
       </div>`;
 
     this.shadowRoot.getElementById("nav").addEventListener("click", (event) => {
+      const target = /** @type {Element} */ (event.target);
       // the view switch sits at the right end of the same bar as the page links
-      const modeButton = event.target.closest("button[data-mode]");
+      const modeButton = /** @type {HTMLButtonElement} */ (target.closest("button[data-mode]"));
       if (modeButton) {
         this._setMode(modeButton.dataset.mode);
         return;
       }
-      const link = event.target.closest("a[data-page]");
+      const link = /** @type {HTMLAnchorElement} */ (target.closest("a[data-page]"));
       if (!link) return;
       event.preventDefault();
       this._navigate(link.dataset.page);
@@ -453,7 +456,8 @@ class EltakoPanel extends HTMLElement {
     if (!slot) return;
 
     if (customElements.get("ha-menu-button")) {
-      this._menuButton = document.createElement("ha-menu-button");
+      this._menuButton = /** @type {import("./types.js").HaElement} */
+        (document.createElement("ha-menu-button"));
       this._menuButton.hass = this._hass;
       this._menuButton.narrow = this._narrow;
     } else {

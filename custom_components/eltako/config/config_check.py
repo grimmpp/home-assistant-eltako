@@ -24,7 +24,6 @@ from typing import Callable
 
 from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
 
-from . import config_helpers
 from ..const import (
     CONF_BASE_ID, CONF_EEP, CONF_GATEWAY, CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS,
     DATA_ELTAKO, ELTAKO_CONFIG, GatewayDeviceType)

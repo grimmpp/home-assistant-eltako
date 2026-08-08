@@ -8,9 +8,22 @@ import unittest
 from datetime import datetime, timezone
 from unittest import IsolatedAsyncioTestCase, TestCase
 
-from tests.mocks import *
+from tests.mocks import GatewayMock, HassMock
 
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_AREA, CONF_BASE_ID, CONF_DEPRECATED_ENABLE_FRONTEND,
+                                            CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI,
+                                            CONF_DEPRECATED_FRONTEND_DEV_URL, CONF_DEVICE_TYPE, CONF_EEP,
+                                            CONF_ENABLE_FRONTEND, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION,
+                                            CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS,
+                                            CONF_LOG_LEVEL_DECODE_ERRORS, CONF_LOG_LEVEL_INCOMING,
+                                            CONF_LOG_LEVEL_POLLING, CONF_LOG_LEVEL_UNKNOWN_DEVICES,
+                                            CONF_SENDER, CONF_TELEGRAM_LOG_BACKUP_COUNT,
+                                            CONF_TELEGRAM_LOG_BUFFER_SIZE, CONF_TELEGRAM_LOG_DECODE_EEP,
+                                            CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT,
+                                            CONF_TELEGRAM_LOG_INCLUDE_POLLING,
+                                            CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB, CONF_UI_DEVICES, DATA_ELTAKO,
+                                            DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, PANEL_JS_FILE,
+                                            TelegramDirection, TelegramLogFormat)
 from custom_components.eltako.config import config_helpers
 from custom_components.eltako.config.config_helpers import DEFAULT_GENERAL_SETTINGS
 from custom_components.eltako.observation.enocean_logger import (
@@ -26,6 +39,7 @@ from custom_components.eltako.config.schema import CONFIG_SCHEMA
 from eltakobus.eep import A5_04_02, F6_02_01
 from eltakobus.message import EltakoDiscoveryRequest, EltakoPoll, RPSMessage, Regular4BSMessage, TeachIn4BSMessage2
 from eltakobus.util import AddressExpression
+from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
 
 
 def get_general_settings(**overrides) -> dict:

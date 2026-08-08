@@ -1,0 +1,46 @@
+# Linting of the integration and its tests.
+#
+#   ruff check custom_components tests          # what the CI runs
+#   ruff check --fix custom_components tests    # apply the safe fixes
+#
+# ruff.toml and not pyproject.toml on purpose: this repository is a Home Assistant custom
+# component distributed through HACS, not a python package - there is no packaging metadata
+# here and a pyproject.toml would suggest otherwise.
+#
+# The selected families are the ones the code already annotates with `# noqa` (BLE001, F401,
+# E731, E402), so the existing suppressions finally mean something again.
+
+target-version = "py314"    # home assistant requires >= 3.14.2
+line-length = 120
+
+[lint]
+select = [
+    "F",      # pyflakes: undefined and unused names - the class of bug that only shows up
+              # at runtime, on a code path nobody clicked yet
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings (trailing whitespace and friends)
+    "BLE",    # blind-except: `except Exception` without a reason
+    "PLE",    # pylint *errors* only, no style: this is what found the two LOGGER.debug calls
+              # in config_flow.py which had two %s placeholders but only one argument
+]
+
+ignore = [
+    # 268 lines are longer than 120 characters. Reflowing them is a separate, purely
+    # cosmetic change - enable this once that is done, the limit above is already set.
+    "E501",
+
+    # `if hasattr(telegram, 'row'): result['row'] = telegram.row` - every remaining case of
+    # this is a table of one-line mappings (config_helpers.telegram_to_dict, select.py).
+    # Expanding those to two lines each doubles the block and hides the pattern instead of
+    # showing it, so the rule is off rather than the code being reshaped to satisfy it.
+    "E701",
+]
+
+[lint.per-file-ignores]
+# The platform modules re-export the symbols of their star imports (see core/entity.py),
+# and the const module is imported for its side effect of defining names.
+"custom_components/eltako/__init__.py" = ["F401"]
+
+[lint.flake8-annotations]
+# not selected yet - kept here so the intent is visible when ANN is switched on
+suppress-none-returning = true

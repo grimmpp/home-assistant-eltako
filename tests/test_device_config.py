@@ -4,12 +4,14 @@ from unittest import IsolatedAsyncioTestCase, TestCase, mock
 
 import voluptuous as vol
 
-from tests.mocks import *
 
 from custom_components.eltako.config import device_config
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_AREA, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
+                                            CONF_GATEWAY_DESCRIPTION, CONF_INVERT_SIGNAL, CONF_SENDER,
+                                            CONF_TIME_CLOSES, CONF_UI_DEVICES, CONF_VOC_TYPE_INDEXES,
+                                            DATA_ELTAKO, ELTAKO_CONFIG)
 
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, Platform
+from homeassistant.const import CONF_DEVICES, CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
 
 
 class ConfigEntryWithOptions:

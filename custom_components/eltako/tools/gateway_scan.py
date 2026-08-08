@@ -17,9 +17,10 @@ import os
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 
-from ..const import *
+from ..const import (DATA_ELTAKO, DATA_PORT_FINGERPRINTS, DATA_PORT_FINGERPRINT_STORE, DOMAIN,
+                     GatewayDeviceType, LOGGER, WS_GATEWAY_SCAN)
 
 LOG_PREFIX_SCAN = "Gateway Scan"
 

@@ -12,7 +12,6 @@
 
 import ast
 import inspect
-import os
 import unittest
 
 from homeassistant.components.sensor import SensorEntityDescription

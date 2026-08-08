@@ -1,12 +1,9 @@
 import unittest
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from unittest import mock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor, GatewayConnectionState
-from custom_components.eltako.config.config_helpers import *
-from eltakobus import *
-from eltakobus.eep import *
+from custom_components.eltako.binary_sensor import GatewayConnectionState
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -15,7 +12,7 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 class TestBinarySensor(unittest.TestCase):
 
-    
+
     def test_GatewayConnectionState(self):
         gateway=GatewayMock()
         gateway._bus._is_active = False
@@ -24,7 +21,7 @@ class TestBinarySensor(unittest.TestCase):
 
         bs.value_changed(True)
         self.assertEqual(bs._attr_is_on, True)
-        
+
         bs.value_changed(False)
         self.assertEqual(bs._attr_is_on, False)
 
@@ -36,7 +33,7 @@ class TestBinarySensor(unittest.TestCase):
 
         bs.value_changed(True)
         self.assertEqual(bs._attr_is_on, True)
-        
+
         bs.value_changed(False)
         self.assertEqual(bs._attr_is_on, False)
 

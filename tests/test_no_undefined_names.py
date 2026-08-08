@@ -3,8 +3,13 @@
 Some code paths (e.g. callbacks which Home Assistant only calls on user interaction) are not
 covered by the other tests. A missing import there only shows up at runtime - this test finds
 those cases by resolving every name used in a module against its imports, definitions and
-builtins. It deliberately understands `from .const import *` style star imports, which this
-integration uses a lot.
+builtins.
+
+Ruff covers the same ground now (rule F821, see ruff.toml) - it can do so since the star
+imports were resolved into explicit lists, because `from .const import *` makes it impossible
+for any checker to tell a typo apart from a name the star import might have provided. The star
+import handling below is therefore dead weight by now and this test is a candidate for removal;
+it is kept for the moment because it also runs where ruff is not installed.
 """
 import ast
 import builtins

@@ -1,9 +1,12 @@
 from unittest import TestCase, mock
-from tests.mocks import *
-from eltakobus import *
-from custom_components.eltako.core.gateway import *
+from tests.mocks import DEFAULT_GENERAL_SETTINGS, HassMock
+from eltakobus import RS485SerialInterface
+from custom_components.eltako.core.gateway import (AddressExpression, ConfigEntry, DOMAIN, EnOceanGateway,
+                                                   GatewayDeviceType, asyncio, basename, normpath)
 from custom_components.eltako.config import config_helpers
 import yaml
+from custom_components.eltako.const import BAUD_RATE_DEVICE_TYPE_MAPPING
+from homeassistant.const import CONF_ID
 
 # mock update of Home Assistant
 EnOceanGateway._register_device = mock.Mock(return_value=None)
@@ -16,8 +19,8 @@ class TestGateway(TestCase):
 
     def test_gateway_types(self):
         for t in GatewayDeviceType:
-            
-            if t in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN, 
+
+            if t in [GatewayDeviceType.GatewayEltakoFAMUSB, GatewayDeviceType.EnOceanUSB300, GatewayDeviceType.USB300, GatewayDeviceType.ESP3, GatewayDeviceType.LAN,
                             GatewayDeviceType.LAN_ESP2, GatewayDeviceType.MGW_LAN, GatewayDeviceType.EUL_LAN]:
                 self.assertTrue(GatewayDeviceType.is_transceiver(t))
             else:
@@ -28,10 +31,10 @@ class TestGateway(TestCase):
         sub_type = GatewayDeviceType.GatewayEltakoFAM14
         baud_rate = BAUD_RATE_DEVICE_TYPE_MAPPING[sub_type]
         conf = ConfigEntry(version=1, minor_version=0, domain=DOMAIN, title="gateway", data={}, source=None, options=None, unique_id=None, discovery_keys = [], subentries_data = None)
-        gw = EnOceanGateway(DEFAULT_GENERAL_SETTINGS, HassMock(), 
+        gw = EnOceanGateway(DEFAULT_GENERAL_SETTINGS, HassMock(),
                               dev_id=123, dev_type=sub_type, serial_path="serial_path",  baud_rate=baud_rate, port=None, base_id=AddressExpression.parse('FF-AA-00-00'), dev_name="GW", auto_reconnect=True,
                               config_entry=conf)
-        
+
         self.assertEqual(gw.identifier, basename(normpath('serial_path')))
         self.assertEqual(gw.general_settings, DEFAULT_GENERAL_SETTINGS)
         self.assertEqual(gw.model, "EnOcean Gateway - FAM14")

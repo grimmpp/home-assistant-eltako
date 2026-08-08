@@ -14,17 +14,20 @@ re-registration which keeps the url alive.
 import asyncio
 from unittest import TestCase, mock
 
-import voluptuous as vol
 
 from homeassistant.components.frontend import DATA_PANELS, async_register_built_in_panel
 
-from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako import config_flow
 from custom_components.eltako.config import config_helpers, general_settings
 from custom_components.eltako.core import integration
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_CORE_ENTRY, CONF_ENABLE_FRONTEND, CONF_GATEWAY_DESCRIPTION,
+                                            CONF_GERNERAL_SETTINGS, CONF_PLUG_AND_PLAY_INTERVAL,
+                                            CONF_SHOW_PANEL_IN_SIDEBAR, CONF_TELEGRAM_LOG_BUFFER_SIZE,
+                                            CONF_UI_DEVICES, DATA_ELTAKO, DATA_SETTINGS_OVERRIDES,
+                                            DATA_SETTINGS_STORE, DATA_YAML_CONFIGURED, DOMAIN, PANEL_ICON,
+                                            PANEL_TITLE, PANEL_URL_PATH, SETTING_GROUPS)
 
 
 def run(coroutine):
@@ -172,6 +175,42 @@ class TestThePanelGoesWithTheLastEntry(TestCase):
         run(integration.async_register_panel(hass, settings))
 
         self.assertIn(PANEL_URL_PATH, hass.data[DATA_PANELS])
+
+    def test_deleting_a_gateway_entry_removes_it_from_the_web_ui_too(self):
+        """The two halves of a gateway - its stored configuration and its config entry - have
+        to go together. Deleting the entry on the Home Assistant integration page used to
+        leave the configuration behind, where it was invisible (the web ui lists the running
+        gateways) and could not be deleted anymore."""
+        entry = FakeEntry()
+        entry.data = {CONF_GATEWAY_DESCRIPTION: 'Cellar - fgw14usb (Id: 3)'}
+        hass = self._hass([entry])
+        removed = []
+
+        async def async_remove_gateway(_hass, gateway_id):
+            removed.append(gateway_id)
+            return True
+
+        with mock.patch.object(integration.gateway_config, 'async_remove_gateway',
+                               async_remove_gateway):
+            run(integration.async_remove_entry(hass, entry))
+
+        self.assertEqual([3], removed)
+
+    def test_deleting_the_core_entry_touches_no_gateway(self):
+        """It carries no gateway description - there is nothing of its own to remove."""
+        entry = FakeEntry()
+        hass = self._hass([entry])
+        removed = []
+
+        async def async_remove_gateway(_hass, gateway_id):
+            removed.append(gateway_id)
+            return True
+
+        with mock.patch.object(integration.gateway_config, 'async_remove_gateway',
+                               async_remove_gateway):
+            run(integration.async_remove_entry(hass, entry))
+
+        self.assertEqual([], removed)
 
     def test_removing_it_twice_does_not_raise(self):
         entry = FakeEntry()

@@ -32,6 +32,7 @@ function verdict(ok, problemText) {
     : `<span class="tag failed">${escapeHtml(problemText || "failed")}</span>`;
 }
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "tests",
   title: "Tests",

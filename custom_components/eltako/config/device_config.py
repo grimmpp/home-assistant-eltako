@@ -23,7 +23,13 @@ from homeassistant.components import websocket_api
 
 from eltakobus.util import AddressExpression
 
-from ..const import *
+from ..const import (CONF_AREA, CONF_BASE_ID, CONF_CORE_ENTRY, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
+                     CONF_GATEWAY_DESCRIPTION, CONF_INVERT_SIGNAL, CONF_MAX_TARGET_TEMPERATURE,
+                     CONF_METER_TARIFFS, CONF_MIN_TARGET_TEMPERATURE, CONF_OFF_TEMPERATURE, CONF_ROOM_SENSOR,
+                     CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SIMULATED, CONF_TIME_CLOSES, CONF_TIME_OPENS,
+                     CONF_TIME_TILTS, CONF_UI_DEVICES, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, LOGGER,
+                     WS_DEVICE_ADD, WS_DEVICE_FORM, WS_DEVICE_LIST, WS_DEVICE_REMOVE, WS_DEVICE_REMOVE_ALL,
+                     WS_DEVICE_TEACH_IN, WS_DEVICE_UPDATE)
 from . import config_helpers
 from ..catalog.device_catalog import get_device_templates
 from .schema import (

@@ -1,13 +1,13 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import Platform
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import DEFAULT_GENERAL_SETTINGS, GatewayMock, LatestStateMock
 
 from homeassistant.helpers.entity import Entity
-from homeassistant.components.light import ATTR_BRIGHTNESS
 
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, ESP2Message, Regular4BSMessage
 from custom_components.eltako.light import EltakoDimmableLight
+from custom_components.eltako.const import CONF_FAST_STATUS_CHANGE
 
 
 # mock update of Home Assistant
@@ -26,7 +26,7 @@ class TestDimmableLight(unittest.TestCase):
         dev_id = AddressExpression.parse('00-00-00-01')
         dev_name = 'device name'
         eep_string = 'A5-38-08'
-        
+
         sender_id = AddressExpression.parse('00-00-B0-01')
         sender_eep_string = 'A5-38-08'
 
@@ -59,7 +59,7 @@ class TestDimmableLight(unittest.TestCase):
         self.assertEqual(light.is_on, True)
         self.assertEqual(light.brightness, 255)
         self.assertEqual(light.state, 'on')
-        
+
         light.value_changed(off_msg)
         self.assertEqual(light.is_on, False)
         self.assertEqual(light.brightness, 0)
@@ -89,14 +89,14 @@ class TestDimmableLight(unittest.TestCase):
     def test_switchable_light_trun_on(self):
         light = self.create_switchable_light()
         light.send_message = self.mock_send_message
-        
+
         # test if command is sent to eltako bus
         light.turn_on()
         self.assertEqual(light.brightness, 255)
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x02d\x00\t\x00\x00\xb0\x01\x00')
-        
+
     def test_switchable_light_trun_off(self):
         light = self.create_switchable_light()
         light.send_message = self.mock_send_message

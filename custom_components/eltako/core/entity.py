@@ -1,5 +1,4 @@
 """Representation of an Eltako device."""
-from datetime import datetime
 
 from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage, prettify
 from eltakobus.util import AddressExpression, b2s
@@ -14,7 +13,8 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers import area_registry as ar, device_registry as dr
 from homeassistant.const import CONF_ID, Platform
 
-from ..const import *
+from ..const import (CONF_GATEWAY_ID, DATA_ADDITIONAL_SENDERS, DATA_ELTAKO, DOMAIN,
+                     ELTAKO_GLOBAL_EVENT_BUS_ID, LOGGER, MANUFACTURER, SIGNAL_SEND_MESSAGE)
 from .gateway import EnOceanGateway
 from ..config import config_helpers
 
@@ -43,7 +43,7 @@ class EltakoEntity(Entity):
         self._attr_dev_eep = dev_eep
         self._attr_dev_area = dev_area
         self.listen_to_addresses = []
-        
+
         # calculate external address
         if self.dev_id.is_local_address():
             self._external_dev_id = self.dev_id.add(self.gateway.base_id)
@@ -68,7 +68,7 @@ class EltakoEntity(Entity):
         if hasattr(self, 'entity_description') and self.entity_description is not None:
             if self.description_key is None:
                 self.description_key = self.entity_description.key
-                
+
         return self.description_key
 
     @property
@@ -84,7 +84,7 @@ class EltakoEntity(Entity):
             via_device=(DOMAIN, self.gateway.serial_path),
             suggested_area=self._attr_dev_area,
         )
-    
+
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
@@ -116,7 +116,7 @@ class EltakoEntity(Entity):
                 if latest_state is not None:
                     try:
                         self.load_value_initially(latest_state)
-                    except Exception as e:
+                    except Exception as e:   # noqa: BLE001 - restoring the last state must not prevent the entity from loading
                         # Restoring the last state must never prevent the entity from being added.
                         # Otherwise Home Assistant aborts the registration and the entity stays
                         # unavailable until the next restart. (e.g. attributes of the old state are missing)
@@ -142,7 +142,7 @@ class EltakoEntity(Entity):
         LOGGER.warning(f"[{self._attr_ha_platform} {self.dev_id}] DOES NOT HAVE AN IMPLEMENTATION FOR: load_value_initially()")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
-        
+
 
     def validate_dev_id(self) -> bool:
         if not self._attr_is_actuator_entity:
@@ -176,22 +176,17 @@ class EltakoEntity(Entity):
     def dev_eep(self):
         """Return the eep of device."""
         return self._attr_dev_eep
-    
-    @property
-    def dev_id(self) -> AddressExpression:
-        """Return the id of device."""
-        return self._attr_dev_id
-    
-    @property
-    def gateway(self) -> EnOceanGateway:
-        """Return the supporting gateway of device."""
-        return self._attr_gateway
 
     @property
     def dev_id(self) -> AddressExpression:
         """Return the id of device."""
         return self._attr_dev_id
-    
+
+    @property
+    def gateway(self) -> EnOceanGateway:
+        """Return the supporting gateway of device."""
+        return self._attr_gateway
+
     @property
     def unique_id(self) -> str:
         """Return the unique id of device"""
@@ -216,7 +211,7 @@ class EltakoEntity(Entity):
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the device when a message arrives."""
-    
+
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.gateway.dev_id, SIGNAL_SEND_MESSAGE)
@@ -266,7 +261,7 @@ class EltakoEntity(Entity):
                                    f"via gateway {sender.get(CONF_GATEWAY_ID)}: {e}")
         except Exception as e:  # noqa: BLE001 - the fanout must never break the primary send
             LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Additional-gateway fanout failed: {e}")
-        
+
 
 def validate_actuators_dev_and_sender_id(entities:list[EltakoEntity]):
     """Validate device and sender addresses of the configured devices.

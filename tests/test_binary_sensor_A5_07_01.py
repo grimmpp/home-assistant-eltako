@@ -1,12 +1,7 @@
 import unittest
-from tests.mocks import *
 from unittest import mock
 from homeassistant.helpers.entity import Entity
-from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from custom_components.eltako.config.config_helpers import *
-from eltakobus import *
-from eltakobus.eep import *
+from eltakobus.eep import Regular4BSMessage
 
 from tests.test_binary_sensor_generic import TestBinarySensor
 

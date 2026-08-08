@@ -26,4 +26,8 @@ import os
 # this file. To avoid loading Home Assistant - which also crashes the event loop - this opt out
 # is placed here.
 if not os.environ.get('SKIPP_IMPORT_HOME_ASSISTANT'):
-    from .core.integration import *
+    # Home Assistant looks these up on the package itself, so they are re-exported here on
+    # purpose - the implementation lives in core/integration.py.
+    from .core.integration import (async_reload_entry, async_remove_config_entry_device,    # noqa: F401
+                                   async_remove_entry, async_setup, async_setup_entry,
+                                   async_unload_entry)

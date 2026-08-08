@@ -17,11 +17,15 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.components import websocket_api
 from homeassistant.helpers.storage import Store
 
-from ..const import *
+from ..const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_GATEWAY, CONF_GATEWAY_ADDRESS,
+                     CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
+                     CONF_GATEWAY_PORT, CONF_SERIAL_PATH, CONF_SIMULATED, DATA_ELTAKO, DATA_GATEWAY_STORE,
+                     DATA_UI_GATEWAYS, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, SOURCE_UI_GATEWAY,
+                     WS_GATEWAY_ADD, WS_GATEWAY_FORM, WS_GATEWAY_REMOVE, WS_GATEWAY_REPAIR, WS_GATEWAY_UPDATE)
 from . import config_helpers
 
 LOG_PREFIX_GATEWAY_CONFIG = "Gateway Config"
@@ -280,6 +284,73 @@ def find_config_entry(hass: HomeAssistant, gateway_id: int):
     return None
 
 
+def get_gateways_without_entry(hass: HomeAssistant) -> list[dict]:
+    """Gateways of the web ui which have no config entry - configured, but never set up.
+
+    The two stores can drift apart: deleting a gateway on the Home Assistant integration page
+    removes its entry, while the gateway itself stays here (removing it is a separate step,
+    see `async_remove_gateway`). What is left is invisible everywhere - the web ui lists the
+    *running* gateway objects, and without an entry none is created (`async_setup_entry` is
+    what builds them). So the gateway occupies its id and its serial port without doing
+    anything, and there is no way to get rid of it short of editing '.storage' by hand.
+
+    Reported to the web ui so it can offer both ways out: set it up again or remove it.
+    """
+    orphans = []
+    for gateway in get_ui_gateways(hass):
+        try:
+            if find_config_entry(hass, int(gateway[CONF_ID])) is not None:
+                continue
+        except Exception:   # noqa: BLE001 - a stored gateway without a usable id
+            continue
+        orphans.append({
+            'id': gateway.get(CONF_ID),
+            'name': gateway.get(CONF_NAME) or '',
+            'device_type': gateway.get(CONF_DEVICE_TYPE),
+            'serial_path': get_serial_path(gateway),
+            'base_id': gateway.get(CONF_BASE_ID),
+            'description': get_description(gateway),
+        })
+    return sorted(orphans, key=lambda gateway: int(gateway['id']))
+
+
+async def async_create_config_entry(hass: HomeAssistant, gateway: dict):
+    """Create the config entry of a stored gateway, so Home Assistant sets it up.
+
+    The same flow `ws_gateway_add` uses - a gateway is only ever built from an entry, so this
+    is what turns a stored gateway into a running one.
+    """
+    return await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={'source': SOURCE_UI_GATEWAY},
+        data={
+            CONF_GATEWAY_DESCRIPTION: get_description(gateway),
+            CONF_SERIAL_PATH: get_serial_path(gateway),
+        },
+    )
+
+
+async def async_repair_gateway(hass: HomeAssistant, gateway_id: int) -> dict:
+    """Give a stored gateway its missing config entry back.
+
+    Does nothing if the gateway already has one - repairing twice must not create a second
+    entry for the same gateway.
+    """
+    gateway = next((stored for stored in get_ui_gateways(hass)
+                    if int(stored[CONF_ID]) == int(gateway_id)), None)
+    if gateway is None:
+        return {'repaired': False, 'reason': 'unknown_gateway'}
+
+    if find_config_entry(hass, int(gateway_id)) is not None:
+        return {'repaired': False, 'reason': 'already_set_up'}
+
+    result = await async_create_config_entry(hass, gateway)
+    created = result.get('type') == 'create_entry'
+    LOGGER.info(f"[{LOG_PREFIX_GATEWAY_CONFIG}] Gateway '{get_description(gateway)}' had no "
+                f"Home Assistant entry - {'created one' if created else 'creating one failed'}.")
+    return {'repaired': created, 'flow_result': result.get('type'), 'reason': result.get('reason')}
+
+
 async def async_apply_to_config_entry(hass: HomeAssistant, gateway: dict) -> dict:
     """Write description and connection of a changed gateway into its config entry.
 
@@ -399,6 +470,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_gateway_add)
     websocket_api.async_register_command(hass, ws_gateway_update)
     websocket_api.async_register_command(hass, ws_gateway_remove)
+    websocket_api.async_register_command(hass, ws_gateway_repair)
 
 
 @websocket_api.require_admin
@@ -484,3 +556,14 @@ async def ws_gateway_remove(hass: HomeAssistant, connection, msg) -> None:
 
     removed = await async_remove_gateway(hass, gateway_id)
     connection.send_result(msg['id'], {'removed': removed, 'removed_config_entries': removed_entries})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_GATEWAY_REPAIR,
+    vol.Required('gateway_id'): vol.Coerce(int),
+})
+@websocket_api.async_response
+async def ws_gateway_repair(hass: HomeAssistant, connection, msg) -> None:
+    """Create the missing config entry of a stored gateway (see get_gateways_without_entry)."""
+    connection.send_result(msg['id'], await async_repair_gateway(hass, msg['gateway_id']))

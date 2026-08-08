@@ -1,14 +1,15 @@
 import unittest
-from tests.mocks import *
+from tests.mocks import GatewayMock, LatestStateMock
 from unittest import mock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
 from homeassistant.components.climate import HVACMode
 from custom_components.eltako.climate import ClimateController
-from custom_components.eltako.config.config_helpers import *
+from custom_components.eltako.config.config_helpers import CONF_EEP, CONF_ID, DeviceConf
 from custom_components.eltako.core.entity import EltakoEntity
-from eltakobus.eep import *
-from eltakobus import *
+from eltakobus.eep import A5_10_06, F6_02_01
+from eltakobus import AddressExpression
+from custom_components.eltako.const import CONF_SWITCH_BUTTON
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -29,7 +30,7 @@ class EventDataMock():
     def __init__(self,d):
         self.data = d
 
-def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=None):    
+def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=None):
     gw = GatewayMock(dev_id=12345)
     dev_id = AddressExpression.parse("00-00-00-01") # heating cooling actuator
     dev_name = "Room 1"
@@ -39,7 +40,7 @@ def create_climate_entity(thermostat:DeviceConf=None, cooling_switch:DeviceConf=
     temp_unit = "°C"
     min_temp = 16
     max_temp = 25
-    
+
     cc = ClimateController(Platform.CLIMATE, gw, dev_id, dev_name, dev_eep, sender_id, sender_eep, temp_unit, min_temp, max_temp, thermostat, cooling_switch, None)
     return cc
 
@@ -72,7 +73,7 @@ class TestClimate(unittest.TestCase):
         self.assertEqual( round(cc.target_temperature), target_temp)
         # priority is handled in select entity
         self.assertEqual( A5_10_06.decode_message(msg).priority, prio)
-        
+
 
     def test_climate_thermostat(self):
         thermostat = DeviceConf({
@@ -137,13 +138,13 @@ class TestClimate(unittest.TestCase):
     def test_initial_loading(self):
         cc = create_climate_entity()
 
-        cc.load_value_initially(LatestStateMock('heat', 
-                                                attributes={'hvac_modes': ['heat', 'off'], 
-                                                            'min_temp': 17, 
-                                                            'max_temp': 25, 
-                                                            'current_temperature': 19.8, 
-                                                            'temperature': 22.5, 
-                                                            'friendly_name': 'Bad Room', 
+        cc.load_value_initially(LatestStateMock('heat',
+                                                attributes={'hvac_modes': ['heat', 'off'],
+                                                            'min_temp': 17,
+                                                            'max_temp': 25,
+                                                            'current_temperature': 19.8,
+                                                            'temperature': 22.5,
+                                                            'friendly_name': 'Bad Room',
                                                             'supported_features': 385}))
         self.assertEqual(cc.current_temperature, 19.8)
         self.assertEqual(cc.target_temperature, 22.5)
@@ -159,7 +160,7 @@ class TestClimate(unittest.TestCase):
         # so the UI starts at a sensible, in-range value instead of "Unknown".
         self.assertEqual(cc.target_temperature, cc._attr_min_temp)
         self.assertEqual(cc.state, 'off')
-    
+
 class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
 
     async def test_climate_cooling_switch(self):
@@ -182,8 +183,5 @@ class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(cc.target_temperature)
         self.assertIsNone(cc.current_temperature)
 
-        #0x70 = 3
-        msg = F6_02_01(3, 1, 0, 0).encode_message(b'\xFF\xFF\xFF\x01')
-        # cc.value_changed(msg)
         await cc.async_handle_cooling_switch_event(EventDataMock({'switch_address': cooling_switch.id, 'data': cooling_switch[CONF_SWITCH_BUTTON]}))
         self.assertEqual(cc.hvac_mode, HVACMode.COOL)

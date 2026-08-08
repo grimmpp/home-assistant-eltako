@@ -1,11 +1,17 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import (EltakoSensorEntityDescription, EltakoWeatherStation,
+                                             SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_CENTRAL,
+                                             SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN,
+                                             SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_EAST,
+                                             SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_WEST,
+                                             SENSOR_DESC_WEATHER_STATION_RAIN,
+                                             SENSOR_DESC_WEATHER_STATION_TEMPERATURE,
+                                             SENSOR_DESC_WEATHER_STATION_WIND_SPEED)
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, Regular4BSMessage
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -22,13 +28,13 @@ class TestSensor(unittest.TestCase):
         ews = EltakoWeatherStation(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep, description)
 
         return ews
-    
+
 
     def test_weatherstation_sensor(self):
         ews = self.create_weatherstation_sensor(SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN)
-        
+
         msg = Regular4BSMessage(address=b'\x05\x1e\x83\x15', status=b'\x00', data=b'\x0f\x7d\x07\x1a', outgoing=False)
-        
+
         ews.entity_description = SENSOR_DESC_WEATHER_STATION_ILLUMINANCE_DAWN
         ews._attr_native_value = -1
         ews.value_changed(msg)

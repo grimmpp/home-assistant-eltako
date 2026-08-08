@@ -14,8 +14,8 @@ REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
-import generate_docs
-from custom_components.eltako.catalog import help_catalog
+import generate_docs                                       # noqa: E402 - needs the sys.path above
+from custom_components.eltako.catalog import help_catalog  # noqa: E402 - needs the sys.path above
 
 
 REGENERATE = 'Regenerate it with "python generate_docs.py".'

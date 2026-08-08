@@ -17,6 +17,7 @@ const CSV_COLUMNS = [
 // number of decoded values shown per row before the rest is collapsed into a counter
 const VALUE_LIMIT = 8;
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "telegrams",
   title: "Live telegrams",

@@ -12,13 +12,10 @@ from eltakobus.serial import RS485SerialInterfaceV2
 
 from homeassistant.components import zeroconf
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.config_entries import ConfigEntry
 
-from ..const import *
-from ..config import config_helpers
+from ..const import GATEWAY_DEFAULT_NAME, GatewayDeviceType, LOGGER
 from .gateway import EnOceanGateway, ELTAKO_GLOBAL_EVENT_BUS_ID
 
 VIRT_GW_PORT = 12345
@@ -29,9 +26,9 @@ LOGGING_PREFIX_VIRT_GW = "VirtGw"
 
 class VirtualNetworkGateway(EnOceanGateway):
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, 
+    def __init__(self, general_settings:dict, hass: HomeAssistant,
                  dev_id: int, port:int, config_entry: ConfigEntry):
-        
+
         if port is None:
             port = VIRT_GW_PORT
 
@@ -47,15 +44,15 @@ class VirtualNetworkGateway(EnOceanGateway):
         self.connected_clients = []
         self.incoming_message_queues:Dict[socket.socket, List[queue.Queue]] = {}
         self.sending_gateways:list[EnOceanGateway] = []
-        
+
 
         self._register_device()
 
-    
+
     @property
     def dev_name(self):
         return VIRT_GW_DEVICE_NAME
-    
+
     @property
     def dev_type(self):
         return GatewayDeviceType.VirtualNetworkAdapter
@@ -74,7 +71,7 @@ class VirtualNetworkGateway(EnOceanGateway):
             server=f"{hostname}.local."
         )
 
-        return info        
+        return info
 
 
     async def _forward_message(self, data:dict):
@@ -93,8 +90,8 @@ class VirtualNetworkGateway(EnOceanGateway):
     def convert_bus_address_to_external_address(self, gateway, msg):
         address = msg.body[6:10]
         if address[0] == 0 and address[1] == 0:
-            LOGGER.debug(f"TODO: create external id")
-        
+            LOGGER.debug("TODO: create external id")
+
         return msg
 
 
@@ -108,7 +105,7 @@ class VirtualNetworkGateway(EnOceanGateway):
 
                 ## request gateway version
                 #TODO: ...
-            except Exception as e:
+            except Exception as e:   # noqa: BLE001 - one client must not break the others
                 LOGGER.exception(e)
 
 
@@ -134,7 +131,7 @@ class VirtualNetworkGateway(EnOceanGateway):
                         self._fire_last_message_received_event()
                     else:
                         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] EnOcean message {msg} expired (Max delay: {MAX_MESSAGE_DELAY})")
-                except:
+                except Exception:   # noqa: BLE001 - the queue timeout is the normal case here
                     # send keep alive message
                     conn.sendall(b'IM2M')
 
@@ -142,7 +139,7 @@ class VirtualNetworkGateway(EnOceanGateway):
             pass
         except BrokenPipeError:
             pass
-        except Exception as e:
+        except Exception as e:   # noqa: BLE001 - one client must not break the others
             LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred with {addr}: {e}", exc_info=True, stack_info=True)
         finally:
             del self.incoming_message_queues[conn]
@@ -173,7 +170,7 @@ class VirtualNetworkGateway(EnOceanGateway):
                 service_info: ServiceInfo = self.get_service_info(hostname, ip_address)
                 self.zeroconf.register_service(service_info)
                 LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] registered mDNS service record created.")
-            except Exception as e:
+            except Exception as e:   # noqa: BLE001 - the mdns registration is optional
                 LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW} {e}]")
 
             while self._running.is_set():
@@ -182,20 +179,20 @@ class VirtualNetworkGateway(EnOceanGateway):
                     conn, addr = s.accept()
                     conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                     LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Connection from: {addr} established")
-                    
+
                     client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
                     client_thread.start()
-                
+
                 except socket.timeout:
                     # Timeout used to periodically check for shutdown
                     continue
 
-                except Exception as e:
+                except Exception as e:   # noqa: BLE001 - the server loop must keep accepting
                     LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] An error occurred: {e}", exc_info=True, stack_info=True)
                     self._fire_connection_state_changed_event(False)
 
             self.zeroconf.unregister_service(service_info)
-        
+
         self._fire_connection_state_changed_event(False)
         LOGGER.info(f"[{LOGGING_PREFIX_VIRT_GW}] Closed TCP Server")
 
@@ -208,7 +205,7 @@ class VirtualNetworkGateway(EnOceanGateway):
         LOGGER.debug(f"[{LOGGING_PREFIX_VIRT_GW}] Restart TCP server")
         if self._running.is_set():
             self.stop_tcp_server()
-        
+
         self.start_tcp_server()
 
 
@@ -232,7 +229,7 @@ class VirtualNetworkGateway(EnOceanGateway):
                 return socket.inet_pton(socket.AF_INET6, ip_address_str)
             else:  # Assume IPv4
                 return socket.inet_aton(ip_address_str)
-            
+
         except socket.error as e:
             LOGGER.error(f"[{LOGGING_PREFIX_VIRT_GW}] Invalid IP address: {ip_address_str} - {e}")
 

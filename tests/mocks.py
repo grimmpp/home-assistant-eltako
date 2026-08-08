@@ -1,8 +1,9 @@
 import asyncio
 from typing import Any
 
-from custom_components.eltako.config.config_helpers import *
+from custom_components.eltako.config.config_helpers import AddressExpression, DEFAULT_GENERAL_SETTINGS
 from custom_components.eltako.core.gateway import EnOceanGateway
+from custom_components.eltako.const import GatewayDeviceType
 class BusMock():
 
     def __init__(self):
@@ -23,7 +24,7 @@ class BusMock():
                 origin = None,
                 context = None,
                 ) -> None:
-        
+
         self.fired_events.append({
             'event_type': event_type,
             'event_data': event_data,
@@ -35,7 +36,7 @@ class BusMock():
     async_fire = fire
 
 class HassMock():
-        
+
     def __init__(self) -> None:
         self.bus = BusMock()
         try:
@@ -46,7 +47,7 @@ class HassMock():
 
     # def async_create_task(self, async_call):
     #     asyncio.run( async_call )
-        
+
 class ConfigEntryMock():
 
     def __init__(self):
@@ -95,4 +96,4 @@ class LatestStateMock():
     def __init__(self, state:str=None, attributes:dict[str:str]={}):
         self.state = state
         self.attributes = attributes
-        
+

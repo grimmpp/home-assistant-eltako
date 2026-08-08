@@ -30,8 +30,11 @@ from homeassistant.const import CONF_DEVICE_CLASS, CONF_DEVICES, CONF_ID, CONF_N
 from homeassistant.core import HomeAssistant
 from homeassistant.components import websocket_api
 
-from ..const import *
-from . import config_helpers
+from ..const import (CONF_BASE_ID, CONF_COMMENT, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
+                     CONF_GATEWAY_ADDRESS, CONF_GATEWAY_DESCRIPTION, CONF_MAX_TARGET_TEMPERATURE,
+                     CONF_MIN_TARGET_TEMPERATURE, CONF_REGISTERED_IN, CONF_SENDER, CONF_SERIAL_PATH,
+                     CONF_TIME_CLOSES, CONF_TIME_OPENS, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG,
+                     GatewayDeviceType, LOGGER, Platform, SOURCE_UI_GATEWAY)
 from . import device_config
 from ..catalog import device_catalog
 from . import gateway_config

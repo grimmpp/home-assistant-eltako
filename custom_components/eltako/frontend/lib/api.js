@@ -3,7 +3,12 @@
  * Backend: custom_components/eltako/core/websocket.py and observation/enocean_logger.py
  */
 
-export const WS = {
+// `@type {const}` keeps the literal strings: that is what lets api.call() look the result
+// type of a command up in WsResults (types.d.ts). Without it every value would be a plain
+// `string` and the map could not be indexed.
+// `@satisfies` checks the other direction - a command which has no entry in WsResults yet
+// is an error here instead of silently falling back to `any`.
+export const WS = /** @type {const} @satisfies {Record<string, import("../types.js").WsCommand>} */ ({
   INTEGRATION_INFO: "eltako/integration_info",
   CONFIGURED_GATEWAYS: "eltako/configured_gateways",
   USB_PORTS: "eltako/potential_usb_ports",
@@ -25,6 +30,7 @@ export const WS = {
   GATEWAY_ADD: "eltako/gateways/add",
   GATEWAY_UPDATE: "eltako/gateways/update",
   GATEWAY_REMOVE: "eltako/gateways/remove",
+  GATEWAY_REPAIR: "eltako/gateways/repair",
   GATEWAY_SCAN: "eltako/gateways/scan",
   PNP_STATUS: "eltako/plug_and_play/status",
   PNP_RUN: "eltako/plug_and_play/run",
@@ -49,15 +55,27 @@ export const WS = {
   LOG_SUBSCRIBE: "eltako/telegram_log/subscribe",
   LOG_CLEAR: "eltako/telegram_log/clear",
   LOG_REFRESH_DEVICES: "eltako/telegram_log/refresh_devices",
-};
+});
 
 export class EltakoApi {
+  /** @param {import("../types.js").HomeAssistant} hass */
   constructor(hass) {
     this.hass = hass;
+    /** @type {{type: string, message: string} | null} */
     this.lastError = null;
   }
 
-  /** Send a command and return its result, or null if it failed. */
+  /**
+   * Send a command and return its result, or null if it failed.
+   *
+   * The result type comes from WsResults in types.d.ts, so reading a field which the
+   * backend does not send is an error instead of `undefined` at runtime.
+   *
+   * @template {import("../types.js").WsCommand} T
+   * @param {T} type
+   * @param {Record<string, any>} [payload]
+   * @returns {Promise<import("../types.js").WsResults[T] | null>}
+   */
   async call(type, payload = {}) {
     try {
       const result = await this.hass.connection.sendMessagePromise({ type, ...payload });

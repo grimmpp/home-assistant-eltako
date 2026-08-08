@@ -15,7 +15,11 @@ from .core import gateway
 from .config import config_helpers
 from .config import gateway_config
 from .config import general_settings
-from .const import *
+from .const import (CONF_BASE_ID, CONF_CORE_ENTRY, CONF_DEVICE_TYPE, CONF_GATEWAY_ADDRESS,
+                    CONF_GATEWAY_DESCRIPTION, CONF_SERIAL_PATH, CORE_TITLE, CORE_UNIQUE_ID, DATA_ELTAKO,
+                    DATA_INITIAL_DETECTION, DOMAIN, ERROR_INVALID_GATEWAY_PATH,
+                    ERROR_NO_GATEWAY_CONFIGURATION_AVAILABLE, ERROR_NO_SERIAL_PATH_AVAILABLE,
+                    GatewayDeviceType, LOGGER, SETTING_GROUPS)
 from .config.schema import CONFIG_SCHEMA
 
 LOGGER_PREFIX_CONFIG_FLOW = "config_flow"
@@ -185,12 +189,12 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Propose a list of gateways which are configured but not set up yet."""
         LOGGER.debug("[%s] config_flow detect step started.", LOGGER_PREFIX_CONFIG_FLOW)
         return await self.manual_selection_routine(user_input)
-        
+
     async def async_step_manual(self, user_input=None):
         """Request manual USB gateway path."""
         LOGGER.debug("[%s] config_flow manual step started.", LOGGER_PREFIX_CONFIG_FLOW)
         return await self.manual_selection_routine(user_input, manual_setp=True)
-    
+
     async def manual_selection_routine(self, user_input=None, manual_setp:bool=False):
         LOGGER.debug("[%s] Add new gateway", LOGGER_PREFIX_CONFIG_FLOW)
         errors = {}
@@ -215,16 +219,16 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if self.is_input_available(user_input):
                 if await self.validate_eltako_conf(user_input):
                     return self.create_eltako_entry(user_input)
-            
+
                 errors = {CONF_SERIAL_PATH: ERROR_INVALID_GATEWAY_PATH}
 
         LOGGER.debug("[%s] Get data for gateway selection", LOGGER_PREFIX_CONFIG_FLOW)
 
         # find all existing serial paths
         serial_paths = await self.hass.async_add_executor_job(gateway.detect)
-        
+
         # get available (not registered) gateways
-        g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA)) 
+        g_list_dict = (await config_helpers.async_get_list_of_gateway_descriptions(self.hass, CONFIG_SCHEMA))
         # filter out registered gateways. all registered gateways are listen in data section
         g_list = list([g for g in g_list_dict.values() if g not in self.hass.data[DATA_ELTAKO] and 'gateway_'+str(config_helpers.get_id_from_gateway_name(g)) not in self.hass.data[DATA_ELTAKO]])
         LOGGER.debug("[%s] Available gateways to be added: %s", LOGGER_PREFIX_CONFIG_FLOW, g_list)
@@ -252,7 +256,7 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if manual_setp or len(serial_paths) == 0:
             LOGGER.debug("[%s] No usb port or any manually configured address available.", LOGGER_PREFIX_CONFIG_FLOW)
             errors = {CONF_SERIAL_PATH: ERROR_NO_SERIAL_PATH_AVAILABLE}
-                
+
             return self.async_show_form(
                 step_id="manual",
                 data_schema=vol.Schema({
@@ -290,17 +294,18 @@ class EltakoFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if GatewayDeviceType.is_lan_gateway(gdc) and gdc in gateway_selection:
                 is_network_gw = True
                 break
-        
+
         # check ip address for esp2/3 over tcp
         if GatewayDeviceType.VirtualNetworkAdapter.value in gateway_selection:
             return True
         elif is_network_gw:
             try:
-                ip = ipaddress.ip_address(serial_path)
-                LOGGER.debug("[%s] Found valid IP Address %s.", serial_path)
+                ipaddress.ip_address(serial_path)    # raises if it is not an ip address
+                LOGGER.debug("[%s] Found valid IP Address %s.", LOGGER_PREFIX_CONFIG_FLOW, serial_path)
                 return True
-            except Exception:
-                LOGGER.debug("[%s] serial_path: %s is no valid IP Address", serial_path)
+            except Exception:   # noqa: BLE001 - ip_address() rejects a serial path with whatever it likes
+                LOGGER.debug("[%s] serial_path: %s is no valid IP Address",
+                             LOGGER_PREFIX_CONFIG_FLOW, serial_path)
                 return False
         # check serial ports / usb
         else:

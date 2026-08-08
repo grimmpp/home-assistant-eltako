@@ -1,12 +1,7 @@
 import unittest
-from tests.mocks import *
 from unittest import mock
 from homeassistant.helpers.entity import Entity, EntityDescription
-from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from custom_components.eltako.config.config_helpers import *
-from eltakobus import *
-from eltakobus.eep import *
+from eltakobus.eep import A5_30_03, Regular4BSMessage
 
 from tests.test_binary_sensor_generic import TestBinarySensor
 
@@ -48,4 +43,3 @@ class TestBinarySensor_A5_30_03(unittest.TestCase):
             bs.value_changed(msg)
 
             self.assertEqual(bs.is_on, True)
-        

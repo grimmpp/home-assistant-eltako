@@ -6,19 +6,18 @@
 """
 import copy
 import unittest
-from unittest import IsolatedAsyncioTestCase, TestCase
+from unittest import TestCase
 
-from tests.mocks import *
+from tests.mocks import GatewayMock, LatestStateMock
 
 from custom_components.eltako.config import config_helpers
-from custom_components.eltako.const import *
+from custom_components.eltako.const import CONF_EEP, CONF_GATEWAY, DOMAIN, LOGGER
 from custom_components.eltako.cover import EltakoCover
-from custom_components.eltako.core.entity import EltakoEntity
 from custom_components.eltako.select import RepeaterMode
 
 from eltakobus.eep import G5_3F_7F, H5_3F_7F
 from eltakobus.util import AddressExpression
-from homeassistant.const import Platform, STATE_OPEN
+from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME, Platform, STATE_OPEN
 
 
 class TestObjectIdSanitizing(TestCase):

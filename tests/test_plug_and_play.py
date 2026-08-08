@@ -9,13 +9,16 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 
 import voluptuous as vol
 
-from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako.tools import plug_and_play
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
+                                            CONF_GATEWAY_ADDRESS, CONF_GATEWAY_DESCRIPTION,
+                                            CONF_GATEWAY_PORT, CONF_PLUG_AND_PLAY,
+                                            CONF_PLUG_AND_PLAY_INTERVAL, CONF_SENDER, CONF_SERIAL_PATH,
+                                            CONF_UI_DEVICES, SETTING_GROUPS)
 
-from homeassistant.const import CONF_ID, CONF_NAME
+from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
 
 
 def member(**kwargs) -> dict:
@@ -130,6 +133,44 @@ class TestCandidateDescription(TestCase):
 
         self.assertFalse(candidate['confident'])
         self.assertIn('confirm', candidate['reason'])
+
+    def test_a_usb300_is_not_called_mgw(self):
+        """The probe only proves 'some ESP3 stick answered'; the usb descriptor names the
+        model. Without refining it a USB300 is stored as 'esp3-gateway', which the catalog
+        knows as the PioTek 'MGW (USB)' - a different manufacturer's product."""
+        port = {'name': 'EnOcean GmbH EnOcean USB 300 DD FT5XDBOW',
+                'suggested_device_types': ['enocean-usb300', 'esp3-gateway']}
+
+        candidate = plug_and_play.describe_candidate(
+            '/dev/ttyUSB3', {'device_type': 'esp3-gateway', 'baud_rate': 57600}, port)
+
+        self.assertEqual('enocean-usb300', candidate['device_type'])
+        self.assertEqual('USB300', candidate['hw_type'])
+        self.assertTrue(candidate['confident'])
+
+    def test_an_esp3_stick_without_a_known_model_stays_generic(self):
+        """The honest answer for a stick this integration has no catalog entry for."""
+        port = {'name': 'Silicon Labs CP2102', 'suggested_device_types': ['esp3-gateway']}
+
+        candidate = plug_and_play.describe_candidate(
+            '/dev/ttyUSB0', {'device_type': 'esp3-gateway', 'baud_rate': 57600}, port)
+
+        self.assertEqual('esp3-gateway', candidate['device_type'])
+
+    def test_a_probe_result_with_a_model_is_not_overruled(self):
+        for device_type in ['fam14', 'fam-usb', 'enocean-usb300']:
+            candidate = plug_and_play.describe_candidate(
+                '/dev/ttyUSB0', {'device_type': device_type},
+                {'suggested_device_types': ['enocean-usb300', 'esp3-gateway']})
+
+            self.assertEqual(device_type, candidate['device_type'], msg=device_type)
+
+    def test_a_port_without_any_descriptor_stays_generic(self):
+        """Inside a container the device node is passed through, sysfs is not."""
+        candidate = plug_and_play.describe_candidate(
+            '/dev/ttyUSB0', {'device_type': 'esp3-gateway', 'baud_rate': 57600}, None)
+
+        self.assertEqual('esp3-gateway', candidate['device_type'])
 
 
 class TestMdnsDiscovery(TestCase):

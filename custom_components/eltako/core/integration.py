@@ -1,21 +1,26 @@
 """Support for Eltako devices."""
 import os
 
-from homeassistant.components.http import HomeAssistantView, StaticPathConfig
+from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ID, CONF_NAME
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.dispatcher import dispatcher_connect
-from homeassistant.helpers.reload import async_reload_integration_platforms
 from homeassistant.components.frontend import DATA_PANELS, async_register_built_in_panel
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.components import panel_custom, websocket_api
+from homeassistant.components import panel_custom
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er, device_registry as dr, entity_platform as pl
+from homeassistant.helpers import device_registry as dr
 
 
-from ..const import *
-from .gateway import *
+from ..const import GatewayDeviceType
+from .gateway import AddressExpression, DOMAIN, EnOceanGateway, GATEWAY_DEFAULT_NAME, LOGGER, b2s
+from ..const import (BAUD_RATE_DEVICE_TYPE_MAPPING, CONF_BASE_ID, CONF_CORE_ENTRY, CONF_DEVICE_TYPE,
+                     CONF_ENABLE_FRONTEND, CONF_ENABLE_TEACH_IN_BUTTONS, CONF_GATEWAY_ADDRESS,
+                     CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
+                     CONF_GATEWAY_PORT, CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS, CONF_SERIAL_PATH,
+                     CORE_TITLE, DATA_ADDITIONAL_SENDERS, DATA_ELTAKO, DATA_ENTITIES, DATA_INITIAL_DETECTION,
+                     DATA_YAML_CONFIGURED, ELTAKO_CONFIG, INTEGRATION_DIR, OLD_CORE_TITLES,
+                     OLD_GATEWAY_DEFAULT_NAME, PANEL_ICON, PANEL_JS_FILE, PANEL_STATIC_URL, PANEL_TITLE,
+                     PANEL_URL_PATH, PANEL_WEBCOMPONENT, PLATFORMS)
 
 from .virtual_network_gateway import VirtualNetworkGateway, VIRT_GW_PORT
 from .websocket import register_websockets
@@ -174,7 +179,7 @@ async def async_register_frontend(hass: HomeAssistant, general_settings: dict) -
             LOGGER.info(f"[{LOG_PREFIX_INIT}] Telegram recording is disabled. The telegram pages of the "
                         f"web ui stay empty until '{CONF_LOG_ENOCEAN_TELEGRAMS}: True' is configured.")
 
-    except Exception as e:
+    except Exception as e:   # noqa: BLE001 - the web ui is optional - the integration must still start
         LOGGER.error(f"[{LOG_PREFIX_INIT}] Cannot register web ui: {e}", exc_info=True)
 
 
@@ -350,7 +355,7 @@ def unload_gateway(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 
         LOGGER.info(f"[{LOG_PREFIX_INIT}] Unload {gateway.dev_name} and all its supported devices!")
         gateway.unload()
-    
+
         gw_id = "gateway_"+str(gateway.dev_id)
         if gw_id in hass.data[DATA_ELTAKO]:
             del hass.data[DATA_ELTAKO][gw_id]
@@ -460,7 +465,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # print whole eltako configuration
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] config: {config}\n")
 
-    
+
     general_settings_values = config_helpers.get_general_settings_from_configuration(hass)
     # Initialise the gateway
     # get base_id from user input
@@ -472,7 +477,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not ('(' in gateway_description and ')' in gateway_description):
         LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no base id of gateway available. Try to delete and recreate the gateway.")
         return False
-    
+
     gateway_id = config_helpers.get_id_from_gateway_name(gateway_description)
 
     # get home assistant configuration section matching base_id
@@ -480,7 +485,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if not gateway_conf:
         LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no gateway configuration found in '/homeassistant/configuration.yaml'.")
         return False
-    
+
     # get serial path info
     if CONF_SERIAL_PATH not in config_entry.data.keys():
         LOGGER.warning(f"[{LOG_PREFIX_INIT}] Ooops, no information about serial path available for gateway.")
@@ -515,7 +520,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_conf[CONF_BASE_ID])
     message_delay = gateway_conf.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
-    
+
     if is_simulated:
         # no port and no socket is opened: the devices behind this gateway are simulated in
         # this process (see simulation/). Everything else about the gateway stays as it is.
@@ -527,7 +532,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     else:
         gateway = EnOceanGateway(general_settings_values, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
 
-    
+
     # gateways query their base id from the hardware after the connection is up - persist
     # the answer for gateways created in the web ui, so nobody has to know the base id upfront
     async def _persist_reported_base_id(base_id):
@@ -593,8 +598,38 @@ async def async_remove_config_entry_device(hass: HomeAssistant, config_entry: Co
     return True
 
 
+async def async_remove_gateway_of_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Remove the web ui gateway which belonged to a deleted config entry.
+
+    A gateway of the web ui lives in two places: the gateway store (its configuration) and a
+    config entry (what makes Home Assistant set it up). `ws_gateway_remove` deletes both, but
+    deleting the entry on the Home Assistant integration page only removes the second half -
+    and the first one is then stuck: the web ui lists the *running* gateways, so a gateway
+    without an entry is in no list, cannot be deleted and still occupies its id and its serial
+    port. Removing it here keeps both halves together, whichever way the user deletes.
+
+    Gateways of `configuration.yaml` are not touched - they are not in this store, and the
+    yaml is the only place they can be removed.
+    """
+    description = config_entry.data.get(CONF_GATEWAY_DESCRIPTION)
+    if not description:
+        return          # the entry of the integration itself carries no gateway
+
+    try:
+        gateway_id = config_helpers.get_id_from_gateway_name(description)
+        if await gateway_config.async_remove_gateway(hass, gateway_id):
+            LOGGER.info(f"[{LOG_PREFIX_INIT}] Removed gateway {gateway_id} from the web ui "
+                        f"configuration - its Home Assistant entry was deleted.")
+    except Exception as e:  # noqa: BLE001 - a removed entry must never fail to be removed
+        LOGGER.warning(f"[{LOG_PREFIX_INIT}] Cannot remove the gateway of '{description}' "
+                       f"from the web ui configuration: {e}")
+
+
 async def async_remove_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    """The integration lost an entry - take the web ui with it if it was the last one.
+    """The integration lost an entry - clean up what belonged to it.
+
+    Two things: the gateway of that entry (see async_remove_gateway_of_entry) and, if it was
+    the last entry, the web ui itself.
 
     An integration without a single entry is not configured anymore: Home Assistant shows no
     entry on its page, and a panel which stays in the sidebar until the next restart is a dead
@@ -604,6 +639,8 @@ async def async_remove_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     A configuration in `configuration.yaml` keeps the web ui: there `eltako:` is what loads the
     integration and what the panel belongs to, entries or not.
     """
+    await async_remove_gateway_of_entry(hass, config_entry)
+
     if (hass.data.get(DATA_ELTAKO) or {}).get(DATA_YAML_CONFIGURED):
         return
 

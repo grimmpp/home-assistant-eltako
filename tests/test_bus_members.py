@@ -3,13 +3,14 @@ import asyncio
 import unittest
 from unittest import IsolatedAsyncioTestCase, TestCase
 
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from tests.test_device_activity import StoreMock, iso_days_ago
 from tests.test_enocean_logger import HassDataMock, get_general_settings
 
 from custom_components.eltako.observation import bus_members
 from custom_components.eltako.observation.bus_members import BusMemberRegistry, describe_model
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_EEP, CONF_GATEWAY, CONF_LOG_ENOCEAN_TELEGRAMS, DATA_ELTAKO,
+                                            DATA_TELEGRAM_LOGGER, TelegramDirection)
 from custom_components.eltako.observation.enocean_logger import EnOceanTelegramLogger
 
 from eltakobus.message import EltakoDiscoveryReply, EltakoPoll, EltakoWrapped4BS

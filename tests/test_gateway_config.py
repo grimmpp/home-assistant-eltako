@@ -4,11 +4,14 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 
 import voluptuous as vol
 
-from tests.mocks import *
 from tests.test_enocean_logger import HassDataMock
 
 from custom_components.eltako.config import config_helpers, gateway_config
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_GATEWAY,
+                                            CONF_GATEWAY_ADDRESS, CONF_GATEWAY_AUTO_RECONNECT,
+                                            CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_PORT, CONF_SERIAL_PATH,
+                                            DATA_ELTAKO, DATA_GATEWAY_STORE, DOMAIN, ELTAKO_CONFIG,
+                                            GatewayDeviceType)
 
 from homeassistant.const import CONF_ID, CONF_NAME
 
@@ -404,6 +407,85 @@ class TestReportedBaseId(IsolatedAsyncioTestCase):
         hass = await self._hass_with_ui_gateway()
 
         self.assertFalse(await gateway_config.async_update_gateway_base_id(hass, 99, 'FF-AA-00-00'))
+
+
+class GatewayEntry:
+    """A config entry of a gateway, identified by the id inside its description."""
+
+    def __init__(self, gateway_id: int, entry_id: str = 'gw'):
+        self.entry_id = entry_id
+        self.domain = DOMAIN
+        self.data = {CONF_GATEWAY_DESCRIPTION: f"Cellar - fgw14usb (Id: {gateway_id})",
+                     CONF_SERIAL_PATH: '/dev/ttyUSB3'}
+        self.options = {}
+
+
+class EntriesMock:
+    def __init__(self, entries=()):
+        self._entries = list(entries)
+
+    def async_entries(self, domain=None):
+        return list(self._entries)
+
+
+class TestGatewaysWithoutAConfigEntry(IsolatedAsyncioTestCase):
+    """A gateway of the web ui needs both halves: the stored configuration and a config entry.
+    Without the entry Home Assistant never builds it, and because the web ui lists the running
+    gateways it is invisible - it cannot even be deleted anymore."""
+
+    async def _hass(self, entries=()):
+        hass = hass_with(stored=[dict(SERIAL_GATEWAY)])
+        hass.config_entries = EntriesMock(entries)
+        await gateway_config.async_load_ui_gateways(hass)
+        return hass
+
+    async def test_a_gateway_without_an_entry_is_reported(self):
+        hass = await self._hass()
+
+        orphans = gateway_config.get_gateways_without_entry(hass)
+
+        self.assertEqual(1, len(orphans))
+        self.assertEqual(3, orphans[0]['id'])
+        self.assertEqual('/dev/ttyUSB3', orphans[0]['serial_path'])
+
+    async def test_a_gateway_with_an_entry_is_not_reported(self):
+        hass = await self._hass([GatewayEntry(3)])
+
+        self.assertEqual([], gateway_config.get_gateways_without_entry(hass))
+
+    async def test_repairing_creates_the_missing_entry(self):
+        hass = await self._hass()
+        started = []
+
+        async def async_init(domain, context=None, data=None):
+            started.append(data)
+            return {'type': 'create_entry'}
+
+        hass.config_entries.flow = type('Flow', (), {'async_init': staticmethod(async_init)})()
+
+        result = await gateway_config.async_repair_gateway(hass, 3)
+
+        self.assertTrue(result['repaired'])
+        self.assertEqual(1, len(started))
+        self.assertEqual('/dev/ttyUSB3', started[0][CONF_SERIAL_PATH])
+        self.assertIn('Id: 3', started[0][CONF_GATEWAY_DESCRIPTION])
+
+    async def test_repairing_a_gateway_which_is_set_up_does_nothing(self):
+        """Otherwise the same gateway would end up with two entries."""
+        hass = await self._hass([GatewayEntry(3)])
+
+        result = await gateway_config.async_repair_gateway(hass, 3)
+
+        self.assertFalse(result['repaired'])
+        self.assertEqual('already_set_up', result['reason'])
+
+    async def test_repairing_an_unknown_gateway_does_nothing(self):
+        hass = await self._hass()
+
+        result = await gateway_config.async_repair_gateway(hass, 99)
+
+        self.assertFalse(result['repaired'])
+        self.assertEqual('unknown_gateway', result['reason'])
 
 
 if __name__ == '__main__':

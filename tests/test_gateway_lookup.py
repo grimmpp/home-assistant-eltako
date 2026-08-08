@@ -7,10 +7,12 @@ lookup crashed with an AttributeError - which made all gateways disappear from t
 import unittest
 from unittest import TestCase
 
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from tests.test_enocean_logger import HassDataMock
 
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (DATA_BUS_MEMBERS, DATA_DEVICE_ACTIVITY, DATA_ELTAKO,
+                                            DATA_ENTITIES, DATA_GATEWAY_STORE, DATA_SETTINGS_OVERRIDES,
+                                            DATA_SETTINGS_STORE, DATA_TELEGRAM_LOGGER, DATA_UI_GATEWAYS)
 from custom_components.eltako.core.websocket import get_gateways, _get_configured_gateways
 
 

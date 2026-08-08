@@ -1,13 +1,15 @@
-import unittest
 import os
-from tests.mocks import *
-from unittest import mock, IsolatedAsyncioTestCase, TestCase
-from custom_components.eltako.config.config_helpers import async_get_home_assistant_config
+from unittest import IsolatedAsyncioTestCase, TestCase
+from custom_components.eltako.config.config_helpers import DeviceConf, async_get_home_assistant_config
 from custom_components.eltako.config.schema import CONFIG_SCHEMA, GatewaySchema
-from custom_components.eltako.core.gateway import *
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_AREA, CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP,
+                                            CONF_FAST_STATUS_CHANGE, CONF_GATEWAY, CONF_GATEWAY_ID,
+                                            CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS,
+                                            CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE,
+                                            CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT, DOMAIN,
+                                            GatewayDeviceType, TelegramLogFormat)
 from custom_components.eltako.config import config_helpers
-from homeassistant.const import CONF_DEVICE, Platform
+from homeassistant.const import CONF_DEVICE, CONF_DEVICES, CONF_ID, CONF_NAME, Platform
 
 import yaml
 
@@ -26,7 +28,7 @@ class TestIdComparison(IsolatedAsyncioTestCase):
 
     async def test_config(self):
         config = await async_get_home_assistant_config(None, CONFIG_SCHEMA, get_config_basic_fam14)
-        
+
         self.assertTrue(CONF_GERNERAL_SETTINGS in config)
         self.assertTrue(not config[CONF_GERNERAL_SETTINGS][CONF_FAST_STATUS_CHANGE])
 
@@ -136,7 +138,7 @@ class TestDeviceConfig(TestCase):
             self.assertTrue(hasattr(dev_config, k), f"{k} is expected to be an attribute in config.")
             self.assertIsNone(dev_config[k], f"{k} is expected to be None.")
             self.assertIsNone(dev_config.get(k), f"{k} is expected to be None.")
-                  
+
         for k in [CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE]:
             self.assertFalse(k in dev_config, f"{k} is not expected to be in config.")
             self.assertIsNone(dev_config.get(k), f"{k} is expected to be None.")

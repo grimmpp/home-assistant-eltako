@@ -12,6 +12,7 @@ const CSV_COLUMNS = [
   "min_interval", "avg_interval", "max_interval", "msg_types", "last_data", "last_decoded",
 ];
 
+// TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "statistics",
   title: "Statistics",

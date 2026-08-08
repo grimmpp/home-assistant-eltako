@@ -1,12 +1,10 @@
 import unittest
-from tests.mocks import *
 from unittest import mock
 from homeassistant.helpers.entity import Entity
-from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from custom_components.eltako.config.config_helpers import *
-from eltakobus import *
-from eltakobus.eep import *
+from custom_components.eltako.config.config_helpers import get_bus_event_type
+from custom_components.eltako.const import EVENT_BUTTON_PRESSED
+from eltakobus import AddressExpression, time
+from eltakobus.eep import RPSMessage, Regular1BSMessage
 
 from tests.test_binary_sensor_generic import TestBinarySensor
 
@@ -32,7 +30,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
 
     def test_binary_sensor_rocker_switch(self):
         bs = TestBinarySensor().create_binary_sensor()
-        
+
         # send push button
         switch_address = b'\xfe\xdb\xb6\x40'
         msg:Regular1BSMessage = RPSMessage(switch_address, status=b'\x30', data=b'\x70')
@@ -40,7 +38,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         self.assertEqual(bs._attr_is_on, None)
 
         bs.value_changed(msg)
-        
+
         # test if processing was finished and event arrived on bus
         self.assertEqual(len(bs.hass.bus.fired_events), 1)
         self.assertEqual(bs._attr_is_on, True)
@@ -61,7 +59,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
 
         # check event data
         expected_data = {
-            'id': 'eltako_btn_pressed_fe_db_b6_40', 
+            'id': 'eltako_btn_pressed_fe_db_b6_40',
             'entity_id': 'binary_sensor.eltako_gw_123_00_00_00_01',
             'data': 112,
             'eep': 'F6-02-01',
@@ -73,7 +71,6 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
             'release_telegram_received_time_in_sec': -1,
             'rocker_first_action': 3,
             'rocker_second_action': 0,
-            'switch_address': 'FE-DB-B6-40',
             'two_buttons_pressed': False,
             'is_on': True
         }
@@ -95,25 +92,25 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
         # check button specific event
         fired_event_2 = bs.hass.bus.fired_events[1]
         expected_data = {
-            'id': 'eltako_btn_pressed_fe_db_b6_40', 
+            'id': 'eltako_btn_pressed_fe_db_b6_40',
             'entity_id': 'binary_sensor.eltako_gw_123_00_00_00_01',
-            'data': 0, 
+            'data': 0,
             'eep': 'F6-02-01',
-            'switch_address': 'FE-DB-B6-40', 
-            'pressed_buttons': [], 
-            'pressed': False, 
-            'two_buttons_pressed': False, 
-            'rocker_first_action': 0, 
-            'rocker_second_action': 0, 
-            'push_telegram_received_time_in_sec': 1729514202.6208754, 
-            'release_telegram_received_time_in_sec': 1729514206.3687692, 
+            'switch_address': 'FE-DB-B6-40',
+            'pressed_buttons': [],
+            'pressed': False,
+            'two_buttons_pressed': False,
+            'rocker_first_action': 0,
+            'rocker_second_action': 0,
+            'push_telegram_received_time_in_sec': 1729514202.6208754,
+            'release_telegram_received_time_in_sec': 1729514206.3687692,
             'push_duration_in_sec': 3.747893810272217,
             'is_on': False
         }
         for k in expected_data:
             if k not in ['push_telegram_received_time_in_sec', 'release_telegram_received_time_in_sec', 'push_duration_in_sec']:
                 self.assertEqual(fired_event_2['event_data'][k], expected_data[k])
-        
+
         self.assertTrue(fired_event_2['event_data']['push_telegram_received_time_in_sec'] > 0)
         self.assertTrue(fired_event_2['event_data']['release_telegram_received_time_in_sec'] > 0)
         self.assertTrue(fired_event_2['event_data']['push_duration_in_sec'] > 0)
@@ -125,7 +122,7 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
 
     def test_binary_sensor_rocker_switch_button_test(self):
         bs = TestBinarySensor().create_binary_sensor()
-        
+
         switch_address = b'\xfe\xdb\xb6\x40'
 
         for test_data in [(b'\x70', ['RT']), (b'\x50', ['RB']), (b'\x30', ['LT']), (b'\x10', ['LB'])]:

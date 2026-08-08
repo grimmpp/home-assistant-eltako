@@ -7,7 +7,7 @@ import re
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components import websocket_api
 from homeassistant.const import __version__ as HA_VERSION
@@ -15,7 +15,8 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 
 from eltakobus.util import b2s
 
-from ..const import *
+from ..const import (DATA_ELTAKO, DOMAIN, INTEGRATION_DIR, LOGGER, WS_HELP_CATALOG, WS_INTEGRATION_INFO,
+                     WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM)
 from .gateway import detect, EnOceanGateway
 
 
@@ -34,7 +35,7 @@ def _get_manifest_info():
         with open(os.path.join(INTEGRATION_DIR, "manifest.json"), "r") as file:
             response = json.load(file)
             # LOGGER.info(f"info response: {response}")
-    except Exception as e:
+    except Exception:   # noqa: BLE001 - an unreadable manifest must not break the api
         LOGGER.error("Cannot read manifest.json", exc_info=True, stack_info=True)
         response = {}
 
@@ -73,6 +74,17 @@ def _get_configured_gateways(hass: HomeAssistant):
             "simulated": bool(getattr(gw, 'is_simulated', False)),
         })
     return sorted(result, key=lambda gateway: gateway["id"])
+
+
+def _get_gateways_without_entry(hass: HomeAssistant) -> list[dict]:
+    """Stored gateways Home Assistant never set up. Never fails the whole info response."""
+    try:
+        from ..config.gateway_config import get_gateways_without_entry
+
+        return get_gateways_without_entry(hass)
+    except Exception as e:      # noqa: BLE001 - an extra list is not worth the overview page
+        LOGGER.debug(f"Cannot determine the gateways without a config entry: {e}")
+        return []
 
 
 def _gateway_type(gateway: EnOceanGateway) -> str:
@@ -350,6 +362,9 @@ async def ws_integration_info(hass: HomeAssistant, connection, msg):
         "general_settings": {str(k): v for k, v in general_settings.items()},
         "telegram_logging_enabled": is_telegram_logging_enabled(general_settings),
         "gateways": _get_configured_gateways(hass),
+        # configured in the web ui but without a config entry, so Home Assistant never built
+        # them - they are in no other list and would be invisible without this one
+        "gateways_not_set_up": _get_gateways_without_entry(hass),
         "entities": _get_entity_summary(hass),
     }
 

@@ -9,7 +9,7 @@ import asyncio
 import unittest
 from unittest import IsolatedAsyncioTestCase
 
-from tests.mocks import *
+from tests.mocks import EltakoBusMock, GatewayMock
 
 from custom_components.eltako.const import GatewayDeviceType
 from custom_components.eltako.core.gateway import BASE_ID_REQUEST_TIMEOUT

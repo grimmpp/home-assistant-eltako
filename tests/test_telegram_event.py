@@ -9,7 +9,7 @@ See docs/telegram-events/readme.md.
 import unittest
 from unittest import TestCase, mock
 
-from tests.mocks import *
+from tests.mocks import AddressExpression, GatewayMock
 
 from custom_components.eltako.const import ELTAKO_GLOBAL_EVENT_BUS_ID
 from eltakobus.message import EltakoWrappedRPS, EltakoDiscoveryRequest, RPSMessage

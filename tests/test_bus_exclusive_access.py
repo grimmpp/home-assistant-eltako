@@ -9,7 +9,6 @@ import asyncio
 from unittest import TestCase, mock
 
 from eltakobus.message import ESP2Message, RPSMessage
-from eltakobus.util import AddressExpression
 
 from tests.mocks import GatewayMock
 from custom_components.eltako.core import gateway as gateway_module

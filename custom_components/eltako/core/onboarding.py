@@ -23,7 +23,8 @@ from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from ..const import *
+from ..const import (CONF_ONBOARDING_SHOWN, DATA_ELTAKO, DATA_ONBOARDING, LOGGER, PANEL_ONBOARDING_JS_URL,
+                     PANEL_TITLE, PANEL_URL_PATH, WS_ONBOARDING_CONSUME)
 from ..config import config_helpers
 
 LOG_PREFIX_ONBOARDING = "First start"

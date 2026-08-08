@@ -4,13 +4,35 @@ from abc import ABC
 from typing import ClassVar
 import voluptuous as vol
 
-from numbers import Number, Real
 import homeassistant.helpers.config_validation as cv
 
 
-from eltakobus.eep import *
+from eltakobus.eep import (A5_04_01, A5_04_02, A5_04_03, A5_06_01, A5_07_01, A5_08_01, A5_09_0C, A5_10_03,
+                           A5_10_06, A5_10_12, A5_12_01, A5_12_02, A5_12_03, A5_13_01, A5_30_01, A5_30_03,
+                           A5_38_08, D5_00_01, F6_01_01, F6_02_01, F6_02_02, F6_10_00, G5_3F_7F, H5_3F_7F,
+                           M5_38_08, VOC_SubstancesType)
 
-from ..const import *
+from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_DEPRECATED_ENABLE_FRONTEND,
+                     CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI, CONF_DEPRECATED_FRONTEND_DEV_URL,
+                     CONF_DEVICE_TYPE, CONF_EEP, CONF_ENABLE_FRONTEND, CONF_ENABLE_TEST_PAGE,
+                     CONF_FAST_STATUS_CHANGE, CONF_GATEWAY, CONF_GATEWAY_ADDRESS,
+                     CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_ID, CONF_GATEWAY_MESSAGE_DELAY,
+                     CONF_GATEWAY_PORT, CONF_GERNERAL_SETTINGS, CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL,
+                     CONF_ID_REGEX, CONF_INVERT_SIGNAL, CONF_LOG_ENOCEAN_TELEGRAMS,
+                     CONF_LOG_LEVEL_BUS_MESSAGES, CONF_LOG_LEVEL_DECODE_ERRORS, CONF_LOG_LEVEL_INCOMING,
+                     CONF_LOG_LEVEL_OUTGOING, CONF_LOG_LEVEL_POLLING, CONF_LOG_LEVEL_UNKNOWN_DEVICES,
+                     CONF_MAX_TARGET_TEMPERATURE, CONF_METER_TARIFFS, CONF_MIN_TARGET_TEMPERATURE,
+                     CONF_OFF_TEMPERATURE, CONF_PLUG_AND_PLAY, CONF_PLUG_AND_PLAY_INTERVAL, CONF_ROOM_SENSOR,
+                     CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SENSOR, CONF_SERIAL_PATH,
+                     CONF_SHOW_DEV_ID_IN_DEV_NAME, CONF_SHOW_PANEL_IN_SIDEBAR, CONF_SIMULATED,
+                     CONF_SWITCH_BUTTON, CONF_TELEGRAM_LOG_BACKUP_COUNT, CONF_TELEGRAM_LOG_BUFFER_SIZE,
+                     CONF_TELEGRAM_LOG_DECODE_EEP, CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT,
+                     CONF_TELEGRAM_LOG_INCLUDE_POLLING, CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB,
+                     CONF_TELEGRAM_LOG_ROTATE_DAYS, CONF_TIMESERIES_BUCKET, CONF_TIMESERIES_ENABLED,
+                     CONF_TIMESERIES_MEASUREMENT, CONF_TIMESERIES_ORG, CONF_TIMESERIES_TOKEN,
+                     CONF_TIMESERIES_URL, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS,
+                     CONF_VOC_TYPE_INDEXES, DOMAIN, LANGUAGE_ABBREVIATION, TelegramLogFormat,
+                     TelegramLogLevel)
 from ..core.gateway import GatewayDeviceType
 
 from homeassistant.components.binary_sensor import (
@@ -19,14 +41,10 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.components.cover import (
     DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
 )
-from homeassistant.components.cover import (
-    DEVICE_CLASSES_SCHEMA as COVER_DEVICE_CLASSES_SCHEMA,
-)
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_ID,
     CONF_NAME,
-    CONF_DEVICE,
     CONF_DEVICES,
     Platform,
     CONF_TEMPERATURE_UNIT,
@@ -34,14 +52,14 @@ from homeassistant.const import (
     CONF_LANGUAGE,
 )
 
-CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_01_01.eep_string, 
-                                    F6_02_01.eep_string, 
-                                    F6_02_02.eep_string, 
-                                    F6_10_00.eep_string, 
-                                    D5_00_01.eep_string, 
-                                    A5_07_01.eep_string, 
-                                    A5_08_01.eep_string, 
-                                    A5_30_01.eep_string, 
+CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_01_01.eep_string,
+                                    F6_02_01.eep_string,
+                                    F6_02_02.eep_string,
+                                    F6_10_00.eep_string,
+                                    D5_00_01.eep_string,
+                                    A5_07_01.eep_string,
+                                    A5_08_01.eep_string,
+                                    A5_30_01.eep_string,
                                     A5_30_03.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
 
@@ -71,7 +89,7 @@ class EltakoPlatformSchema(ABC):
                 cv.ensure_list, [cls.ENTITY_SCHEMA]
             )
         }
-    
+
 
 class GeneralSettings(EltakoPlatformSchema):
     """Voluptuous schema for general settings of this integration"""
@@ -117,12 +135,12 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_GRAFANA_TOKEN, default=""): cv.string,
 
             # log levels per telegram category
-            vol.Optional(CONF_LOG_LEVEL_INCOMING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
-            vol.Optional(CONF_LOG_LEVEL_OUTGOING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
-            vol.Optional(CONF_LOG_LEVEL_UNKNOWN_DEVICES, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
-            vol.Optional(CONF_LOG_LEVEL_BUS_MESSAGES, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
-            vol.Optional(CONF_LOG_LEVEL_POLLING, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
-            vol.Optional(CONF_LOG_LEVEL_DECODE_ERRORS, default=TelegramLogLevel.OFF.value): vol.In([l.value for l in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_INCOMING, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_OUTGOING, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_UNKNOWN_DEVICES, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_BUS_MESSAGES, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_POLLING, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),
+            vol.Optional(CONF_LOG_LEVEL_DECODE_ERRORS, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),
 
             # deprecated options: still accepted so that existing configurations do not break,
             # but they have no effect anymore. A warning is logged during setup.
@@ -130,7 +148,7 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_DEPRECATED_FRONTEND_DEV_URL): cv.string,
             vol.Optional(CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI): cv.boolean,
     })
-    
+
     @classmethod
     def get_id(cls) -> str:
         return cls.PLATFORM
@@ -219,11 +237,11 @@ class SensorSchema(EltakoPlatformSchema):
                           A5_10_03.eep_string,
                           A5_10_06.eep_string,
                           A5_10_12.eep_string,
-                          A5_12_01.eep_string, 
-                          A5_12_02.eep_string, 
-                          A5_12_03.eep_string, 
+                          A5_12_01.eep_string,
+                          A5_12_02.eep_string,
+                          A5_12_03.eep_string,
                           A5_13_01.eep_string,
-                          F6_10_00.eep_string,  
+                          F6_10_00.eep_string,
                           ]
 
     DEFAULT_NAME = ""
@@ -342,7 +360,7 @@ class GatewaySchema(EltakoPlatformSchema):
                 **ClimateSchema.platform_node(),
             })),
         })
-    
+
     @classmethod
     def get_schema(cls) -> vol.Schema:
         """Return a schema."""

@@ -14,7 +14,8 @@ from eltakobus.util import AddressExpression
 
 from homeassistant.const import CONF_ID
 
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_BASE_ID, CONF_GATEWAY, CONF_LOG_ENOCEAN_TELEGRAMS,
+                                            TelegramDirection)
 from custom_components.eltako.observation.enocean_logger import EnOceanTelegramLogger, CSV_COLUMNS
 
 from tests.mocks import GatewayMock

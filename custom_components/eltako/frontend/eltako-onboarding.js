@@ -23,7 +23,7 @@ async function connection(timeoutMs = 30000) {
   // older frontends only have the connection on the root element
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
-    const conn = document.querySelector("home-assistant")?.hass?.connection;
+    const conn = /** @type {any} */ (document.querySelector("home-assistant"))?.hass?.connection;
     if (conn) return conn;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }

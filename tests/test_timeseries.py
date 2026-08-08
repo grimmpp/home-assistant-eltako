@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from unittest import TestCase
 
-from custom_components.eltako.const import *
+from custom_components.eltako.const import (CONF_TIMESERIES_BUCKET, CONF_TIMESERIES_ENABLED,
+                                            CONF_TIMESERIES_ORG, CONF_TIMESERIES_TOKEN, CONF_TIMESERIES_URL)
 from custom_components.eltako.observation.timeseries import (
     TimeseriesExporter,
     backfill_log_files,

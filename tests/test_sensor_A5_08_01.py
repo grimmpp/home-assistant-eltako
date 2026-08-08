@@ -1,11 +1,11 @@
 import unittest
-from custom_components.eltako.sensor import *
+from custom_components.eltako.sensor import (EltakoBatteryVoltageSensor, EltakoIlluminationSensor,
+                                             EltakoTemperatureSensor)
 from unittest import mock
-from tests.mocks import *
+from tests.mocks import GatewayMock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from custom_components.eltako.binary_sensor import EltakoBinarySensor
-from eltakobus import *
+from eltakobus import AddressExpression, EEP, Regular4BSMessage
 
 # mock update of Home Assistant
 Entity.schedule_update_ha_state = mock.Mock(return_value=None)
@@ -13,7 +13,7 @@ Entity.schedule_update_ha_state = mock.Mock(return_value=None)
 
 
 class TestSensor_A5_08_01(unittest.TestCase):
-    
+
     msg1 = Regular4BSMessage (address=b'\xFF\xFF\x00\x80', data=b'\xaa\x80\x76\x0f', status=0x00)
 
     def create_temperature_sensor(self) -> EltakoTemperatureSensor:
@@ -23,7 +23,7 @@ class TestSensor_A5_08_01(unittest.TestCase):
         dev_eep = EEP.find("A5-08-01")
         s = EltakoTemperatureSensor(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep)
         return s
-    
+
     def create_illumination_sensor(self) -> EltakoIlluminationSensor:
         gateway = GatewayMock()
         dev_id = AddressExpression.parse("FF-FF-00-80")
@@ -31,7 +31,7 @@ class TestSensor_A5_08_01(unittest.TestCase):
         dev_eep = EEP.find("A5-08-01")
         s = EltakoIlluminationSensor(Platform.SENSOR, gateway, dev_id, dev_name, dev_eep)
         return s
-    
+
     def create_battery_voltage_sensor(self) -> EltakoBatteryVoltageSensor:
         gateway = GatewayMock()
         dev_id = AddressExpression.parse("FF-FF-00-80")
@@ -59,4 +59,3 @@ class TestSensor_A5_08_01(unittest.TestCase):
         self.assertEqual(s_ill.native_value, 256.0)
 
 
-        

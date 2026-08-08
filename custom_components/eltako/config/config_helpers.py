@@ -5,11 +5,26 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import CONF_DEVICES, CONF_NAME, CONF_ID
 
-from eltakobus.util import AddressExpression, b2a, b2s
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.message import EltakoMessage
 from eltakobus.eep import EEP
 
-from ..const import *
+from ..const import (CONF_AREA, CONF_BASE_ID, CONF_DEPRECATED_ENABLE_FRONTEND,
+                     CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI, CONF_DEPRECATED_FRONTEND_DEV_URL,
+                     CONF_DEVICE_TYPE, CONF_EEP, CONF_ENABLE_FRONTEND, CONF_ENABLE_TEACH_IN_BUTTONS,
+                     CONF_ENABLE_TEST_PAGE, CONF_FAST_STATUS_CHANGE, CONF_GATEWAY, CONF_GATEWAY_ID,
+                     CONF_GERNERAL_SETTINGS, CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL,
+                     CONF_LOG_ENOCEAN_TELEGRAMS, CONF_LOG_LEVEL_BUS_MESSAGES, CONF_LOG_LEVEL_DECODE_ERRORS,
+                     CONF_LOG_LEVEL_INCOMING, CONF_LOG_LEVEL_OUTGOING, CONF_LOG_LEVEL_POLLING,
+                     CONF_LOG_LEVEL_UNKNOWN_DEVICES, CONF_PLUG_AND_PLAY, CONF_PLUG_AND_PLAY_INTERVAL,
+                     CONF_SENDER, CONF_SERIAL_PATH, CONF_SHOW_DEV_ID_IN_DEV_NAME, CONF_SHOW_PANEL_IN_SIDEBAR,
+                     CONF_TELEGRAM_LOG_BACKUP_COUNT, CONF_TELEGRAM_LOG_BUFFER_SIZE,
+                     CONF_TELEGRAM_LOG_DECODE_EEP, CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT,
+                     CONF_TELEGRAM_LOG_INCLUDE_POLLING, CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB,
+                     CONF_TELEGRAM_LOG_ROTATE_DAYS, CONF_TIMESERIES_BUCKET, CONF_TIMESERIES_ENABLED,
+                     CONF_TIMESERIES_MEASUREMENT, CONF_TIMESERIES_ORG, CONF_TIMESERIES_TOKEN,
+                     CONF_TIMESERIES_URL, DATA_ELTAKO, DATA_SETTINGS_OVERRIDES, DATA_UI_GATEWAYS, DOMAIN,
+                     ELTAKO_CONFIG, GATEWAY_DEFAULT_NAME, LOGGER, TelegramLogFormat, TelegramLogLevel)
 
 # default settings from configuration
 DEFAULT_GENERAL_SETTINGS = {
@@ -62,7 +77,7 @@ class DeviceConf(dict):
     def __init__(self, config: ConfigType, extra_keys:list[str]=[]):
         # merge everything into dict
         self.update(config)
-        
+
         # additionally add attributes
         self.id = config.get(CONF_ID, None)
         if self.id is not None and isinstance(self.id, str):
@@ -227,7 +242,7 @@ def add_ui_gateways_to_config(hass: HomeAssistant, config: dict) -> dict:
     merged = dict(config)
     merged[CONF_GATEWAY] = merge_gateways(config.get(CONF_GATEWAY, []) or [], ui_gateways)
     return merged
-    
+
 def get_device_config(config: dict, id: int) -> dict:
     # a configuration without any gateway is valid (everything can be created in the web ui),
     # so the key can be missing entirely
@@ -264,7 +279,7 @@ def config_check_gateway(config: dict) -> bool:
             if g[CONF_ID] in g_ids:
                 return False
             g_ids.append(g[CONF_ID])
-    
+
     if len(g_ids) == 0:
         return True
 
@@ -320,7 +335,7 @@ def is_simulator_serial_path(path: str) -> bool:
 def get_gateway_name(dev_name:str, dev_type:str, dev_id: int) -> str:
     if not dev_name or len(dev_name) == 0:
         dev_name = GATEWAY_DEFAULT_NAME
-    
+
     return f"{dev_name} - {dev_type} (Id: {dev_id})"
 
 
@@ -329,17 +344,17 @@ def get_device_name(dev_name: str, dev_id: AddressExpression, general_config: di
         return f"{dev_name} ({b2s(dev_id)})"
     else:
         return dev_name
-    
+
 def get_id_from_gateway_name(dev_name: str) -> AddressExpression:
     return int(dev_name.split('(Id: ')[1].split(')')[0])
-    
+
 
 def get_identifier(gateway_id: int, dev_id: AddressExpression | bytes, event_id:str=None, description_key:str=None) -> str:
     id = f"{DOMAIN}_"
 
     ## add gateway id only for local addresses
     _dev_id = dev_id
-    if dev_id is not None and isinstance(_dev_id, AddressExpression): 
+    if dev_id is not None and isinstance(_dev_id, AddressExpression):
         _dev_id = _dev_id[0]
     if dev_id is not None and _dev_id[0:2] == b'\x00\x00':
         id += f"gw_{gateway_id}_"
@@ -512,7 +527,7 @@ def address_to_str(value) -> str | int | None:
 def telegram2json(telegram: EltakoMessage, local_telegram: EltakoMessage = None) -> dict:
     result = {}
     result['msg_type'] = telegram.__class__.__name__
-    if hasattr(telegram, 'address'): 
+    if hasattr(telegram, 'address'):
         if isinstance(telegram.address, int): result['address'] = telegram.address
         else: result['address'] = b2s(telegram.address)
     if hasattr(telegram, 'org'): result['org'] = telegram.org

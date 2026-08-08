@@ -15,7 +15,6 @@ when something does not work.
 
 from __future__ import annotations
 
-import time
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
@@ -26,7 +25,8 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
-from ..const import *
+from ..const import (DATA_DEVICE_ACTIVITY, DATA_ELTAKO, DOMAIN, LOGGER, TelegramDirection,
+                     WS_DEVICE_ACTIVITY, WS_DEVICE_ACTIVITY_CLEAR)
 
 if TYPE_CHECKING:
     from ..core.gateway import EnOceanGateway
