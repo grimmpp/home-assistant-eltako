@@ -164,6 +164,39 @@ class TestDeviceTypeSuggestion(TestCase):
         self.assertIn('TWO ports', hint)
         self.assertIn('9600', hint)
 
+    def test_usb300_with_spaces_in_its_product_name(self):
+        """The descriptor of a real USB300 as it appears on a raspberry pi. It writes its
+        product with spaces ('EnOcean USB 300 DD'), so the fragment 'USB300' does not match -
+        the port used to be skipped as 'no known gateway' before the probe ever saw it."""
+        types, hint = gateway_scan._describe_descriptor(
+            "usb-EnOcean_GmbH_EnOcean_USB_300_DD_FT5XDBOW-if00-port0 "
+            "EnOcean USB 300 DD EnOcean GmbH")
+
+        self.assertEqual(types[0], 'enocean-usb300')
+        self.assertIn('esp3-gateway', types)
+        self.assertTrue(hint)
+
+    def test_an_unknown_enocean_product_is_suggested_as_esp3(self):
+        """EnOcean only builds ESP3 sticks, so their manufacturer alone is enough to send the
+        port to the probe - which then asks for the base id and settles the type."""
+        types, _ = gateway_scan._describe_descriptor("EnOcean GmbH EnOcean USB 400J DA")
+
+        self.assertEqual(types[0], 'esp3-gateway')
+
+    def test_the_manufacturer_beats_the_ftdi_chip(self):
+        """An EnOcean stick which also reports its ftdi chip is an ESP3 stick, not an Eltako
+        gateway - otherwise the probe would start with the wrong baud rate."""
+        types, _ = gateway_scan._describe_descriptor("EnOcean GmbH FT232R USB UART FT5XDBOW")
+
+        self.assertEqual(types[0], 'esp3-gateway')
+
+    def test_a_foreign_stick_is_still_unknown(self):
+        """The suggestion decides whether a port is opened at all - a zigbee stick belongs to
+        another integration and must not be probed."""
+        types, _ = gateway_scan._describe_descriptor("ITead Sonoff Zigbee 3.0 USB Dongle Plus")
+
+        self.assertEqual([], types)
+
     def test_unknown_device(self):
         self.assertEqual(gateway_scan._describe_descriptor("Some random adapter"), ([], ""))
 

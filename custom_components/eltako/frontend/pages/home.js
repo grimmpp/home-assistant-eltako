@@ -441,7 +441,17 @@ export const page = {
 
     const platform = descriptor.platforms.find((entry) => entry.platform === editor.platform)
       || descriptor.platforms[0];
-    if (!platform) return `<div class="notice warn">The backend did not deliver any form definition.</div>`;
+    // No form definition means there is nothing to fill in. It still needs the cancel button:
+    // without it `afterRender` would find none of the editor elements and the page would be
+    // stuck showing this notice.
+    if (!platform) {
+      return `
+        <div class="form-card" id="simple-editor">
+          <div class="notice warn">The backend did not deliver any form definition. Reload the
+            page - if it stays this way, the integration did not start up completely.</div>
+          <div class="form-actions"><button id="simple-cancel" class="action">Close</button></div>
+        </div>`;
+    }
     const gateways = descriptor.gateways || [];
     const fields = (platform.fields || []).filter((field) => SIMPLE_FIELDS.includes(field.name));
 
@@ -557,7 +567,9 @@ export const page = {
     const editor = ctx.state.simpleEditor;
     if (!editor) return;
 
-    root.getElementById("simple-cancel").addEventListener("click", () => {
+    // every lookup below stays optional: the editor can render as a notice without any fields
+    // (no form definition), and a listener missing is never worth losing the whole page
+    root.getElementById("simple-cancel")?.addEventListener("click", () => {
       ctx.state.simpleEditor = null;
       ctx.requestContentRender(true);
     });
@@ -604,7 +616,7 @@ export const page = {
       ctx.requestContentRender(true);
     });
 
-    root.getElementById("simple-save").addEventListener("click", async () => {
+    root.getElementById("simple-save")?.addEventListener("click", async () => {
       const entered = readFields(root.getElementById("simple-fields"));
       const device = editor.mode === "edit"
         // rename: keep the configuration as it is and only replace what the form offers

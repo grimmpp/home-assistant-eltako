@@ -50,6 +50,19 @@ KNOWN_DEVICES = [
      "if01. If the gateway stays disconnected, use the other port."),
     ("USB300", [GatewayDeviceType.EnOceanUSB300.value],
      "EnOcean USB300 transceiver (ESP3, 57600 baud)."),
+    # The current generation writes its product with spaces ('EnOcean USB 300 DD'), which the
+    # fragment above does not cover - the normalization only turns underscores into spaces.
+    ("USB 300", [GatewayDeviceType.EnOceanUSB300.value, GatewayDeviceType.ESP3.value],
+     "EnOcean USB300 transceiver (ESP3, 57600 baud)."),
+    ("USB 500", [GatewayDeviceType.ESP3.value],
+     "EnOcean USB500 transceiver (ESP3, 57600 baud)."),
+    # Anything else built by EnOcean: the manufacturer only ships ESP3 sticks, and knowing the
+    # manufacturer is worth more than knowing the ftdi chip below - which is why this comes
+    # first. The exact type is decided by the probe (it asks for the base id), so an unknown
+    # EnOcean product reaches the probe instead of being skipped as 'no known gateway'.
+    ("EnOcean", [GatewayDeviceType.ESP3.value, GatewayDeviceType.EnOceanUSB300.value],
+     "EnOcean usb stick (ESP3, 57600 baud). The exact model is determined by the probe, which "
+     "asks the stick for its base id."),
     ("FT232R", [GatewayDeviceType.GatewayEltakoFGW14USB.value, GatewayDeviceType.GatewayEltakoFAM14.value,
                 GatewayDeviceType.GatewayEltakoFAMUSB.value],
      "FTDI serial adapter - used by ELTAKO FGW14-USB and FAM14 (both ESP2 at 57600 baud) and by "
