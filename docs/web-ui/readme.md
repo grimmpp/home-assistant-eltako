@@ -69,8 +69,13 @@ The panel comes in two views, switched with the button at the right end of the n
   the few things which cannot be guessed (kind of device, model, address, name, room), the automatic
   detection is one button, and devices which sent a telegram but are not set up yet are offered with a
   single "+ add". No EEPs, no bus positions, no base ids.
+
+  [![The simple view: all devices as cards grouped by room, with the Initial Setup guide on top](img/simple-view.png)](img/simple-view.png)
+
 * **Expert** &ndash; everything the panel can do: gateways, plug &amp; play, the hierarchical bus view,
   live telegrams, statistics, device tests and all settings. This is the panel as it was.
+
+  [![The expert view: the device page with the bus hierarchy, the senders and the taught-in memory of every actuator](img/expert-view.png)](img/expert-view.png)
 
 The choice is stored in the browser, so a reload opens the same view again. Home Assistant starts in the
 **simple** view, the [standalone runtime](../standalone/readme.md) &ndash; a tool for installation and

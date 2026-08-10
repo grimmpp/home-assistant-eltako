@@ -121,6 +121,22 @@ eltako:
 Own panel in the sidebar, part of the integration. Every page has its own url and can be bookmarked
 (e.g. `/eltako#/telegrams`). Full description: [docs/web-ui](docs/web-ui/readme.md).
 
+It comes in **two views**, switched at the right end of the navigation bar &ndash; the same installation,
+once without and once with everything.
+
+**Simple** &ndash; your devices as cards, grouped by room: state, switch, rename, remove. The
+*Initial Setup* guide at the top says what a fresh installation needs, and ticks off what is done.
+No EEPs, no bus positions, no base ids.
+
+[![The simple view: devices as cards, grouped by room](docs/web-ui/img/simple-view.png)](docs/web-ui/img/simple-view.png)
+
+**Expert** &ndash; everything the panel can do: gateways, the hierarchical bus view with the memory of
+every actuator, live telegrams, statistics, device tests, simulation and all settings.
+
+[![The expert view: the device page with the bus hierarchy and the taught-in senders](docs/web-ui/img/expert-view.png)](docs/web-ui/img/expert-view.png)
+
+The pages of the panel:
+
 | Page | What it is for |
 | --- | --- |
 | **Overview** | One tile per gateway (type, protocol, base id, connection, serial path) with add / edit / remove, counters for devices, entities and telegram rate, the plug & play run with its report, and the usb/serial port scan. |
