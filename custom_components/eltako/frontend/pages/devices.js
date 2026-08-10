@@ -1,9 +1,10 @@
 /** Statistics per EnOcean address: how often, how regular, which entity, which EEP. */
 
 import { WS } from "../lib/api.js";
+import { DETAILS_STYLES, bindDetails, renderDetails, unknownDetails } from "../lib/details.js";
 import {
-  card, chip, download, escapeHtml, formatDecoded, formatInterval, formatNumber, formatTime,
-  matchesFilter, sortRows, timestampForFilename, toCsv,
+  card, chip, download, escapeHtml, formatDateTime, formatDecoded, formatInterval, formatNumber,
+  formatTime, icon, matchesFilter, sortRows, timestampForFilename, toCsv,
 } from "../lib/utils.js";
 
 const CSV_COLUMNS = [
@@ -21,6 +22,13 @@ export const page = {
   glyph: "▥",
   needsRecording: true,
   refreshMs: 5000,
+  // the popup of an address which is not configured yet - the same one the other pages use
+  styles: DETAILS_STYLES,
+
+  /** While the popup is open the 5 s refresh must not rebuild it under the reader. */
+  isEditing(ctx) {
+    return !!ctx.state.unknownDetails;
+  },
 
   async load(ctx) {
     await Promise.all([ctx.loadLogInfo(), ctx.loadStatistics()]);
@@ -111,7 +119,12 @@ export const page = {
         <td class="mono">${escapeHtml(device.address)}
           ${device.local_address && device.local_address !== device.address
             ? `<span class="hint">bus ${escapeHtml(device.local_address)}</span>` : ""}</td>
-        <td>${device.known ? escapeHtml(device.name || "") : `<span class="tag unknown">unknown</span>`}
+        <td>${device.known ? escapeHtml(device.name || "")
+          // not configured yet: what is it, and add it - the same popup as in the live view
+          : `<span class="tag unknown">unknown</span>
+             <button class="action small" data-unknown-details="${escapeHtml(device.address)}"
+               title="What is this address? Everything which was seen, the possible profiles and devices - and add it">
+               identify&hellip;</button>`}
           ${device.role && device.role !== "device" ? `<span class="tag role">${escapeHtml(device.role)}</span>` : ""}
           ${(device.entity_ids || []).map((entityId) => `
             <span class="hint">${escapeHtml(entityId)}${stateOf(entityId)
@@ -130,6 +143,7 @@ export const page = {
 
     return `
       ${header}
+      ${this._renderUnknownDetails(ctx)}
       <div class="table-wrapper">
         <table>
           <thead><tr>
@@ -153,7 +167,57 @@ export const page = {
         Intervals describe the time between two telegrams of that address.</div>`;
   },
 
+  /**
+   * "What is this address?" for a row which is not configured - the same popup as in the live
+   * telegram view. The suggestions (possible profiles with their confidence, reason and the
+   * models which speak them) come from the statistics this page shows anyway, so nothing has
+   * to be fetched for it.
+   */
+  _renderUnknownDetails(ctx) {
+    const address = ctx.state.unknownDetails;
+    if (!address) return "";
+    const same = (value) => String(value || "").toUpperCase() === String(address).toUpperCase();
+
+    const statistics = ctx.state.statistics || {};
+    const row = (statistics.devices || []).find((device) => same(device.address));
+    const suggested = (statistics.unknown_devices || []).find((device) => same(device.address));
+    if (!row && !suggested) return "";
+
+    // both carry the same fields (address, counters, msg_types, last_data); only the
+    // suggestions are exclusive to the unknown list, so that one wins
+    const entry = { ...(row || {}), ...(suggested || {}) };
+    const best = entry.suggested || {};
+    const parts = unknownDetails(entry, null, {
+      firstSeen: entry.first_seen ? formatDateTime(entry.first_seen) : null,
+      lastSeen: entry.last_seen ? formatDateTime(entry.last_seen) : null,
+    });
+    return renderDetails(parts, icon, `
+      <button class="action primary" data-add-unknown="${escapeHtml(address)}|${escapeHtml(best.eep || "")}|${escapeHtml(best.platform || "")}|${escapeHtml(best.hw_type || "")}"
+        >+ Add device</button>`);
+  },
+
   afterRender(ctx, root) {
+    root.querySelectorAll("button[data-unknown-details]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ctx.state.unknownDetails = button.dataset.unknownDetails;
+        ctx.requestContentRender(true);
+      });
+    });
+    bindDetails(root, () => {
+      ctx.state.unknownDetails = null;
+      ctx.requestContentRender(true);
+    });
+
+    // adding it is the job of the device page - it opens its form prefilled
+    root.querySelectorAll("button[data-add-unknown]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const [address, eep, platform, model] = button.dataset.addUnknown.split("|");
+        ctx.state.unknownDetails = null;
+        ctx.state.pendingNewDevice = { address, eep, platform, name: model || "" };
+        ctx.navigate("devices");
+      });
+    });
+
     root.querySelectorAll("th[data-sort]").forEach((header) => {
       header.addEventListener("click", () => {
         const column = header.dataset.sort;

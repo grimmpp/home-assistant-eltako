@@ -71,7 +71,8 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_EEP, CONF_
                      LOGGER, SERVICE_CLEAR_TELEGRAM_LOG, SERVICE_EXPORT_TELEGRAM_LOG, TELEGRAM_LOGGER_NAME,
                      TelegramDirection, TelegramLogFormat, TelegramLogLevel, WS_GRAFANA_SYNC,
                      WS_TELEGRAM_LOG_CLEAR, WS_TELEGRAM_LOG_INFO, WS_TELEGRAM_LOG_RECENT,
-                     WS_TELEGRAM_LOG_REFRESH_DEVICES, WS_TELEGRAM_LOG_STATISTICS, WS_TELEGRAM_LOG_SUBSCRIBE)
+                     WS_TELEGRAM_LOG_REFRESH_DEVICES, WS_TELEGRAM_LOG_STATISTICS,
+                     WS_TELEGRAM_LOG_SUBSCRIBE, WS_TELEGRAM_LOG_SUGGESTIONS)
 
 if TYPE_CHECKING:
     from ..core.gateway import EnOceanGateway
@@ -1221,6 +1222,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_telegram_log_info)
     websocket_api.async_register_command(hass, ws_telegram_log_statistics)
     websocket_api.async_register_command(hass, ws_telegram_log_recent)
+    websocket_api.async_register_command(hass, ws_telegram_log_suggestions)
     websocket_api.async_register_command(hass, ws_telegram_log_subscribe)
     websocket_api.async_register_command(hass, ws_telegram_log_clear)
     websocket_api.async_register_command(hass, ws_telegram_log_refresh_devices)
@@ -1286,6 +1288,38 @@ def ws_telegram_log_subscribe(hass: HomeAssistant, connection, msg) -> None:
 
     connection.subscriptions[msg['id']] = telegram_logger.add_subscriber(forward_telegram)
     connection.send_result(msg['id'])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_TELEGRAM_LOG_SUGGESTIONS,
+    vol.Optional('address'): vol.Any(str, None),
+    vol.Optional('data'): vol.Any(str, None),
+    vol.Optional('status'): vol.Any(str, None),
+    vol.Optional('msg_type'): vol.Any(str, None),
+    vol.Optional('teach_in_profile'): vol.Any(str, None),
+    vol.Optional('limit', default=6): vol.All(vol.Coerce(int), vol.Range(min=1, max=20)),
+})
+@callback
+def ws_telegram_log_suggestions(hass: HomeAssistant, connection, msg) -> None:
+    """Which profiles fit **this** telegram, and what each of them makes of its data.
+
+    The statistics carry the suggestions of the *last* telegram of an address. This answers
+    the same question for the one telegram a user is looking at, so the values shown next to
+    each candidate belong to the row in front of them - which is what makes a profile
+    recognizable ("22.4 °C, 41 %" against "button B pressed").
+    """
+    from . import telegram_suggestions
+
+    msg_type = msg.get('msg_type')
+    suggestions = telegram_suggestions.suggest(
+        msg_types={msg_type: 1} if msg_type else None,
+        data=msg.get('data'), status=msg.get('status'), address=msg.get('address'),
+        teach_in_profile=msg.get('teach_in_profile'), limit=msg['limit'])
+    connection.send_result(msg['id'], {
+        'suggestions': suggestions,
+        'best': telegram_suggestions.best_candidate(suggestions),
+    })
 
 
 @websocket_api.require_admin

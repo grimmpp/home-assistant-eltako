@@ -306,6 +306,8 @@ SOURCE_UI_GATEWAY: Final = "ui_gateway"
 WS_TELEGRAM_LOG_INFO: Final = "eltako/telegram_log/info"
 WS_TELEGRAM_LOG_STATISTICS: Final = "eltako/telegram_log/statistics"
 WS_TELEGRAM_LOG_RECENT: Final = "eltako/telegram_log/recent"
+# which profiles fit *one* telegram, incl. what each of them makes of its data
+WS_TELEGRAM_LOG_SUGGESTIONS: Final = "eltako/telegram_log/suggestions"
 WS_TELEGRAM_LOG_SUBSCRIBE: Final = "eltako/telegram_log/subscribe"
 WS_TELEGRAM_LOG_CLEAR: Final = "eltako/telegram_log/clear"
 WS_TELEGRAM_LOG_REFRESH_DEVICES: Final = "eltako/telegram_log/refresh_devices"

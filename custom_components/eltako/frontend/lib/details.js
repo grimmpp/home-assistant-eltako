@@ -13,7 +13,7 @@
  * device page as a button, the standalone runtime has none and does not show it.
  */
 
-import { escapeHtml } from "./utils.js";
+import { escapeHtml, formatDecoded } from "./utils.js";
 
 export const DETAILS_STYLES = `
   /* The popup is fixed to the viewport, so the panel moves it out of the page content into
@@ -39,7 +39,88 @@ export const DETAILS_STYLES = `
   .modal-card .meta-section .device-states { display: flex; flex-wrap: wrap; gap: 5px; }
   .modal-card .modal-note { font-size: .78rem; color: var(--eltako-muted); }
   .modal-card .modal-note.warn { color: var(--eltako-warn); }
+  /* what an address could be: one line per candidate profile with its models (see the
+     "unknown" popup of the telegram page) */
+  .modal-card .candidate-list { display: flex; flex-direction: column; gap: 8px; }
+  .modal-card .candidate-list .candidate { font-size: .82rem; display: flex; flex-wrap: wrap;
+                                           align-items: baseline; gap: 6px; }
+  .modal-card .candidate-list .candidate-models { flex-basis: 100%; display: flex;
+                                                  flex-wrap: wrap; gap: 4px; }
+  /* what this telegram means read as that profile - the evidence a human judges by */
+  .modal-card .candidate-values { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; }
 `;
+
+/**
+ * The popup of an *unknown* address: what was seen and what it could be.
+ *
+ * `entry` is one item of `statistics.unknown_devices` (observation/telegram_suggestions.py:
+ * the backend already derived the possible profiles with their confidence and the models of
+ * the catalog which speak them), `telegram` the record the popup was opened from. Either of
+ * them may be missing - an address which just sent its first telegram is not in the
+ * statistics yet, and the statistics know addresses whose telegram has scrolled out.
+ */
+export function unknownDetails(entry, telegram, options = {}) {
+  const seen = entry || {};
+  const record = telegram || {};
+  const best = seen.suggested || {};
+  const address = seen.address || record.address;
+  const messageTypes = Object.keys(seen.msg_types || {}).join(", ") || record.msg_type;
+
+  return {
+    icon: options.icon || ["mdi:help-circle-outline", "?"],
+    title: address,
+    subtitle: "Not configured yet",
+    haDeviceId: null,
+    editable: false,
+    entities: [],
+    rows: [
+      ["Address", address, true],
+      ["Address on the bus", seen.local_address || record.local_address, true],
+      ["Gateway", (seen.gateway_ids || []).join(", ") || record.gateway_name || record.gateway_id],
+      ["Message types", messageTypes],
+      ["Telegrams seen", seen.count],
+      ["First seen", options.firstSeen],
+      ["Last seen", options.lastSeen],
+      ["Last data", seen.last_data || record.data || record.payload, true],
+      ["Signal", record.rssi_dbm === null || record.rssi_dbm === undefined
+        ? null : `${record.rssi_dbm} dBm`],
+      ["Probably a profile", best.eep ? `${best.eep}${best.confidence ? ` (${best.confidence})` : ""}` : null],
+      ["Probably a device", best.hw_type],
+      ...(options.rows || []),
+    ],
+    extra: renderCandidates(seen.suggestions || []),
+    note: best.eep ? null
+      : "No profile could be derived yet. A device usually reveals itself with the next "
+        + "telegram which carries data - press its button again, or teach it in (4BS).",
+  };
+}
+
+/** The possible profiles of an unknown address, each with the models which speak it. */
+export function renderCandidates(candidates) {
+  if (!candidates.length) return "";
+
+  return `
+    <div class="meta-section">
+      <h4>What it could be</h4>
+      <div class="candidate-list">
+        ${candidates.map((candidate) => `
+          <div class="candidate">
+            <span class="mono">${escapeHtml(candidate.eep)}</span>
+            <span class="tag ${candidate.confidence === "confirmed" ? "taught"
+              : candidate.confidence === "likely" ? "role" : "unknown"}"
+              >${escapeHtml(candidate.confidence || "")}</span>
+            <span class="hint">${escapeHtml(candidate.reason || "")}</span>
+            ${candidate.decoded ? `
+              <span class="candidate-values">${formatDecoded(candidate.decoded, 6)}</span>` : ""}
+            ${(candidate.devices || []).length ? `
+              <span class="candidate-models">${candidate.devices.map((model) => `
+                <span class="chip" title="${escapeHtml([model.hw_type, model.brand, model.description,
+                  model.platform].filter(Boolean).join(" - "))}">${escapeHtml(model.hw_type)}</span>`).join("")}
+              </span>` : ""}
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
 
 /** The device page exists in Home Assistant only - the standalone runtime has none. */
 export function canOpenInHa(haDeviceId) {
@@ -159,6 +240,7 @@ export function renderDetails(parts, icon, actions = "") {
                 <span class="chip-label">${escapeHtml(entity.entityId)}</span>
                 <b>${escapeHtml(entity.text || "no value yet")}</b></span>`).join("")}</div>
           </div>` : ""}
+        ${parts.extra || ""}
         ${parts.note ? `<div class="modal-note ${parts.noteWarn ? "warn" : ""}">${parts.note}</div>` : ""}
         <div class="form-actions">
           ${parts.haDeviceId ? `<button class="action primary" data-ha-device="${escapeHtml(parts.haDeviceId)}"

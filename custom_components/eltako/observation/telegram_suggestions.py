@@ -112,6 +112,18 @@ def _decode(eep_string: str, data: bytes, status: int):
         return None
 
 
+def _decoded_values(decoded) -> dict | None:
+    """Everything a profile makes of the telegram, as a plain dict (or None)."""
+    if decoded is None:
+        return None
+    from .enocean_logger import decoded_eep_to_dict
+
+    try:
+        return decoded_eep_to_dict(decoded)
+    except Exception:   # noqa: BLE001 - a broken property is no reason to drop the candidate
+        return None
+
+
 def _plausibility(decoded) -> tuple[bool, list[str]]:
     """Are the decoded values within a physically sensible range?
 
@@ -183,11 +195,16 @@ def suggest(msg_types=None, data: str = None, status: str = None, address: str =
                 'reason': (f"decodes the data plausibly ({', '.join(values)})" if values
                            else f"fits the {'/'.join(sorted(families)) or 'telegram'} type"),
                 'values': values,
+                # what this telegram *means* read as this profile. The range check above only
+                # looks at the few physical values it knows; this is everything the profile
+                # decodes, and it is what lets a human decide which candidate is the right
+                # one ("22.4 °C, 41 %" against "button B pressed").
+                'decoded': _decoded_values(decoded),
             })
         else:
             candidates.append({'eep': eep, 'confidence': 'possible',
                                'reason': f"fits the {'/'.join(sorted(families))} type",
-                               'values': []})
+                               'values': [], 'decoded': None})
 
     # 4) a wired FTS14EM input is recognizable by its low local address
     if local_id is not None and local_id < 0x1500:

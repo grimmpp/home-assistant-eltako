@@ -1,9 +1,11 @@
 /** Live view of all recorded EnOcean telegrams. */
 
 import { WS } from "../lib/api.js";
+import { DETAILS_STYLES, bindDetails, renderCandidates, renderDetails,
+         unknownDetails } from "../lib/details.js";
 import {
-  decodedToText, download, escapeHtml, formatDecoded, formatNumber, formatTime, matchesFilter,
-  timestampForFilename, toCsv,
+  decodedToText, download, escapeHtml, formatDateTime, formatDecoded, formatNumber, formatTime,
+  icon, matchesFilter, timestampForFilename, toCsv,
 } from "../lib/utils.js";
 import { collectValues, decidesTheFields, descriptorFor, fieldControl, fieldLabel, infoOf,
          relevantFields } from "../lib/telegram_form.js";
@@ -25,6 +27,8 @@ export const page = {
   icon: "mdi:swap-vertical",
   glyph: "⇅",
   needsRecording: true,
+  // the popup of an address which is not configured yet - the same one the device page uses
+  styles: DETAILS_STYLES,
 
   async load(ctx) {
     await Promise.all([ctx.loadLogInfo(), ctx.loadRecentTelegrams(), ctx.loadIntegrationInfo()]);
@@ -32,8 +36,11 @@ export const page = {
 
   /** Called by the shell for every telegram of the live stream. */
   onTelegram(ctx) {
-    // while the send form is open the list must not re-render - the inputs would lose focus
-    if (!ctx.state.paused && !ctx.state.sendForm) ctx.requestContentRender();
+    // while the send form is open the list must not re-render - the inputs would lose focus.
+    // The same for the popup of an unknown address: it is being read, and the list below it
+    // would rebuild it with every telegram which arrives.
+    if (ctx.state.paused || ctx.state.sendForm || ctx.state.unknownDetails) return;
+    ctx.requestContentRender();
   },
 
   renderStatus(ctx) {
@@ -171,7 +178,7 @@ export const page = {
 
     const telegrams = this._filtered(ctx);
     if (!telegrams.length) {
-      return `${sendForm}<div class="empty">${ctx.state.telegrams.length
+      return `${sendForm}${this._renderUnknownDetails(ctx)}<div class="empty">${ctx.state.telegrams.length
         ? "No telegram matches the current filter."
         : "Waiting for telegrams&hellip; As soon as a device sends something it shows up here."}</div>`;
     }
@@ -194,7 +201,12 @@ export const page = {
               ? `${escapeHtml(telegram.device_name || "")}
                  ${telegram.role && telegram.role !== "device" ? `<span class="tag role">${escapeHtml(telegram.role)}</span>` : ""}
                  ${(telegram.entity_ids || []).length ? `<span class="hint">${escapeHtml(telegram.entity_ids.join(", "))}</span>` : ""}`
-              : `<span class="tag unknown">unknown</span>`}</td>
+              // an address which is not configured: everything known about it, what it
+              // probably is and the way to add it - one click away instead of another page
+              : `<span class="tag unknown">unknown</span>
+                 <button class="action small" data-unknown-details="${escapeHtml(telegram.address || "")}"
+                   title="What is this address? Everything which was seen, the possible profiles and devices - and add it">
+                   identify&hellip;</button>`}</td>
           <td class="mono">${escapeHtml(eep.value || "-")}
             ${eep.hint ? `<span class="hint">${escapeHtml(eep.hint)}</span>` : ""}</td>
           <td>${escapeHtml(telegram.msg_type)}</td>
@@ -208,6 +220,7 @@ export const page = {
 
     return `
       ${sendForm}
+      ${this._renderUnknownDetails(ctx)}
       <div class="table-wrapper">
         <table class="clickable">
           <thead><tr>
@@ -220,6 +233,43 @@ export const page = {
       <div class="footnote">Showing ${telegrams.length} of ${ctx.state.telegrams.length} buffered telegrams
         (newest first). Click a row to see the complete record. The buffer size can be changed with
         <code>telegram_log_buffer_size</code>.</div>`;
+  },
+
+  /**
+   * "What is this address?" - the popup of an unknown telegram.
+   *
+   * A telegram from an address which is not configured is the moment a user meets a new
+   * device: it flashes by in the list and the only way to do anything with it was to
+   * remember the address and look for it on the device page. The popup answers it here -
+   * what was seen, which profiles fit (with the reason and the confidence the backend
+   * derived, see telegram_suggestions.py) and which models of the catalog speak them - and
+   * offers the one action which follows: adding it.
+   */
+  _renderUnknownDetails(ctx) {
+    const address = ctx.state.unknownDetails;
+    if (!address) return "";
+
+    const entry = ((ctx.state.statistics || {}).unknown_devices || [])
+      .find((device) => String(device.address).toUpperCase() === String(address).toUpperCase());
+    const telegram = (ctx.state.telegrams || [])
+      .find((record) => String(record.address || "").toUpperCase() === String(address).toUpperCase());
+    if (!entry && !telegram) return "";
+
+    const best = (entry || {}).suggested || {};
+    const parts = unknownDetails(entry, telegram, {
+      firstSeen: (entry || {}).first_seen ? formatDateTime(entry.first_seen) : null,
+      lastSeen: (entry || {}).last_seen ? formatDateTime(entry.last_seen)
+        : telegram ? formatDateTime(telegram.timestamp) : null,
+    });
+    // the candidates of *this* telegram if they were fetched (see the click handler): the
+    // statistics answer for the last telegram of the address, which is not necessarily the
+    // row the user is looking at
+    if (this._suggestionsFor === address && this._suggestions) {
+      parts.extra = renderCandidates(this._suggestions);
+    }
+    return renderDetails(parts, icon, `
+      <button class="action primary" data-add-unknown="${escapeHtml(address)}|${escapeHtml(best.eep || "")}|${escapeHtml(best.platform || "")}|${escapeHtml(best.hw_type || "")}"
+        >+ Add device</button>`);
   },
 
   /**
@@ -302,6 +352,50 @@ export const page = {
       row.addEventListener("click", () => {
         const detail = root.getElementById(row.dataset.detail);
         if (detail) detail.classList.toggle("visible");
+      });
+    });
+
+    // an address which is not configured yet: what is it, and add it
+    root.querySelectorAll("button[data-unknown-details]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();                  // the row itself opens the raw record
+        const address = button.dataset.unknownDetails;
+        const telegram = (ctx.state.telegrams || []).find((record) =>
+          String(record.address || "").toUpperCase() === String(address).toUpperCase());
+
+        // two sources: the statistics know how often this address was seen and what it looks
+        // like over time, and the backend reads *this* telegram with every profile which
+        // fits - its values are the evidence which tells the candidates apart
+        const [, suggestions] = await Promise.all([
+          ctx.loadStatistics(),
+          ctx.api.call(WS.LOG_SUGGESTIONS, {
+            address,
+            data: (telegram || {}).data || null,
+            status: (telegram || {}).status || null,
+            msg_type: (telegram || {}).msg_type || null,
+            teach_in_profile: (telegram || {}).teach_in_profile || null,
+          }),
+        ]);
+        this._suggestionsFor = address;
+        this._suggestions = (suggestions || {}).suggestions || null;
+        ctx.state.unknownDetails = address;
+        ctx.requestContentRender(true);
+      });
+    });
+    bindDetails(root, () => {
+      ctx.state.unknownDetails = null;
+      ctx.requestContentRender(true);
+    });
+
+    // adding it is the job of the device page - it opens its form prefilled with what the
+    // backend suggested (see its `pendingNewDevice` handling)
+    root.querySelectorAll("button[data-add-unknown]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const [address, eep, platform, model] = button.dataset.addUnknown.split("|");
+        ctx.state.unknownDetails = null;
+        ctx.state.pendingNewDevice = { address, eep, platform, name: model || "" };
+        ctx.navigate("devices");
       });
     });
 

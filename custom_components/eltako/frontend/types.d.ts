@@ -110,6 +110,8 @@ export interface PanelState {
    * View state which the pages create on demand - it is not in the initializer of the
    * constructor, so these keys are undefined until the page ran once.
    */
+  /** the address whose "what is this?" popup is open (live telegrams and statistics) */
+  unknownDetails?: string | null;
   /** pages/telegrams.js: the free send form */
   sendForm?: any;
   sendFormDescriptor?: { gateways: Gateway[]; eeps: EepDescriptor[] } | null;
@@ -681,6 +683,7 @@ export interface WsResults {
   "eltako/telegram_log/info": LogInfo;
   "eltako/telegram_log/statistics": StatisticsResult;
   "eltako/telegram_log/recent": { telegrams: TelegramRecord[] };
+  "eltako/telegram_log/suggestions": { suggestions: any[]; best: Record<string, any> };
   "eltako/telegram_log/subscribe": undefined;
   "eltako/telegram_log/clear": { cleared: boolean };
   "eltako/telegram_log/refresh_devices": { known_address_count: number };

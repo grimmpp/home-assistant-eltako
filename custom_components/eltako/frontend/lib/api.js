@@ -53,6 +53,7 @@ export const WS = /** @type {const} @satisfies {Record<string, import("../types.
   LOG_INFO: "eltako/telegram_log/info",
   LOG_STATISTICS: "eltako/telegram_log/statistics",
   LOG_RECENT: "eltako/telegram_log/recent",
+  LOG_SUGGESTIONS: "eltako/telegram_log/suggestions",
   LOG_SUBSCRIBE: "eltako/telegram_log/subscribe",
   LOG_CLEAR: "eltako/telegram_log/clear",
   LOG_REFRESH_DEVICES: "eltako/telegram_log/refresh_devices",
