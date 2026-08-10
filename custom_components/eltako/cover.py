@@ -7,8 +7,8 @@ from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP, G5_3F_7F, H5_3F_7F
 
 from homeassistant import config_entries
-from homeassistant.components.cover import CoverEntity, CoverEntityFeature, ATTR_POSITION, ATTR_TILT_POSITION
-from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverState, ATTR_POSITION, ATTR_TILT_POSITION
+from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
@@ -93,23 +93,23 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             self._attr_current_cover_position = latest_state.attributes.get('current_position')
             self._attr_current_cover_tilt_position = latest_state.attributes.get('current_tilt_position')
 
-            if latest_state.state == STATE_OPEN:
+            if latest_state.state == CoverState.OPEN:
                 self._attr_is_opening = False
                 self._attr_is_closing = False
                 self._attr_is_closed = False
                 self._attr_current_cover_position = 100
                 self._attr_current_cover_tilt_position = 100
-            elif latest_state.state == STATE_CLOSED:
+            elif latest_state.state == CoverState.CLOSED:
                 self._attr_is_opening = False
                 self._attr_is_closing = False
                 self._attr_is_closed = True
                 self._attr_current_cover_position = 0
                 self._attr_current_cover_tilt_position = 0
-            elif latest_state.state == STATE_CLOSING:
+            elif latest_state.state == CoverState.CLOSING:
                 self._attr_is_opening = False
                 self._attr_is_closing = True
                 self._attr_is_closed = False
-            elif latest_state.state == STATE_OPENING:
+            elif latest_state.state == CoverState.OPENING:
                 self._attr_is_opening = True
                 self._attr_is_closing = False
                 self._attr_is_closed = False
