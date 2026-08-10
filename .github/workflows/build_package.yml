@@ -1,0 +1,213 @@
+# Builds the pip package of the standalone runtime (`pip install eltako-enocean-tool`).
+#
+#   build         sdist + wheel from pyproject.toml, metadata checked with twine
+#   smoke-test    installs the built wheel in a clean environment on linux/windows/macos
+#                 and actually boots the runtime with the bundled demo data
+#   publish       uploads to PyPI - only when a GitHub release is published, or manually
+#                 (workflow_dispatch) to TestPyPI for a dry run
+#
+# The version is `eltako_standalone.__version__` and must match the version in
+# custom_components/eltako/manifest.json (tests/test_metadata.py checks it as well).
+# The Home Assistant integration itself is still distributed through HACS - this package
+# is the standalone runtime, which happens to contain the same integration code.
+name: Build python package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish_to:
+        description: "Upload the built package to"
+        required: true
+        default: "nowhere"
+        type: choice
+        options: [nowhere, testpypi, pypi]
+  release:
+    types: [published]
+
+# a second push to the same branch makes the running build pointless - except for tags
+# and releases, where the run belongs to an artifact somebody is waiting for
+concurrency:
+  group: build-package-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # pinned on purpose, see test_on_push.yml
+          python-version: '3.14'
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build twine
+
+      - name: Check that package and integration version match
+        id: version
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, re, pathlib
+
+          manifest = json.loads(pathlib.Path("custom_components/eltako/manifest.json").read_text())["version"]
+          source = pathlib.Path("eltako_standalone/__init__.py").read_text()
+          package = re.search(r'^__version__ = "([^"]+)"', source, re.M).group(1)
+          if manifest != package:
+              raise SystemExit(
+                  f"version mismatch: manifest.json says {manifest}, "
+                  f"eltako_standalone.__version__ says {package}")
+          print(f"version={package}")
+          PY
+
+      - name: Build
+        run: python -m build
+
+      - name: Check metadata
+        run: python -m twine check --strict dist/*
+
+      - name: List the artifacts
+        run: |
+          ls -l dist/
+          python -m zipfile -l dist/*.whl
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-package-${{ steps.version.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+  smoke-test:
+    name: Install ${{ matrix.os }} / python ${{ matrix.python-version }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # the lower bound of requires-python and the version Home Assistant uses
+          - { os: ubuntu-latest, python-version: '3.12' }
+          - { os: ubuntu-latest, python-version: '3.13' }
+          - { os: ubuntu-latest, python-version: '3.14' }
+          # the two platforms where the standalone runtime is the *only* way to reach a
+          # usb gateway natively - a broken package there is a broken feature
+          - { os: windows-latest, python-version: '3.14' }
+          - { os: macos-latest, python-version: '3.14' }
+    defaults:
+      run:
+        shell: bash        # also on windows, so one script fits all three platforms
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-package-${{ needs.build.outputs.version }}
+          path: dist
+
+      # no checkout: this must work from the wheel alone, exactly like `pip install` on a
+      # machine which never saw the repository
+      - name: Install the wheel
+        run: python -m pip install --upgrade pip && python -m pip install dist/*.whl
+
+      - name: Console scripts
+        run: |
+          eet --help
+          eltako-enocean-tool --help
+
+      - name: The integration and the shim are importable and complete
+        run: |
+          python - <<'PY'
+          import importlib.metadata, os
+
+          import eltako_standalone
+          print("installed version:", importlib.metadata.version("eltako-enocean-tool"),
+                "package version:", eltako_standalone.__version__)
+
+          # the shim must win over a real homeassistant package, so it has to be shipped
+          from eltako_standalone.runtime import install_shim
+          install_shim()
+          import homeassistant
+          assert "hass_shim" in homeassistant.__file__, homeassistant.__file__
+
+          # the integration runs from the same wheel...
+          from custom_components.eltako.const import INTEGRATION_DIR, PANEL_STATIC_URL
+          from eltako_standalone import cli, entity_api, server, test_runner   # noqa: F401
+
+          # ...including the files it reads from disk at runtime (web ui, catalogs)
+          for relative in ("manifest.json", "docs_index.json", "strings.json", "services.yaml",
+                           "translations/en.json", "frontend/eltako-panel.js",
+                           "frontend/lib/api.js", "frontend/pages/overview.js",
+                           "frontend/img/eltako-logo.svg",
+                           "grafana/dashboards/telegram-overview.json"):
+              path = os.path.join(INTEGRATION_DIR, relative)
+              assert os.path.isfile(path), f"missing in the wheel: {path}"
+          assert os.path.isdir(server.SHELL_DIR), server.SHELL_DIR
+          assert os.path.isfile(cli.EXAMPLE_EODM), cli.EXAMPLE_EODM
+          print("web ui and example data are in the wheel:", PANEL_STATIC_URL)
+          PY
+
+      - name: Boot the runtime with the bundled demo data
+        run: |
+          eet --config ./smoke-config --demo devices | tee devices.txt
+          grep -q "^light\." devices.txt
+          grep -q "^cover\." devices.txt
+          test -f ./smoke-config/.storage/eltako_gateways
+
+  publish:
+    name: Publish to ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to || 'pypi' }}
+    needs: [build, smoke-test]
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_to != 'nowhere')
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to || 'pypi' }}
+    permissions:
+      # trusted publishing (https://docs.pypi.org/trusted-publishers/): no token in the
+      # repository at all. Configure the publisher once on PyPI for this workflow file,
+      # or set the secret PYPI_API_TOKEN / TEST_PYPI_API_TOKEN instead.
+      id-token: write
+    env:
+      TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to || 'pypi' }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-package-${{ needs.build.outputs.version }}
+          path: dist
+
+      # tags of this repository are `v<version>-<what changed>`, e.g. v2.2.0-standalone-package
+      - name: The release tag must match the version of the package
+        if: github.event_name == 'release'
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${{ needs.build.outputs.version }}"
+          case "$tag" in
+            "v${version}"|"v${version}-"*) echo "tag $tag matches version $version" ;;
+            *) echo "::error::tag $tag does not belong to version $version - bump \
+                 eltako_standalone/__init__.py and manifest.json, or fix the tag"; exit 1 ;;
+          esac
+
+      - name: Publish to PyPI
+        if: env.TARGET == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # empty means trusted publishing; an existing secret takes precedence
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Publish to TestPyPI
+        if: env.TARGET == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          # a dry run is repeated with the same version on purpose
+          skip-existing: true

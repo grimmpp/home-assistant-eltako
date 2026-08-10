@@ -231,7 +231,9 @@ class TelegramDirection(StrEnum):
 ### (custom_components/eltako/frontend) and contains all sub pages (overview, telegram
 ### logging, device statistics, about, ...).
 PANEL_URL_PATH: Final = "eltako"                    # sidebar/url path: /eltako
-PANEL_TITLE: Final = "ELTAKO - EnOcean"    # sidebar entry and heading of the web ui
+PANEL_TITLE: Final = "ELTAKO EnOcean Tool"    # sidebar entry and heading of the web ui
+# The heading of the web ui is the same name (frontend/eltako-panel.js, .brand-title) - a
+# test compares both, so the two places cannot drift apart.
 PANEL_ICON: Final = "mdi:access-point-network"   # radio/telegrams fit EnOcean better than a bus
 PANEL_WEBCOMPONENT: Final = "eltako-panel"
 PANEL_STATIC_URL: Final = "/eltako_frontend"        # url the frontend folder is served under
@@ -308,9 +310,15 @@ WS_TELEGRAM_LOG_STATISTICS: Final = "eltako/telegram_log/statistics"
 WS_TELEGRAM_LOG_RECENT: Final = "eltako/telegram_log/recent"
 # which profiles fit *one* telegram, incl. what each of them makes of its data
 WS_TELEGRAM_LOG_SUGGESTIONS: Final = "eltako/telegram_log/suggestions"
+# site survey: how well the radio gateways hear, and what arrives via a repeater
+WS_RECEPTION_SURVEY: Final = "eltako/reception/survey"
 WS_TELEGRAM_LOG_SUBSCRIBE: Final = "eltako/telegram_log/subscribe"
 WS_TELEGRAM_LOG_CLEAR: Final = "eltako/telegram_log/clear"
 WS_TELEGRAM_LOG_REFRESH_DEVICES: Final = "eltako/telegram_log/refresh_devices"
+# one radio telegram as *every* gateway received it: who heard it, where the bytes differ and
+# how strong the signal was (observation/radio_comparison.py)
+WS_RADIO_COMPARISON: Final = "eltako/radio_comparison/report"
+WS_RADIO_COMPARISON_CLEAR: Final = "eltako/radio_comparison/clear"
 
 ### Services of the telegram logger
 SERVICE_CLEAR_TELEGRAM_LOG: Final = "clear_telegram_log"

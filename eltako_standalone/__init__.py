@@ -3,4 +3,7 @@
 See eltako_standalone/README.md.
 """
 
-__version__ = "0.1.0"
+# Version of the pip package (see pyproject.toml). The wheel ships the integration itself,
+# so this follows the version of custom_components/eltako/manifest.json - both are checked
+# against each other in tests/test_metadata.py.
+__version__ = "2.2.0"

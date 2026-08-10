@@ -20,8 +20,11 @@ from unittest import TestCase
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPOSITORY_URL = 'https://github.com/grimmpp/home-assistant-eltako'
 
-# folders which are not documentation of this repository
-SKIPPED_DIRS = {'.git', '.venv', 'node_modules', '__pycache__', '.pytest_cache', 'blueprints'}
+# folders which are not documentation of this repository. 'build' and 'dist' are the output of
+# `python -m build` (see pyproject.toml): they contain a *copy* of the readmes, one folder level
+# deeper, where every relative link of the original points nowhere.
+SKIPPED_DIRS = {'.git', '.venv', 'node_modules', '__pycache__', '.pytest_cache', 'blueprints',
+                'build', 'dist'}
 
 # A link into this repository addresses a **file** when it goes through tree/, blob/ or raw/ -
 # those are the ones which have to be relative. Everything else of the repository url (issues,

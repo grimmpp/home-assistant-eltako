@@ -1,0 +1,137 @@
+# Packaging metadata of the STANDALONE runtime (`pip install eltako-enocean-tool`).
+#
+# The distribution is named after what it is for somebody who does not use Home Assistant -
+# a tool for an ELTAKO/EnOcean installation. "Tool" and not "manager" on purpose: the
+# EnOcean Device Manager (https://github.com/grimmpp/enocean-device-manager) covers the same
+# ground with a desktop application, and two names which cannot be confused are worth more
+# than a version relationship somebody has to explain.
+#
+# The Home Assistant integration itself is not distributed from here - it is installed
+# through HACS by copying `custom_components/eltako` into the config folder, and that
+# stays the only supported way to use it inside Home Assistant.
+#
+# The wheel ships two top level packages, because the standalone runtime *is* the
+# integration - it imports `custom_components.eltako.*` unchanged (see
+# eltako_standalone/runtime.py):
+#
+#   eltako_standalone/       runtime, cli, web server and the homeassistant shim
+#   custom_components/eltako the integration, byte for byte the same code HACS installs
+#
+# `custom_components` has no __init__.py and is therefore an implicit namespace package:
+# an installed wheel merges with, instead of shadowing, a `custom_components` folder that
+# already exists elsewhere on sys.path.
+#
+# Build and check locally exactly like the pipeline does (.github/workflows/build_package.yml):
+#
+#   python -m pip install build twine
+#   python -m build
+#   python -m twine check dist/*
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eltako-enocean-tool"
+dynamic = ["version"]
+description = "ELTAKO EnOcean: operate, analyse and test an EnOcean installation without Home Assistant - web ui and command line"
+readme = { file = "eltako_standalone/README.md", content-type = "text/markdown" }
+# The integration code targets the python version Home Assistant requires, but nothing in
+# it needs 3.13+ syntax - the pipeline builds and smoke tests 3.12 as well.
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Philipp Grimm" }]
+keywords = ["eltako", "enocean", "home-assistant", "esp2", "esp3", "fam14", "fgw14",
+            "rs485", "telegram", "smarthome"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Home Automation",
+]
+
+# Kept in sync with eltako_standalone/requirements-standalone.txt by
+# tests/test_metadata.py - notably WITHOUT homeassistant.
+dependencies = [
+    "aiohttp",
+    "pyyaml",
+    "voluptuous",
+    "pyserial",
+    "pyserial-asyncio",
+    "eltako14bus==0.0.82",
+    "esp2-gateway-adapter==0.2.21",
+    "enocean>=0.60.1",
+    "zeroconf",
+    "pytz",
+    "strenum",
+    "termcolor",
+]
+
+[project.optional-dependencies]
+# `python -m eltako_standalone test` / the 'Tests' page of the web ui run pytest as a
+# subprocess. Only needed when the test suites are run from a source checkout.
+test = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/grimmpp/home-assistant-eltako"
+Documentation = "https://github.com/grimmpp/home-assistant-eltako/blob/main/docs/standalone/readme.md"
+Issues = "https://github.com/grimmpp/home-assistant-eltako/issues"
+Changelog = "https://github.com/grimmpp/home-assistant-eltako/blob/main/changes.md"
+
+[project.scripts]
+# Both are `python -m eltako_standalone`. `eet` is the short one to type, but three letters
+# are cheap and taken elsewhere - /usr/bin/eet belongs to the EFL data tool (debian package
+# libeet-bin) - so the unmistakable long name is installed next to it and every piece of
+# documentation which must not break uses that one.
+eet = "eltako_standalone.cli:main"
+eltako-enocean-tool = "eltako_standalone.cli:main"
+
+[tool.setuptools.dynamic]
+# single source of truth, checked against manifest.json in tests/test_metadata.py
+version = { attr = "eltako_standalone.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+# namespaces = true is required for `custom_components` (no __init__.py) and for
+# eltako_standalone/hass_shim (also no __init__.py, so that the shim is reachable only
+# through the sys.path insert of runtime.install_shim, never as a top level import).
+namespaces = true
+include = ["eltako_standalone*", "custom_components*"]
+exclude = [
+    "*.__pycache__*",
+    # dev only: the test suites live in the repository, not in the wheel
+    "eltako_standalone.tests*",
+    # data folders - shipped through package-data below, not as importable packages
+    "eltako_standalone.shell*",
+    "eltako_standalone.examples*",
+    "custom_components.eltako.frontend*",
+    "custom_components.eltako.grafana*",
+    "custom_components.eltako.translations*",
+]
+
+[tool.setuptools.package-data]
+# The web ui, the catalogs and the manifest are read from disk at runtime
+# (custom_components/eltako/const.py: INTEGRATION_DIR), so they have to be in the wheel.
+"custom_components.eltako" = [
+    "manifest.json",
+    "docs_index.json",
+    "strings.json",
+    "services.yaml",
+    "translations/*.json",
+    "frontend/**/*.js",
+    "frontend/**/*.json",
+    "frontend/**/*.d.ts",
+    "frontend/img/*",
+    "grafana/dashboards/*.json",
+]
+"eltako_standalone" = [
+    "README.md",
+    "requirements-standalone.txt",
+    "shell/*",
+    "examples/*",
+]

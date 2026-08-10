@@ -289,8 +289,26 @@ def build_fixtures() -> dict:
         'eeps': get_eep_descriptors(),
     }
 
+    # the radio comparison page: a report of the real backend with a telegram which two
+    # gateways received differently (see tests/test_frontend_radio_page.py for what it renders)
+    from tests.test_frontend_radio_page import build_report as build_radio_report
+
+    radio_gateways = {**integration_info, 'gateways': [
+        {'id': 1, 'name': 'USB300 hall', 'type': 'enocean-usb300', 'base_id': 'FF-AA-80-00',
+         'serial_path': '/dev/ttyUSB0', 'connected': True, 'simulated': False},
+        {'id': 2, 'name': 'MGW cellar', 'type': 'mgw-lan', 'base_id': 'FF-BB-10-00',
+         'serial_path': '192.168.0.10', 'connected': True, 'simulated': False},
+    ]}
+
     return {
         'about': {'integrationInfo': integration_info},
+        'radio': {'integrationInfo': radio_gateways, 'radioComparison': build_radio_report()},
+        # the same page restricted to two gateways, one sender and the telegrams which were
+        # received differently - the direct comparison
+        'radio_restricted': {'integrationInfo': radio_gateways,
+                             'radioComparison': build_radio_report(),
+                             'radioView': 'disagreeing', 'radioWindowMs': 500,
+                             'radioGateways': ['1', '2'], 'radioSender': 'FE-DC-BA-98'},
         'telegrams_send_form': {
             'integrationInfo': integration_info,
             'sendFormDescriptor': send_form_descriptor,
@@ -373,8 +391,9 @@ class TestEveryPageRenders(unittest.TestCase):
         """Without a fixture only the loading branch would be checked."""
         report = self.report()
 
-        for page_id in ('about', 'help', 'tests', 'simulation', 'devices'):
+        for page_id in ('about', 'help', 'tests', 'simulation', 'devices', 'radio'):
             self.assertIn(f'{page_id}:fixture', report['rendered'])
+        self.assertIn('radio:radio_restricted', report['rendered'])
         # the simulation page with an open form and a triggered telegram, and the devices page
         # while an exclusive operation has the bus
         for variant in ('simulation_editing', 'simulation_off'):

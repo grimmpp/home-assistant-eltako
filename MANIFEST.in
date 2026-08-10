@@ -1,0 +1,17 @@
+# What goes into the source distribution on top of the code and the package data
+# declared in pyproject.toml. Everything else of the repository (docs, dev container,
+# blueprints, the test suites) is not part of the pip package.
+include LICENSE
+include eltako_standalone/README.md
+include eltako_standalone/requirements-standalone.txt
+
+recursive-include custom_components/eltako/frontend *.js *.json *.d.ts
+recursive-include custom_components/eltako/frontend/img *
+recursive-include custom_components/eltako/translations *.json
+recursive-include custom_components/eltako/grafana *.json
+recursive-include eltako_standalone/shell *
+recursive-include eltako_standalone/examples *
+recursive-include eltako_standalone/hass_shim *.py
+
+global-exclude *.py[cod]
+global-exclude __pycache__/*

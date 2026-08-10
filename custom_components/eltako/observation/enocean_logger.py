@@ -35,6 +35,7 @@ import time
 from collections import deque
 from datetime import datetime, timezone
 from enum import Enum
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable
 
 import voluptuous as vol
@@ -70,9 +71,14 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_EEP, CONF_
                      CONF_TIMESERIES_ENABLED, DATA_ELTAKO, DATA_TELEGRAM_LOGGER, DOMAIN, ELTAKO_CONFIG,
                      LOGGER, SERVICE_CLEAR_TELEGRAM_LOG, SERVICE_EXPORT_TELEGRAM_LOG, TELEGRAM_LOGGER_NAME,
                      TelegramDirection, TelegramLogFormat, TelegramLogLevel, WS_GRAFANA_SYNC,
+                     WS_RADIO_COMPARISON, WS_RADIO_COMPARISON_CLEAR,
                      WS_TELEGRAM_LOG_CLEAR, WS_TELEGRAM_LOG_INFO, WS_TELEGRAM_LOG_RECENT,
                      WS_TELEGRAM_LOG_REFRESH_DEVICES, WS_TELEGRAM_LOG_STATISTICS,
                      WS_TELEGRAM_LOG_SUBSCRIBE, WS_TELEGRAM_LOG_SUGGESTIONS)
+
+from .radio_comparison import (DEFAULT_WINDOW_MS as RADIO_DEFAULT_WINDOW_MS,
+                               MAX_WINDOW_MS as RADIO_MAX_WINDOW_MS,
+                               MIN_WINDOW_MS as RADIO_MIN_WINDOW_MS)
 
 if TYPE_CHECKING:
     from ..core.gateway import EnOceanGateway
@@ -519,6 +525,14 @@ class EnOceanTelegramLogger:
         from .timeseries import create_exporter_from_settings
         self._timeseries = create_exporter_from_settings(general_settings)
 
+        # one radio telegram as every gateway received it (radio_comparison.py). Always on:
+        # recording into it is only an append to a ring buffer, and the differences it looks
+        # for are rare - a comparison which starts when somebody opens the page would never
+        # see them. The analysis itself happens when the web ui asks for it, which is what
+        # makes its time window and its filters adjustable.
+        from .radio_comparison import RadioComparison
+        self.radio_comparison = RadioComparison()
+
         self._buffer: deque = deque(maxlen=max(self.buffer_size, 1))
         self._statistics: dict[str, DeviceStatistics] = {}
         self._subscribers: list[Callable[[dict], None]] = []
@@ -649,12 +663,25 @@ class EnOceanTelegramLogger:
             if self._timeseries:
                 self._timeseries.submit(record)
 
+            self._compare_radio_reception(record)
             self._log_record(record)
             self._notify_subscribers_threadsafe(record)
 
         except Exception as e:  # noqa: BLE001 - logging must never break the bus
             self._error_count += 1
             LOGGER.error(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot record telegram: {e}", exc_info=True)
+
+    def _compare_radio_reception(self, record: dict) -> None:
+        """Hand the telegram to the per gateway comparison (radio_comparison.py).
+
+        Its own try/except: an analysis which is only read by one page of the web ui must
+        never cost a telegram in the live view or in the log file.
+        """
+        try:
+            self.radio_comparison.add(record)
+        except Exception as e:  # noqa: BLE001
+            LOGGER.debug(f"[{LOG_PREFIX_TELEGRAM_LOGGER}] Cannot compare the reception of a "
+                         f"telegram: {e}")
 
     # The bus member registry is fed by the gateway (see bus_members.note_telegram), not from
     # here: recording telegrams is off by default, and the channel layout of multi channel
@@ -1226,6 +1253,8 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_telegram_log_subscribe)
     websocket_api.async_register_command(hass, ws_telegram_log_clear)
     websocket_api.async_register_command(hass, ws_telegram_log_refresh_devices)
+    websocket_api.async_register_command(hass, ws_radio_comparison)
+    websocket_api.async_register_command(hass, ws_radio_comparison_clear)
     websocket_api.async_register_command(hass, ws_grafana_sync)
 
     domain_data[WS_COMMANDS_REGISTERED] = True
@@ -1320,6 +1349,64 @@ def ws_telegram_log_suggestions(hass: HomeAssistant, connection, msg) -> None:
         'suggestions': suggestions,
         'best': telegram_suggestions.best_candidate(suggestions),
     })
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_RADIO_COMPARISON,
+    vol.Optional('limit', default=50): vol.All(vol.Coerce(int), vol.Range(min=1, max=200)),
+    # how far apart two receptions may be to count as the same transmission. Adjustable
+    # because the answer depends on the installation - see radio_comparison.WINDOW_CHOICES.
+    vol.Optional('window_ms'): vol.All(vol.Coerce(int),
+                                       vol.Range(min=RADIO_MIN_WINDOW_MS, max=RADIO_MAX_WINDOW_MS)),
+    # which telegrams the list shows: 'all', 'disagreeing', 'missing', ... (FILTERS)
+    vol.Optional('filter'): vol.Any(str, None),
+    # the direct comparison: only these gateways, only this sender
+    vol.Optional('gateway_ids'): vol.Any([vol.Any(int, str)], None),
+    vol.Optional('address'): vol.Any(str, None),
+})
+@websocket_api.async_response
+async def ws_radio_comparison(hass: HomeAssistant, connection, msg) -> None:
+    """One radio telegram as every gateway received it - see radio_comparison.py."""
+    connection.send_result(msg['id'], await async_radio_comparison_report(hass, msg))
+
+
+async def async_radio_comparison_report(hass: HomeAssistant, msg: dict) -> dict:
+    """The answer of WS_RADIO_COMPARISON for one request.
+
+    `limit` and `filter` only bound the list of single telegrams; the summary, the per gateway,
+    the per address and the head to head numbers describe everything in the buffer which is
+    left after `gateway_ids` / `address`.
+
+    Runs in the executor: the whole analysis is computed for this request (which is what makes
+    the window adjustable), and grouping a full buffer takes long enough to be felt in the
+    event loop. The web ui asks for it when a telegram arrived, not on a timer - see the
+    `onTelegram` hook of frontend/pages/radio.js.
+    """
+    telegram_logger = get_telegram_logger(hass)
+    if telegram_logger is None:
+        return {'summary': _disabled_response(), 'gateways': [], 'addresses': [], 'pairs': [],
+                'bursts': [], 'selected_count': 0}
+
+    return await hass.async_add_executor_job(
+        partial(telegram_logger.radio_comparison.get_report,
+                window_ms=msg.get('window_ms') or RADIO_DEFAULT_WINDOW_MS,
+                limit=msg.get('limit') or 50,
+                telegram_filter=msg.get('filter') or 'all',
+                gateway_ids=msg.get('gateway_ids'),
+                address=msg.get('address')))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_RADIO_COMPARISON_CLEAR})
+@callback
+def ws_radio_comparison_clear(hass: HomeAssistant, connection, msg) -> None:
+    """Start the comparison over. Deliberately separate from the telegram log: clearing the
+    live view must not throw away the differences which were collected over hours."""
+    telegram_logger = get_telegram_logger(hass)
+    if telegram_logger is not None:
+        telegram_logger.radio_comparison.clear()
+    connection.send_result(msg['id'], {'cleared': telegram_logger is not None})
 
 
 @websocket_api.require_admin

@@ -5,7 +5,7 @@ websocket connection, and through nothing else. There is no REST endpoint, no te
 and no state the frontend keeps for itself: a page asks for what it needs, renders the answer, and
 asks again.
 
-**55 commands**, all named `eltako/*`. 47 of them are named in
+**58 commands**, all named `eltako/*`. 50 of them are named in
 [`const.py`](../../custom_components/eltako/const.py) as `WS_*` constants; the four
 `device_tests/*` and `config/import` are named in their own module because those features are
 self contained, and three legacy ones are literals in
@@ -134,7 +134,11 @@ and [`core/websocket.py`](../../custom_components/eltako/core/websocket.py).
 | `eltako/telegram_log/info` | &ndash; | Whether recording is on, which file, its size and rotation, and the state of the timeseries export |
 | `eltako/telegram_log/statistics` | &ndash; | Per address: counts, intervals, message types, first and last seen - plus the ready `unknown_devices` list with EEP candidates, the best suggestion and a pastable yaml snippet |
 | `eltako/telegram_log/recent` | &ndash; | The telegrams still in the ring buffer |
+| `eltako/telegram_log/suggestions` | `address`, `data`, `status`, `msg_type`, `teach_in_profile`, `limit` | Which profiles fit **one** telegram - each with its confidence, its reason, the models of the catalog which speak it and **what that profile makes of these data bytes**. The statistics answer the same for the last telegram of an address; this one answers it for the row a user is looking at |
+| `eltako/reception/survey` | `window`, `address`, `gateway_id` | Site survey: signal strength, telegram rate and repeater share per link (one sender heard by one gateway) and per gateway, over the last `window` seconds. What the reception page is walked through the building with |
 | `eltako/telegram_log/subscribe` | &ndash; | **Subscription**: every telegram is pushed as an event until the connection closes or unsubscribes. This is what the live view runs on |
+| `eltako/radio_comparison/report` | `window_ms`, `filter`, `gateway_ids`, `address`, `limit` | One radio telegram as **every** gateway received it: the receptions of one transmission grouped (same address within `window_ms`) and compared - who heard it, who missed it, in which field they disagree, whether a gateway *read* it differently (profile, decoded values), whether it arrived directly or over a repeater, plus per gateway, per address and per pair of gateways. Recording and analysis are separate, so window, view and the restriction to gateways / one sender are parameters of the request, not settings |
+| `eltako/radio_comparison/clear` | &ndash; | Throw the recorded receptions of the comparison away. Deliberately separate from the telegram log: clearing the live view must not lose the differences collected over hours |
 | `eltako/telegram_log/clear` | &ndash; | Empty the buffer and the statistics |
 | `eltako/telegram_log/refresh_devices` | &ndash; | Re-read the device names, areas and entity ids the recorded telegrams are annotated with |
 | `eltako/send_telegram_form` | &ndash; | The form: every EEP of the library with its fields, plus the gateways and sender ids which may be used |

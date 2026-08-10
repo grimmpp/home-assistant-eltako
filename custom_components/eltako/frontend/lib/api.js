@@ -54,9 +54,12 @@ export const WS = /** @type {const} @satisfies {Record<string, import("../types.
   LOG_STATISTICS: "eltako/telegram_log/statistics",
   LOG_RECENT: "eltako/telegram_log/recent",
   LOG_SUGGESTIONS: "eltako/telegram_log/suggestions",
+  RECEPTION_SURVEY: "eltako/reception/survey",
   LOG_SUBSCRIBE: "eltako/telegram_log/subscribe",
   LOG_CLEAR: "eltako/telegram_log/clear",
   LOG_REFRESH_DEVICES: "eltako/telegram_log/refresh_devices",
+  RADIO_COMPARISON: "eltako/radio_comparison/report",
+  RADIO_COMPARISON_CLEAR: "eltako/radio_comparison/clear",
 });
 
 export class EltakoApi {

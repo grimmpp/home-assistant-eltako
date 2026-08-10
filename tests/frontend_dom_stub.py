@@ -20,7 +20,9 @@ class El {
     this.children = [];
     this.parentElement = null;
     this.hidden = 'hidden' in attributes;
-    this.text = '';
+    // text and elements in the order they appear, so the text next to a child is not lost
+    // ("<td>FF-EE-DD-CC <span class=hint>Kitchen button</span></td>")
+    this.nodes = [];
     /** by event type, filled by addEventListener and fired by click() */
     this.listeners = {};
     // element.dataset.busScan <-> the attribute data-bus-scan, as in a browser
@@ -54,17 +56,35 @@ class El {
       add: (name) => classes.add(name),
       remove: (name) => classes.delete(name),
       contains: (name) => classes.has(name),
-      toggle: (name, on) => (on ? classes.add(name) : classes.delete(name)),
+      // as in a browser: without the second argument the class is flipped. Called without it
+      // by every page which unfolds a detail row (`classList.toggle('visible')`).
+      toggle: (name, on) => ((on === undefined ? !classes.has(name) : on)
+        ? classes.add(name) : classes.delete(name)),
     };
   }
 
+  get text() {
+    return this.nodes.filter((node) => typeof node === 'string').join(' ');
+  }
+
+  set text(value) {
+    this.nodes = value ? [String(value)] : [];
+  }
+
   get textContent() {
-    return this.children.length ? this.children.map((child) => child.textContent).join('') : this.text;
+    return this.nodes
+      .map((node) => (typeof node === 'string' ? node : node.textContent))
+      .filter((part) => part !== '')
+      .join(' ');
   }
 
   set textContent(value) {
     this.children = [];
-    this.text = String(value);
+    this.nodes = [String(value)];
+  }
+
+  appendText(value) {
+    if (value) this.nodes.push(String(value));
   }
 
   getAttribute(name) {
@@ -86,6 +106,7 @@ class El {
   append(child) {
     child.parentElement = this;
     this.children.push(child);
+    this.nodes.push(child);
   }
 
   descendants() {
@@ -95,8 +116,11 @@ class El {
   set innerHTML(html) {
     const parsed = parseHtml(String(html));
     this.children = [];
-    this.text = parsed.text;
-    for (const child of parsed.children) this.append(child);
+    this.nodes = [];
+    for (const node of parsed.nodes) {
+      if (typeof node === 'string') this.appendText(node);
+      else this.append(node);
+    }
   }
 
   matches(selector) {
@@ -126,6 +150,9 @@ class El {
     const rest = selector.replace(/\[[^\]]*\]/g, '');
     const tag = (rest.match(/^[a-zA-Z][\w-]*/) || [''])[0];
     if (tag && this.tagName !== tag.toUpperCase()) return false;
+    for (const [, id] of rest.matchAll(/#([\w-]+)/g)) {
+      if (this.attributes.id !== id) return false;
+    }
     for (const [, name] of rest.matchAll(/\.([\w-]+)/g)) {
       if (!this.classes.has(name)) return false;
     }
@@ -188,8 +215,7 @@ function parseHtml(html) {
   let current = root;
   let last = 0;
   const addText = (node, raw) => {
-    const text = decodeEntities(raw.replace(/\s+/g, ' ').trim());
-    if (text) node.text += (node.text ? ' ' : '') + text;
+    node.appendText(decodeEntities(raw.replace(/\s+/g, ' ').trim()));
   };
   for (const match of html.matchAll(/<\/?([a-zA-Z][\w-]*)([^>]*)>/g)) {
     addText(current, html.slice(last, match.index));

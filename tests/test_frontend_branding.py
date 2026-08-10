@@ -99,6 +99,39 @@ class TestHeaderLogo(TestCase):
         return match.group(1)
 
 
+class TestTheName(TestCase):
+    """The web ui carries one name, and it is written down in two places.
+
+    The heading is markup in the panel, the sidebar entry is PANEL_TITLE in const.py - so
+    renaming one of them alone gives an installation whose sidebar and heading disagree.
+    """
+
+    NAME = 'ELTAKO EnOcean Tool'
+
+    def test_the_heading_is_the_name(self):
+        heading = re.search(r'<span class="brand-title">([^<]*)</span>', read('eltako-panel.js'))
+
+        self.assertIsNotNone(heading, msg='the brand title is gone')
+        self.assertEqual(self.NAME, heading.group(1).strip())
+
+    def test_the_sidebar_entry_is_the_same_name(self):
+        constants = os.path.join(os.path.dirname(FRONTEND), 'const.py')
+        with open(constants, encoding='utf-8') as handle:
+            title = re.search(r'PANEL_TITLE: Final = "([^"]*)"', handle.read())
+
+        self.assertIsNotNone(title, msg='PANEL_TITLE is gone')
+        self.assertEqual(self.NAME, title.group(1))
+
+    def test_the_standalone_browser_tab_says_it_too(self):
+        shell = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                             'eltako_standalone', 'shell', 'index.html')
+        with open(shell, encoding='utf-8') as handle:
+            title = re.search(r'<title>([^<]*)</title>', handle.read())
+
+        self.assertIsNotNone(title, msg='the shell page has no title')
+        self.assertEqual(self.NAME, title.group(1).strip())
+
+
 class TestColourPalette(TestCase):
     """Light and blue like eltako.com - not grey with orange accents."""
 

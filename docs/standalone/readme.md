@@ -25,10 +25,26 @@ system. Everything it does know is the same code Home Assistant runs.
 
 ## Install and start
 
+From PyPI - nothing of this repository is needed, the package contains the integration:
+
 ```bash
-pip install -r eltako_standalone/requirements-standalone.txt   # no homeassistant needed
+pip install eltako-enocean-tool    # no homeassistant needed
+eet serve                          # or: eltako-enocean-tool serve
+```
+
+From a checkout of this repository (what a change to the integration is tested with):
+
+```bash
+pip install -r eltako_standalone/requirements-standalone.txt
 python -m eltako_standalone serve
 ```
+
+`eet`, `eltako-enocean-tool` and `python -m eltako_standalone` are the same command line -
+the installed ones work in any folder, the module has to run in the repository root. `eet`
+is the short name to type; the long one exists because three letters are cheap and taken
+elsewhere (`/usr/bin/eet` of the EFL data tool on linux). The package is built and published
+by [the build pipeline](../../.github/workflows/build_package.yml), see
+[packaging](packaging.md).
 
 Then open **<http://localhost:8124>**. That is deliberately not the 8123 of Home Assistant: on a
 shared port both would share the origin of the browser, and the service worker of the Home

@@ -3,9 +3,10 @@
 #   ruff check custom_components tests          # what the CI runs
 #   ruff check --fix custom_components tests    # apply the safe fixes
 #
-# ruff.toml and not pyproject.toml on purpose: this repository is a Home Assistant custom
-# component distributed through HACS, not a python package - there is no packaging metadata
-# here and a pyproject.toml would suggest otherwise.
+# ruff.toml and not pyproject.toml on purpose: the pyproject.toml of this repository packages
+# the *standalone runtime* (`pip install eltako-enocean-tool`), while the integration itself is
+# distributed through HACS. Keeping the lint configuration out of it says which of the two a
+# setting belongs to - and ruff.toml wins over pyproject.toml when both exist.
 #
 # The selected families are the ones the code already annotates with `# noqa` (BLE001, F401,
 # E731, E402), so the existing suppressions finally mean something again.

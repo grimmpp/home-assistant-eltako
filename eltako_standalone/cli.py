@@ -101,10 +101,20 @@ def _setup_logging(args) -> None:
         logging.getLogger("eltako_standalone").info("Process log: %s", log_path)
 
 
+def _program_name() -> str:
+    """What the usage line has to say: `eet`, `eltako-enocean-tool` (the console scripts of
+    the pip package) or `python -m eltako_standalone`. Not argparse's default - for the module
+    form that would be '__main__.py', which is why the name used to be hardcoded."""
+    name = os.path.basename(sys.argv[0] or "")
+    if name in ("", "-c", "__main__.py", "cli.py"):
+        return "python -m eltako_standalone"
+    return name
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="eltako_standalone",
-        description="Run the Eltako integration without Home Assistant.")
+        prog=_program_name(),
+        description="ELTAKO EnOcean Tool - run the Eltako integration without Home Assistant.")
     parser.add_argument("--config", default=DEFAULT_CONFIG_DIR,
                         help=f"config folder (default: {DEFAULT_CONFIG_DIR})")
     parser.add_argument("--debug", action="store_true", help="verbose logging")

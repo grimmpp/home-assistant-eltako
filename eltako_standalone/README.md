@@ -22,6 +22,24 @@ eltako_standalone/
 └── tests/                     run with:  pytest eltako_standalone/tests
 ```
 
+## Install
+
+```bash
+pip install eltako-enocean-tool   # brings the integration with it, no homeassistant needed
+eet serve                         # or: eltako-enocean-tool serve
+```
+
+From a checkout of the repository instead - what a change to the integration is tested with:
+
+```bash
+pip install -r eltako_standalone/requirements-standalone.txt
+python -m eltako_standalone serve
+```
+
+`eet`, `eltako-enocean-tool` and `python -m eltako_standalone` are the same command line; the
+installed ones work in any folder. How the package is built and released:
+[packaging](../docs/standalone/packaging.md).
+
 ## Configuration
 
 A config folder (default `~/.eltako-standalone`, override with `--config` or

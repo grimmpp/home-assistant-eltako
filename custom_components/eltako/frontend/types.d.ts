@@ -70,6 +70,20 @@ export interface PanelState {
   deviceFilter: string;
   onlyUnknownDevices: boolean;
 
+  /** pages/radio.js: one telegram as every gateway received it */
+  radioComparison: RadioComparisonReport | null;
+  radioFilter: string;
+  /** how far apart two receptions may be to count as the same transmission */
+  radioWindowMs: number;
+  /** which telegrams the list shows - a key of RadioComparisonReport.summary.filters */
+  radioView: string;
+  /** the direct comparison: only these gateways take part in the analysis (empty = all) */
+  radioGateways: Array<string | number>;
+  /** only the telegrams of this sender (null = all) */
+  radioSender: string | null;
+  /** which burst details are unfolded, keyed by '<address>|<timestamp_ms>' */
+  radioOpen: Record<string, boolean>;
+
   deviceForm: DeviceFormDescriptor | null;
   configuredDevices: ConfiguredDevice[];
   configFilter: string;
@@ -112,6 +126,12 @@ export interface PanelState {
    */
   /** the address whose "what is this?" popup is open (live telegrams and statistics) */
   unknownDetails?: string | null;
+
+  /** pages/reception.js: the site survey */
+  reception?: ReceptionSurvey | null;
+  receptionWindow?: number;
+  receptionAddress?: string | null;
+  receptionSpots?: any[];
   /** pages/telegrams.js: the free send form */
   sendForm?: any;
   sendFormDescriptor?: { gateways: Gateway[]; eeps: EepDescriptor[] } | null;
@@ -592,6 +612,263 @@ export interface Activity {
   jobs: ActivityJob[];
 }
 
+/** observation/reception.py - the site survey of the radio gateways */
+export interface ReceptionSurvey {
+  recording?: boolean;
+  window_seconds: number;
+  from?: string;
+  to?: string;
+  telegrams: number;
+  has_rssi: boolean;
+  buffer_limited: boolean;
+  covers_from?: string | null;
+  last_telegram?: string | null;
+  buffer_size?: number | null;
+  /** one sender heard by one gateway */
+  links: Array<{
+    address: string;
+    name?: string | null;
+    known?: boolean;
+    gateway_id: any;
+    gateway_name?: string | null;
+    count: number;
+    repeated: number;
+    repeated_share: number;
+    per_minute: number;
+    last_seen: string | null;
+    rssi: { last: number | null; avg: number | null; min: number | null; max: number | null; count: number };
+    quality: string | null;
+    msg_types?: Record<string, number>;
+  }>;
+  gateways: Array<{
+    gateway_id: any;
+    gateway_name?: string | null;
+    telegrams: number;
+    senders: number;
+    repeated: number;
+    repeated_share: number;
+    per_minute: number;
+    rssi_avg: number | null;
+    quality: string | null;
+    best: number | null;
+    worst: number | null;
+  }>;
+}
+
+/* ------------------------- observation/radio_comparison.py: one telegram, many gateways */
+
+/** One reception of a transmission - `RadioBurst.members` (radio_comparison._Member) */
+export interface RadioReception {
+  gateway_id: number;
+  gateway_name: string | null;
+  direction: string;
+  simulated: boolean;
+  seq: number | null;
+  address: string;
+  /** set when this gateway saw the device with an address relative to its own base id */
+  local_address: string | null;
+  /** the profile this gateway read the telegram with */
+  eep: string | null;
+  /** what came out of it, as one line ('temperature=22.4, humidity=41') */
+  decoded: string | null;
+  timestamp_ms: number;
+  /** how much later than the first gateway this one reported the telegram */
+  offset_ms: number;
+  msg_type: string | null;
+  org: string | null;
+  data: string | null;
+  status: string | null;
+  /** status byte without the repeater counter - that is what is compared */
+  status_base: string | null;
+  rp_count: number | null;
+  rp_count_max: number | null;
+  raw: string | null;
+  rssi_dbm: number | null;
+  rssi_min: number | null;
+  rssi_max: number | null;
+  /** how often a repeater delivered the same telegram to this gateway again */
+  repeats: number;
+}
+
+/** One transmission with all its receptions - RadioComparison._finalize() */
+export interface RadioBurst {
+  address: string;
+  device_name: string | null;
+  known: boolean;
+  eep: string | null;
+  timestamp: string;
+  timestamp_ms: number;
+  /** number of gateways which received it */
+  gateway_count: number;
+  /** every gateway which has taken part in any comparison so far */
+  known_gateway_ids: number[];
+  sender_gateway_ids: number[];
+  missing_gateway_ids: number[];
+  /** between the first and the last reception */
+  span_ms: number;
+  members: RadioReception[];
+  rssi_min: number | null;
+  rssi_max: number | null;
+  rssi_spread: number | null;
+  /** the compared fields which are not identical ('data', 'status', 'rp_count', ...) */
+  differences: string[];
+  /** received differently: a raw field other than the repeater hop count */
+  disagreement: string[];
+  /** read differently: the profile or the decoded values are not the same */
+  interpretation: string[];
+  /** fields whose values are evenly split, so no gateway can be called the wrong one */
+  tied: string[];
+  /** the first reception - what the differing bytes are marked against */
+  reference: {
+    msg_type: string | null;
+    org: string | null;
+    data: string | null;
+    status: string | null;
+    gateway_id: number | null;
+  };
+  /** field -> value -> the gateways which reported it */
+  values: Record<string, Record<string, number[]>>;
+  /** field -> the value most gateways agree on (only for differing fields) */
+  majority: Record<string, string>;
+  outlier_gateway_ids: number[];
+}
+
+/** _GatewayStatistics.to_dict() */
+export interface RadioGatewayStatistics {
+  gateway_id: number;
+  gateway_name: string | null;
+  received: number;
+  sent: number;
+  missed: number;
+  /** transmissions it could have received: everything since it showed up */
+  offered: number;
+  share: number | null;
+  /** it was the first of several gateways to report the telegram */
+  first: number;
+  alone: number;
+  outlier: number;
+  /** telegrams it took part in which the gateways did not agree about */
+  differing: number;
+  repeats: number;
+  hops: number;
+  /** how the telegrams arrived: hop count ('0' = direct) -> receptions */
+  by_level: Record<string, number>;
+  rssi_min: number | null;
+  rssi_max: number | null;
+  rssi_avg: number | null;
+  rssi_count: number;
+}
+
+/** One pair of gateways head to head - radio_comparison._describe_pairs() */
+export interface RadioGatewayPair {
+  gateway_a: number;
+  gateway_b: number;
+  /** transmissions both of them received */
+  together: number;
+  only_a: number;
+  only_b: number;
+  /** a third gateway received it, neither of these two did */
+  neither: number;
+  /** of the ones both received: identical / not identical */
+  agreed: number;
+  disagreed: number;
+  /** same telegram, different profile or values */
+  interpreted: number;
+  /** one heard the device directly, the other one through a repeater */
+  hops: number;
+  offered: number;
+  share_a: number | null;
+  share_b: number | null;
+  /** how much stronger a hears the same telegram than b, on average */
+  rssi_delta_avg: number | null;
+  rssi_delta_count: number;
+  a_stronger: number;
+  b_stronger: number;
+}
+
+/** _AddressStatistics.to_dict() - one row of the "who receives what" table */
+export interface RadioAddressStatistics {
+  address: string;
+  name: string | null;
+  known: boolean;
+  eep: string | null;
+  bursts: number;
+  differing: number;
+  /** differences other than the repeater hop count */
+  disagreeing: number;
+  max_gateway_count: number;
+  last_seen: string | null;
+  /** keyed by gateway id as a string */
+  gateways: Record<string, {
+    count: number;
+    offered: number;
+    missed: number;
+    share: number | null;
+    hops: number;
+    /** which path the telegrams took: hop count ('0' = direct) -> telegrams */
+    by_level: Record<string, number>;
+    direct: number;
+    best_level: number | null;
+    worst_level: number | null;
+    rssi_min: number | null;
+    rssi_max: number | null;
+    rssi_avg: number | null;
+  }>;
+}
+
+/** RadioComparison.get_report(), or `{enabled: false}` when recording is off */
+export interface RadioComparisonReport {
+  summary: {
+    enabled: boolean;
+    /** how to switch recording on - only present while it is off */
+    hint?: string;
+    /** the window the analysis was computed for, and what the ui may offer */
+    window_ms?: number;
+    window_choices?: number[];
+    /** the view the burst list was filtered by, and every view with its label */
+    filter?: string;
+    filters?: Record<string, string>;
+    /** how many telegrams each view holds */
+    filter_counts?: Record<string, number>;
+    /** what can be restricted to - independent of the current restriction */
+    available?: {
+      gateways: Array<{ gateway_id: number; gateway_name: string | null; count: number }>;
+      addresses: Array<{ address: string; name: string | null; known: boolean; count: number }>;
+    };
+    selected_gateway_ids?: string[];
+    selected_address?: string | null;
+    hop_level_labels?: Record<string, string>;
+    started_at?: string;
+    /** receptions in the buffer (not transmissions) */
+    telegram_count?: number;
+    buffer_size?: number;
+    dropped_count?: number;
+    covers_from?: string | null;
+    last_telegram?: string | null;
+    burst_count?: number;
+    differing_bursts?: number;
+    disagreeing_bursts?: number;
+    interpreted_bursts?: number;
+    multi_gateway_bursts?: number;
+    single_gateway_bursts?: number;
+    by_field?: Record<string, number>;
+    by_gateway_count?: Record<string, number>;
+    gateway_count?: number;
+    address_count?: number;
+    compared_fields?: string[];
+    interpretation_fields?: string[];
+    hop_field?: string;
+  };
+  gateways: RadioGatewayStatistics[];
+  addresses: RadioAddressStatistics[];
+  /** every pair of gateways against each other */
+  pairs: RadioGatewayPair[];
+  /** the telegrams of the selected view, newest first */
+  bursts: RadioBurst[];
+  /** how many telegrams the selected view holds in total (bursts is limited) */
+  selected_count?: number;
+}
+
 /* ------------------------------------------------------------------ command map */
 
 /**
@@ -684,9 +961,13 @@ export interface WsResults {
   "eltako/telegram_log/statistics": StatisticsResult;
   "eltako/telegram_log/recent": { telegrams: TelegramRecord[] };
   "eltako/telegram_log/suggestions": { suggestions: any[]; best: Record<string, any> };
+  "eltako/reception/survey": ReceptionSurvey;
   "eltako/telegram_log/subscribe": undefined;
   "eltako/telegram_log/clear": { cleared: boolean };
   "eltako/telegram_log/refresh_devices": { known_address_count: number };
+
+  "eltako/radio_comparison/report": RadioComparisonReport;
+  "eltako/radio_comparison/clear": { cleared: boolean };
 }
 
 export type WsCommand = keyof WsResults;

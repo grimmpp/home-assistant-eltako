@@ -37,6 +37,7 @@
   * [Automations triggered by Wall-Mounted EnOcean Switches](./rocker_switch/readme.md)
   * [Reacting on Incoming Telegrams in Automations (Event `eltako_global_event_bus`)](./telegram-events/readme.md)
   * [Device Tests: Configuration Check, Teach-In Test, Burst Test, Cover Travel Times](./device-tests/readme.md)
+  * [Reception: Finding a Good Place for a Gateway (site survey)](./reception/readme.md)
   * [Simulation: Gateways and Devices without Hardware](./simulation/readme.md)
   * [Teach-In Buttons](./teach_in_buttons/readme.md)
   * [Sending Arbitrary EnOcean Messages](./service-send-message/readme.md)
@@ -51,6 +52,7 @@
   * [Generating the documentation](../generate_docs.py) - the supported devices and EEPs are rendered from the code (`python generate_docs.py`)
   * [Development container (Home Assistant + example data + Grafana)](dev-container/readme.md)
   * [Standalone runtime (without Home Assistant)](standalone/readme.md)
+  * [The pip package of the standalone runtime](standalone/packaging.md) &ndash; what `pip install eltako-enocean-tool` contains, and the pipeline which builds and publishes it
   * [Testing with real hardware](hardware-testing/readme.md) &ndash; both ways to put a real gateway in front of the automatic detection, and the one rule that breaks everything else
   * [Analysing telegrams with Grafana](grafana/readme.md)
 * **Testing**

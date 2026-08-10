@@ -55,7 +55,7 @@ serial communication is slowed down by disk i/o.
 
 ## Web UI
 
-The sidebar contains the panel **ELTAKO** (visible for admins only) without any configuration. Two of its
+The sidebar contains the panel **ELTAKO** (visible for admins only) without any configuration. Three of its
 pages belong to the telegram analysis:
 
 * **Live telegrams** – all telegrams as they arrive, including direction, gateway, address, device name,
@@ -67,6 +67,27 @@ pages belong to the telegram analysis:
   average/minimum/maximum interval between two telegrams, first/last time seen, message types, area,
   platform, entity ids and the last decoded values. Sortable by clicking a column header.
   `Refresh known devices` rebuilds the list of known devices after configuration changes.
+* **Radio reception** – the same radio telegram as *every* gateway received it. Installations with
+  more than one transceiver receive each telegram several times; this page groups the receptions of
+  one transmission (same address within the time window) and compares them:
+  * **per gateway**: reception rate, missed telegrams, how often it was the first, whether the
+    telegrams came in **directly or through repeater level 1 / 2**, and the signal strength,
+  * **gateway against gateway**: both / only A / only B, how many of the shared telegrams differed
+    and how much stronger one of them hears the same telegram,
+  * **which gateway receives which device**, one column per gateway, with the path per device,
+  * **per telegram**: the reception of every gateway side by side, the differing byte marked, and
+    what each of them *made* of it – the profile and the decoded values, because a gateway can
+    receive the same bytes and still interpret them differently.
+
+  The **time window** (50 ms … 2 s), the **view** (identical, received differently, read
+  differently, repeater hop only, somebody missed it, only one gateway, repeated) and the
+  restriction to **selected gateways** or **one sender** are controls: recording and analysis are
+  separate, so the same recording is regrouped for whatever question is being asked. The last
+  10 000 receptions are kept in a buffer of their own – independent of `telegram_log_buffer_size`,
+  and `Clear` of the live view does not touch them. Only **radio** telegrams are compared: bus house
+  keeping (polling, discovery, memory) and the telegrams of the actuators on an RS485 bus reach their
+  gateway over the wire, so they are not a reception – what a bus gateway *sends* stays, because a
+  FAM14 puts its bus traffic on air and the other gateways receive it from there.
 Addresses which sent telegrams but are not configured yet are listed as **unknown devices** on the
 **Devices** page, including their EEP (from a teach-in telegram or guessed). A click takes such a
 candidate over: the device form opens prefilled, no yaml involved.

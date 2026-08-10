@@ -48,6 +48,10 @@ class HassMock():
     # def async_create_task(self, async_call):
     #     asyncio.run( async_call )
 
+    async def async_add_executor_job(self, target, *args):
+        """Run it inline: a test does not need a thread to prove that the call happens."""
+        return target(*args)
+
 class ConfigEntryMock():
 
     def __init__(self):

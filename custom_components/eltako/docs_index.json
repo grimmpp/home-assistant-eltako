@@ -97,6 +97,11 @@
       "section": "telegram-events"
     },
     {
+      "title": "Reception: finding a good place for a gateway",
+      "path": "docs/reception/readme.md",
+      "section": "reception"
+    },
+    {
       "title": "Send Message Service",
       "path": "docs/service-send-message/readme.md",
       "section": "service-send-message"

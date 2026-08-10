@@ -22,6 +22,8 @@ import { page as overviewPage } from "./pages/overview.js";
 import { page as controlPage } from "./pages/control.js";
 import { page as devicesConfigPage } from "./pages/devices_config.js";
 import { page as telegramsPage } from "./pages/telegrams.js";
+import { page as radioPage } from "./pages/radio.js";
+import { page as receptionPage } from "./pages/reception.js";
 import { page as statisticsPage } from "./pages/devices.js";
 import { page as testsPage } from "./pages/tests.js";
 import { page as simulationPage } from "./pages/simulation.js";
@@ -35,8 +37,8 @@ import { page as aboutPage } from "./pages/about.js";
 // 'unknown devices' has no page of its own anymore - the addresses which are not configured
 // yet are the last block of the device page, next to everything else which exists on the bus.
 const PAGES = /** @type {import("./types.js").Page[]} */ (
-  [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, statisticsPage,
-   testsPage, simulationPage, settingsPage, helpPage, aboutPage])
+  [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, radioPage,
+   statisticsPage, receptionPage, testsPage, simulationPage, settingsPage, helpPage, aboutPage])
   .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
 
 /**
@@ -109,6 +111,16 @@ class EltakoPanel extends HTMLElement {
       onlyUnknown: false,
       deviceFilter: "",
       onlyUnknownDevices: false,
+      // radio comparison page (pages/radio.js): one telegram as every gateway received it.
+      // The window, the view, the gateways and the sender are what the backend computes the
+      // analysis for - changing one of them reloads the report (see its _reload).
+      radioComparison: null,
+      radioFilter: "",
+      radioWindowMs: 200,
+      radioView: "all",
+      radioGateways: [],
+      radioSender: null,
+      radioOpen: {},
       // device configuration page
       deviceForm: null,
       configuredDevices: [],
@@ -501,7 +513,7 @@ class EltakoPanel extends HTMLElement {
             <span class="brand">
               <span id="menu-button-slot"></span>
               ${icon("mdi:access-point-network", "◉")}
-              <span class="brand-title">ELTAKO &ndash; EnOcean</span>
+              <span class="brand-title">ELTAKO EnOcean Tool</span>
               <span class="brand-version" id="app-version"></span>
             </span>
           </header>
