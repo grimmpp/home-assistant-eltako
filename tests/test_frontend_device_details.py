@@ -48,15 +48,20 @@ const device = {
 const yamlDevice = { ...device, address: '00-00-00-06', name: 'Hall light', source: 'yaml',
                      editable: False_, ha_device_id: null, entity_ids: [] };
 
-function makeContext(deviceDetails = null) {
+const GATEWAY = { id: 1, name: 'FAM14', type: 'fam14', connected: True_, base_id: 'FF-AA-80-00',
+                  ha_device_id: 'gw-abc', model: 'FAM14', native_protocol: 'ESP2',
+                  serial_path: '/dev/ttyUSB0', baud_rate: 57600, auto_reconnect: True_ };
+
+function makeContext(deviceDetails = null, overrides = {}) {
   return {
     hass: { states: { 'light.kitchen_light': { state: 'on', attributes: {} } } },
     state: {
       configuredDevices: [device, yamlDevice],
-      integrationInfo: { gateways: [{ id: 1, name: 'FAM14', connected: True_ }] },
+      integrationInfo: { gateways: [GATEWAY] },
       statistics: { devices: [], unknown_devices: [], summary: {} },
       busMembers: null, deviceFilter: '', configSort: 'address', deviceView: 'flat',
-      editor: null, memoryPanel: null, deviceDetails,
+      editor: null, memoryPanel: null, deviceDetails, gatewayDetails: null,
+      ...overrides,
     },
     api: { call: async () => ({}), lastError: null },
     root: null,
@@ -95,7 +100,27 @@ const closeCtx = makeContext('light|00-00-00-05|1');
 const closeRoot = show(closeCtx);
 await closeRoot.getElementById('details-done').click();
 
+/* ------------------------------------------------------------------ the gateway */
+
+// the bus heading and the wireless gateway rows live in the hierarchical view
+const busCtx = makeContext(null, { deviceView: 'hierarchy' });
+const busRoot = show(busCtx);
+const gatewayButton = busRoot.querySelector('button[data-gateway-details]');
+await gatewayButton.click();
+const openedGateway = busCtx.state.gatewayDetails;
+
+const gatewayPopupRoot = show(makeContext(null, { deviceView: 'hierarchy', gatewayDetails: '1' }));
+const gatewayPopup = gatewayPopupRoot.querySelector('.modal-card');
+
 console.log(JSON.stringify({
+  gatewayButtons: busRoot.querySelectorAll('button[data-gateway-details]')
+    .map((button) => button.textContent.replace(/\s+/g, ' ').trim()),
+  // nothing jumps out of the panel by itself anymore - the popup offers that button
+  strayHaButtons: busRoot.querySelectorAll('[data-ha-device]').length,
+  openedGateway,
+  gatewayPopupTitle: gatewayPopup.querySelector('h3').textContent.trim(),
+  gatewayPopupMeta: metaOf(gatewayPopupRoot),
+  gatewayPopupHasHaButton: !!gatewayPopup.querySelector('button[data-ha-device]'),
   buttonPerDevice: detailsButtons.length,
   opened,
   popupTitle: popupRoot.querySelector('.modal-card h3').textContent.trim(),
@@ -156,6 +181,33 @@ class TestTheDetailsPopupOfTheExpertPage(unittest.TestCase):
 
     def test_it_lists_the_entities_with_their_state(self):
         self.assertEqual(['light.kitchen_lighton'], self.result['popupEntities'])
+
+    ### the gateway: the same popup instead of a jump out of the panel
+
+    def test_the_gateway_rows_offer_details_too(self):
+        """They used to carry "open device", which left the panel for a page nobody asked for -
+        and in the standalone runtime it leads nowhere at all."""
+        self.assertEqual(['details'], sorted(set(self.result['gatewayButtons'])))
+        self.assertTrue(self.result['gatewayButtons'], 'no gateway carries a details button')
+
+    def test_nothing_jumps_out_of_the_panel_on_its_own(self):
+        self.assertEqual(0, self.result['strayHaButtons'])
+
+    def test_pressing_it_opens_the_popup_of_that_gateway(self):
+        self.assertEqual('1', self.result['openedGateway'])
+
+    def test_the_gateway_popup_answers_what_the_gateway_is(self):
+        meta = self.result['gatewayPopupMeta']
+        self.assertEqual('FAM14', self.result['gatewayPopupTitle'])
+        self.assertEqual('connected', meta['Status'])
+        self.assertEqual('/dev/ttyUSB0', meta['Connection'])
+        self.assertEqual('FF-AA-80-00', meta['Base id'])
+        self.assertEqual('ESP2', meta['Protocol'])
+        # both configured devices sit on this gateway
+        self.assertEqual('2', meta['Devices on it'])
+
+    def test_the_way_into_home_assistant_is_inside_that_popup(self):
+        self.assertTrue(self.result['gatewayPopupHasHaButton'])
 
     def test_it_is_the_way_into_home_assistant(self):
         self.assertTrue(self.result['hasHaButton'])

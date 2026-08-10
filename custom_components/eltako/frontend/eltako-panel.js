@@ -71,6 +71,10 @@ const pageModes = (page) => page.modes || ["expert"];
 // Home Assistant shows for this integration in its settings and serves as a fallback.
 const LOGO_URL = new URL("./img/eltako-logo.svg", import.meta.url).href;
 const LOGO_URL_FALLBACK = new URL("./img/eltako-logo.png", import.meta.url).href;
+// The lettering of the logo without the blue square, used as the watermark behind the page
+// (.shell::before). The stylesheet cannot hold this url itself: a relative url() inside it
+// would be resolved against the document, which is /lovelace/... in Home Assistant.
+const WATERMARK_URL = new URL("./img/eltako-watermark.svg", import.meta.url).href;
 const MAX_LIVE_TELEGRAMS = 500;
 
 class EltakoPanel extends HTMLElement {
@@ -508,7 +512,8 @@ class EltakoPanel extends HTMLElement {
 
   _renderShell() {
     this.shadowRoot.innerHTML = `
-      <style>${STYLES}${BUS_SCAN_STYLES}${ACTIVITY_STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
+      <style>:host { --eltako-watermark: url("${WATERMARK_URL}"); }
+${STYLES}${BUS_SCAN_STYLES}${ACTIVITY_STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
       <div class="shell">
         <div class="topbar">
           <header class="app-head">

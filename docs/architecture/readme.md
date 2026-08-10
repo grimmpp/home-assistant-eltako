@@ -298,6 +298,7 @@ lines) is the largest because one EEP can produce many measurements.
 | Module | What it does |
 | --- | --- |
 | [`config/device_config.py`](../../custom_components/eltako/config/device_config.py) | Devices from **two** sources: `configuration.yaml` and the web ui (stored in the config entry's options under `ui_devices`) |
+| [`config/sender_gateway.py`](../../custom_components/eltako/config/sender_gateway.py) | Which gateway switches an actuator: the address into the device (bus write or teach-in telegram) **and** as its sender in Home Assistant |
 | [`config/gateway_config.py`](../../custom_components/eltako/config/gateway_config.py) | Gateways created in the web ui, in their own `Store` |
 | [`config/general_settings.py`](../../custom_components/eltako/config/general_settings.py) | The editable settings and their overrides, incl. `LOCKED_SETTINGS` |
 | [`config/config_import.py`](../../custom_components/eltako/config/config_import.py) | Import from PCT14 / EnOcean Device Manager exports |
@@ -423,9 +424,9 @@ cache ES modules heuristically and your edits stay invisible.
 | --- | --- | --- |
 | Integration, help, onboarding | `integration_info`, `info`, `configured_gateways`, `potential_usb_ports`, `help/catalog`, `onboarding/consume` | `core/websocket.py`, `core/onboarding.py` |
 | Settings | `settings/{get,set,reset}` | `config/general_settings.py` |
-| Devices | `devices/{form,list,add,update,remove}`, `devices/{activity,activity_clear}` | `config/device_config.py`, `observation/device_activity.py` |
+| Devices | `devices/{form,list,add,update,remove}`, `devices/{teach_in,sender_gateway}`, `devices/{activity,activity_clear}` | `config/device_config.py`, `config/sender_gateway.py`, `observation/device_activity.py` |
 | Gateways | `gateways/{form,add,update,remove,scan}` | `config/gateway_config.py`, `tools/gateway_scan.py` |
-| The bus | `bus/{members,read_memory,cancel,teach_in_senders}` | `observation/bus_members.py` |
+| The bus | `bus/{members,read_memory,cancel,teach_in_senders,program_gateway}` | `observation/bus_members.py` |
 | Logs | `logs/{recent,level,clear}` | `observation/integration_log.py` |
 | Telegrams | `telegram_log/{info,statistics,recent,subscribe,clear,refresh_devices}`, `radio_comparison/{report,clear}`, `send_telegram{,_form}`, `grafana/sync` | `observation/enocean_logger.py`, `observation/radio_comparison.py`, `core/websocket.py` |
 | Plug & play | `plug_and_play/{status,run,probe}` | `tools/plug_and_play.py` |

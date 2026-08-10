@@ -26,6 +26,11 @@ export const DETAILS_STYLES = `
                 border-radius: var(--eltako-radius); padding: 16px 18px; width: min(560px, 100%);
                 max-height: 85vh; overflow: auto; display: flex; flex-direction: column; gap: 12px;
                 box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+  /* a form needs more room than a list of facts: two columns of the form grid side by side
+     instead of one, otherwise every field is its own line and the popup is a tower */
+  .modal-card.modal-wide { width: min(760px, 100%); }
+  /* the form actions of a popup sit at its bottom edge, not floating under the last field */
+  .modal-card .form-actions { margin-top: 4px; flex-wrap: wrap; }
   .modal-head { display: flex; align-items: center; gap: 10px; }
   .modal-head h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
   .modal-head ha-icon, .modal-head .glyph { --mdc-icon-size: 24px; color: var(--eltako-accent); }
@@ -205,6 +210,59 @@ export function gatewayDetails(gateway, options = {}) {
 }
 
 /**
+ * The bare popup: the darkened backdrop, the card and the head with its close button - and
+ * `body` inside it.
+ *
+ * The details popup is one thing which goes in there, a form is another: a page which has to
+ * show a form without taking the user away from the list it belongs to wraps it in here
+ * instead of building a second overlay of its own. The panel moves every
+ * `aside.modal-overlay` out of the scrolling page into the shell (see eltako-panel
+ * `_renderContent`), so this markup is what makes a popup a popup.
+ *
+ * `options.closeId` and `options.backdrop` name the hooks the page binds (see `bindModal`) -
+ * two popups on one page must not answer to the same ids.
+ *
+ * @param {(name: string, glyph: string) => string} icon the icon helper of the page
+ */
+export function renderModal(options, icon, body) {
+  const { title, subtitle = "", id = "", wide = false,
+          closeId = "modal-close", backdrop = "data-modal-backdrop" } = options;
+  const parts = options.icon || ["mdi:chip", "▪"];
+
+  return `
+    <aside class="modal-overlay" ${backdrop}>
+      <div class="modal-card ${wide ? "modal-wide" : ""}" ${id ? `id="${escapeHtml(id)}"` : ""}
+           role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+        <div class="modal-head">
+          ${icon(parts[0], parts[1])}
+          <div style="min-width:0">
+            <h3>${escapeHtml(title)}</h3>
+            ${subtitle ? `<div class="device-kind">${escapeHtml(subtitle)}</div>` : ""}
+          </div>
+          <span class="spacer"></span>
+          <button class="action small" id="${escapeHtml(closeId)}" aria-label="Close">&times;</button>
+        </div>
+        ${body}
+      </div>
+    </aside>`;
+}
+
+/**
+ * The ways out of a popup which are the same everywhere: the ×, the button which says close,
+ * and a click next to the card. `options` names the hooks `renderModal` was given.
+ */
+export function bindModal(root, close, options = {}) {
+  const { closeId = "modal-close", doneId = null,
+          backdrop = "[data-modal-backdrop]" } = options;
+  root.getElementById(closeId)?.addEventListener("click", close);
+  if (doneId) root.getElementById(doneId)?.addEventListener("click", close);
+  root.querySelector(backdrop)?.addEventListener("click", (event) => {
+    // a click inside the popup must not close it
+    if (event.target === event.currentTarget) close();
+  });
+}
+
+/**
  * The popup itself. `parts` is what deviceDetails/gatewayDetails returned, `actions` the
  * buttons of the page (rename, remove, ...) as markup - every page has its own handlers for
  * those, so they carry the attributes that page already binds.
@@ -214,18 +272,10 @@ export function gatewayDetails(gateway, options = {}) {
 export function renderDetails(parts, icon, actions = "") {
   if (!parts) return "";
 
-  return `
-    <aside class="modal-overlay" data-details-backdrop>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(parts.title)}">
-        <div class="modal-head">
-          ${icon(parts.icon[0], parts.icon[1])}
-          <div style="min-width:0">
-            <h3>${escapeHtml(parts.title)}</h3>
-            <div class="device-kind">${escapeHtml(parts.subtitle)}</div>
-          </div>
-          <span class="spacer"></span>
-          <button class="action small" id="details-close" aria-label="Close">&times;</button>
-        </div>
+  return renderModal({
+    icon: parts.icon, title: parts.title, subtitle: parts.subtitle,
+    closeId: "details-close", backdrop: "data-details-backdrop",
+  }, icon, `
         <dl class="meta-grid">
           ${parts.rows.filter(([, value]) => value !== null && value !== undefined && value !== "")
             .map(([label, value, mono]) => `
@@ -248,17 +298,12 @@ export function renderDetails(parts, icon, actions = "") {
           ${actions}
           <span class="spacer"></span>
           <button class="action" id="details-done">Close</button>
-        </div>
-      </div>
-    </aside>`;
+        </div>`);
 }
 
 /** The three ways out of the popup which are the same everywhere: ×, Close, click next to it. */
 export function bindDetails(root, close) {
-  root.getElementById("details-close")?.addEventListener("click", close);
-  root.getElementById("details-done")?.addEventListener("click", close);
-  root.querySelector("[data-details-backdrop]")?.addEventListener("click", (event) => {
-    // a click inside the popup must not close it
-    if (event.target === event.currentTarget) close();
+  bindModal(root, close, {
+    closeId: "details-close", doneId: "details-done", backdrop: "[data-details-backdrop]",
   });
 }

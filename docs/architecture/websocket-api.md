@@ -90,6 +90,7 @@ Registered in [`core/websocket.py`](../../custom_components/eltako/core/websocke
 | `eltako/devices/update` | `gateway_id`, `platform`, `address`, `device` | Change it. Fields the form does not render are kept from the stored device instead of being dropped |
 | `eltako/devices/remove` | `gateway_id`, `platform`, `address` | Remove it. Devices declared in `configuration.yaml` are protected |
 | `eltako/devices/remove_all` | `gateway_id` (optional) | Remove **every** device created in the web ui - of one gateway or of all of them. Each gateway is written once, so the entities are rebuilt in one reload per gateway. Gateways, stored bus memories and `configuration.yaml` devices are kept. The web ui asks before it sends this (button *Remove all & search again*) |
+| `eltako/devices/sender_gateway` | `target_gateway_id`, `gateway_id` (optional), `address` (optional), `program` (optional, default `true`) | **Which gateway switches an actuator** - the address is put into the device *and* stored as its sender in Home Assistant, because both have to agree or the device is configured, listed and dead. A **bus actuator** gets `base id of the target + the last byte of its own address` written into its memory (only a FAM14 can write, and an address which is already in there is not written again); a **wireless actuator** gets the teach-in telegram of that address sent through the chosen gateway, which it takes over while it is in learn mode. Without `address` the whole bus is switched over, without `gateway_id` every bus of the installation ("this gateway operates everything from now on"). `program: false` only stores the addresses. Answers per bus with `results` (what the actuators did), `updated` (whose sender in Home Assistant really changed) and `skipped` (yaml devices, addresses outside the range) - a device whose actuator refused the write keeps its old sender |
 | `eltako/devices/activity` | &ndash; | Per address: how often it reported, when it was first and last heard from, how many sessions ago |
 | `eltako/devices/activity_clear` | &ndash; | Forget all of that |
 
@@ -115,10 +116,18 @@ says so.
 
 | Command | Parameters | What it does |
 | --- | --- | --- |
-| `eltako/bus/members` | &ndash; | Every bus position collected **passively** from the traffic - model, channels, taught-in senders from the stored memory image, and the radio devices next to it. No bus lock |
+| `eltako/bus/members` | &ndash; | Every bus position collected **passively** from the traffic - model, channels, taught-in senders from the stored memory image, and the radio devices next to it. No bus lock. Carries the counters of what runs (`scan_progress`, `teach_in_progress`) and `programmed`: per gateway how many actuators already have its sender addresses, with `unknown` for the positions whose memory was never read |
 | `eltako/bus/read_memory` | `gateway_id` | The **active** scan: discovery of every position plus the complete device memories. Locks the bus for minutes and runs in its own thread with its own event loop, so nothing can delay its timing. Answers `{started: false, reason: 'already_running', busy_with: ...}` when another operation has the bus |
 | `eltako/bus/cancel` | `gateway_id` (optional - without it **every** bus) | Stop the running operation and hand the bus back. Two steps: the loop is asked to stop between two bus requests, and the lock is released **regardless** - a scan hanging in a serial read does not reach its own cleanup for minutes, and until then every command is queued. Allowed while nothing runs (`cancelled: []` then), because a hanging operation cannot be told apart from an idle bus from the outside |
+| `eltako/bus/program_gateway` | `gateway_id` (the FAM14), `target_gateway_id` | Writes the sender addresses of **another** gateway into every configured actuator of this bus: base id of that gateway + the last byte of the actuator address (`00-00-00-04` behind `FF-C0-02-00` becomes `FF-C0-02-04`), the rule the EnOcean Device Manager uses. Needed before an installation which was programmed with a FAM14 can be operated through a wireless gateway - and only a FAM14 can write it |
+| `eltako/bus/delete_memory_line` | `gateway_id`, `bus_address`, `memory_line`, `sensor_id` (optional) | Clear one taught-in sender out of the memory of a bus device - an empty line is written, like the PCT14 does. `sensor_id` is the safety catch: the line is read first and only cleared when it really holds that sender, so a page which is a few seconds out of date cannot delete what moved into that line meanwhile (error `line_changed`) |
 | `eltako/bus/teach_in_senders` | `gateway_id`, `address` (optional) | Compare the configured sender ids against the device memories and write the missing ones with `ensure_programmed`. Error `bus_busy` while a scan runs |
+
+A scan which breaks off is **continued where it stopped**: the positions which are done are
+remembered, and up to `SCAN_ATTEMPTS` (3) attempts visit only the rest - reading a full bus
+again because the connection dropped at position 27 costs minutes. The attempt is part of the
+progress (`attempt`, `attempts`), so the web ui says "attempt 2/3" instead of letting the
+counters jump back.
 
 While one of those runs, the bus of **that** gateway belongs to it alone: commands are queued
 and sent afterwards, a second scan or teach-in is refused, and `eltako/bus/members` reports it
@@ -142,8 +151,8 @@ and [`core/websocket.py`](../../custom_components/eltako/core/websocket.py).
 | `eltako/radio_comparison/clear` | &ndash; | Throw the recorded receptions of the comparison away. Deliberately separate from the telegram log: clearing the live view must not lose the differences collected over hours |
 | `eltako/telegram_log/clear` | &ndash; | Empty the buffer and the statistics |
 | `eltako/telegram_log/refresh_devices` | &ndash; | Re-read the device names, areas and entity ids the recorded telegrams are annotated with |
-| `eltako/send_telegram_form` | &ndash; | The form: every EEP of the library with its fields, plus the gateways and sender ids which may be used |
-| `eltako/send_telegram` | `gateway_id`, and either `eep` + `fields` or `raw` | Send an arbitrary telegram - built from an EEP or as raw ESP2 hex (11 body bytes or the full 14 byte frame, checksum validated) |
+| `eltako/send_telegram_form` | &ndash; | The form: every EEP of the library with its fields, whether it has a profile teach-in (`4bs`/`1bs`/`rps`) and the data bytes of its ELTAKO teach-in, the sender profiles which are taught in at all (`teach_in.eltako_eeps`, from `EEP_WITH_TEACH_IN_BUTTONS`), plus the gateways and sender ids which may be used |
+| `eltako/send_telegram` | `gateway_id`, `mode` (`eep`, `teach_in`, `eltako_teach_in`, `raw`), and either `eep` + `fields`, `eep` + `sender_id` or `raw` | Send an arbitrary telegram - built from an EEP, as one of the two teach-in telegrams of a profile (the **profile teach-in** a sensor announces itself with, or the **ELTAKO teach-in** an actuator learns a sender from) or as raw ESP2 hex (11 body bytes or the full 14 byte frame, checksum validated). Answers with `count`, because the teach-in of an RPS profile is a press *and* its release |
 | `eltako/grafana/sync` | &ndash; | Push the five dashboards shipped with the integration into the configured Grafana, pointing every panel at the InfluxDB datasource which actually exists there |
 
 ## Logs of the integration

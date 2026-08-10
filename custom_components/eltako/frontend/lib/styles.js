@@ -46,8 +46,29 @@ export const STYLES = `
      is the standard home assistant one: it shows the hamburger when the sidebar is hidden,
      so the panel can be left again on a smartphone. */
   .shell { display: flex; flex-direction: column; height: 100%; position: relative; }
+  /* Large "Eltako" lettering as a watermark behind the page. It is drawn as a css mask of
+     img/eltako-watermark.svg (the bare lettering, no blue square) filled with the brand
+     colour, so it follows the theme instead of being a baked-in grey - on a dark theme the
+     lighter blue keeps it visible at the same faint strength. The url comes from the panel
+     as --eltako-watermark, because a relative url() in this stylesheet would be resolved
+     against the *document*, not against the frontend folder.
+     It is absolutely positioned, so it is no flex item of .shell and does not scroll with
+     <main>; .topbar and main paint above it. */
+  .shell::before {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-color: var(--eltako-blue);
+    /* barely there: the lettering must read as a shade of the background, not as content */
+    opacity: .05;
+    -webkit-mask: var(--eltako-watermark) no-repeat center 55% / min(70%, 760px) auto;
+    mask: var(--eltako-watermark) no-repeat center 55% / min(70%, 760px) auto;
+  }
+  /* the dark brand blue disappears completely on a dark background - there the watermark uses
+     the lightened variant, which reads as the same faint shade of the page */
+  @media (prefers-color-scheme: dark) {
+    .shell::before { background-color: var(--eltako-blue-light); opacity: .07; }
+  }
   /* header + navigation: one white bar, and the reference for the logo positioned in it */
-  .topbar { flex: 0 0 auto; position: relative; }
+  .topbar { flex: 0 0 auto; position: relative; z-index: 1; }
   header.app-head {
     flex: 0 0 auto; box-sizing: border-box; display: flex; align-items: center; gap: 10px;
     /* more room below: the navigation used to sit directly under the title */
@@ -130,7 +151,9 @@ export const STYLES = `
   }
   nav ha-icon, nav .glyph { --mdc-icon-size: 20px; width: 20px; text-align: center; flex: 0 0 20px; }
 
-  main { flex: 1 1 auto; overflow-y: auto; padding: 16px 20px 40px; box-sizing: border-box; }
+  /* position/z-index: the page content belongs above the watermark of .shell::before */
+  main { flex: 1 1 auto; overflow-y: auto; padding: 16px 20px 40px; box-sizing: border-box;
+         position: relative; z-index: 1; background: transparent; }
   header.page-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline;
                      justify-content: space-between; margin-bottom: 16px; }
   header.page-head h1 { margin: 0; font-size: 1.35rem; font-weight: 500; }
@@ -213,11 +236,20 @@ export const STYLES = `
     border-color: transparent; color: var(--text-primary-color, #fff);
   }
 
-  .table-wrapper { overflow-x: auto; background: var(--eltako-card); border: 1px solid var(--eltako-border);
+  /* Translucent, so the watermark of .shell::before shows through the tables instead of being
+     cut off by the largest surface of the page. The card colour is mixed with transparency
+     instead of being replaced, so a custom or dark theme keeps its own surface.
+     60% is what makes the lettering readable *through* the table: the watermark itself is only
+     5% strong, so a nearly opaque table (80%) leaves a difference of one percent - present in
+     the css and invisible on a screen. The text of the table is opaque and unaffected. */
+  .table-wrapper { overflow-x: auto; background: color-mix(in srgb, var(--eltako-card) 60%, transparent);
+                   border: 1px solid var(--eltako-border);
                    border-radius: var(--eltako-radius); }
   table { border-collapse: collapse; width: 100%; font-size: .82rem; }
   th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--eltako-border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
+  /* the head stays opaque on purpose: it is sticky, so the rows scroll underneath it - through a
+     translucent head they would show as ghosts */
   thead th { position: sticky; top: 0; background: var(--eltako-card); z-index: 1; font-weight: 500;
              color: var(--eltako-muted); white-space: nowrap; }
   th[data-sort] { cursor: pointer; user-select: none; }

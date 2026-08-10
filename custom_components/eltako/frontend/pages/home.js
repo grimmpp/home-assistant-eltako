@@ -21,6 +21,8 @@ import { WS } from "../lib/api.js";
 import { DETAILS_STYLES, bindDetails, deviceDetails, gatewayDetails, openInHomeAssistant,
          renderDetails } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
+import { assignSenderGateway, defaultGatewayChoices, describeAssignResult, gatewayOption,
+         isBusGatewayType, senderGatewayOf, senderTargets } from "../lib/sender_gateway.js";
 import { escapeHtml, formatDuration, icon, matchesFilter } from "../lib/utils.js";
 
 /** fields of the backend form which the simple add form shows - the rest keeps its default */
@@ -56,6 +58,13 @@ const PLATFORM_LABELS = {
 };
 
 const ROOMLESS = "Without room";
+
+/**
+ * Whether the "Initial Setup" guide at the top of the page is folded out - in the browser, so
+ * it survives a reload and the switch to another page. An installation which is set up folds
+ * it away once and does not see it again; a fresh one gets it open, which is the default.
+ */
+const SETUP_OPEN_KEY = "eltako-simple-setup-open";
 
 // TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
@@ -110,6 +119,39 @@ export const page = {
     .device-card.telegram-flash { animation: eltako-card-flash 1.4s ease-out; }
     .simple-hint { font-size: .78rem; color: var(--eltako-muted); margin: 10px 0 0; }
     .gateway-card .device-note { font-size: .72rem; }
+    .bus-hint p { font-size: .85rem; margin: 6px 0 0; }
+    /* The guide stands at the top of the page and folds away: an installation which is set up
+       keeps one line there instead of a block it has read ten times. Collapsed it is exactly
+       the summary, so <details> needs no height of its own. */
+    .bus-hint > summary { display: flex; align-items: center; gap: 6px; cursor: pointer;
+                          font-size: 1rem; font-weight: 500; list-style: none; }
+    .bus-hint > summary::-webkit-details-marker { display: none; }   /* safari draws its own */
+    .bus-hint > summary::after { content: "\\25BE"; margin-left: auto; color: var(--eltako-muted);
+                                 transform: rotate(-90deg); transition: transform .15s ease; }
+    .bus-hint[open] > summary::after { transform: none; }
+    .bus-hint > summary:hover { color: var(--eltako-accent); }
+    /* how far the setup is - the one thing worth reading while it is folded away */
+    .bus-hint .setup-progress { font-size: .75rem; color: var(--eltako-muted);
+                                border: 1px solid var(--eltako-border); border-radius: 999px;
+                                padding: 1px 8px; font-weight: 400; }
+    /* the setup instruction: numbered steps, a step which is done carries a check instead
+       of its number - so the user sees where they are without reading the whole text */
+    .steps { list-style: none; counter-reset: eltako-step; margin: 10px 0 0; padding: 0;
+             display: flex; flex-direction: column; gap: 10px; }
+    .steps li { counter-increment: eltako-step; display: flex; gap: 10px; align-items: flex-start; }
+    .steps li::before { content: counter(eltako-step); flex: 0 0 auto; width: 22px; height: 22px;
+                        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                        font-size: .75rem; font-weight: 600; line-height: 1;
+                        background: var(--eltako-tint-strong); color: var(--primary-text-color); }
+    .steps li.done::before { content: "✓"; background: var(--eltako-good, #2E7D32); color: #fff; }
+    .steps .step-title { font-weight: 500; }
+    .steps li.done .step-title { color: var(--eltako-muted); }
+    .steps .step-text { font-size: .82rem; color: var(--eltako-muted); margin: 2px 0 0; }
+    /* the button (or the gateway choice) which does that step, right below its text */
+    .steps .step-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+                           margin-top: 6px; }
+    .steps .step-field { display: inline-flex; align-items: center; gap: 6px;
+                         font-size: .78rem; color: var(--eltako-muted); }
     /* result and progress of the automatic detection */
     .detect-card h3 { display: flex; align-items: center; gap: 6px; }
     .detect-card p { font-size: .85rem; }
@@ -143,9 +185,6 @@ export const page = {
       <input id="simple-filter" type="search" placeholder="Search device or room&hellip;"
              value="${escapeHtml(ctx.state.simpleFilter || "")}" />
       <span class="spacer"></span>
-      <button id="simple-detect" class="action" data-busy-block="any" ${running ? "disabled" : ""}
-              title="Searches for gateways, bus devices, sensors and actuators and lists what was found">
-        ${icon("mdi:magnify-scan", "◎")} ${running ? "Searching&hellip;" : "Search devices"}</button>
       <button id="simple-reset" class="action danger" data-busy-block="any" ${running ? "disabled" : ""}
               title="Removes every device created here and searches again from scratch - including a fresh read of every bus. Devices from configuration.yaml are kept.">
         ${icon("mdi:refresh", "↻")} Remove all &amp; search again</button>
@@ -160,7 +199,6 @@ export const page = {
     root.getElementById("simple-add").addEventListener("click", () => {
       this._openAdd(ctx, {});
     });
-    root.getElementById("simple-detect").addEventListener("click", () => this._startDetection(ctx));
     root.getElementById("simple-reset").addEventListener("click", () => this._resetAndDetect(ctx));
   },
 
@@ -174,7 +212,10 @@ export const page = {
        PLATFORM_LABELS[device.platform] || device.platform]));
 
     return `
+      ${gateways.some((gateway) => ["fam14", "fgw14usb"].includes(String(gateway.type)))
+        ? this._renderBusHint(ctx) : ""}
       ${this._renderEditor(ctx)}
+      ${this._renderTeachIn(ctx)}
       ${this._renderDetails(ctx)}
       ${this._renderDetection(ctx)}
       ${this._renderSummary(ctx, all, gateways)}
@@ -191,8 +232,125 @@ export const page = {
 
   /* ------------------------------------------------------------------- pieces */
 
+  /**
+   * How to get from a fresh installation to devices which react - as four steps instead of
+   * the prose it used to be. The one thing about an ELTAKO bus which cannot be guessed from
+   * the ui is which gateway does what, and that decides whether the search finds anything at
+   * all: reading the actuator memories and writing into them is a FAM14 feature; an FGW14-USB
+   * puts telegrams on the same bus but can do neither. So step 1 is the FAM14, and everything
+   * the search does - finding the devices, learning which sensors are taught into which
+   * actuator, writing the sender addresses of Home Assistant - happens there.
+   *
+   * A step which is already done is ticked off (see the .steps styles), so the list is a
+   * progress display as well and not a wall of text to read again on every visit.
+   *
+   * Two steps carry the button which does them, because a step which only says what to press
+   * somewhere else is a step people get wrong: the search of step 2 (which also teaches the
+   * senders into the actuators), and the everyday gateway of step 4 - picking one there writes
+   * its addresses into every actuator and makes Home Assistant send with them
+   * (lib/sender_gateway.js, backend config/sender_gateway.py).
+   */
+  _renderBusHint(ctx) {
+    const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+    const hasFam14 = gateways.some((gateway) => String(gateway.type) === "fam14");
+    const searched = !!((ctx.state.plugAndPlay || {}).last_report || {}).started_at;
+    const hasDevices = ((ctx.state.configuredDevices || []).length > 0);
+    const running = !!(ctx.state.plugAndPlay || {}).running;
+    // every gateway, the ones on the bus included: switching back to the FAM14 changes the
+    // senders in Home Assistant just as much as switching away from it (see the module comment
+    // of lib/sender_gateway.js)
+    const targets = defaultGatewayChoices(gateways);
+    // is the installation already switched over? Then step 4 is done as well - every bus
+    // actuator whose sender lies in the base id range of a wireless gateway says so
+    const devices = ctx.state.configuredDevices || [];
+    const busActuators = devices.filter((device) => (device.sender || {}).id
+      && String(device.address || "").toUpperCase().startsWith("00-00-00-"));
+    const onTarget = busActuators.filter((device) => {
+      const owner = senderGatewayOf(gateways, device.gateway_id, (device.sender || {}).id);
+      return owner && !isBusGatewayType(owner.type);
+    });
+    const switched = busActuators.length > 0 && onTarget.length === busActuators.length;
+    // which gateway carries the installation right now - it is the preselected one, so the
+    // list says what is set instead of proposing a change nobody asked for
+    const owners = busActuators.map((device) =>
+      senderGatewayOf(gateways, device.gateway_id, (device.sender || {}).id)).filter(Boolean);
+    const current = owners.length && owners.every((owner) => owner.id === owners[0].id)
+      ? owners[0] : null;
+
+    const step = (done, title, text, controls = "") => `
+      <li class="${done ? "done" : ""}">
+        <div><div class="step-title">${title}</div><div class="step-text">${text}</div>
+          ${controls ? `<div class="step-actions">${controls}</div>` : ""}</div>
+      </li>`;
+
+    const done = [hasFam14, searched, hasDevices, switched].filter(Boolean).length;
+
+    return `
+      <details class="notice bus-hint" id="simple-setup" ${this._setupOpen() ? "open" : ""}>
+        <summary>
+          ${icon("mdi:information-outline", "i")} <span class="setup-title">Initial Setup</span>
+          <span class="setup-progress">${done}/4</span>
+        </summary>
+        <ol class="steps">
+          ${step(hasFam14, "Connect the FAM14 by USB",
+            "Only the FAM14 can read your bus actuators and program them &ndash; even if you "
+            + "want to run a different gateway later, start with this one.")}
+          ${step(searched, "Search the devices and teach them in",
+            "It finds the gateway, reads every bus and adds the devices it recognises. That "
+            + "takes a few minutes, and it also writes the sender addresses of Home Assistant "
+            + "into the actuators &ndash; without them an actuator does not react to a command.",
+            `<button class="action primary" id="step-detect" data-busy-block="any"
+               ${running ? "disabled" : ""}>${icon("mdi:magnify-scan", "◎")}
+               ${running ? "Searching&hellip;" : "Search devices &amp; teach in"}</button>`)}
+          ${step(hasDevices, "Check the list below",
+            "Everything which was found is there. A device which could not be identified for "
+            + "sure you add yourself with <b>+ Add device</b>.")}
+          ${step(switched, "Optional: pick the gateway for everyday use",
+            "An FGW14-USB or a wireless gateway (FAM-USB, USB300, LAN gateway) is the better "
+            + "permanent connection than the FAM14. Whichever gateway it is, <b>Home Assistant "
+            + "has to send with its addresses</b> &ndash; that is what this does. An address "
+            + "which is not in an actuator yet is written into it, which only the FAM14 can do, "
+            + "so switching to a wireless gateway belongs <b>while the FAM14 is still "
+            + "connected</b>; going back to the bus needs no write at all.",
+            targets.length ? `
+              <label class="step-field">Default gateway
+                <select id="step-default-gateway">
+                  ${targets.map((gateway) => gatewayOption(gateway,
+                    { selected: !!current && current.id === gateway.id })).join("")}
+                </select>
+              </label>
+              <button class="action" id="step-apply-gateway" data-busy-block="bus"
+                title="Stores the addresses of this gateway as the senders of your devices - and
+                       writes them into the actuators which do not carry them yet. Only that
+                       write needs a connected FAM14."
+                >Use for all devices</button>`
+              : `<span class="step-text">No gateway with addresses to hand out &ndash; a wireless
+                 gateway reports its base id as soon as it has been connected once.</span>`)}
+        </ol>
+      </details>`;
+  },
+
+  /** Folded out or not - see SETUP_OPEN_KEY. A fresh browser gets the guide open. */
+  _setupOpen() {
+    try {
+      return window.localStorage.getItem(SETUP_OPEN_KEY) !== "0";
+    } catch (err) {
+      return true;
+    }
+  },
+
+  _storeSetupOpen(open) {
+    try {
+      window.localStorage.setItem(SETUP_OPEN_KEY, open ? "1" : "0");
+    } catch (err) {
+      // storage blocked or full: the guide still folds, it just starts open again
+    }
+  },
+
+
   _renderNoGateway(ctx) {
     return `
+      ${this._renderBusHint(ctx)}
       ${this._renderDetection(ctx)}
       <div class="notice warn">
         <h3>No gateway yet</h3>
@@ -263,6 +421,15 @@ export const page = {
           ${skipped.length ? `${skipped.length} device${skipped.length === 1 ? "" : "s"} could not be
             identified for sure - add ${skipped.length === 1 ? "it" : "them"} with
             <b>+ Add device</b>.` : ""}</p>
+        ${/* the search does not only write the configuration, it programs the actuators: the
+              sender addresses of Home Assistant and those of every connected wireless gateway.
+              Without them an actuator is listed here and does nothing when it is switched. */
+          (report.senders_taught_in || []).length ? `
+        <p>${icon("mdi:key-chain-variant", "⚿")}
+          <b>${report.senders_taught_in.length} sender address${
+            report.senders_taught_in.length === 1 ? " was" : "es were"} programmed</b> into the
+          actuators &ndash; the ones Home Assistant sends with, and those of every connected
+          wireless gateway, so the installation can be operated with them later.</p>` : ""}
         ${skipped.length ? `<div class="detect-list">${skipped.map((entry) => `
           <span class="chip" title="${escapeHtml(entry.reason || "")}">
             <span class="mono">${escapeHtml(entry.address || "")}</span>
@@ -427,6 +594,7 @@ export const page = {
         <div class="device-foot">
           <button class="action small" data-simple-details="${this._key(device)}"
              title="Address, profile, gateway and everything else about this device">details</button>
+          ${this._renderCardTeachIn(ctx, device)}
           <span class="spacer"></span>
           ${device.editable ? `
             <button class="action small" data-simple-edit="${this._key(device)}">rename</button>
@@ -454,6 +622,23 @@ export const page = {
     return `<button class="state-chip switchable" data-entity="${id}"
       data-service="${id}|${entity.domain}|toggle" ${entity.text ? "" : "hidden"}
       title="Click to switch ${escapeHtml(entity.label)}">${label}</button>`;
+  },
+
+  /**
+   * The teach-in of one device - one button on its card, the rest in a popup.
+   *
+   * It is the answer to "this device does not react": which gateway switches it, with which
+   * address, and the way to change both. That is three controls and two sentences of
+   * explanation, which is a popup and not something a card can carry next to its state - the
+   * card stays a card. The popup is `_renderTeachIn`.
+   *
+   * Only for what Home Assistant switches: a sensor reports, it is not commanded, so it has no
+   * sender and nothing to teach in.
+   */
+  _renderCardTeachIn(ctx, device) {
+    if (!this._teachInChoices(ctx, device).length) return "";
+    return `<button class="action small" data-simple-teach-in="${this._key(device)}"
+       title="Which gateway switches this device - and the teach-in which puts its address into the device">teach-in</button>`;
   },
 
   /** On/off, up/down - only for what can be operated and only if a service call is possible. */
@@ -671,6 +856,160 @@ export const page = {
       </div>`;
   },
 
+  /* ----------------------------------------------------------------- teach-in */
+
+  /**
+   * The teach-in of one device, as a popup: which gateway switches it and how it learns that.
+   *
+   * An actuator only reacts to sender addresses it knows, and a transceiver only transmits
+   * addresses out of its own base id range - both halves have to agree, which is what the two
+   * controls here do in one step (backend: config/sender_gateway.py):
+   *
+   *   * a device on the RS485 bus gets the address **written into its memory**, which only a
+   *     FAM14 can do, so it has to be connected;
+   *   * a wireless device **learns it from a telegram** - it is put into its learn mode by hand
+   *     and the teach-in telegram goes out through the chosen gateway.
+   *
+   * In both cases the same address becomes the sender of this device in Home Assistant, because
+   * otherwise the integration would keep transmitting the old one.
+   *
+   * It is a popup and not a control on the card: the current gateway, the address it hands out
+   * and the sentence which says what pressing the button does are what makes this usable, and
+   * none of that fits next to the state of a device.
+   */
+  _renderTeachIn(ctx) {
+    const teach = ctx.state.simpleTeachIn;
+    if (!teach) return "";
+    const device = this._deviceByKey(ctx, teach.key);
+    if (!device) return "";
+
+    const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+    const choices = this._teachInChoices(ctx, device);
+    const current = senderGatewayOf(gateways, device.gateway_id, (device.sender || {}).id);
+    const chosen = this._teachInGateway(ctx, device);
+    const onBus = this._isBusDevice(device);
+
+    const parts = {
+      icon: PLATFORM_ICONS[device.platform] || ["mdi:chip", "▪"],
+      title: device.name || device.address,
+      // the head of the popup is escaped by renderDetails, so this is plain text
+      subtitle: `Teach-in - ${PLATFORM_LABELS[device.platform] || device.platform}`,
+      rows: [
+        ["Device address", device.address, true],
+        ["Switched by", current ? current.name : "no gateway of this installation"],
+        ["Sender address", (device.sender || {}).id || "not set", true],
+      ],
+      extra: `
+        <div class="meta-section">
+          <h4>Which gateway should switch it?</h4>
+          <div class="field">
+            <select id="teach-in-gateway">
+              ${choices.map((gateway) => gatewayOption(gateway,
+                { selected: !!chosen && String(gateway.id) === String(chosen.id) })).join("")}
+            </select>
+            <span class="field-help">${onBus
+              ? `It gets an address of this gateway written into its memory - only a FAM14 can
+                 write, so it has to be connected. Nothing is removed: what switched this device
+                 before keeps switching it.`
+              : `Put the device into its teach-in mode first (rotary switch to <b>LRN</b>, or
+                 whatever its manual says), then send. A device which is not in teach-in mode
+                 ignores the telegram, so it can simply be sent again.`}</span>
+          </div>
+        </div>`,
+    };
+
+    return renderDetails(parts, icon, `
+      <button class="action primary" id="teach-in-send"
+        >${onBus ? "Write into the device" : "Send teach-in"}</button>`);
+  },
+
+  /**
+   * The gateways which may switch this device.
+   *
+   * A device on the bus can stay on it - the local senders `00-00-B0-xx` are what a FAM14 works
+   * with - or be moved to a wireless gateway; a wireless device has only the gateways which
+   * transmit. Empty where the choice would be a lie: a device out of `configuration.yaml` (it
+   * is changed there), a sensor (nothing switches it), an installation without a gateway which
+   * could take it over.
+   */
+  _teachInChoices(ctx, device) {
+    if (!device.editable || !NEEDS_SENDER.includes(device.platform)) return [];
+    if (!(device.sender || {}).eep) return [];
+
+    const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+    const targets = senderTargets(gateways);
+    const bus = this._isBusDevice(device)
+      && gateways.find((gateway) => String(gateway.id) === String(device.gateway_id));
+    return (bus ? [bus] : []).concat(targets.filter((gateway) => gateway !== bus));
+  },
+
+  /** The gateway the popup has selected: the one which was picked, else the current one. */
+  _teachInGateway(ctx, device) {
+    const choices = this._teachInChoices(ctx, device);
+    const picked = (ctx.state.simpleTeachIn || {}).gatewayId;
+    if (picked) {
+      const found = choices.find((gateway) => String(gateway.id) === String(picked));
+      if (found) return found;
+    }
+    const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+    const current = senderGatewayOf(gateways, device.gateway_id, (device.sender || {}).id);
+    return choices.find((gateway) => current && gateway.id === current.id) || choices[0] || null;
+  },
+
+  /** An address on the RS485 bus - those are taught in by writing the device, not by a telegram. */
+  _isBusDevice(device) {
+    return String(device.address || "").toUpperCase().startsWith("00-00-00-");
+  },
+
+  /** The listeners of the popup - it is content, so this runs on every render. */
+  _bindTeachIn(ctx, root) {
+    root.getElementById("teach-in-gateway")?.addEventListener("change", (event) => {
+      if (ctx.state.simpleTeachIn) ctx.state.simpleTeachIn.gatewayId = event.target.value;
+    });
+    root.getElementById("teach-in-send")?.addEventListener("click",
+      (event) => this._sendTeachIn(ctx, event.target));
+  },
+
+  /**
+   * Write the address into the device, or send it the teach-in telegram - and store it as the
+   * sender of this device in Home Assistant. One backend call does both halves
+   * (`eltako/devices/sender_gateway`), which is what keeps them from drifting apart.
+   */
+  async _sendTeachIn(ctx, button) {
+    const teach = ctx.state.simpleTeachIn;
+    const device = teach && this._deviceByKey(ctx, teach.key);
+    if (!device) return;
+    const gateway = this._teachInGateway(ctx, device);
+    if (!gateway) return;
+
+    const onBus = this._isBusDevice(device);
+    if (!confirm(onBus
+      ? `Let "${gateway.name}" switch "${device.name || device.address}"?\n\n`
+        + "Its address is written into the device and Home Assistant sends with it afterwards. "
+        + "Nothing is removed - what switched this device before keeps switching it. Only a "
+        + "FAM14 can write, so it has to be connected; the bus is locked for a moment."
+      : `Teach "${device.name || device.address}" in on "${gateway.name}"?\n\n`
+        + "Put the device into its teach-in mode now - the teach-in telegram is sent through "
+        + "that gateway and its address is stored as the sender of this device. A device which "
+        + "is not in teach-in mode ignores the telegram, so it can simply be sent again.")) return;
+
+    button.disabled = true;
+    const result = await assignSenderGateway(ctx, {
+      targetGatewayId: gateway.id, gatewayId: device.gateway_id, address: device.address,
+    });
+    button.disabled = false;
+
+    if (!result) {
+      alert((ctx.api.lastError || {}).message || "The gateway could not be changed.");
+      ctx.api.lastError = null;
+      return;
+    }
+    alert(describeAssignResult(result));
+    ctx.state.simpleTeachIn = null;
+    await this.load(ctx);
+    ctx.requestRender();
+  },
+
   /* ------------------------------------------------------------------ actions */
 
   afterRender(ctx, root) {
@@ -679,9 +1018,19 @@ export const page = {
     root.getElementById("simple-to-expert")?.addEventListener("click", () => {
       ctx.setMode("expert", "overview");
     });
+    // folding the guide away is remembered - the page redraws itself on every state change,
+    // so without that it would spring open again a second later
+    root.getElementById("simple-setup")?.addEventListener("toggle", (event) => {
+      this._storeSetupOpen(event.target.open);
+    });
     root.getElementById("simple-detect-empty")?.addEventListener("click", () => this._startDetection(ctx));
     root.getElementById("simple-detect-again")?.addEventListener("click", () => this._startDetection(ctx));
+    // step 2 of the instruction does the same thing as the toolbar button
+    root.getElementById("step-detect")?.addEventListener("click", () => this._startDetection(ctx));
+    root.getElementById("step-apply-gateway")?.addEventListener("click",
+      (event) => this._applyDefaultGateway(ctx, root, event.target));
     this._syncDetectButton(ctx);
+    this._bindTeachIn(ctx, root);
 
     // switch, dim, move: the same call the dashboard of Home Assistant makes
     root.querySelectorAll("button[data-service]").forEach((button) => {
@@ -696,13 +1045,23 @@ export const page = {
     // the popup with everything about one device or one gateway
     root.querySelectorAll("button[data-simple-details]").forEach((button) => {
       button.addEventListener("click", () => {
+        ctx.state.simpleTeachIn = null;             // one popup at a time
         ctx.state.simpleDetails = { kind: "device", key: button.dataset.simpleDetails };
         ctx.requestContentRender(true);
       });
     });
     root.querySelectorAll("button[data-gateway-details]").forEach((button) => {
       button.addEventListener("click", () => {
+        ctx.state.simpleTeachIn = null;
         ctx.state.simpleDetails = { kind: "gateway", key: button.dataset.gatewayDetails };
+        ctx.requestContentRender(true);
+      });
+    });
+    // the teach-in popup of one device: which gateway switches it, and how it learns that
+    root.querySelectorAll("button[data-simple-teach-in]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ctx.state.simpleDetails = null;
+        ctx.state.simpleTeachIn = { key: button.dataset.simpleTeachIn, gatewayId: null };
         ctx.requestContentRender(true);
       });
     });
@@ -710,8 +1069,10 @@ export const page = {
       button.addEventListener("click", () => ctx.setMode("expert", "overview"));
     });
 
+    // both popups are the same markup, so closing is the same handler
     bindDetails(root, () => {
       ctx.state.simpleDetails = null;
+      ctx.state.simpleTeachIn = null;
       ctx.requestContentRender(true);
     });
 
@@ -1088,6 +1449,42 @@ export const page = {
     await this._runDetection(ctx);
   },
 
+  /**
+   * Step 4 of the instruction: this gateway operates the installation from now on.
+   *
+   * Every bus actuator gets an address of the chosen gateway written into its memory and that
+   * address becomes its sender in Home Assistant - the two halves which have to agree, see
+   * lib/sender_gateway.js. Only a FAM14 can write, so this is the step which has to happen
+   * while it is still connected.
+   */
+  async _applyDefaultGateway(ctx, root, button) {
+    const select = root.getElementById("step-default-gateway");
+    if (!select || !select.value) return;
+    const name = select.options[select.selectedIndex].textContent.trim();
+    if (!confirm(`Let "${name}" switch all your devices?\n\n`
+                 + "Home Assistant sends with the addresses of this gateway afterwards, and "
+                 + "every bus actuator which does not carry its address yet gets it written "
+                 + "into its memory. Nothing is removed - what switched a device before keeps "
+                 + "switching it.\n\n"
+                 + "Only a write needs the FAM14 connected and locks the bus for a moment; "
+                 + "where all the addresses are already in place nothing is written.")) return;
+
+    const label = button.innerHTML;
+    button.disabled = true;
+    button.textContent = "programming…";
+    const result = await assignSenderGateway(ctx, { targetGatewayId: select.value });
+    button.disabled = false;
+    button.innerHTML = label;
+    if (!result) {
+      alert((ctx.api.lastError || {}).message || "The gateway could not be programmed.");
+      ctx.api.lastError = null;
+      return;
+    }
+    alert(describeAssignResult(result));
+    await this.load(ctx);
+    ctx.requestRender();
+  },
+
   /** Start the run itself. Whoever calls this has asked the user already. */
   async _runDetection(ctx) {
     // optimistic: the page shows the progress before the answer of the backend arrives
@@ -1132,7 +1529,8 @@ export const page = {
   _pollDetection(ctx) {
     clearTimeout(this._detectTimer);
     this._detectTimer = setTimeout(async () => {
-      if (!ctx.root || !ctx.root.getElementById("simple-detect")) return;   // page was left
+      // the filter input is the toolbar of this page - it is gone as soon as the page is left
+      if (!ctx.root || !ctx.root.getElementById("simple-filter")) return;
       // a start which is still on its way: the backend does not know about it yet, so its
       // "not running" would drop the progress card and hand the buttons back for a moment
       if (this._detectPending) {
@@ -1160,17 +1558,22 @@ export const page = {
     }, 2000);
   },
 
-  /** The toolbar is not rebuilt on a content render, so the button is updated by hand. */
+  /**
+   * Everything which starts a search is locked while one runs.
+   *
+   * The buttons in the content (step 2 of the instruction, "Search again") are rendered with
+   * the state and are right by themselves; the toolbar is *not* rebuilt on a content render,
+   * so its reset button is updated by hand. And "pending" - a start which was sent but not
+   * confirmed by the backend yet - exists only here, so the step button is locked from here
+   * as well: without it the button hands itself back for the moment between the two.
+   */
   _syncDetectButton(ctx) {
-    const button = ctx.root && ctx.root.getElementById("simple-detect");
-    if (!button) return;
-    // "pending" is a start which was sent but not confirmed yet - it locks the buttons too
+    if (!ctx.root) return;
     const running = !!(ctx.state.plugAndPlay || {}).running || !!this._detectPending;
-    button.disabled = running;
-    button.innerHTML = `${icon("mdi:magnify-scan", "◎")} ${running ? "Searching&hellip;" : "Search devices"}`;
-    // the reset starts a search as its second half, so it is locked by the same flag
-    const reset = ctx.root.getElementById("simple-reset");
-    if (reset) reset.disabled = running;
+    for (const id of ["simple-reset", "step-detect", "simple-detect-empty", "simple-detect-again"]) {
+      const button = ctx.root.getElementById(id);
+      if (button) button.disabled = running;
+    }
     if (running) this._pollDetection(ctx);
   },
 

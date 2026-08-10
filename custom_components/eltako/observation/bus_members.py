@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
@@ -38,7 +39,8 @@ from eltakobus.util import b2s
 
 from ..const import (CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION, CONF_SENDER, DATA_BUS_MEMBERS,
                      DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, WS_BUS_CANCEL,
-                     WS_BUS_MEMBERS, WS_BUS_READ_MEMORY, WS_BUS_TEACH_IN_SENDERS)
+                     WS_BUS_DELETE_MEMORY_LINE, WS_BUS_MEMBERS, WS_BUS_PROGRAM_GATEWAY,
+                     WS_BUS_READ_MEMORY, WS_BUS_TEACH_IN_SENDERS)
 from ..catalog.device_catalog import DEVICE_CATALOG, describe_hw_type
 
 if TYPE_CHECKING:
@@ -144,6 +146,21 @@ class BusMemberRegistry:
     def mark_auto_scanned(self, gateway_id: int) -> None:
         """Remember the attempt before it starts, so a restart never repeats it."""
         self._auto_scanned.add(int(gateway_id))
+        self._schedule_save()
+
+    def note_memory_write(self, gateway_id: int, bus_address: int, line: int,
+                          value: bytes) -> None:
+        """Follow a memory line which was just written on the bus.
+
+        Without it the stored image - and with it everything the pages show about taught-in
+        senders - would keep the old content until somebody reads the whole bus again, which
+        takes minutes.
+        """
+        rows = self._memory.setdefault((int(gateway_id), int(bus_address)), {})
+        rows[int(line)] = bytes(value)
+        entry = self._members.get(int(gateway_id), {}).get(int(bus_address))
+        if entry is not None:
+            entry['taught_in_dirty'] = True
         self._schedule_save()
 
     def _entry(self, gateway_id: int, bus_address: int) -> dict:
@@ -677,6 +694,8 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_bus_read_memory)
     websocket_api.async_register_command(hass, ws_bus_cancel)
     websocket_api.async_register_command(hass, ws_bus_teach_in_senders)
+    websocket_api.async_register_command(hass, ws_bus_program_gateway)
+    websocket_api.async_register_command(hass, ws_bus_delete_memory_line)
     domain_data[WS_BUS_REGISTERED] = True
 
 
@@ -693,12 +712,15 @@ async def ws_bus_members(hass: HomeAssistant, connection, msg) -> None:
         members = registry.get_members(hass)
 
     from ..core.websocket import get_gateways
+    programmed = {}
     for gateway in get_gateways(hass):
         try:
             # 'a scan is running' has become 'the bus is busy' - a teach-in and the base id
             # request block the bus just as much, and the page shows the same thing for them
             scans_running[str(gateway.dev_id)] = bool(gateway.is_bus_busy)
             busy_with[str(gateway.dev_id)] = gateway.bus_busy_reason
+            if GatewayDeviceType.is_bus_gateway(gateway.dev_type):
+                programmed[str(gateway.dev_id)] = programmed_gateways(hass, gateway)
         except Exception:   # noqa: BLE001
             scans_running[str(gateway.dev_id)] = False
 
@@ -710,6 +732,13 @@ async def ws_bus_members(hass: HomeAssistant, connection, msg) -> None:
         # numbers right next to its "scanning" badge
         'scan_progress': {str(progress['gateway_id']): progress
                           for progress in get_scan_progress()},
+        # a write (teach-in / programming another gateway) has its own counters - it takes a
+        # discovery and up to one memory write per actuator
+        'teach_in_progress': {str(progress['gateway_id']): progress
+                              for progress in get_teach_in_progress()},
+        # and what is already in the actuators, per gateway: 'can the installation be operated
+        # with this one?' See programmed_gateways()
+        'programmed': programmed,
         'hint': "Detected from the traffic of the gateway (polling, status answers, discovery "
                 "replies) - no bus lock and no active scan needed. Positions without an answer "
                 "are polled by the gateway but did not report yet.",
@@ -884,6 +913,32 @@ NO_ANSWER = (TimeoutError, asyncio.TimeoutError, BusTimeoutError)
 SCAN_PROGRESS: dict[int, dict] = {}
 
 
+# Progress of a running teach-in / programming run, gateway id -> counters. Same idea as
+# SCAN_PROGRESS: writing the senders of a full bus takes a while (one discovery and up to one
+# memory write per actuator), and without counters a page which says nothing for a minute is
+# indistinguishable from one which is stuck.
+TEACH_IN_PROGRESS: dict[int, dict] = {}
+
+
+def get_teach_in_progress(gateway_id: int = None):
+    """Progress of one running write (dict or None) or of all of them (list)."""
+    if gateway_id is not None:
+        return TEACH_IN_PROGRESS.get(gateway_id)
+    return list(TEACH_IN_PROGRESS.values())
+
+
+def describe_teach_in_progress(progress: dict) -> str:
+    """One readable line, e.g. 'actuator 3/14 - 00-00-00-05, 2 written'."""
+    total = progress.get('total') or 0
+    current = min(progress.get('done', 0) + 1, total) if total else '?'
+    line = f"actuator {current}/{total or '?'}"
+    if progress.get('address'):
+        line += f" - {progress['address']}"
+    if progress.get('written'):
+        line += f", {progress['written']} written"
+    return line
+
+
 def get_scan_progress(gateway_id: int = None):
     """Progress of one running scan (dict or None) or of all of them (list)."""
     if gateway_id is not None:
@@ -902,10 +957,18 @@ def describe_scan_progress(progress: dict) -> str:
     line = f"position {current}/{total or '?'}"
     if progress.get('memory_rows_total'):
         line += f", memory {progress.get('memory_rows_read', 0)}/{progress['memory_rows_total']}"
+    # a scan which broke off and goes on where it stopped says so - otherwise the counters
+    # jumping back looks like the scan started over
+    if (progress.get('attempt') or 1) > 1:
+        line += f" (attempt {progress['attempt']}/{progress.get('attempts', SCAN_ATTEMPTS)})"
     return line
 
 
-async def _scan_bus(gateway, positions: list[int]) -> None:
+SCAN_ATTEMPTS = 3           # a scan which breaks off is resumed this often
+SCAN_RETRY_PAUSE = 3        # seconds before the next attempt - a port which just died needs a moment
+
+
+async def _scan_bus(gateway, positions: list[int], completed: set = None, attempt: int = 1) -> None:
     from eltakobus import locking
     from eltakobus.message import (EltakoDiscoveryReply, EltakoDiscoveryRequest,
                                    EltakoMemoryRequest, EltakoMemoryResponse)
@@ -923,7 +986,13 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
         'gateway_id': gateway.dev_id, 'positions_total': len(ordered), 'positions_done': 0,
         'position': None, 'memory_rows_read': None, 'memory_rows_total': None, 'percent': 0,
         'started_at': _utc_now_iso(),
+        # which try this is - the web ui says "attempt 2 of 3" instead of starting at 0 again
+        'attempt': attempt, 'attempts': SCAN_ATTEMPTS,
     }
+    # positions which are done. Filled while the scan runs, so a scan which breaks off in the
+    # middle can be continued at the position it did not reach - the caller keeps this set.
+    if completed is None:
+        completed = set()
     try:
         bus.set_callback(None)
         is_locked = (await locking.lock_bus(bus)) == locking.LOCKED
@@ -946,13 +1015,15 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
                     bus.exchange(EltakoDiscoveryRequest(address=position), EltakoDiscoveryReply, retries=2),
                     timeout=SCAN_EXCHANGE_TIMEOUT)
                 await asyncio.sleep(SCAN_PAUSE)
-                if reply is None:
-                    continue
 
-                forward(reply)      # feeds the registry through the normal receive path
-                skip_until = position + reply.reported_size - 1
+                if reply is not None:
+                    forward(reply)      # feeds the registry through the normal receive path
+                    skip_until = position + reply.reported_size - 1
+                    # the further positions of a multi channel device do not answer a discovery
+                    # of their own, so a retry must not visit them again either
+                    completed.update(range(position, skip_until + 1))
 
-                for line in range(reply.memory_size):
+                for line in range(reply.memory_size if reply is not None else 0):
                     if gateway.is_bus_cancelled:
                         break
                     progress.update({'memory_rows_read': line + 1, 'memory_rows_total': reply.memory_size,
@@ -974,11 +1045,12 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
                 # the normal answer for a gap in the bus, and what a damaged reply ends up as
                 LOGGER.debug(f"[{LOG_PREFIX_BUS}] Gateway {gateway.dev_id}: position {position} "
                              f"did not answer, skipping it.")
-                continue
             except Exception as e:  # noqa: BLE001 - one position must not end the whole scan
                 LOGGER.warning(f"[{LOG_PREFIX_BUS}] Gateway {gateway.dev_id}: position {position} "
                                f"could not be read ({type(e).__name__}: {e}) - skipping it.")
-                continue
+            # visited, whatever came back - a retry starts behind it instead of reading the
+            # positions which are already in the registry a second time
+            completed.add(position)
 
         if gateway.is_bus_cancelled:
             # the memories read so far are kept: they are complete per position, and a position
@@ -1045,10 +1117,40 @@ def start_bus_scan_thread(hass: HomeAssistant, gateway, positions: list[int]) ->
     generation = gateway.bus_generation
 
     def runner():
+        """Read the bus, and pick the scan up where it broke off.
+
+        A scan can end in the middle for reasons which have nothing to do with the position it
+        was reading: the serial connection dies, the port throws, the gateway stops answering
+        for a moment. Starting from position 1 again would read everything which was already
+        read a second time - minutes on a full bus - so the positions which are done are
+        remembered and the next attempt only visits the rest.
+
+        Up to SCAN_ATTEMPTS attempts. A cancel is not a failure: it ends the scan for good
+        (see gateway.cancel_bus_operation), otherwise the button would not do anything.
+        """
+        completed: set[int] = set()
         try:
-            asyncio.run(_scan_bus(gateway, positions))
-        except Exception as e:  # noqa: BLE001
-            LOGGER.error(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} failed: {e}", exc_info=True)
+            for attempt in range(1, SCAN_ATTEMPTS + 1):
+                remaining = [position for position in positions if position not in completed]
+                if not remaining or gateway.is_bus_cancelled:
+                    break
+                if attempt > 1:
+                    LOGGER.warning(
+                        f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id}: attempt "
+                        f"{attempt} of {SCAN_ATTEMPTS}, continuing at position {min(remaining)} "
+                        f"({len(completed)} of {len(positions)} already read).")
+                    time.sleep(SCAN_RETRY_PAUSE)
+                try:
+                    asyncio.run(_scan_bus(gateway, remaining, completed, attempt))
+                    break           # finished - a position which stayed silent is not a failure
+                except Exception as e:  # noqa: BLE001 - the next attempt is the answer to this
+                    LOGGER.error(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} broke "
+                                 f"off in attempt {attempt} of {SCAN_ATTEMPTS}: {e}",
+                                 exc_info=attempt == SCAN_ATTEMPTS)
+            else:
+                LOGGER.error(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} did not "
+                             f"finish after {SCAN_ATTEMPTS} attempts - "
+                             f"{len(completed)} of {len(positions)} positions were read.")
         finally:
             gateway.release_bus(generation)
 
@@ -1085,26 +1187,41 @@ def _schedule_reload_flush(hass: HomeAssistant, gateway, timeout: int = 900) -> 
         LOGGER.debug(f"[{LOG_PREFIX_BUS}] Cannot watch for postponed reloads: {e}")
 
 
-async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str = None) -> list[dict]:
-    """Verify and teach in the configured Home Assistant sender ids on the bus.
+def sender_id_for_gateway(base_id: str, device_address: str) -> str | None:
+    """The sender address another gateway uses for a bus actuator.
 
-    Follows the standard procedure of the EnOcean Device Manager: for every configured
-    actuator its sender id is looked up in the device memory (ensure_programmed of the
-    eltakobus library) and written into the first free line if it is missing. The bus is
-    locked and the receive callback is disabled while writing - exactly like eo_man does.
+    The same rule the EnOcean Device Manager writes into its configurations: the **base id of
+    the gateway** carries the address and the **last byte of the actuator address** identifies
+    the actuator inside it, so position 4 of a bus (00-00-00-04) becomes FF-C0-02-04 behind a
+    gateway with base id FF-C0-02-00.
+
+    That is what makes it possible to move an installation from the FAM14 to a wireless
+    gateway: a transceiver only transmits senders out of its own base id range, so those are
+    the addresses which have to be in the memory of the actuators - written while the FAM14 is
+    still connected, because only it can write anything.
+
+    None when it cannot be formed: without a base id, for a device which is not on the bus, or
+    when the offset would leave the range of 128 addresses a base id covers.
     """
-    from eltakobus import locking
-    from eltakobus.device import create_busobject
-    from eltakobus.eep import EEP
-    from eltakobus.util import AddressExpression
-    from homeassistant.const import CONF_ID
+    from eltakobus.util import AddressExpression, b2s
 
-    if gateway.is_bus_busy:
-        LOGGER.warning(f"[{LOG_PREFIX_BUS}] Teaching in the senders of gateway {gateway.dev_id} "
-                       f"was refused - the bus is busy with '{gateway.bus_busy_reason}'.")
-        return [{'status': 'busy', 'message': f"The bus is busy with "
-                                              f"'{gateway.bus_busy_reason}' - try again when it "
-                                              f"has finished."}]
+    parts = str(device_address or '').upper().split('-')
+    if len(parts) != 4 or parts[:3] != ['00', '00', '00']:
+        return None
+    offset = int(parts[3], 16)
+    try:
+        base = int.from_bytes(AddressExpression.parse(str(base_id))[0], 'big')
+    except Exception:   # noqa: BLE001 - a gateway without a (valid) base id has none to offer
+        return None
+    if not base or (base & 0xFF) + offset > 0x7F:
+        # a base id covers 128 addresses; beyond that the gateway would refuse to transmit
+        return None
+    return b2s((base + offset).to_bytes(4, 'big'))
+
+
+def _collect_teach_in_jobs(hass: HomeAssistant, gateway, only_address: str = None) -> list[dict]:
+    """(position, sender id, sender eep) of every configured bus actuator of this gateway."""
+    from homeassistant.const import CONF_ID
 
     config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
     devices_config = {}
@@ -1114,7 +1231,6 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
             # installation which was configured without a yaml
             devices_config = _devices_of_gateway(hass, gateway_config)
 
-    # collect (local position, channel owner is derived on the bus, sender id, sender eep)
     jobs = []
     for platform, devices in devices_config.items():
         for device in devices or []:
@@ -1130,9 +1246,21 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
             jobs.append({'address': address.upper(), 'position': int(parts[3], 16),
                          'sender_id': sender_id, 'sender_eep': sender_eep,
                          'name': device.get('name'), 'platform': str(platform)})
+    return jobs
 
-    if not jobs:
-        return []
+
+async def _async_write_teach_in_jobs(hass: HomeAssistant, gateway, jobs: list[dict],
+                                     reason: str) -> list[dict]:
+    """Write the sender ids of `jobs` into the memories of the bus devices.
+
+    The bus is locked and the receive callback is disabled while writing - exactly like the
+    EnOcean Device Manager does it. One job which cannot be written is reported and does not
+    stop the others.
+    """
+    from eltakobus import locking
+    from eltakobus.device import create_busobject
+    from eltakobus.eep import EEP
+    from eltakobus.util import AddressExpression
 
     registry = get_registry(hass)
     members = {m['bus_address']: m for m in (registry.get_members(hass) if registry else [])
@@ -1144,21 +1272,30 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
             return member['parent_bus_address']
         return position
 
-    if not gateway.try_acquire_bus("teaching in the senders"):
+    if not gateway.try_acquire_bus(reason):
         return [{'status': 'busy', 'message': f"The bus is busy with "
                                               f"'{gateway.bus_busy_reason}' - try again when it "
                                               f"has finished."}]
+    generation = gateway.bus_generation
 
     bus = gateway._bus
     results = []
     original_callback = bus.callback_func
     is_locked = False
+    progress = TEACH_IN_PROGRESS[gateway.dev_id] = {
+        'gateway_id': gateway.dev_id, 'reason': reason, 'total': len(jobs), 'done': 0,
+        'address': None, 'sender_id': None, 'written': 0, 'failed': 0, 'percent': 0,
+        'started_at': _utc_now_iso(),
+    }
     try:
         bus.set_callback(None)
         is_locked = (await locking.lock_bus(bus)) == locking.LOCKED
 
         bus_objects = {}
-        for job in jobs:
+        for index, job in enumerate(jobs):
+            progress.update({'done': index, 'address': job.get('address'),
+                             'sender_id': job.get('sender_id'),
+                             'percent': int(100 * index / max(len(jobs), 1))})
             owner = owner_of(job['position'])
             channel = job['position'] - owner
             try:
@@ -1174,14 +1311,21 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
                                              EEP.find(job['sender_eep'])),
                     timeout=TEACH_IN_TIMEOUT)
                 results.append({**job, 'result': 'written' if written else 'already_taught_in'})
+                if written:
+                    progress['written'] += 1
             except ValueError as e:
                 results.append({**job, 'result': 'unsupported', 'message': str(e)})
+                progress['failed'] += 1
             except Exception as e:  # noqa: BLE001
                 results.append({**job, 'result': 'error', 'message': str(e)})
+                progress['failed'] += 1
+            progress.update({'done': index + 1,
+                             'percent': int(100 * (index + 1) / max(len(jobs), 1))})
 
-        LOGGER.info(f"[{LOG_PREFIX_BUS}] Teach-in on gateway {gateway.dev_id}: "
+        LOGGER.info(f"[{LOG_PREFIX_BUS}] {reason.capitalize()} on gateway {gateway.dev_id}: "
                     + ", ".join(f"{r['address']}={r['result']}" for r in results))
     finally:
+        TEACH_IN_PROGRESS.pop(gateway.dev_id, None)
         if is_locked:
             try:
                 await locking.unlock_bus(bus)
@@ -1189,12 +1333,215 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
                 LOGGER.error(f"[{LOG_PREFIX_BUS}] Cannot unlock the bus: {e}")
         bus.set_callback(original_callback)
         # commands which arrived while this was running are sent now
-        gateway.release_bus()
+        gateway.release_bus(generation)
         # and a gateway whose reload was postponed while the bus was taken gets it now
         from ..core.integration import async_flush_pending_reloads
         await async_flush_pending_reloads(hass)
 
     return results
+
+
+async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str = None) -> list[dict]:
+    """Verify and teach in the configured Home Assistant sender ids on the bus.
+
+    Follows the standard procedure of the EnOcean Device Manager: for every configured
+    actuator its sender id is looked up in the device memory (ensure_programmed of the
+    eltakobus library) and written into the first free line if it is missing.
+    """
+    if gateway.is_bus_busy:
+        LOGGER.warning(f"[{LOG_PREFIX_BUS}] Teaching in the senders of gateway {gateway.dev_id} "
+                       f"was refused - the bus is busy with '{gateway.bus_busy_reason}'.")
+        return [{'status': 'busy', 'message': f"The bus is busy with "
+                                              f"'{gateway.bus_busy_reason}' - try again when it "
+                                              f"has finished."}]
+
+    jobs = _collect_teach_in_jobs(hass, gateway, only_address)
+    if not jobs:
+        return []
+    return await _async_write_teach_in_jobs(hass, gateway, jobs, "teaching in the senders")
+
+
+async def async_delete_memory_line(hass: HomeAssistant, gateway, bus_address: int,
+                                   memory_line: int, expected_sensor_id: str = None) -> dict:
+    """Clear one taught-in sender out of the memory of a bus device.
+
+    The counterpart of the teach-in: a sender which is in an actuator switches it, and an
+    address which does not belong there anymore (an old gateway, a sensor which was replaced)
+    keeps switching it. Removing it means writing an **empty line** at that position - the same
+    thing the PCT14 does.
+
+    `expected_sensor_id` is the safety catch and should always be passed: the line is read
+    first and only cleared when it really holds that sender. Without it a page which is a few
+    seconds out of date would delete whatever moved into that line meanwhile - and a wrongly
+    deleted line is a device which silently stops reacting.
+    """
+    from eltakobus import locking
+    from eltakobus.device import create_busobject
+    from eltakobus.util import b2s
+
+    if gateway.is_bus_busy:
+        return {'error': 'bus_busy',
+                'message': f"The bus is busy with '{gateway.bus_busy_reason}' - try again "
+                           f"when it has finished."}
+    if not gateway.try_acquire_bus("deleting a memory line"):
+        return {'error': 'bus_busy', 'message': f"The bus is busy with "
+                                                f"'{gateway.bus_busy_reason}'."}
+    generation = gateway.bus_generation
+
+    bus = gateway._bus
+    original_callback = bus.callback_func
+    is_locked = False
+    try:
+        bus.set_callback(None)
+        is_locked = (await locking.lock_bus(bus)) == locking.LOCKED
+
+        device = await asyncio.wait_for(create_busobject(bus=bus, id=int(bus_address)),
+                                        timeout=TEACH_IN_TIMEOUT)
+        if device is None:
+            return {'error': 'no_answer',
+                    'message': f"Position {bus_address} did not answer the discovery."}
+
+        line = await asyncio.wait_for(device.read_mem_line(int(memory_line)),
+                                      timeout=TEACH_IN_TIMEOUT)
+        current = b2s(bytes(line[:4]))
+        if expected_sensor_id and current.upper() != str(expected_sensor_id).upper():
+            LOGGER.warning(f"[{LOG_PREFIX_BUS}] Not deleting line {memory_line} of position "
+                           f"{bus_address}: it holds {current}, not {expected_sensor_id}.")
+            return {'error': 'line_changed',
+                    'message': f"Memory line {memory_line} holds {current}, not "
+                               f"{expected_sensor_id} - the view was out of date. Read the bus "
+                               f"again and try once more."}
+
+        await asyncio.wait_for(device.write_mem_line(int(memory_line), bytes(len(line))),
+                               timeout=TEACH_IN_TIMEOUT)
+        LOGGER.info(f"[{LOG_PREFIX_BUS}] Gateway {gateway.dev_id}: sender {current} removed "
+                    f"from position {bus_address}, memory line {memory_line}.")
+
+        # the stored memory image has to follow, otherwise the page shows the deleted sender
+        # until somebody reads the whole bus again
+        registry = get_registry(hass)
+        if registry is not None:
+            registry.note_memory_write(gateway.dev_id, int(bus_address), int(memory_line),
+                                       bytes(len(line)))
+            await registry.async_parse_taught_in()
+        return {'deleted': True, 'sensor_id': current, 'bus_address': int(bus_address),
+                'memory_line': int(memory_line)}
+    except Exception as e:  # noqa: BLE001 - the answer says what went wrong, the bus is freed
+        LOGGER.error(f"[{LOG_PREFIX_BUS}] Cannot delete memory line {memory_line} of position "
+                     f"{bus_address}: {e}", exc_info=True)
+        return {'error': 'write_failed', 'message': str(e)}
+    finally:
+        if is_locked:
+            try:
+                await locking.unlock_bus(bus)
+            except Exception as e:  # noqa: BLE001
+                LOGGER.error(f"[{LOG_PREFIX_BUS}] Cannot unlock the bus: {e}")
+        bus.set_callback(original_callback)
+        gateway.release_bus(generation)
+
+
+def programmed_gateways(hass: HomeAssistant, gateway) -> list[dict]:
+    """Whose senders are already in the actuators of this bus - one entry per gateway.
+
+    This is the answer to the question the programming raises: did it work, and can the
+    installation be operated with that gateway? It is read out of the memory images of the last
+    bus scan, so a position whose memory was never read says **unknown** instead of "no" - the
+    difference matters, because "no" would send somebody programming what is long since in
+    there.
+    """
+    from ..const import GatewayDeviceType
+    from ..core.websocket import get_gateways
+    from eltakobus.util import b2s
+
+    jobs = _collect_teach_in_jobs(hass, gateway)
+    if not jobs:
+        return []
+
+    summary = []
+    for target in get_gateways(hass):
+        is_self = target.dev_id == gateway.dev_id
+        if not is_self and GatewayDeviceType.is_bus_gateway(target.dev_type):
+            continue        # a second bus gateway uses the same local senders as this one
+        base_id = None
+        if not is_self:
+            try:
+                base_id = b2s(target.base_id[0]) if target.base_id else None
+            except Exception:   # noqa: BLE001
+                base_id = None
+            if not base_id or not base_id.upper().startswith('FF'):
+                continue    # no wireless base id -> no addresses to look for
+
+        programmed = unknown = 0
+        for job in jobs:
+            sender_id = job['sender_id'] if is_self else sender_id_for_gateway(base_id, job['address'])
+            if sender_id is None:
+                unknown += 1
+                continue
+            state = sender_is_taught_in(hass, gateway.dev_id, job['address'], sender_id)
+            if state is None:
+                unknown += 1
+            elif state:
+                programmed += 1
+        summary.append({
+            'gateway_id': target.dev_id, 'name': target.dev_name, 'base_id': base_id,
+            'is_this_bus': is_self, 'total': len(jobs),
+            'programmed': programmed, 'unknown': unknown,
+            'missing': len(jobs) - programmed - unknown,
+        })
+    return summary
+
+
+async def async_program_gateway_senders(hass: HomeAssistant, gateway, target_gateway) -> dict:
+    """Write the sender addresses of **another** gateway into the actuators of this bus.
+
+    Why this exists: an installation is read and programmed with a FAM14, but it is often
+    operated with something else afterwards - an FGW14-USB or a wireless gateway. A wireless
+    gateway may only transmit senders out of its own base id range, so the actuators have to
+    carry *those* addresses in their memory. Writing them needs a FAM14, so it has to happen
+    while it is still connected - which is exactly what this does, for all actuators at once.
+
+    The addresses follow sender_id_for_gateway(): base id of the target gateway plus the last
+    byte of the actuator address, the rule the EnOcean Device Manager uses as well.
+    """
+    from eltakobus.util import b2s
+
+    if gateway.is_bus_busy:
+        return {'results': [], 'error': 'bus_busy',
+                'message': f"The bus is busy with '{gateway.bus_busy_reason}' - try again "
+                           f"when it has finished."}
+
+    base_id = b2s(target_gateway.base_id[0]) if getattr(target_gateway, 'base_id', None) else None
+    if not base_id or not str(base_id).upper().startswith('FF'):
+        # a gateway which never reported its base id (not connected yet, or a bus gateway,
+        # which has no range of its own) has no sender addresses to hand out
+        return {'results': [], 'error': 'no_base_id',
+                'message': f"Gateway '{target_gateway.dev_name}' has no wireless base id yet - "
+                           f"connect it once so that it reports one."}
+
+    jobs = []
+    skipped = []
+    for job in _collect_teach_in_jobs(hass, gateway):
+        sender_id = sender_id_for_gateway(base_id, job['address'])
+        if sender_id is None:
+            skipped.append({**job, 'result': 'out_of_range'})
+            continue
+        jobs.append({**job, 'sender_id': sender_id, 'sender_eep': job['sender_eep'],
+                     'target_gateway_id': target_gateway.dev_id,
+                     'target_gateway_name': target_gateway.dev_name})
+
+    if not jobs:
+        return {'results': skipped, 'base_id': base_id,
+                'target_gateway_id': target_gateway.dev_id,
+                'target_gateway_name': target_gateway.dev_name}
+
+    LOGGER.info(f"[{LOG_PREFIX_BUS}] Programming the senders of gateway "
+                f"'{target_gateway.dev_name}' (base id {base_id}) into {len(jobs)} actuator(s) "
+                f"of gateway {gateway.dev_id}.")
+    results = await _async_write_teach_in_jobs(
+        hass, gateway, jobs, f"programming the senders of '{target_gateway.dev_name}'")
+    return {'results': results + skipped, 'base_id': base_id,
+            'target_gateway_id': target_gateway.dev_id,
+            'target_gateway_name': target_gateway.dev_name}
 
 
 @websocket_api.require_admin
@@ -1223,3 +1570,69 @@ async def ws_bus_teach_in_senders(hass: HomeAssistant, connection, msg) -> None:
 
     results = await async_teach_in_senders(hass, gateway, msg.get('address'))
     connection.send_result(msg['id'], {'results': results})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_BUS_PROGRAM_GATEWAY,
+    # the FAM14 which does the writing, and the gateway whose addresses are written
+    vol.Required('gateway_id'): vol.Coerce(int),
+    vol.Required('target_gateway_id'): vol.Coerce(int),
+})
+@websocket_api.async_response
+async def ws_bus_program_gateway(hass: HomeAssistant, connection, msg) -> None:
+    """Program the sender addresses of another gateway into the actuators of this bus."""
+    from ..core.websocket import get_gateways
+
+    gateways = get_gateways(hass)
+    gateway = next((g for g in gateways if g.dev_id == msg['gateway_id']), None)
+    target = next((g for g in gateways if g.dev_id == msg['target_gateway_id']), None)
+    if gateway is None or target is None:
+        connection.send_error(msg['id'], 'unknown_gateway',
+                              f"No gateway with id {msg['gateway_id']} / {msg['target_gateway_id']}")
+        return
+    if not GatewayDeviceType.is_bus_gateway(gateway.dev_type):
+        connection.send_error(msg['id'], 'not_a_bus_gateway',
+                              f"Gateway {gateway.dev_id} ({gateway.dev_type}) has no RS485 bus.")
+        return
+    if gateway.dev_id == target.dev_id:
+        connection.send_error(msg['id'], 'same_gateway',
+                              "The senders of this gateway are written by the normal teach-in.")
+        return
+
+    answer = await async_program_gateway_senders(hass, gateway, target)
+    if answer.get('error'):
+        connection.send_error(msg['id'], answer['error'], answer.get('message', ''))
+        return
+    connection.send_result(msg['id'], answer)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_BUS_DELETE_MEMORY_LINE,
+    vol.Required('gateway_id'): vol.Coerce(int),
+    vol.Required('bus_address'): vol.Coerce(int),
+    vol.Required('memory_line'): vol.Coerce(int),
+    # what the page believes is in that line - the write only happens if it is really there
+    vol.Optional('sensor_id'): vol.Any(None, str),
+})
+@websocket_api.async_response
+async def ws_bus_delete_memory_line(hass: HomeAssistant, connection, msg) -> None:
+    """Remove one taught-in sender from the memory of a bus device."""
+    from ..core.websocket import get_gateways
+
+    gateway = next((g for g in get_gateways(hass) if g.dev_id == msg['gateway_id']), None)
+    if gateway is None:
+        connection.send_error(msg['id'], 'unknown_gateway', f"No gateway with id {msg['gateway_id']}")
+        return
+    if not GatewayDeviceType.is_bus_gateway(gateway.dev_type):
+        connection.send_error(msg['id'], 'not_a_bus_gateway',
+                              f"Gateway {gateway.dev_id} ({gateway.dev_type}) has no RS485 bus.")
+        return
+
+    answer = await async_delete_memory_line(hass, gateway, msg['bus_address'],
+                                            msg['memory_line'], msg.get('sensor_id'))
+    if answer.get('error'):
+        connection.send_error(msg['id'], answer['error'], answer.get('message', ''))
+        return
+    connection.send_result(msg['id'], answer)

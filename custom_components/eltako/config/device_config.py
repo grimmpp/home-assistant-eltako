@@ -777,6 +777,10 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_device_remove)
     websocket_api.async_register_command(hass, ws_device_remove_all)
     websocket_api.async_register_command(hass, ws_device_teach_in)
+    # which gateway switches an actuator - imported here because that module builds on the
+    # device configuration of this one (and would be a circular import at module level)
+    from .sender_gateway import register_websocket_commands as register_sender_gateway
+    register_sender_gateway(hass)
 
 
 def _get_area_names(hass: HomeAssistant) -> list[str]:

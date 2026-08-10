@@ -112,6 +112,27 @@ for (const file of readdirSync(`${frontendDir}/pages`).filter((name) => name.end
       problems.push(`${file} (${label}): render() returned no html`);
       continue;
     }
+    // the toolbar and the status line are markup of this page as well - the leaked css this
+    // checks for landed in a toolbar, where nothing looked at it
+    for (const extra of ['renderToolbar', 'renderStatus']) {
+      if (typeof page[extra] !== 'function') continue;
+      try {
+        const more = page[extra](makeCtx(structuredClone(state)));
+        if (typeof more === 'string') html += `\n${more}`;
+      } catch (error) {
+        problems.push(`${file} (${label}): ${extra}() throws - ${error.message}`);
+      }
+    }
+    // css which leaked into the markup. A page declares its styles as `styles:`, and that
+    // value is not always a template literal - a rule which is appended to the wrong string
+    // ends up *printed on the page* instead of in the <style> of the panel, which is what
+    // happened once and is invisible to every other check here.
+    const leaked = html.match(/^\s*[.#a-z][\w.#> -]*\s*\{\s*(display|margin|padding|font-size|color|flex)\s*:/mi);
+    if (leaked) {
+      problems.push(`${file} (${label}): css rule in the html near "${leaked[0].trim()}" - ` +
+                    'it probably went into a markup template instead of the styles');
+    }
+
     for (const marker of ['undefined', 'NaN', '${']) {
       if (html.includes(marker)) {
         const at = html.indexOf(marker);
@@ -282,11 +303,13 @@ def build_fixtures() -> dict:
 
     # the free send form of the telegram page, opened with a profile whose fields depend on
     # each other (A5-38-08 switches or dims)
-    from custom_components.eltako.core.websocket import get_eep_descriptors
+    from custom_components.eltako.core.websocket import (get_eep_descriptors,
+                                                        get_teach_in_descriptor)
 
     send_form_descriptor = {
         'gateways': [{'id': 1, 'name': 'FAM14', 'base_id': 'FF-AA-80-00'}],
         'eeps': get_eep_descriptors(),
+        'teach_in': get_teach_in_descriptor(),
     }
 
     # the radio comparison page: a report of the real backend with a telegram which two
@@ -337,8 +360,43 @@ def build_fixtures() -> dict:
                          'senderId': '00-00-B0-01', 'fields': {'command': '2'}, 'raw': '',
                          'result': None, 'error': None},
         },
+        # the same form in its teach-in modes: the profile teach-in of an RPS sender profile
+        # (which is two telegrams - press and release) and the ELTAKO teach-in of a sender profile
+        'telegrams_teach_in': {
+            'integrationInfo': integration_info,
+            'sendFormDescriptor': send_form_descriptor,
+            'sendForm': {'gatewayId': 1, 'mode': 'teach_in', 'eep': 'H5-3F-7F',
+                         'senderId': '00-00-B0-01', 'fields': {}, 'raw': '',
+                         'result': {'sent': True, 'mode': 'teach_in', 'count': 2,
+                                    'telegram': '<RPSMessage from 00-00-B0-01> | <RPSMessage from 00-00-B0-01>',
+                                    'hex': 'a55a6b05300000000000b0013081 a55a6b05200000000000b0013071'},
+                         'error': None},
+        },
+        'telegrams_eltako_teach_in': {
+            'integrationInfo': integration_info,
+            'sendFormDescriptor': send_form_descriptor,
+            'sendForm': {'gatewayId': 1, 'mode': 'eltako_teach_in', 'eep': 'A5-38-08',
+                         'senderId': '00-00-B0-01', 'fields': {}, 'raw': '',
+                         'result': None, 'error': None},
+        },
         'devices': {'integrationInfo': bus_gateway_info, 'configuredDevices': home_devices,
                     'busMembers': bus_members, 'statistics': home_statistics},
+        # the same page while the senders of another gateway are being written, and with
+        # the summary of what is already in the actuators
+        'devices_programming': {
+            'integrationInfo': bus_gateway_info, 'configuredDevices': home_devices,
+            'statistics': home_statistics,
+            'busMembers': {**bus_members,
+                'teach_in_progress': {'1': {'gateway_id': 1, 'reason': "programming the senders of 'FAM-USB'",
+                                            'total': 14, 'done': 3, 'address': '00-00-00-04',
+                                            'sender_id': 'FF-C0-02-04', 'written': 2, 'failed': 0,
+                                            'percent': 21}},
+                'programmed': {'1': [
+                    {'gateway_id': 1, 'name': 'FAM14', 'base_id': None, 'is_this_bus': True,
+                     'total': 14, 'programmed': 14, 'unknown': 0, 'missing': 0},
+                    {'gateway_id': 2, 'name': 'FAM-USB', 'base_id': 'FF-C0-02-00',
+                     'is_this_bus': False, 'total': 14, 'programmed': 3, 'unknown': 4, 'missing': 7},
+                ]}}},
         # while a scan or a teach-in has the bus, the page says so instead of offering the buttons
         'devices_bus_busy': {'integrationInfo': bus_gateway_info,
                              'configuredDevices': home_devices, 'statistics': home_statistics,
@@ -360,6 +418,19 @@ def build_fixtures() -> dict:
                                           'repeating_count': 0}},
         'home': {'integrationInfo': integration_info, 'configuredDevices': home_devices,
                  'deviceForm': device_form, 'statistics': home_statistics},
+        # the same page with the teach-in popup of one device open: which gateway switches
+        # it, and how it learns that (pages/home.js)
+        'home_teach_in': {
+            'integrationInfo': {**integration_info, 'gateways': [
+                {'id': 1, 'name': 'FAM14', 'type': 'fam14', 'base_id': 'FF-AA-80-00',
+                 'serial_path': '/dev/ttyUSB0', 'connected': True, 'simulated': False},
+                {'id': 2, 'name': 'FAM-USB', 'type': 'fam-usb', 'base_id': 'FF-C0-02-00',
+                 'serial_path': '/dev/ttyUSB1', 'connected': True, 'simulated': False},
+            ]},
+            'configuredDevices': home_devices, 'deviceForm': device_form,
+            'statistics': home_statistics,
+            'simpleTeachIn': {'key': 'light|00-00-00-01|1', 'gatewayId': None},
+        },
         'help': {'helpCatalog': build_catalog(), 'helpFilter': ''},
         'tests': {'integrationInfo': integration_info, 'deviceTests': device_tests_info},
     }
@@ -416,9 +487,15 @@ class TestEveryPageRenders(unittest.TestCase):
             self.assertIn(f'{page_id}:fixture', report['rendered'])
         self.assertIn('radio:radio_restricted', report['rendered'])
         self.assertIn('logs:logs_empty', report['rendered'])
+        self.assertIn('devices:devices_programming', report['rendered'])
         # the simulation page with an open form and a triggered telegram, and the devices page
         # while an exclusive operation has the bus
         for variant in ('simulation_editing', 'simulation_off'):
             self.assertIn(f'simulation:{variant}', report['rendered'])
         self.assertIn('devices:devices_bus_busy', report['rendered'])
         self.assertIn('telegrams:telegrams_send_form', report['rendered'])
+        # the send form in both teach-in modes
+        for variant in ('telegrams_teach_in', 'telegrams_eltako_teach_in'):
+            self.assertIn(f'telegrams:{variant}', report['rendered'])
+        # the teach-in popup of the simple view
+        self.assertIn('home:home_teach_in', report['rendered'])

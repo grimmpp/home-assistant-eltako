@@ -39,9 +39,15 @@ const True_ = true, False_ = false;
 const navigations = [];
 const events = [];
 globalThis.history = { pushState: (_state, _title, url) => navigations.push(url) };
+/** the browser storage the folded state of the Initial Setup guide is remembered in */
+const storage = {};
 globalThis.window = {
   eltakoStandalone: False_,
   dispatchEvent: (event) => events.push({ where: 'window', type: event.type }),
+  localStorage: {
+    getItem: (key) => (key in storage ? storage[key] : null),
+    setItem: (key, value) => { storage[key] = String(value); },
+  },
 };
 globalThis.CustomEvent = class { constructor(type, init = {}) { this.type = type; Object.assign(this, init); } };
 globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0);
@@ -155,7 +161,33 @@ const gatewayPopup = show(offlineCtx).querySelector('.modal-card');
 const orphanRoot = show(makeContext({
   orphans: [{ id: 2, name: 'FGW14-USB', device_type: 'fgw14usb' }] }));
 
+/* ------------------------------------------------------ the Initial Setup guide */
+
+const setupCtx = makeContext();
+const setupRoot = show(setupCtx);
+const setup = setupRoot.getElementById('simple-setup');
+const firstBlock = setupRoot.children[0];
+
+// fold it away: <details> flips its own state and fires 'toggle' - the page only stores it
+setup.open = False_;
+await setup.dispatch('toggle');
+const storedAfterCollapse = storage['eltako-simple-setup-open'];
+const collapsed = show(makeContext()).getElementById('simple-setup');
+
+// and out again
+collapsed.open = True_;
+await collapsed.dispatch('toggle');
+const storedAfterReopen = storage['eltako-simple-setup-open'];
+const reopened = show(makeContext()).getElementById('simple-setup');
+
 console.log(JSON.stringify({
+  setupIsTheFirstBlock: { id: firstBlock.attributes.id || null, tag: firstBlock.tagName },
+  setupTag: setup.tagName,
+  setupTitle: setup.querySelector('summary').textContent.replace(/\s+/g, ' ').trim(),
+  setupOpenByDefault: setup.hasAttribute('open'),
+  storedAfterCollapse, openAfterCollapse: collapsed.hasAttribute('open'),
+  storedAfterReopen, openAfterReopen: reopened.hasAttribute('open'),
+  setupSteps: setupRoot.querySelectorAll('.steps li').length,
   serviceCalls: ctx.hass.calls,
   chipIsAButton: chip.tagName === 'BUTTON',
   chipShowsTheValue: chip.textContent.replace(/\s+/g, ' ').trim(),
@@ -246,6 +278,33 @@ class TestTheSimpleView(unittest.TestCase):
 
     def test_a_click_next_to_the_popup_closes_it(self):
         self.assertIsNone(self.result['closedByBackdrop'])
+
+    ### the Initial Setup guide
+
+    def test_it_stands_at_the_very_top_of_the_page(self):
+        """It is the first thing a fresh installation needs - and the first thing to fold away."""
+        self.assertEqual({'id': 'simple-setup', 'tag': 'DETAILS'},
+                         self.result['setupIsTheFirstBlock'])
+
+    def test_it_is_called_initial_setup_and_says_how_far_it_is(self):
+        title = self.result['setupTitle']
+
+        self.assertIn('Initial Setup', title)
+        # the progress belongs into the summary: it is all that is left when it is folded away
+        self.assertIn('/4', title)
+        self.assertEqual(4, self.result['setupSteps'])
+
+    def test_it_is_folded_out_on_a_fresh_browser(self):
+        self.assertTrue(self.result['setupOpenByDefault'])
+
+    def test_folding_it_away_is_remembered(self):
+        """The page redraws itself on every state change - without this it would spring open."""
+        self.assertEqual('0', self.result['storedAfterCollapse'])
+        self.assertFalse(self.result['openAfterCollapse'])
+
+    def test_folding_it_out_again_is_remembered_too(self):
+        self.assertEqual('1', self.result['storedAfterReopen'])
+        self.assertTrue(self.result['openAfterReopen'])
 
     ### gateways
 

@@ -90,10 +90,14 @@ export function bindBusCancel(root, api, afterCancel) {
 export function describeBusScan(scan) {
   const total = scan.positions_total || 0;
   const current = total ? Math.min((scan.positions_done || 0) + 1, total) : "?";
-  const line = `position ${current}/${total || "?"}`;
-  return scan.memory_rows_total
-    ? `${line} &middot; memory ${scan.memory_rows_read || 0}/${scan.memory_rows_total}`
-    : line;
+  let line = `position ${current}/${total || "?"}`;
+  if (scan.memory_rows_total) {
+    line += ` &middot; memory ${scan.memory_rows_read || 0}/${scan.memory_rows_total}`;
+  }
+  // a scan which broke off continues where it stopped - without this the counters would jump
+  // back and look like it started over
+  if ((scan.attempt || 1) > 1) line += ` &middot; attempt ${scan.attempt}/${scan.attempts || 3}`;
+  return line;
 }
 
 /**

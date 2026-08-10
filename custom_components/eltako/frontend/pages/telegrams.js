@@ -19,6 +19,23 @@ const CSV_COLUMNS = [
 // number of decoded values shown per row before the rest is collapsed into a counter
 const VALUE_LIMIT = 8;
 
+/**
+ * What the send form can build.
+ *
+ * The two teach-in telegrams are not value telegrams: they carry no fields, only the address
+ * they are sent from, and they run in opposite directions - a *sensor* announces its profile,
+ * a *sender* asks an ELTAKO actuator to take it into its memory. The backend builds both with
+ * the encoders of the simulation (`build_teach_in_telegrams` in core/websocket.py) and tells the
+ * form in the descriptor which profile has which of them.
+ */
+const SEND_MODES = [
+  { value: "eep", label: "EEP fields" },
+  { value: "teach_in", label: "profile teach-in (sensor announces itself)" },
+  { value: "eltako_teach_in", label: "ELTAKO teach-in (actuator learns the sender)" },
+  { value: "raw", label: "raw ESP2 hex" },
+];
+const TEACH_IN_MODES = ["teach_in", "eltako_teach_in"];
+
 // TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "telegrams",
@@ -272,15 +289,67 @@ export const page = {
         >+ Add device</button>`);
   },
 
+  /** True for the two modes which send a teach-in telegram instead of a value telegram. */
+  _isTeachIn(mode) {
+    return TEACH_IN_MODES.indexOf(mode) >= 0;
+  },
+
   /**
-   * Form to send an arbitrary EnOcean telegram: built from an EEP with its fields, or as
-   * raw ESP2 hex. The live list below shows the sent telegram right away.
+   * The profiles which can be sent in this mode.
+   *
+   * Both teach-in modes offer the sender profiles the integration teaches in at all
+   * (`EEP_WITH_TEACH_IN_BUTTONS` in catalog/teach_in.py, published as `teach_in.eltako_eeps`) -
+   * that is what an ELTAKO actuator learns a sender from, and it is the profile a device of
+   * Home Assistant announces. For the profile teach-in it additionally has to be a family which
+   * can announce itself at all.
+   */
+  _eepChoices(descriptor, mode) {
+    const eeps = (descriptor || {}).eeps || [];
+    if (!this._isTeachIn(mode)) return eeps;
+    const isSender = this._senderProfile(descriptor);
+    return eeps.filter((candidate) => isSender(candidate)
+      && (mode === "eltako_teach_in" || candidate.teach_in));
+  },
+
+  /**
+   * Is this a sender profile the integration teaches in?
+   *
+   * The list comes from the backend (`teach_in.eltako_eeps`). A backend which does not send it -
+   * a Home Assistant which was not restarted after an update, so the new frontend talks to the
+   * old python - would leave the dropdown empty; the teach-in payload per profile is the same
+   * table, so that is used instead of showing nothing.
+   */
+  _senderProfile(descriptor) {
+    const named = ((descriptor || {}).teach_in || {}).eltako_eeps;
+    if (named && named.length) return (candidate) => named.indexOf(candidate.eep) >= 0;
+    return (candidate) => Boolean(candidate.eltako_teach_in);
+  },
+
+  /** What the chosen teach-in mode really sends - the texts come from the backend. */
+  _teachInNote(descriptor, mode, eep) {
+    const info = (descriptor || {}).teach_in || {};
+    if (mode === "eltako_teach_in") {
+      return `${escapeHtml(info.eltako_description || "")}
+        ${eep.eltako_teach_in
+          ? `Data bytes of ${escapeHtml(eep.eep)}: <code>${escapeHtml(eep.eltako_teach_in)}</code>.`
+          : ""}`;
+    }
+    return `${escapeHtml(info.profile_description || "")}
+      ${escapeHtml((info.kinds || {})[eep.teach_in] || "")}`;
+  },
+
+  /**
+   * Form to send an arbitrary EnOcean telegram: built from an EEP with its fields, as one of the
+   * two teach-in telegrams of a profile, or as raw ESP2 hex. The live list below shows the sent
+   * telegram right away.
    */
   _renderSendForm(ctx) {
     const form = ctx.state.sendForm;
     if (!form) return "";
     const descriptor = ctx.state.sendFormDescriptor || { gateways: [], eeps: [] };
     const eep = descriptorFor(descriptor, form.eep) || { fields: [], field_info: [] };
+    const teachIn = this._isTeachIn(form.mode);
+    const choices = this._eepChoices(descriptor, form.mode);
 
     return `
       <div class="form-card" id="send-form">
@@ -297,8 +366,9 @@ export const page = {
           <div class="field">
             <label for="send-mode">Input *</label>
             <select id="send-mode">
-              <option value="eep" ${form.mode === "eep" ? "selected" : ""}>EEP fields</option>
-              <option value="raw" ${form.mode === "raw" ? "selected" : ""}>raw ESP2 hex</option>
+              ${SEND_MODES.map((mode) => `
+                <option value="${mode.value}" ${form.mode === mode.value ? "selected" : ""}>
+                  ${escapeHtml(mode.label)}</option>`).join("")}
             </select>
           </div>
           ${form.mode === "raw" ? `
@@ -311,34 +381,51 @@ export const page = {
             <div class="field">
               <label for="send-eep">EEP *</label>
               <select id="send-eep">
-                ${descriptor.eeps.map((candidate) => `
+                ${choices.map((candidate) => `
                   <option value="${escapeHtml(candidate.eep)}" ${candidate.eep === form.eep ? "selected" : ""}>
                     ${escapeHtml(candidate.description ? `${candidate.eep} - ${candidate.description}`
-                                                       : candidate.eep)}</option>`).join("")}
+                                                       : candidate.eep)}${
+                    teachIn && form.mode === "teach_in" && candidate.teach_in
+                      ? ` (${escapeHtml(String(candidate.teach_in).toUpperCase())})` : ""}</option>`).join("")}
               </select>
-              ${eep.description ? `<span class="field-help">${escapeHtml(eep.description)}</span>` : ""}
+              ${choices.length
+                // an empty dropdown has to say why - the profiles come from the backend, and a
+                // Home Assistant which was not restarted after an update answers without them
+                ? (eep.description ? `<span class="field-help">${escapeHtml(eep.description)}</span>` : "")
+                : `<span class="field-help">No profile is offered here. The backend does not
+                     report any teach-in profiles - restart Home Assistant so that it serves the
+                     current version of the integration.</span>`}
             </div>
             <div class="field">
-              <label for="send-sender">Sender id *</label>
+              <label for="send-sender">${teachIn ? "Sent from (address) *" : "Sender id *"}</label>
               <input id="send-sender" class="mono" value="${escapeHtml(form.senderId)}" placeholder="00-00-B0-01" />
-              <span class="field-help">Local id for bus gateways, base id + offset for transceivers.</span>
+              <span class="field-help">${teachIn
+                ? form.mode === "eltako_teach_in"
+                  ? "The sender address the actuator shall learn - the id Home Assistant switches it with."
+                  : "The address of the device which announces itself."
+                : "Local id for bus gateways, base id + offset for transceivers."}</span>
             </div>
-            ${relevantFields(eep, form.fields).map((field) => {
-              const info = infoOf(eep, field);
-              return `
-              <div class="field">
-                <label for="send-field-${escapeHtml(field)}">${fieldLabel(eep, field)}</label>
-                ${fieldControl(eep, form.fields, field,
-                               `id="send-field-${escapeHtml(field)}" class="send-field"`)}
-                ${info.help ? `<span class="field-help">${escapeHtml(info.help)}</span>` : ""}
-              </div>`;
-            }).join("")}
-            ${eep.sendable === false ? `<div class="field" style="grid-column: 1 / -1">
-              <span class="field-help">This profile can only be decoded - the library has no
-                encoder for it, so no telegram can be built.</span></div>` : ""}`}
+            ${teachIn ? `
+              <div class="field" style="grid-column: 1 / -1">
+                <span class="field-help">${this._teachInNote(descriptor, form.mode, eep)}</span>
+              </div>` : `
+              ${relevantFields(eep, form.fields).map((field) => {
+                const info = infoOf(eep, field);
+                return `
+                <div class="field">
+                  <label for="send-field-${escapeHtml(field)}">${fieldLabel(eep, field)}</label>
+                  ${fieldControl(eep, form.fields, field,
+                                 `id="send-field-${escapeHtml(field)}" class="send-field"`)}
+                  ${info.help ? `<span class="field-help">${escapeHtml(info.help)}</span>` : ""}
+                </div>`;
+              }).join("")}
+              ${eep.sendable === false ? `<div class="field" style="grid-column: 1 / -1">
+                <span class="field-help">This profile can only be decoded - the library has no
+                  encoder for it, so no telegram can be built.</span></div>` : ""}`}`}
         </div>
         ${form.error ? `<div class="notice warn">${escapeHtml(form.error)}</div>` : ""}
-        ${form.result ? `<div class="notice">Sent: <code>${escapeHtml(form.result.telegram)}</code>
+        ${form.result ? `<div class="notice">Sent${form.result.count > 1
+            ? ` ${form.result.count} telegrams` : ""}: <code>${escapeHtml(form.result.telegram)}</code>
           <span class="hint mono">${escapeHtml(form.result.hex)}</span></div>` : ""}
         <div class="form-actions">
           <button class="action primary" id="send-submit">Send</button>
@@ -406,6 +493,12 @@ export const page = {
     });
     root.getElementById("send-mode").addEventListener("change", (event) => {
       form.mode = event.target.value;
+      // a teach-in mode offers only the profiles which have such a telegram - the profile which
+      // was chosen before may not be among them anymore
+      const choices = this._eepChoices(ctx.state.sendFormDescriptor, form.mode);
+      if (choices.length && !choices.some((candidate) => candidate.eep === form.eep)) {
+        form.eep = choices[0].eep;
+      }
       ctx.requestContentRender(true);
     });
     root.getElementById("send-eep")?.addEventListener("change", (event) => {
@@ -429,9 +522,12 @@ export const page = {
       ctx.requestRender();
     });
     root.getElementById("send-submit").addEventListener("click", async () => {
-      const payload = { gateway_id: Number(form.gatewayId) };
+      const payload = { gateway_id: Number(form.gatewayId), mode: form.mode };
       if (form.mode === "raw") {
         payload.raw = form.raw;
+      } else if (this._isTeachIn(form.mode)) {
+        // a teach-in carries no values - only the profile and the address it is sent from
+        Object.assign(payload, { sender_id: form.senderId, eep: form.eep });
       } else {
         const descriptor = descriptorFor(ctx.state.sendFormDescriptor, form.eep);
         // only the fields the profile really reads, and the start values for the untouched ones

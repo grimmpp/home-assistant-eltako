@@ -216,8 +216,9 @@ def get_eep_descriptors() -> list[dict]:
     """
     from eltakobus.eep import EEP
 
+    from ..catalog.teach_in import get_teach_in_payload
     from ..config.device_config import describe_eep
-    from ..simulation.core import conditional_fields, default_state, describe_fields
+    from ..simulation.core import conditional_fields, default_state, describe_fields, teach_in_kind
 
     result = []
     def walk(cls):
@@ -228,6 +229,7 @@ def get_eep_descriptors() -> list[dict]:
                     [param.name for param in inspect.signature(sub.__init__).parameters.values()
                      if param.name != 'self' and param.kind == param.POSITIONAL_OR_KEYWORD]
                 defaults = default_state(eep_string)
+                eltako_payload = get_teach_in_payload(eep_string)
                 result.append({'eep': eep_string, 'fields': list(fields),
                                'defaults': defaults,
                                # what the values mean: named options, units, ranges - the form
@@ -235,10 +237,37 @@ def get_eep_descriptors() -> list[dict]:
                                'field_info': describe_fields(eep_string, list(fields), sub),
                                'conditional': conditional_fields(eep_string),
                                'sendable': _is_sendable(eep_string, defaults),
+                               # the two teach-in telegrams of this profile, if it has them: how
+                               # a device of this family announces itself ('4bs', '1bs', 'rps'),
+                               # and the data bytes an Eltako actuator learns this sender from
+                               'teach_in': teach_in_kind(eep_string),
+                               'eltako_teach_in': bytes(eltako_payload).hex() if eltako_payload
+                                                  else None,
                                'description': describe_eep(eep_string)})
             walk(sub)
     walk(EEP)
     return sorted(result, key=lambda descriptor: descriptor['eep'])
+
+
+def get_teach_in_descriptor() -> dict:
+    """What the two teach-in telegrams are - the texts the send form explains itself with.
+
+    They are the same descriptions the simulation page uses (`TEACH_IN_KINDS` per profile family
+    and the Eltako teach-in of a sender profile), so both pages say the same thing about the same
+    telegram.
+    """
+    from ..catalog.teach_in import teach_in_button_eep_names
+    from ..simulation.core import TEACH_IN_KINDS
+    from ..simulation.service import ELTAKO_TEACH_IN_DESCRIPTION
+
+    return {
+        'kinds': {kind: description for kind, description in TEACH_IN_KINDS.values()},
+        'profile_description': ("The profile teach-in: what a sensor sends to announce what it "
+                                "is, from its own address. Which telegram that is depends on the "
+                                "profile family."),
+        'eltako_description': ELTAKO_TEACH_IN_DESCRIPTION,
+        'eltako_eeps': teach_in_button_eep_names(),
+    }
 
 
 # A5-38-08 (central command) takes nested objects in its constructor - the form offers the
@@ -276,6 +305,43 @@ def build_eep_telegram(sender_id: str, eep: str, fields: dict):
     return encode_eep_telegram(sender_id, eep, fields)
 
 
+# the two modes of the send form which produce a teach-in telegram instead of a value telegram
+TEACH_IN_MODES = ('teach_in', 'eltako_teach_in')
+
+
+def build_teach_in_telegrams(sender_id: str, eep: str, mode: str) -> list:
+    """The teach-in telegram(s) of a profile, as they are sent.
+
+    Two different telegrams are called teach-in and they run in opposite directions (see
+    simulation/service.py, which explains both):
+
+    * `teach_in` - the **profile teach-in** a *sensor* sends to announce what it is. 4BS states
+      function, type and manufacturer, 1BS clears the LRN bit, RPS has no teach-in telegram at
+      all and is taught in with a button press, so a press *and* its release are sent. That is
+      why this returns a list.
+    * `eltako_teach_in` - the telegram a *sender* sends so that an ELTAKO actuator takes it into
+      its memory, with the four data bytes of the sender profile (catalog/teach_in.py). It is the
+      telegram the teach-in button of a device in Home Assistant produces.
+
+    The encoders of the simulation build both, so a teach-in written by hand here and the teach-in
+    of a simulated device are the very same telegram. They build a *received* telegram, which is
+    why it is turned around for the gateway.
+    """
+    from ..catalog.teach_in import get_teach_in_payload, teach_in_button_eep_names
+    from ..simulation.core import (as_outgoing, encode_eltako_teach_in_telegram,
+                                   encode_teach_in_telegram)
+
+    if mode == 'eltako_teach_in':
+        payload = get_teach_in_payload(eep)
+        if not payload:
+            raise ValueError(f"There is no ELTAKO teach-in telegram for '{eep}' - only "
+                             f"{', '.join(teach_in_button_eep_names())} have one. Teach that "
+                             f"sender in at the device itself.")
+        return [as_outgoing(encode_eltako_teach_in_telegram(sender_id, payload))]
+
+    return [as_outgoing(telegram) for telegram in encode_teach_in_telegram(sender_id, eep)]
+
+
 @websocket_api.require_admin
 @websocket_api.websocket_command({vol.Required('type'): WS_SEND_TELEGRAM_FORM})
 @websocket_api.async_response
@@ -283,6 +349,8 @@ async def ws_send_telegram_form(hass: HomeAssistant, connection, msg):
     connection.send_result(msg['id'], {
         'gateways': _get_configured_gateways(hass),
         'eeps': get_eep_descriptors(),
+        # what the teach-in modes of the form send, and which profiles have such a telegram
+        'teach_in': get_teach_in_descriptor(),
     })
 
 
@@ -290,6 +358,8 @@ async def ws_send_telegram_form(hass: HomeAssistant, connection, msg):
 @websocket_api.websocket_command({
     vol.Required('type'): WS_SEND_TELEGRAM,
     vol.Required('gateway_id'): vol.Coerce(int),
+    # 'eep' and 'raw' are derived from what is given when no mode is named (older clients)
+    vol.Optional('mode'): vol.In(('eep', 'raw', *TEACH_IN_MODES)),
     vol.Optional('raw'): str,
     vol.Optional('sender_id'): str,
     vol.Optional('eep'): str,
@@ -299,29 +369,43 @@ async def ws_send_telegram_form(hass: HomeAssistant, connection, msg):
 async def ws_send_telegram(hass: HomeAssistant, connection, msg):
     """Send an arbitrary EnOcean telegram through one of the gateways.
 
-    Either as raw ESP2 hex (completely arbitrary) or built from an EEP with its field
-    values - the same way the send_message service of the gateways works.
+    As raw ESP2 hex (completely arbitrary), built from an EEP with its field values - the same way
+    the send_message service of the gateways works - or as one of the two teach-in telegrams of a
+    profile (see build_teach_in_telegrams). A teach-in can be more than one telegram, so
+    everything below works on a list.
     """
     gateway = next((gw for gw in get_gateways(hass) if gw.dev_id == msg['gateway_id']), None)
     if gateway is None:
         connection.send_error(msg['id'], 'unknown_gateway', f"No gateway with id {msg['gateway_id']}")
         return
 
+    mode = msg.get('mode') or ('raw' if msg.get('raw') else 'eep')
     try:
-        if msg.get('raw'):
-            telegram = parse_raw_esp2(msg['raw'])
+        if mode in TEACH_IN_MODES:
+            if not msg.get('eep') or not msg.get('sender_id'):
+                raise ValueError("A teach-in telegram needs 'sender_id' + 'eep'.")
+            telegrams = build_teach_in_telegrams(msg['sender_id'], msg['eep'], mode)
+        elif mode == 'raw':
+            telegrams = [parse_raw_esp2(msg.get('raw'))]
         elif msg.get('eep') and msg.get('sender_id'):
-            telegram = build_eep_telegram(msg['sender_id'], msg['eep'], msg.get('fields'))
+            telegrams = [build_eep_telegram(msg['sender_id'], msg['eep'], msg.get('fields'))]
         else:
             raise ValueError("Either 'raw' or 'sender_id' + 'eep' must be given.")
-        gateway.send_message(telegram)
+        for telegram in telegrams:
+            gateway.send_message(telegram)
     except Exception as e:  # noqa: BLE001 - the message of the library explains the problem
         connection.send_error(msg['id'], 'send_failed', str(e))
         return
 
-    LOGGER.info(f"[Websocket] Sent telegram via gateway {gateway.dev_id}: {telegram}")
-    connection.send_result(msg['id'], {'sent': True, 'telegram': str(telegram),
-                                       'hex': telegram.serialize().hex()})
+    LOGGER.info(f"[Websocket] Sent telegram via gateway {gateway.dev_id} ({mode}): "
+                f"{', '.join(str(telegram) for telegram in telegrams)}")
+    connection.send_result(msg['id'], {
+        'sent': True,
+        'mode': mode,
+        'count': len(telegrams),
+        # one string for the notice of the ui - a teach-in of an RPS profile is press + release
+        'telegram': ' | '.join(str(telegram) for telegram in telegrams),
+        'hex': ' '.join(telegram.serialize().hex() for telegram in telegrams)})
 
 
 @websocket_api.require_admin

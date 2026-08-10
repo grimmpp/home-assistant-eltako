@@ -51,7 +51,7 @@ from .model import SimulatedGateway, SimulationModel                            
 from .presets import (DEVICE_PRESETS, GATEWAY_PRESETS, add_preset_devices,                # noqa: F401
                       describe_device_presets, describe_gateway_presets, find_device_preset,
                       find_gateway_preset, preset_device, preset_hw_type)
-from .telegrams import (TEACH_IN_KINDS, as_incoming, default_state, eep_fields,             # noqa: F401
+from .telegrams import (TEACH_IN_KINDS, as_incoming, as_outgoing, default_state, eep_fields,  # noqa: F401
                         encode_eep_telegram, encode_eltako_teach_in_telegram,
                         encode_state_telegram, encode_teach_in_telegram,
                         find_eep, has_teach_in_telegram, prettified, public_state, sender_of,

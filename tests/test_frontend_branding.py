@@ -99,6 +99,97 @@ class TestHeaderLogo(TestCase):
         return match.group(1)
 
 
+class TestTheWatermark(TestCase):
+    """The "Eltako" lettering sits large and very faint behind the page.
+
+    Three things make it a watermark instead of a picture on the page: it is masked (so its
+    colour follows the theme), it is almost transparent, and the content paints above it.
+    """
+
+    def setUp(self):
+        self.styles = read('lib', 'styles.js')
+        self.panel = read('eltako-panel.js')
+
+    def test_the_cropped_lettering_ships(self):
+        """The logo file itself would be a blue square - the watermark is the lettering only."""
+        path = os.path.join(FRONTEND, 'img', 'eltako-watermark.svg')
+
+        self.assertTrue(os.path.isfile(path))
+        with open(path, encoding='utf-8') as handle:
+            svg = handle.read()
+        # cropped to the lettering: no full 0 0 204.09 204.09 viewBox and no blue square in it
+        self.assertNotIn('204.09 204.09"', svg)
+        self.assertNotIn('<rect', svg)
+
+    def test_it_is_drawn_behind_the_page(self):
+        rule = self._watermark()
+
+        self.assertIn('position: absolute', rule)
+        # no flex item of .shell, no clicks, and it does not scroll away with <main>
+        self.assertIn('pointer-events: none', rule)
+        self.assertIn('z-index: 0', rule)
+
+    def test_the_content_paints_above_it(self):
+        for selector in ('.topbar', 'main'):
+            self.assertIn('z-index: 1', self._rule(selector), msg=selector)
+
+    def test_it_is_barely_visible(self):
+        for rule in self._all_watermark_rules():
+            opacity = float(re.search(r'opacity:\s*([\d.]+)', rule).group(1))
+
+            self.assertLessEqual(opacity, .1, msg='a watermark must not compete with the content')
+            self.assertGreater(opacity, 0)
+
+    def test_its_colour_follows_the_theme(self):
+        """Masked and filled with the brand colour - a baked-in grey would die on a dark theme."""
+        rule = self._watermark()
+
+        self.assertIn('var(--eltako-blue)', rule)
+        for prefix in ('-webkit-mask:', 'mask:'):
+            self.assertIn(prefix, rule, msg=prefix)
+        # ...and on a dark background the lightened variant, which the dark blue cannot replace
+        dark = [body for body in self._all_watermark_rules()
+                if 'var(--eltako-blue-light)' in body]
+        self.assertEqual(1, len(dark), msg='the dark override of the watermark is gone')
+
+    def test_the_url_comes_from_the_panel(self):
+        """A relative url() in the stylesheet resolves against the document, not the module."""
+        self.assertIn('var(--eltako-watermark)', self._watermark())
+        self.assertIn('eltako-watermark.svg", import.meta.url', self.panel)
+        self.assertIn('--eltako-watermark: url("${WATERMARK_URL}")', self.panel)
+
+    def test_the_tables_let_it_through(self):
+        """The tables are the largest surface of the page - opaque they would cut it in half."""
+        wrapper = self._rule('.table-wrapper')
+
+        self.assertIn('color-mix', wrapper)
+        self.assertIn('transparent', wrapper)
+        # mixed into the theme colour, not replaced by a hardcoded rgba white
+        self.assertIn('var(--eltako-card)', wrapper)
+
+    def test_the_sticky_table_head_stays_opaque(self):
+        """The rows scroll underneath it - through a translucent head they would ghost."""
+        head = self._rule('thead th')
+
+        self.assertIn('position: sticky', head)
+        self.assertIn('background: var(--eltako-card)', head)
+
+    def _all_watermark_rules(self):
+        """Bodies of every .shell::before rule - the base one and the dark theme override."""
+        bodies = re.findall(r'\.shell::before\s*\{([^}]*)\}', self.styles)
+        self.assertTrue(bodies, msg='the watermark rule is gone')
+        return bodies
+
+    def _watermark(self):
+        """The base rule: the one which carries the mask."""
+        return next(body for body in self._all_watermark_rules() if 'mask:' in body)
+
+    def _rule(self, selector):
+        match = re.search(re.escape(selector) + r'\s*\{([^}]*)\}', self.styles)
+        self.assertIsNotNone(match, msg=f'rule {selector} is gone')
+        return match.group(1)
+
+
 class TestTheName(TestCase):
     """The web ui carries one name, and it is written down in two places.
 

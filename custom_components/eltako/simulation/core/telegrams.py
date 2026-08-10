@@ -187,6 +187,19 @@ def as_incoming(msg: ESP2Message) -> ESP2Message:
     return prettify(ESP2Message(bytes(body)))
 
 
+def as_outgoing(msg: ESP2Message) -> ESP2Message:
+    """Turn a telegram into one which is *sent* (TRT, h_seq 3) - the counterpart of as_incoming.
+
+    Everything here builds received telegrams, because that is what a simulated device produces.
+    A telegram which really leaves through a gateway has to be marked as outgoing instead: the
+    'send telegram' form of the web ui shares these encoders (see core/websocket.py), so the same
+    code builds the teach-in of a simulated device and the one sent by hand.
+    """
+    body = bytearray(msg.body)
+    body[0] = (3 << 5) + 11     # TRT
+    return prettify(ESP2Message(bytes(body)))
+
+
 def encode_state_telegram(address, eep: str, state: dict = None) -> ESP2Message:
     """The telegram a simulated device with this EEP sends for the given values."""
     values = dict(default_state(eep))

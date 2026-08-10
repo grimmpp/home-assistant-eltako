@@ -160,6 +160,91 @@ class TestEveryDeviceCanBeSentTo(TestCase):
         self.assertEqual(self.DECODE_ONLY, not_sendable)
 
 
+class TestTeachInTelegrams(TestCase):
+    """The send form can also send the two teach-in telegrams of a profile.
+
+    They are the same telegrams a simulated device and the teach-in button of a device send (see
+    `build_teach_in_telegrams`), only marked as outgoing - so what is sent by hand here cannot
+    drift away from what the integration itself sends.
+    """
+
+    def test_a_4bs_profile_announces_itself(self):
+        telegrams = websocket.build_teach_in_telegrams('00-00-B0-01', 'A5-38-08', 'teach_in')
+
+        self.assertEqual(1, len(telegrams))
+        # 4BS teach-in with function 0x38, type 0x08 and the Eltako manufacturer id
+        self.assertEqual(0xE0, telegrams[0].body[2])
+        self.assertEqual(0x80, telegrams[0].body[5])
+
+    def test_an_rps_profile_sends_a_press_and_its_release(self):
+        """RPS has no teach-in telegram - a receiver learns a rocker switch from a press."""
+        telegrams = websocket.build_teach_in_telegrams('00-00-B0-01', 'F6-02-01', 'teach_in')
+
+        self.assertEqual(2, len(telegrams))
+        self.assertEqual(0x30, telegrams[0].body[2])    # energy bow set
+        self.assertEqual(0x20, telegrams[1].body[2])    # released
+
+    def test_a_teach_in_telegram_is_marked_as_outgoing(self):
+        """The encoders build received telegrams - a gateway has to be given a sent one (TRT)."""
+        for eep, mode in (('A5-38-08', 'teach_in'), ('F6-02-01', 'teach_in'),
+                          ('D5-00-01', 'teach_in'), ('A5-38-08', 'eltako_teach_in')):
+            for telegram in websocket.build_teach_in_telegrams('00-00-B0-01', eep, mode):
+                self.assertEqual((3 << 5) + 11, telegram.body[0],
+                                 msg=f"{eep} ({mode}) is not marked as outgoing")
+
+    def test_the_eltako_teach_in_carries_the_payload_of_the_sender_profile(self):
+        from custom_components.eltako.catalog.teach_in import get_teach_in_payload
+
+        telegrams = websocket.build_teach_in_telegrams('00-00-B0-01', 'A5-38-08',
+                                                       'eltako_teach_in')
+
+        self.assertEqual(1, len(telegrams))
+        self.assertEqual(get_teach_in_payload('A5-38-08'), telegrams[0].body[2:6])
+        self.assertEqual(b'\x00\x00\xb0\x01', telegrams[0].body[6:10])   # sent from the sender
+
+    def test_a_profile_without_an_eltako_teach_in_says_so(self):
+        with self.assertRaises(ValueError) as raised:
+            websocket.build_teach_in_telegrams('00-00-B0-01', 'F6-02-01', 'eltako_teach_in')
+        self.assertIn('A5-38-08', str(raised.exception))    # which profiles do have one
+
+    def test_a_profile_which_cannot_announce_itself_raises(self):
+        """Only 4BS, 1BS and RPS have a teach-in - an unknown profile has none at all."""
+        with self.assertRaises(Exception):
+            websocket.build_teach_in_telegrams('00-00-B0-01', 'X9-99-99', 'teach_in')
+
+    def test_the_descriptors_say_which_teach_in_a_profile_has(self):
+        """The form offers only the profiles which really have that telegram."""
+        descriptors = {d['eep']: d for d in websocket.get_eep_descriptors()}
+
+        self.assertEqual('4bs', descriptors['A5-38-08']['teach_in'])
+        self.assertEqual('rps', descriptors['F6-02-01']['teach_in'])
+        self.assertEqual('1bs', descriptors['D5-00-01']['teach_in'])
+        self.assertEqual('e0400d80', descriptors['A5-38-08']['eltako_teach_in'])
+        self.assertIsNone(descriptors['F6-02-01']['eltako_teach_in'])
+
+    def test_every_offered_teach_in_can_really_be_built(self):
+        """Whatever the form offers has to work - an option which always fails is a trap."""
+        for descriptor in websocket.get_eep_descriptors():
+            for mode, offered in (('teach_in', descriptor['teach_in']),
+                                  ('eltako_teach_in', descriptor['eltako_teach_in'])):
+                if not offered:
+                    continue
+                try:
+                    telegrams = websocket.build_teach_in_telegrams('FF-AA-80-01',
+                                                                   descriptor['eep'], mode)
+                except Exception as e:  # noqa: BLE001
+                    self.fail(f"{descriptor['eep']} ({mode}) cannot be built: {e}")
+                self.assertTrue(all(telegram.serialize() for telegram in telegrams))
+
+    def test_the_form_explains_both_teach_ins(self):
+        descriptor = websocket.get_teach_in_descriptor()
+
+        self.assertEqual({'4bs', '1bs', 'rps'}, set(descriptor['kinds']))
+        self.assertIn('A5-38-08', descriptor['eltako_eeps'])
+        self.assertIn('sender', descriptor['eltako_description'])
+        self.assertIn('sensor', descriptor['profile_description'])
+
+
 class TestFieldMeaning(TestCase):
     """The values of a profile must be nameable - a number nobody can guess is unusable.
 

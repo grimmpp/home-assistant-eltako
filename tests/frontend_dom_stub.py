@@ -159,6 +159,25 @@ class El {
     return true;
   }
 
+  /* A <select> in a browser: its options and which of them is picked. `value` is a plain
+     property here (a test sets it, or dispatch() does), so the index follows from it - and
+     before anything was picked it is the option which carries `selected`, as in a browser.
+     Pages read `select.options[select.selectedIndex].textContent` to name the choice in a
+     confirmation, which without this would be undefined. */
+  get options() {
+    return this.querySelectorAll('option');
+  }
+
+  get selectedIndex() {
+    const options = this.options;
+    if (this.value !== undefined && this.value !== null) {
+      const index = options.findIndex((option) => option.getAttribute('value') === String(this.value));
+      if (index >= 0) return index;
+    }
+    const preselected = options.findIndex((option) => option.hasAttribute('selected'));
+    return preselected >= 0 ? preselected : (options.length ? 0 : -1);
+  }
+
   querySelectorAll(selector) {
     return this.descendants().filter((element) => element.matches(selector));
   }
@@ -187,9 +206,18 @@ class El {
 
   /** Returns the promise of the handlers, so an async click can be awaited. */
   click() {
-    const event = { type: 'click', target: this, currentTarget: this,
+    return this.dispatch('click');
+  }
+
+  /**
+   * Fire the listeners of any event type - what a test needs for an input or a select:
+   * `dispatch('change', 'teach_in')` sets the value first, so `event.target.value` is it.
+   */
+  dispatch(type, value) {
+    if (value !== undefined) this.value = value;
+    const event = { type, target: this, currentTarget: this,
                     preventDefault() {}, stopPropagation() {} };
-    return Promise.all((this.listeners.click || []).map((listener) => listener(event)));
+    return Promise.all((this.listeners[type] || []).map((listener) => listener(event)));
   }
 }
 

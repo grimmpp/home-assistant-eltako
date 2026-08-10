@@ -898,6 +898,15 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
         _set_step(hass, STAGE_DEVICES, "Collecting the devices which can be identified")
         await _async_collect_and_add(hass, report, add_devices)
 
+        ### 5) teach the sender addresses of Home Assistant into the actuators which were just
+        ### found. Without them an actuator does not react to a single command - and the moment
+        ### to write them is exactly this one: the devices are configured now, the FAM14 which
+        ### can write is connected now, and the bus is free again. Runs last on purpose, and
+        ### only for the buses which were really read in this run.
+        read_now = [read['gateway_id'] for read in report['buses_read'] if read.get('finished')]
+        if add_devices and read_now:
+            await _async_teach_in_after_scan(hass, report, read_now)
+
         report['finished_at'] = _utc_now_iso()
         LOGGER.info(f"[{LOG_PREFIX_PNP}] Finished: {len(report['gateways_added'])} gateway(s) and "
                     f"{len(report['devices_added'])} device(s) added, "
@@ -957,6 +966,99 @@ async def _async_collect_and_add(hass: HomeAssistant, report: dict, add_devices:
     report['devices_added'].extend(added)
     report['warnings'].extend(warnings)
     return len(added)
+
+
+async def _async_teach_in_after_scan(hass: HomeAssistant, report: dict,
+                                     gateway_ids: list) -> None:
+    """Write the Home Assistant sender ids into the actuators of the buses which were read.
+
+    A bus actuator only reacts to senders which are in its memory, so a device which was just
+    added would be listed in Home Assistant and do nothing when it is switched. Reading and
+    programming both need the FAM14, and it is connected right now - asking the user to press
+    a second button afterwards would be a trap for exactly the installation this search is for.
+
+    Errors are collected as warnings: an actuator whose memory is full or which does not
+    answer must not turn a successful search into a failed one.
+    """
+    from ..observation import bus_members
+    from ..core.websocket import get_gateways
+
+    _set_step(hass, STAGE_DEVICES, "Teaching the Home Assistant senders into the actuators")
+    report['senders_taught_in'] = []
+
+    for gateway in get_gateways(hass):
+        if gateway.dev_id not in gateway_ids:
+            continue
+        try:
+            results = await bus_members.async_teach_in_senders(hass, gateway)
+        except Exception as e:  # noqa: BLE001 - the search itself was fine
+            report['warnings'].append(f"The senders could not be taught into the actuators of "
+                                      f"gateway {gateway.dev_id}: {e}")
+            LOGGER.error(f"[{LOG_PREFIX_PNP}] Teach-in after the scan of gateway "
+                         f"{gateway.dev_id} failed: {e}", exc_info=True)
+            continue
+
+        _note_teach_in_results(report, f"gateway {gateway.dev_id}", results)
+
+        ### and the gateways the installation may be operated with later. A wireless gateway
+        ### only transmits senders out of its own base id range, and only the FAM14 which is
+        ### connected right now can write them into an actuator - so the moment to do it is
+        ### this one, not when somebody unplugs the FAM14 and wonders why nothing switches.
+        for target in _programmable_radio_gateways(hass):
+            try:
+                answer = await bus_members.async_program_gateway_senders(hass, gateway, target)
+            except Exception as e:  # noqa: BLE001
+                report['warnings'].append(f"The senders of '{target.dev_name}' could not be "
+                                          f"programmed into the actuators of gateway "
+                                          f"{gateway.dev_id}: {e}")
+                LOGGER.error(f"[{LOG_PREFIX_PNP}] Programming '{target.dev_name}' on gateway "
+                             f"{gateway.dev_id} failed: {e}", exc_info=True)
+                continue
+            if answer.get('error'):
+                report['warnings'].append(f"'{target.dev_name}' was not programmed: "
+                                          f"{answer.get('message')}")
+                continue
+            _note_teach_in_results(report, f"'{target.dev_name}'", answer.get('results') or [])
+
+
+def _programmable_radio_gateways(hass: HomeAssistant) -> list:
+    """The connected wireless gateways whose senders are worth writing into the actuators.
+
+    Only connected ones, and only those which reported a base id: without it there is no
+    address to hand out, and a gateway which is configured but not plugged in cannot be the
+    one the installation is about to be operated with.
+    """
+    from ..const import GatewayDeviceType
+    from ..core.websocket import get_gateways
+
+    targets = []
+    for gateway in get_gateways(hass):
+        if GatewayDeviceType.is_bus_gateway(gateway.dev_type):
+            continue
+        try:
+            if not gateway._bus.is_active():
+                continue
+            if not gateway.base_id or gateway.base_id[0][0] != 0xFF:
+                continue
+        except Exception:   # noqa: BLE001 - a gateway which is not initialized is not a target
+            continue
+        targets.append(gateway)
+    return targets
+
+
+def _note_teach_in_results(report: dict, who: str, results: list[dict]) -> None:
+    """Sort one write run into the report: what was written, what refused."""
+    written = [r for r in results if r.get('result') == 'written']
+    failed = [r for r in results if r.get('result') in ('error', 'unsupported', 'out_of_range')]
+    report['senders_taught_in'].extend(written)
+    if failed:
+        report['warnings'].append(
+            f"{len(failed)} actuator(s) did not take the sender of {who}: "
+            + ", ".join(f"{r.get('address')} ({r.get('message') or r.get('result')})"
+                        for r in failed[:5]))
+    LOGGER.info(f"[{LOG_PREFIX_PNP}] {who}: {len(written)} sender(s) written, "
+                f"{len(results) - len(written) - len(failed)} already taught in, "
+                f"{len(failed)} refused.")
 
 
 async def _adopt_while_scanning(hass: HomeAssistant, report: dict, add_devices: bool) -> None:

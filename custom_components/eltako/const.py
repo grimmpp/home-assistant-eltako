@@ -296,6 +296,10 @@ WS_DEVICE_REMOVE: Final = "eltako/devices/remove"
 # drop every device created in the web ui - the counterpart of a fresh detection run
 WS_DEVICE_REMOVE_ALL: Final = "eltako/devices/remove_all"
 WS_DEVICE_TEACH_IN: Final = "eltako/devices/teach_in"
+# which gateway switches an actuator: writes the sender address of the chosen gateway into
+# the actuator *and* stores it as the sender of the device in Home Assistant, for one device
+# or for a whole bus (config/sender_gateway.async_assign_sender_gateway)
+WS_DEVICE_SENDER_GATEWAY: Final = "eltako/devices/sender_gateway"
 WS_DEVICE_ACTIVITY: Final = "eltako/devices/activity"
 WS_DEVICE_ACTIVITY_CLEAR: Final = "eltako/devices/activity_clear"
 WS_HELP_CATALOG: Final = "eltako/help/catalog"
@@ -324,6 +328,12 @@ WS_BUS_READ_MEMORY: Final = "eltako/bus/read_memory"
 # because a hanging scan cannot be told apart from an idle bus (gateway.cancel_bus_operation)
 WS_BUS_CANCEL: Final = "eltako/bus/cancel"
 WS_BUS_TEACH_IN_SENDERS: Final = "eltako/bus/teach_in_senders"
+# write the sender addresses of *another* gateway into the actuators of a bus - what makes
+# it possible to operate an installation which was programmed with a FAM14 through a
+# wireless gateway afterwards (observation/bus_members.async_program_gateway_senders)
+WS_BUS_PROGRAM_GATEWAY: Final = "eltako/bus/program_gateway"
+# clear one taught-in sender out of the memory of a bus device
+WS_BUS_DELETE_MEMORY_LINE: Final = "eltako/bus/delete_memory_line"
 WS_SEND_TELEGRAM: Final = "eltako/send_telegram"
 WS_SEND_TELEGRAM_FORM: Final = "eltako/send_telegram_form"
 

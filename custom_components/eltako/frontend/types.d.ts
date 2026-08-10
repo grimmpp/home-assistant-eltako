@@ -91,6 +91,8 @@ export interface PanelState {
   deviceView: string;
   /** which device the details popup of the expert page shows: 'platform|address|gateway id' */
   deviceDetails?: string | null;
+  /** ...or which gateway it shows (its id) - the bus headings and wireless gateway rows */
+  gatewayDetails?: string | null;
   configSortDescending: boolean;
   onlySilent: boolean;
 
@@ -98,6 +100,9 @@ export interface PanelState {
   simpleEditor: any;
   /** the popup of the simple view: {kind: 'device' | 'gateway', key} - see pages/home.js */
   simpleDetails?: { kind: string; key: string } | null;
+  /** the open teach-in popup of the simple view (pages/home.js): the device it belongs to
+      ('platform|address|gateway id') and the gateway which is picked in it */
+  simpleTeachIn?: { key: string; gatewayId: string | number | null } | null;
 
   settingsForm: SettingsFormDescriptor | null;
   settingsError: string | null;
@@ -134,7 +139,8 @@ export interface PanelState {
   receptionSpots?: any[];
   /** pages/telegrams.js: the free send form */
   sendForm?: any;
-  sendFormDescriptor?: { gateways: Gateway[]; eeps: EepDescriptor[] } | null;
+  sendFormDescriptor?: { gateways: Gateway[]; eeps: EepDescriptor[];
+                         teach_in?: TeachInDescriptor } | null;
 
   /** pages/control.js */
   controlEntities?: any;
@@ -303,7 +309,21 @@ export interface EepDescriptor {
   conditional: Record<string, any>;
   /** false for decode-only profiles - no send form is offered for those */
   sendable: boolean;
+  /** how a device of this profile announces itself, null if it cannot */
+  teach_in: "4bs" | "1bs" | "rps" | null;
+  /** data bytes (hex) of the ELTAKO teach-in telegram of this sender profile, null if it has none */
+  eltako_teach_in: string | null;
   description: string | null;
+}
+
+/** get_teach_in_descriptor() - what the teach-in modes of the send form send */
+export interface TeachInDescriptor {
+  /** description per profile family: what a '4bs' / '1bs' / 'rps' teach-in really is */
+  kinds: Record<string, string>;
+  profile_description: string;
+  eltako_description: string;
+  /** the sender profiles which have an ELTAKO teach-in telegram */
+  eltako_eeps: string[];
 }
 
 /* ------------------------------- observation/enocean_logger.py: telegrams and log */
@@ -896,8 +916,30 @@ export interface WsResults {
     | { kind: "bus_memory"; sender_id: string; results: any[] }
     | { kind: "telegram"; sender_id: string; eep: string; telegram: string };
 
-  "eltako/send_telegram": { sent: true; telegram: string; hex: string };
-  "eltako/send_telegram_form": { gateways: Gateway[]; eeps: EepDescriptor[] };
+  /** which gateway switches an actuator: written into the actuator and stored as its sender */
+  "eltako/devices/sender_gateway": {
+    target_gateway_id: number;
+    target_gateway_name: string;
+    base_id: string | null;
+    updated: number;
+    failed: number;
+    buses: {
+      gateway_id: number; gateway_name: string; base_id: string | null;
+      target_gateway_id: number; target_gateway_name: string;
+      /** what the actuators answered - one entry per device which was written */
+      results: { address: string; sender_id: string; result: string; message?: string }[];
+      /** the devices whose sender in Home Assistant really changed */
+      updated: { address: string; sender_id: string; previous_sender_id: string }[];
+      /** yaml devices and actuators outside the base id range of the chosen gateway */
+      skipped: { address: string; result: string; message?: string }[];
+      error?: string; message?: string;
+    }[];
+  };
+
+  /** `count` is 2 for the teach-in of an RPS profile: the button press and its release */
+  "eltako/send_telegram": { sent: true; mode: string; count: number; telegram: string; hex: string };
+  "eltako/send_telegram_form": { gateways: Gateway[]; eeps: EepDescriptor[];
+                                 teach_in: TeachInDescriptor };
 
   "eltako/bus/members": BusMembersResult;
   "eltako/bus/read_memory": any;
@@ -908,6 +950,16 @@ export interface WsResults {
     cancelled: { gateway_id: number; reason: string | null }[];
   };
   "eltako/bus/teach_in_senders": { results: any[] };
+  "eltako/bus/delete_memory_line": {
+    deleted: true; sensor_id: string; bus_address: number; memory_line: number;
+  };
+  /** the senders of another gateway, written into the actuators of this bus */
+  "eltako/bus/program_gateway": {
+    results: { address: string; sender_id: string; result: string; message?: string }[];
+    base_id: string;
+    target_gateway_id: number;
+    target_gateway_name: string;
+  };
 
   /** the log of the integration itself (observation/integration_log.py) */
   "eltako/logs/recent": {
