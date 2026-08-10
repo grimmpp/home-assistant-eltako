@@ -82,6 +82,12 @@ export const STYLES = `
     white-space: nowrap;
   }
   header.app-head .brand-version { font-size: .7rem; color: var(--eltako-muted); }
+  /* a version which is not a finished release says so, everywhere the version is shown */
+  .prerelease-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px;
+                    font-size: .68rem; font-weight: 600; text-transform: uppercase;
+                    letter-spacing: .03em; color: var(--eltako-warn);
+                    border: 1px solid var(--eltako-warn);
+                    background: color-mix(in srgb, var(--eltako-warn) 12%, transparent); }
   header.app-head ha-icon, header.app-head .glyph {
     --mdc-icon-size: 22px; color: var(--eltako-accent); flex: 0 0 auto;
   }

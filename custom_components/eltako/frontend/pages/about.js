@@ -135,6 +135,10 @@ const FEATURE_GROUPS = [
 ];
 
 const ABOUT_STYLES = `
+  /* a pre-release is not a release - the notice carries the warning colour, not the
+     neutral one of the other notices on this page */
+  .prerelease-notice { border-color: var(--eltako-warn); border-left-width: 4px; }
+  .prerelease-notice h3 { color: var(--eltako-warn); }
   .feature-intro { font-size: .78rem; color: var(--eltako-muted); margin: -6px 0 12px; }
   .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
               gap: 14px; margin-bottom: 6px; align-items: start; }
@@ -184,6 +188,22 @@ export const page = {
           ELTAKO support.</p>
       </div>
 
+      ${info.prerelease ? `
+      <div class="notice prerelease-notice">
+        <h3>${icon("mdi:flask-outline", "⚗")} This is a pre-release &ndash; version
+          <span class="mono">${escapeHtml(info.version || "")}</span></h3>
+        <p><strong>Not an official release.</strong> A release candidate (<span class="mono">rc</span>)
+          or beta (<span class="mono">b</span>) is published to try out what is new and to find what
+          is broken before it becomes a release. It can contain bugs which a release does not have,
+          and settings or storage formats may still change.</p>
+        <p>It was installed on purpose: HACS only offers it when <em>show beta versions</em> is
+          switched on for this repository. To go back, switch that off and redownload the latest
+          release. Please report what you find in the
+          ${info.issue_tracker ? `<a href="${escapeHtml(info.issue_tracker)}" target="_blank"
+            rel="noreferrer">issue tracker</a>` : "issue tracker"} &ndash; that is what this version
+          is for.</p>
+      </div>` : ""}
+
       <div class="notice">
         <h3>${escapeHtml(info.name || "ELTAKO")} &mdash; EnOcean / ELTAKO Baureihe 14 for Home Assistant</h3>
         <p>This integration connects ELTAKO series 14 devices (RS485 bus) and EnOcean devices in general to
@@ -192,7 +212,8 @@ export const page = {
       </div>
 
       <div class="cards">
-        ${card("Integration version", `<span class="mono">${escapeHtml(info.version || "-")}</span>`)}
+        ${card("Integration version", `<span class="mono">${escapeHtml(info.version || "-")}</span>`
+          + (info.prerelease ? ` <span class="prerelease-tag">pre-release</span>` : ""))}
         ${card("Home Assistant", `<span class="mono">${escapeHtml(info.home_assistant_version || "-")}</span>`)}
         ${card("Gateways", formatNumber((info.gateways || []).length))}
         ${card("Devices", formatNumber(entities.device_count))}

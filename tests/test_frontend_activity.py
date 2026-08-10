@@ -131,6 +131,18 @@ class TestTheActivityBanner(unittest.TestCase):
         self.assertIn('disabled until it is done', banner)
         self.assertIn('page updates itself', banner)
 
+    def test_a_bus_job_offers_the_way_out(self):
+        """The banner describes a situation which can be a hang - and then this is the only
+        button which helps. It is on every page, because the banner is."""
+        banner = self.result['scanning']
+
+        self.assertIn('data-bus-cancel="1"', banner)
+        self.assertIn('release', banner)
+
+    def test_a_job_which_does_not_hold_a_bus_has_nothing_to_cancel(self):
+        """A detection which is not on a bus cannot be released - offering it would lie."""
+        self.assertNotIn('data-bus-cancel', self.result['detectionOnly'])
+
     def test_a_job_which_does_not_touch_the_bus_gets_the_short_hint(self):
         banner = self.result['detectionOnly']
         self.assertIn('a few minutes', banner)

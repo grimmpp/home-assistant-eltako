@@ -86,6 +86,24 @@ are bumped together. `tests/test_metadata.py` fails if they drift apart, the pip
 it again before it builds, and a release tag which does not belong to the version does not
 get published.
 
+### Pre-releases
+
+A version with a marker (`2.2.0rc1`, `2.3.0b1`) is a pre-release everywhere at once, which is
+the point of having one version for both:
+
+* **PyPI** sorts it before `2.2.0` (PEP 440), so `pip install eltako-enocean-tool` keeps
+  installing the last finished release. `pip install --pre eltako-enocean-tool` takes the
+  candidate.
+* **HACS** only offers it when *show beta versions* is switched on for this repository - and
+  only if the github release is marked as a **pre-release**.
+* the **web ui** marks it: the version in the header carries a `pre-release` tag and the
+  *About* page explains what that means (`prerelease` of `eltako/integration_info`,
+  `const.is_prerelease`).
+
+The publish job refuses the two ways to get this wrong: a version with a marker on a release
+which is not marked as a pre-release (HACS would hand it to everybody), and a finished version
+on a release which is marked as one (nobody but a beta tester would ever see it).
+
 ## The pipeline
 
 [`.github/workflows/build_package.yml`](../../.github/workflows/build_package.yml)

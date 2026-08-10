@@ -10,6 +10,32 @@ from homeassistant.const import Platform
 
 DOMAIN: Final = "eltako"
 
+# Markers of a version which is **not** a finished release: 2.2.0rc1, 2.3.0b2, 2.2.0.dev3.
+# A release candidate is installable through HACS (it has to be a github *pre-release*, and
+# the user has to switch "show beta versions" on for this repository) and it is published to
+# PyPI as a pre-release, which `pip install` skips unless it is asked for with --pre. Inside
+# the running integration it must stay visible that this is not an official release - the web
+# ui reads `prerelease` of eltako/integration_info for exactly that.
+PRERELEASE_MARKERS: Final = ('a', 'b', 'rc', 'dev', 'alpha', 'beta', 'pre')
+
+
+def is_prerelease(version: str | None) -> bool:
+    """True for a version which carries a pre-release marker after its numbers.
+
+    Only what comes *after* the version numbers counts - a plain '2.2.0' is a release, and the
+    'b' of a hypothetical '2.2.0b' is not hidden by the digits before it.
+    """
+    if not version:
+        return False
+    tail = str(version).lower().lstrip('v')
+    # everything up to the first character which is not a digit or a dot is the version itself
+    index = 0
+    while index < len(tail) and (tail[index].isdigit() or tail[index] == '.'):
+        index += 1
+    rest = tail[index:].lstrip('-_.+')
+    return rest.startswith(PRERELEASE_MARKERS)
+
+
 # custom_components/eltako/ - the directory this file sits in and the only thing HACS installs.
 # Every module which has to find a shipped file (manifest.json, docs_index.json, frontend/,
 # grafana/) resolves it from here instead of from its own __file__, which moves when a module
@@ -18,6 +44,9 @@ INTEGRATION_DIR: Final = os.path.dirname(os.path.abspath(__file__))
 DATA_ELTAKO: Final = "eltako"
 DATA_ENTITIES: Final = "entities"
 DATA_TELEGRAM_LOGGER: Final = "telegram_logger"
+# ring buffer of the log records of this integration, read by the "Logs" page of the
+# web ui (observation/integration_log.py)
+DATA_INTEGRATION_LOG: Final = "integration_log"
 DATA_DEVICE_ACTIVITY: Final = "device_activity"
 DATA_SETTINGS_OVERRIDES: Final = "settings_overrides"
 # {'entry_id': ..., 'pending': bool} of the one-time redirect into the web ui (core/onboarding.py)
@@ -181,6 +210,9 @@ CONF_GRAFANA_TOKEN: Final = "grafana_token"
 
 ### Log levels per telegram category. They control what ends up in the Home Assistant log
 ### (logger 'eltako.telegrams'), independent of the telegram log file.
+# log level of the whole integration (logger 'eltako'). Empty/'inherit' leaves it to the
+# `logger:` configuration of Home Assistant - see observation/integration_log.py
+CONF_LOG_LEVEL: Final = "log_level"
 CONF_LOG_LEVEL_INCOMING: Final = "log_level_incoming"
 CONF_LOG_LEVEL_OUTGOING: Final = "log_level_outgoing"
 CONF_LOG_LEVEL_UNKNOWN_DEVICES: Final = "log_level_unknown_devices"
@@ -210,8 +242,10 @@ SETTING_GROUPS: Final = [
     ('timeseries', "Timeseries export (Grafana)", "Writes every recorded telegram with its meta data "
      "(device, EEP, area, decoded values) into an InfluxDB bucket - analyse the history with Grafana. "
      "Works with InfluxDB 2.x and 1.8+ (v2 compatibility api)."),
-    ('log_levels', "Log levels of telegrams", "What is written into the Home Assistant log "
-     "(logger 'eltako.telegrams'). Use this to follow specific telegrams without flooding the log."),
+    ('log_levels', "Log levels", "What this integration writes into the log - the level of the "
+     "integration itself (logger 'eltako', also changeable on the Logs page) and one level per "
+     "telegram category (logger 'eltako.telegrams'), to follow specific telegrams without "
+     "flooding the log."),
 ]
 
 
@@ -286,6 +320,9 @@ WS_BRIDGE_START: Final = "eltako/bridge/start"
 WS_BRIDGE_STOP: Final = "eltako/bridge/stop"
 WS_BUS_MEMBERS: Final = "eltako/bus/members"
 WS_BUS_READ_MEMORY: Final = "eltako/bus/read_memory"
+# stop the running bus operation and release the bus - also when nothing seems to run,
+# because a hanging scan cannot be told apart from an idle bus (gateway.cancel_bus_operation)
+WS_BUS_CANCEL: Final = "eltako/bus/cancel"
 WS_BUS_TEACH_IN_SENDERS: Final = "eltako/bus/teach_in_senders"
 WS_SEND_TELEGRAM: Final = "eltako/send_telegram"
 WS_SEND_TELEGRAM_FORM: Final = "eltako/send_telegram_form"
@@ -319,6 +356,11 @@ WS_TELEGRAM_LOG_REFRESH_DEVICES: Final = "eltako/telegram_log/refresh_devices"
 # how strong the signal was (observation/radio_comparison.py)
 WS_RADIO_COMPARISON: Final = "eltako/radio_comparison/report"
 WS_RADIO_COMPARISON_CLEAR: Final = "eltako/radio_comparison/clear"
+
+### Log of the integration itself (observation/integration_log.py)
+WS_LOGS_RECENT: Final = "eltako/logs/recent"
+WS_LOGS_LEVEL: Final = "eltako/logs/level"
+WS_LOGS_CLEAR: Final = "eltako/logs/clear"
 
 ### Services of the telegram logger
 SERVICE_CLEAR_TELEGRAM_LOG: Final = "clear_telegram_log"

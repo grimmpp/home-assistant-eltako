@@ -5,7 +5,8 @@
  */
 
 import { WS } from "../lib/api.js";
-import { BUS_SCAN_STYLES, applyBusScans, renderBusScans } from "../lib/bus_scan.js";
+import { BUS_SCAN_STYLES, applyBusScans, bindBusCancel, renderBusCancel,
+         renderBusScans } from "../lib/bus_scan.js";
 import { DETAILS_STYLES, bindDetails, deviceDetails, openInHomeAssistant,
          renderDetails } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
@@ -567,7 +568,11 @@ export const page = {
             : `<button class="action small primary" data-bus-scan="${escapeHtml(gw.id)}"
                  data-busy-block="bus">scan bus &amp; read memory</button>
                <button class="action small" data-teach-in="${escapeHtml(gw.id)}"
-                 data-busy-block="bus">check &amp; teach in HA senders</button>`}</h3>
+                 data-busy-block="bus">check &amp; teach in HA senders</button>`}
+          ${/* deliberately offered whether or not something is known to run: a scan whose
+                connection hangs leaves the bus locked while this page shows nothing at all,
+                and then this is the only way back - see lib/bus_scan.BUS_CANCEL_TITLE */
+             renderBusCancel(gw.id)}</h3>
         ${renderBusScans([((ctx.state.busMembers || {}).scan_progress || {})[String(gw.id)]])}
         ${rows.length ? `<div class="table-wrapper"><table>
             <thead><tr>${this.TABLE_HEAD}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`
@@ -969,6 +974,14 @@ export const page = {
 
   afterRender(ctx, root) {
     this._pollBusScans(ctx);
+
+    // "the bus hangs" - cancel the running operation and hand the bus back. Same handler as
+    // the one in the banner of the panel, so both do exactly the same thing.
+    bindBusCancel(root, ctx.api, async () => {
+      await ctx.refreshActivity?.();
+      await this.load(ctx);
+      ctx.requestContentRender();
+    });
 
     // memory details of a bus device open in the side panel on the right
     root.querySelectorAll("button[data-memory-details]").forEach((button) => {

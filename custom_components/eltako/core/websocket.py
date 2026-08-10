@@ -16,7 +16,7 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 from eltakobus.util import b2s
 
 from ..const import (DATA_ELTAKO, DOMAIN, INTEGRATION_DIR, LOGGER, WS_ACTIVITY, WS_HELP_CATALOG,
-                     WS_INTEGRATION_INFO, WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM)
+                     WS_INTEGRATION_INFO, WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM, is_prerelease)
 from .gateway import detect, EnOceanGateway
 
 
@@ -425,6 +425,9 @@ async def ws_integration_info(hass: HomeAssistant, connection, msg):
         "domain": DOMAIN,
         "name": manifest.get("name", "Eltako"),
         "version": manifest.get("version"),
+        # a release candidate / beta must be recognizable inside the running
+        # integration, not only in the release notes on github
+        "prerelease": is_prerelease(manifest.get("version")),
         "documentation": manifest.get("documentation"),
         "issue_tracker": manifest.get("issue_tracker"),
         "codeowners": manifest.get("codeowners", []),

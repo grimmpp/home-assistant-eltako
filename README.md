@@ -43,7 +43,10 @@ your Home Assistant:
 [custom repository](https://hacs.xyz/docs/faq/custom_repositories/) in HACS, or install it by hand &ndash; clone
 the repository and run `./install_custom_component_eltako.sh`, which copies `custom_components/eltako` into
 your Home Assistant configuration. See
-[installing a specific version or branch](docs/install-specific-version-or-branch.md).
+[installing a specific version or branch](docs/install-specific-version-or-branch.md) - which also
+covers **beta versions and release candidates**: those are published as github pre-releases, HACS
+only offers them when *show beta versions* is switched on, and the web ui marks them as what they
+are on every page.
 
 **2. Add the integration.** *Settings &rarr; Devices & services &rarr; Add integration &rarr; ELTAKO*. **Nothing is
 asked and nothing has to be entered**: no gateway, no serial port, no `configuration.yaml`, no restart &ndash;

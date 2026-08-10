@@ -149,6 +149,14 @@ class EnOceanGateway:
         # fail halfway through. See exclusive_bus_access() below.
         self._bus_lock = threading.Lock()
         self._bus_busy_reason = None
+        # Generation of the current bus lock. Every acquisition gets a new number and a release
+        # which names an older one is ignored. Without it the late `finally` of an operation
+        # which was cancelled - its thread can sit in a serial read for minutes - would release
+        # the bus of whoever took it in the meantime. See cancel_bus_operation().
+        self._bus_generation = 0
+        # Set by cancel_bus_operation(): the long running loops check it between two bus
+        # requests and stop instead of running to the end.
+        self._bus_cancelled = threading.Event()
         # commands which arrived while the bus was busy: (time, message). They are sent when it
         # is free again, as long as they are not older than BUS_DEFER_SECONDS.
         self._deferred_messages: deque = deque(maxlen=BUS_DEFERRED_LIMIT)
@@ -465,6 +473,16 @@ class EnOceanGateway:
         """What is occupying the bus right now, for the log and the web ui."""
         return self._bus_busy_reason
 
+    @property
+    def bus_generation(self) -> int:
+        """Number of the current bus lock - pass it to release_bus() from a background thread."""
+        return self._bus_generation
+
+    @property
+    def is_bus_cancelled(self) -> bool:
+        """True after cancel_bus_operation(): a running loop must stop at its next step."""
+        return self._bus_cancelled.is_set()
+
     def try_acquire_bus(self, reason: str) -> bool:
         """Take the bus for one operation. False if somebody else already has it.
 
@@ -476,14 +494,27 @@ class EnOceanGateway:
                            self.dev_id, reason, self._bus_busy_reason)
             return False
         self._bus_busy_reason = reason
+        self._bus_generation += 1
+        # a cancel belongs to the operation which was running, never to the next one
+        self._bus_cancelled.clear()
         # the flag is what the web ui and the detection have always looked at
         self._reading_memory_of_devices_is_running.set()
-        LOGGER.info("[Gateway] [Id: %s] '%s' has the bus - other telegrams wait.",
-                    self.dev_id, reason)
+        LOGGER.info("[Gateway] [Id: %s] '%s' has the bus (generation %d) - other telegrams wait.",
+                    self.dev_id, reason, self._bus_generation)
         return True
 
-    def release_bus(self) -> None:
-        """Give the bus back and send what was waiting for it."""
+    def release_bus(self, generation: int | None = None) -> None:
+        """Give the bus back and send what was waiting for it.
+
+        `generation` is the number try_acquire_bus produced for *this* operation. A release
+        which names an older one is ignored: an operation which was cancelled still runs its
+        own `finally` afterwards, and without this check it would take the bus away from the
+        one which started in the meantime.
+        """
+        if generation is not None and generation != self._bus_generation:
+            LOGGER.debug("[Gateway] [Id: %s] A release of bus generation %s arrived while %s "
+                         "has the bus - ignored.", self.dev_id, generation, self._bus_generation)
+            return
         if self._bus_busy_reason is None:
             return
         reason = self._bus_busy_reason
@@ -496,16 +527,49 @@ class EnOceanGateway:
         LOGGER.info("[Gateway] [Id: %s] '%s' released the bus.", self.dev_id, reason)
         self._send_deferred_messages()
 
+    def cancel_bus_operation(self) -> dict:
+        """Stop whatever holds the bus and give the bus back - the emergency exit of the web ui.
+
+        Two steps, because two different failures have to be cured:
+
+        1. the **cancel flag** asks the running loop to stop between two bus requests. That is
+           the clean end: the scan unlocks the bus in the library and reception continues.
+        2. the lock is released **anyway**. A scan which hangs in a serial read does not reach
+           its own `finally` for minutes, and until then every command of Home Assistant is
+           queued and eventually dropped - which is exactly what "the bus hangs" looks like.
+
+        Calling it while nothing runs is allowed and does nothing beyond arming the flag: from
+        the outside a hanging operation cannot be told apart from none, so the signal must be
+        sendable whenever somebody believes the bus is stuck. The generation counter makes sure
+        the cancelled operation cannot release the bus of the next one when it finally ends.
+        """
+        reason = self._bus_busy_reason
+        self._bus_cancelled.set()
+        waiting = len(self._deferred_messages)
+        if reason is None:
+            LOGGER.info("[Gateway] [Id: %s] Cancel requested - the bus was already free.",
+                        self.dev_id)
+            return {'gateway_id': self.dev_id, 'was_busy': False, 'reason': None,
+                    'released': False, 'messages_waiting': waiting}
+
+        LOGGER.warning("[Gateway] [Id: %s] '%s' was cancelled from the web ui - the bus is "
+                       "released now, %d message(s) were waiting for it.",
+                       self.dev_id, reason, waiting)
+        self.release_bus()
+        return {'gateway_id': self.dev_id, 'was_busy': True, 'reason': reason,
+                'released': True, 'messages_waiting': waiting}
+
     @contextmanager
     def exclusive_bus_access(self, reason: str):
         """`with gateway.exclusive_bus_access('bus scan'):` - raises BusBusyError if occupied."""
         if not self.try_acquire_bus(reason):
             raise BusBusyError(f"The bus of gateway {self.dev_id} is busy with "
                                f"'{self._bus_busy_reason}'.")
+        generation = self._bus_generation
         try:
             yield self
         finally:
-            self.release_bus()
+            self.release_bus(generation)
 
     def _defer_message(self, msg: ESP2Message) -> None:
         """Remember a command which arrived while the bus was busy."""
@@ -556,12 +620,13 @@ class EnOceanGateway:
     async def _read_memory_of_all_bus_members(self):
         if not self.try_acquire_bus("reading the device memories"):
             return
+        generation = self._bus_generation
         try:
             await request_memory_of_all_devices(self._bus)
         except Exception as e:   # noqa: BLE001 - a telegram must never kill the receiving thread
             LOGGER.exception(f"[Gateway] [Id: {self.dev_id}] {e}")
         finally:
-            self.release_bus()
+            self.release_bus(generation)
 
 
 

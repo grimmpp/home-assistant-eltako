@@ -12,6 +12,7 @@ from eltakobus.eep import (A5_04_01, A5_04_02, A5_04_03, A5_06_01, A5_07_01, A5_
                            A5_38_08, D5_00_01, F6_01_01, F6_02_01, F6_02_02, F6_10_00, G5_3F_7F, H5_3F_7F,
                            M5_38_08, VOC_SubstancesType)
 
+from ..observation.integration_log import LOG_LEVELS as INTEGRATION_LOG_LEVELS
 from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_DEPRECATED_ENABLE_FRONTEND,
                      CONF_DEPRECATED_ENABLE_TELEGRAM_WEB_UI, CONF_DEPRECATED_FRONTEND_DEV_URL,
                      CONF_DEVICE_TYPE, CONF_EEP, CONF_ENABLE_FRONTEND, CONF_ENABLE_TEST_PAGE,
@@ -19,7 +20,8 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_DEPRECATED
                      CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_ID, CONF_GATEWAY_MESSAGE_DELAY,
                      CONF_GATEWAY_PORT, CONF_GERNERAL_SETTINGS, CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL,
                      CONF_ID_REGEX, CONF_INVERT_SIGNAL, CONF_LOG_ENOCEAN_TELEGRAMS,
-                     CONF_LOG_LEVEL_BUS_MESSAGES, CONF_LOG_LEVEL_DECODE_ERRORS, CONF_LOG_LEVEL_INCOMING,
+                     CONF_LOG_LEVEL, CONF_LOG_LEVEL_BUS_MESSAGES, CONF_LOG_LEVEL_DECODE_ERRORS,
+                     CONF_LOG_LEVEL_INCOMING,
                      CONF_LOG_LEVEL_OUTGOING, CONF_LOG_LEVEL_POLLING, CONF_LOG_LEVEL_UNKNOWN_DEVICES,
                      CONF_MAX_TARGET_TEMPERATURE, CONF_METER_TARIFFS, CONF_MIN_TARGET_TEMPERATURE,
                      CONF_OFF_TEMPERATURE, CONF_PLUG_AND_PLAY, CONF_PLUG_AND_PLAY_INTERVAL, CONF_ROOM_SENSOR,
@@ -133,6 +135,9 @@ class GeneralSettings(EltakoPlatformSchema):
             vol.Optional(CONF_TIMESERIES_MEASUREMENT, default="eltako_telegram"): cv.string,
             vol.Optional(CONF_GRAFANA_URL, default=""): cv.string,
             vol.Optional(CONF_GRAFANA_TOKEN, default=""): cv.string,
+
+            # level of the integration itself; '' keeps whatever `logger:` configures
+            vol.Optional(CONF_LOG_LEVEL, default=""): vol.In(INTEGRATION_LOG_LEVELS + [""]),
 
             # log levels per telegram category
             vol.Optional(CONF_LOG_LEVEL_INCOMING, default=TelegramLogLevel.OFF.value): vol.In([level.value for level in TelegramLogLevel]),

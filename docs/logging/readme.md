@@ -8,6 +8,18 @@ This part is about how to get access to the logs of Home Assistant ELTAKO Integr
 
 <img src="screenshot_logging.png" alt="Exemplary screenshot about logging." height="300" />
 
+## The Logs page of the web ui
+
+The quickest way is the **Logs** page of the [web ui](../web-ui/readme.md) (expert view,
+`/eltako#/logs`): it shows what this integration logs - filterable by level and text, with the
+traceback of an error - and the **log level** can be changed right there. That takes effect
+immediately, without editing a file and without restarting Home Assistant, and it is remembered.
+`inherit` hands the level back to the `logger:` section described below.
+
+Two limits, on purpose: the page keeps the last 2000 records **in memory**, so it starts empty
+after a restart and older lines fall out (it says how many) - the Home Assistant log file below
+has everything and survives a restart.
+
 ## Log level 
 By default log level `INFO` is activated which means only important information like be displayed in the logs. This comprises e.g. error and superficial information.
 If you want to get more detailed information you need to change the log level which can be done inside the Home assistant Configuration file `/config/configuration.yaml`.

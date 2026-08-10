@@ -28,7 +28,7 @@ from ..const import (CONF_CORE_ENTRY, CONF_DEPRECATED_ENABLE_FRONTEND, CONF_ENAB
                      CONF_ENABLE_TEACH_IN_BUTTONS, CONF_ENABLE_TEST_PAGE, CONF_FAST_STATUS_CHANGE,
                      CONF_GERNERAL_SETTINGS, CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL,
                      CONF_LOG_ENOCEAN_TELEGRAMS, CONF_LOG_LEVEL_BUS_MESSAGES, CONF_LOG_LEVEL_DECODE_ERRORS,
-                     CONF_LOG_LEVEL_INCOMING, CONF_LOG_LEVEL_OUTGOING, CONF_LOG_LEVEL_POLLING,
+                     CONF_LOG_LEVEL, CONF_LOG_LEVEL_INCOMING, CONF_LOG_LEVEL_OUTGOING, CONF_LOG_LEVEL_POLLING,
                      CONF_LOG_LEVEL_UNKNOWN_DEVICES, CONF_PLUG_AND_PLAY, CONF_PLUG_AND_PLAY_INTERVAL,
                      CONF_SHOW_DEV_ID_IN_DEV_NAME, CONF_SHOW_PANEL_IN_SIDEBAR,
                      CONF_TELEGRAM_LOG_BACKUP_COUNT, CONF_TELEGRAM_LOG_BUFFER_SIZE,
@@ -39,6 +39,9 @@ from ..const import (CONF_CORE_ENTRY, CONF_DEPRECATED_ENABLE_FRONTEND, CONF_ENAB
                      CONF_TIMESERIES_URL, DATA_ELTAKO, DATA_SETTINGS_OVERRIDES, DATA_SETTINGS_STORE, DOMAIN,
                      ELTAKO_CONFIG, LOGGER, PANEL_URL_PATH, SETTING_GROUPS, TELEGRAM_LOGGER_NAME,
                      TelegramLogFormat, TelegramLogLevel, WS_SETTINGS_GET, WS_SETTINGS_RESET, WS_SETTINGS_SET)
+# the levels of the integration logger itself: the python ones plus 'inherit' (= whatever
+# the `logger:` section of Home Assistant says)
+from ..observation.integration_log import LOG_LEVELS as INTEGRATION_LOG_LEVELS
 from . import config_helpers
 from .config_helpers import DEFAULT_GENERAL_SETTINGS
 from .schema import GeneralSettings
@@ -143,6 +146,13 @@ SETTING_DESCRIPTORS = [
      'help': "Service account token with the role 'Editor' (Grafana: Administration -> Users and "
              "access -> Service accounts). Only needed for the 'Sync dashboards' button. "
              "'user:password' is accepted as well (basic auth, e.g. admin:admin for a test setup)."},
+
+    # level of the integration itself - the same select as on the Logs page of the web ui
+    {'group': 'log_levels', 'name': CONF_LOG_LEVEL, 'type': 'select', 'label': 'Log level of the integration',
+     'options': INTEGRATION_LOG_LEVELS,
+     'help': "Everything this integration writes (logger 'eltako'). 'inherit' leaves it to the "
+             "`logger:` section of Home Assistant. 'debug' answers most questions about a device "
+             "which does not react - the Logs page shows the result without any file access."},
 
     # one log level per telegram category
     {'group': 'log_levels', 'name': CONF_LOG_LEVEL_INCOMING, 'type': 'select', 'label': 'Incoming telegrams',
@@ -361,6 +371,14 @@ async def async_apply_settings(hass: HomeAssistant) -> dict:
         result['telegram_logger_restarted'] = True
     except Exception as e:  # noqa: BLE001
         LOGGER.error(f"[{LOG_PREFIX_SETTINGS}] Cannot restart the telegram logger: {e}", exc_info=True)
+
+    # the log level of the integration is applied directly - it is switched on while a problem
+    # is being chased, and the reload further down would close the serial ports in that moment
+    try:
+        from ..observation.integration_log import apply_log_level
+        result['log_level'] = apply_log_level(hass, settings.get(CONF_LOG_LEVEL)).get('effective')
+    except Exception as e:  # noqa: BLE001
+        LOGGER.error(f"[{LOG_PREFIX_SETTINGS}] Cannot apply the log level: {e}", exc_info=True)
 
     # switching plug & play on or off (or changing its interval) takes effect immediately
     try:

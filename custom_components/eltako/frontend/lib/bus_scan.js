@@ -14,6 +14,7 @@
  * `plugAndPlay.bus_scans` (a list) and as `busMembers.scan_progress` (keyed by gateway id).
  */
 
+import { WS } from "./api.js";
 import { escapeHtml } from "./utils.js";
 
 export const BUS_SCAN_STYLES = `
@@ -29,7 +30,57 @@ export const BUS_SCAN_STYLES = `
                   background: var(--eltako-tint-strong); }
   .bus-scan-bar i { display: block; height: 100%; border-radius: 999px;
                     background: var(--eltako-accent); transition: width .8s ease; }
+  .bus-cancel { font-size: .72rem; padding: 1px 8px; }
 `;
+
+/** Why the button exists, on every one of them - it is not an ordinary "stop". */
+export const BUS_CANCEL_TITLE =
+  "Stops the running operation and hands the bus back, so waiting commands go through again. "
+  + "Can be pressed at any time: a scan whose connection hangs looks exactly like an idle bus "
+  + "from here, and that is when this is needed.";
+
+/**
+ * The cancel button. `target` is a gateway id, or "all" for every bus at once - which is the
+ * honest choice when it is not even clear which bus is stuck.
+ */
+export function renderBusCancel(target, label = "cancel &amp; release bus") {
+  return `<button class="action small bus-cancel" data-bus-cancel="${escapeHtml(target)}"
+            title="${escapeHtml(BUS_CANCEL_TITLE)}">${label}</button>`;
+}
+
+/**
+ * Wires every cancel button below `root`. Used by the panel for the banner and by the device
+ * page for its per-bus buttons, so both do exactly the same thing.
+ *
+ * @param {any} root element to search in
+ * @param {any} api EltakoApi
+ * @param {() => any} [afterCancel] called when the backend answered (refresh the view)
+ */
+export function bindBusCancel(root, api, afterCancel) {
+  if (!root) return;
+  root.querySelectorAll("button[data-bus-cancel]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const target = button.dataset.busCancel;
+      const label = button.textContent;       // "cancel" in a scan row, the long one elsewhere
+      button.disabled = true;
+      button.textContent = "releasing…";
+      const result = await api.call(WS.BUS_CANCEL,
+        target && target !== "all" ? { gateway_id: Number(target) } : {});
+      button.disabled = false;
+      button.textContent = label;
+      if (!result) {
+        alert((api.lastError || {}).message || "The bus could not be released.");
+        api.lastError = null;
+        return;
+      }
+      // saying "nothing was running" is the point: it tells the user that the hang is not a
+      // bus lock of this integration, instead of leaving them pressing a button that "worked"
+      const cancelled = (result.cancelled || []).length;
+      if (!cancelled) alert("Nothing was running on the bus - it was already free.");
+      await afterCancel?.();
+    });
+  });
+}
 
 /**
  * One readable line for a scan, the same wording as bus_members.describe_scan_progress:
@@ -65,6 +116,7 @@ export function renderBusScans(scans, nameOf) {
           ${name ? `<span class="bus-scan-name">${escapeHtml(name)}</span>` : ""}
           <span class="bus-scan-step">${describeBusScan(scan)}</span>
           <span class="bus-scan-percent">${percent}%</span>
+          ${renderBusCancel(scan.gateway_id, "cancel")}
         </div>
         <div class="bus-scan-bar"><i style="width:${Math.max(percent, 2)}%"></i></div>
       </div>`;

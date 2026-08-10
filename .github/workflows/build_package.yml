@@ -196,6 +196,33 @@ jobs:
                  eltako_standalone/__init__.py and manifest.json, or fix the tag"; exit 1 ;;
           esac
 
+      # A release candidate must be a github *pre-release* and a version with a marker, or
+      # neither. Get it wrong in one direction and HACS offers an unfinished version to
+      # everybody; get it wrong in the other and nobody but a beta tester ever sees the
+      # finished release. See const.is_prerelease.
+      - name: Pre-release flag and version must agree
+        if: github.event_name == 'release'
+        env:
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os, re, sys
+
+          version = os.environ['VERSION']
+          marked = os.environ['IS_PRERELEASE'] == 'true'
+          rest = re.sub(r'^v?\d+(\.\d+)*', '', version.lower()).lstrip('-_.+')
+          carries_marker = rest.startswith(('a', 'b', 'rc', 'dev', 'alpha', 'beta', 'pre'))
+
+          if carries_marker and not marked:
+              sys.exit(f"::error::version {version} is a pre-release, but the github release is "
+                       "not marked as one - HACS would offer it to everybody")
+          if marked and not carries_marker:
+              sys.exit(f"::error::the github release is marked as a pre-release, but version "
+                       f"{version} carries no marker - use e.g. {version}rc1")
+          print(f"{version}: pre-release={carries_marker}, matches the github release")
+          PY
+
       - name: Publish to PyPI
         if: env.TARGET == 'pypi'
         uses: pypa/gh-action-pypi-publish@release/v1

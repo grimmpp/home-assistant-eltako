@@ -37,10 +37,15 @@ export const RADIO_STYLES = `
   tr.burst-detail { display: none; }
   tr.burst-detail.visible { display: table-row; }
   .gateway-name { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-  /* the controls of the analysis: which telegrams, which gateways */
-  .controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .control-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
-  .control-row > label { font-size: .78rem; color: var(--eltako-muted); min-width: 130px; }
+  /* The controls of the analysis: which telegrams, which gateways.
+     Named after the page on purpose - the styles of every page end up in one stylesheet of
+     the shadow root, so a plain .controls / .control-row here is a rule for the whole
+     panel. Those two names once turned the rows of the HA entities page (tr.control-row,
+     td.controls) into flex boxes: the cells left the columns of their own table head and the
+     buttons stood underneath each other. */
+  .radio-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .radio-control-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+  .radio-control-row > label { font-size: .78rem; color: var(--eltako-muted); min-width: 130px; }
 
   /* Problems are coloured, not only worded: with a table this wide the eye has to be able to
      jump to the row which is wrong. Two levels only - red is a fault (the gateways did not
@@ -385,8 +390,8 @@ export const page = {
     const selected = (ctx.state.radioGateways || []).map(String);
     const restricted = selected.length || ctx.state.radioSender;
     return `
-      <div class="controls">
-        <div class="control-row">
+      <div class="radio-controls">
+        <div class="radio-control-row">
           <label title="Compare only these gateways with each other - everything else is left out of the analysis">Compare gateways</label>
           <button class="action small ${selected.length ? "" : "primary"}" data-gateway="">all</button>
           ${gateways.map((gateway) => `
@@ -427,7 +432,7 @@ export const page = {
     const counts = summary.filter_counts || {};
     const view = ctx.state.radioView || "all";
     return `
-      <div class="control-row">
+      <div class="radio-control-row">
         <label>Show</label>
         ${VIEWS.map(([name, label]) => `
           <button class="action small ${name === view ? "primary" : ""}" data-view="${name}"
@@ -1065,7 +1070,7 @@ export const page = {
   _levels(byLevel) {
     const entries = Object.entries(byLevel || {});
     if (!entries.length) return "";
-    return `<span class="control-row">${entries
+    return `<span class="radio-control-row">${entries
       .sort((left, right) => Number(left[0]) - Number(right[0]))
       .map(([level, count]) => `<span class="path ${Number(level) ? "hop" : "direct"}"
               title="${Number(level)

@@ -117,6 +117,7 @@ says so.
 | --- | --- | --- |
 | `eltako/bus/members` | &ndash; | Every bus position collected **passively** from the traffic - model, channels, taught-in senders from the stored memory image, and the radio devices next to it. No bus lock |
 | `eltako/bus/read_memory` | `gateway_id` | The **active** scan: discovery of every position plus the complete device memories. Locks the bus for minutes and runs in its own thread with its own event loop, so nothing can delay its timing. Answers `{started: false, reason: 'already_running', busy_with: ...}` when another operation has the bus |
+| `eltako/bus/cancel` | `gateway_id` (optional - without it **every** bus) | Stop the running operation and hand the bus back. Two steps: the loop is asked to stop between two bus requests, and the lock is released **regardless** - a scan hanging in a serial read does not reach its own cleanup for minutes, and until then every command is queued. Allowed while nothing runs (`cancelled: []` then), because a hanging operation cannot be told apart from an idle bus from the outside |
 | `eltako/bus/teach_in_senders` | `gateway_id`, `address` (optional) | Compare the configured sender ids against the device memories and write the missing ones with `ensure_programmed`. Error `bus_busy` while a scan runs |
 
 While one of those runs, the bus of **that** gateway belongs to it alone: commands are queued
@@ -144,6 +145,21 @@ and [`core/websocket.py`](../../custom_components/eltako/core/websocket.py).
 | `eltako/send_telegram_form` | &ndash; | The form: every EEP of the library with its fields, plus the gateways and sender ids which may be used |
 | `eltako/send_telegram` | `gateway_id`, and either `eep` + `fields` or `raw` | Send an arbitrary telegram - built from an EEP or as raw ESP2 hex (11 body bytes or the full 14 byte frame, checksum validated) |
 | `eltako/grafana/sync` | &ndash; | Push the five dashboards shipped with the integration into the configured Grafana, pointing every panel at the InfluxDB datasource which actually exists there |
+
+## Logs of the integration
+
+[`observation/integration_log.py`](../../custom_components/eltako/observation/integration_log.py).
+
+| Command | Parameters | What it does |
+| --- | --- | --- |
+| `eltako/logs/recent` | `limit` (default 300), `level`, `search` | The buffered records of the `eltako` logger, newest last, with the level which is configured and the one which is really in effect. `dropped` says how many records already left the ring buffer |
+| `eltako/logs/level` | `level` (`inherit`, `debug`, `info`, `warning`, `error`) | Set the log level of the integration. Applied immediately and stored as the general setting `log_level`; `inherit` gives it back to the `logger:` configuration of Home Assistant |
+| `eltako/logs/clear` | &ndash; | Empty the buffer |
+
+The buffer is a `logging.Handler` **next to** the ones Home Assistant installed - nothing is
+redirected, the log file keeps everything. Changing the level does **not** reload the config
+entries (unlike the settings page): the level is switched while a problem is being chased, and
+a reload would close the serial ports in exactly that moment.
 
 ## Plug & play
 

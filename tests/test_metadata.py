@@ -168,9 +168,34 @@ class MetadataTest(unittest.TestCase):
         self.assertIn('frontend/**/*.js', patterns)
         self.assertIn('frontend/img/*', patterns)
 
+    @classmethod
+    def get_release_version(cls):
+        """The version without its pre-release marker: 2.2.0rc1 -> 2.2.0.
+
+        A release candidate is a candidate *for* a release, so it describes the changes of
+        that release - `changes.md` gets its section when the version is opened, not once per
+        candidate. See const.is_prerelease.
+        """
+        version = cls.get_version_of_eltako_integration()
+        return re.match(r'^v?(\d+(?:\.\d+)*)', version).group(1)
+
     def test_if_changes_are_documented(self):
         changes_filename = os.path.join(os.getcwd(), 'changes.md')
         with open(changes_filename, 'r', encoding="utf-8") as f:
             changes_text = f.read()
 
-        self.assertTrue( f'## Version {self.get_version_of_eltako_integration()}' in changes_text )
+        self.assertTrue( f'## Version {self.get_release_version()}' in changes_text )
+
+    def test_a_prerelease_is_recognized_as_one(self):
+        """The web ui marks a pre-release as such (eltako/integration_info -> `prerelease`),
+        which only works if the version really carries a marker python and HACS both read."""
+        from custom_components.eltako.const import is_prerelease
+
+        version = self.get_version_of_eltako_integration()
+        # a version with a marker must be a *pre*-release for pip as well: PEP 440 sorts
+        # 2.2.0rc1 before 2.2.0, and `pip install` skips it unless it is asked with --pre
+        if is_prerelease(version):
+            from packaging.version import Version
+            self.assertTrue(Version(version).is_prerelease,
+                            msg=f"{version} is not a pre-release for pip - use e.g. 2.2.0rc1")
+            self.assertNotEqual(version, self.get_release_version())

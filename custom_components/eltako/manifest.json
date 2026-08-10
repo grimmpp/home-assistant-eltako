@@ -25,5 +25,5 @@
     "StrEnum",
     "esp2-gateway-adapter==0.2.21"
   ],
-  "version": "2.2.0"
+  "version": "2.2.0rc1"
 }

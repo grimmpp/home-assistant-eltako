@@ -12,7 +12,7 @@
 import { ACTIVITY_STYLES, applyBusyLocks, blockingJob, describeJob, jobsOf,
          renderActivity } from "./lib/activity.js";
 import { EltakoApi, WS } from "./lib/api.js";
-import { BUS_SCAN_STYLES } from "./lib/bus_scan.js";
+import { BUS_SCAN_STYLES, bindBusCancel } from "./lib/bus_scan.js";
 import { EntityHub } from "./lib/entity_hub.js";
 import { STYLES } from "./lib/styles.js";
 import { escapeHtml, icon } from "./lib/utils.js";
@@ -25,6 +25,7 @@ import { page as telegramsPage } from "./pages/telegrams.js";
 import { page as radioPage } from "./pages/radio.js";
 import { page as receptionPage } from "./pages/reception.js";
 import { page as statisticsPage } from "./pages/devices.js";
+import { page as logsPage } from "./pages/logs.js";
 import { page as testsPage } from "./pages/tests.js";
 import { page as simulationPage } from "./pages/simulation.js";
 import { page as settingsPage } from "./pages/settings.js";
@@ -38,7 +39,8 @@ import { page as aboutPage } from "./pages/about.js";
 // yet are the last block of the device page, next to everything else which exists on the bus.
 const PAGES = /** @type {import("./types.js").Page[]} */ (
   [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, radioPage,
-   statisticsPage, receptionPage, testsPage, simulationPage, settingsPage, helpPage, aboutPage])
+   statisticsPage, receptionPage, logsPage, testsPage, simulationPage, settingsPage,
+   helpPage, aboutPage])
   .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
 
 /**
@@ -614,7 +616,15 @@ class EltakoPanel extends HTMLElement {
     const info = this.state.integrationInfo || {};
     const context = this._context();
     const version = this.shadowRoot.getElementById("app-version");
-    if (version) version.textContent = info.version ? `v${info.version}` : "";
+    // A release candidate has to be recognizable while working with it, not only in the
+    // release notes on github - so it says so next to the version, on every page.
+    if (version) {
+      version.innerHTML = info.version
+        ? `v${escapeHtml(info.version)}${info.prerelease
+            ? ` <span class="prerelease-tag" title="Pre-release: not an official release. Installed from a beta/release candidate - please report what you find.">pre-release</span>`
+            : ""}`
+        : "";
+    }
     const nav = this.shadowRoot.getElementById("nav");
     // on a narrow screen the navigation scrolls horizontally - a refresh must not jump it
     // back to the first entry
@@ -646,7 +656,16 @@ class EltakoPanel extends HTMLElement {
   /** The banner above the content of every page - see lib/activity.js for what it says. */
   _renderActivity() {
     const section = this.shadowRoot.getElementById("activity");
-    if (section) section.innerHTML = renderActivity(this.state.activity);
+    if (!section) return;
+    section.innerHTML = renderActivity(this.state.activity);
+    // the banner is the one place which is on *every* page, so the way out of a bus which does
+    // not answer belongs here. The buttons are rewritten with the banner, so they are wired
+    // again after every render.
+    bindBusCancel(section, this._api, async () => {
+      await this.loadActivity();
+      this._renderActivity();
+      this._applyBusyLocks();
+    });
   }
 
   /** Buttons which would collide with a running job are disabled and say why. */

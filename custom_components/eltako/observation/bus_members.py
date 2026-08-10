@@ -32,12 +32,13 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
+from eltakobus.error import TimeoutError as BusTimeoutError
 from eltakobus.message import EltakoDiscoveryReply, EltakoMemoryResponse
 from eltakobus.util import b2s
 
 from ..const import (CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION, CONF_SENDER, DATA_BUS_MEMBERS,
-                     DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, WS_BUS_MEMBERS,
-                     WS_BUS_READ_MEMORY, WS_BUS_TEACH_IN_SENDERS)
+                     DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, WS_BUS_CANCEL,
+                     WS_BUS_MEMBERS, WS_BUS_READ_MEMORY, WS_BUS_TEACH_IN_SENDERS)
 from ..catalog.device_catalog import DEVICE_CATALOG, describe_hw_type
 
 if TYPE_CHECKING:
@@ -674,6 +675,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
         return
     websocket_api.async_register_command(hass, ws_bus_members)
     websocket_api.async_register_command(hass, ws_bus_read_memory)
+    websocket_api.async_register_command(hass, ws_bus_cancel)
     websocket_api.async_register_command(hass, ws_bus_teach_in_senders)
     domain_data[WS_BUS_REGISTERED] = True
 
@@ -805,6 +807,49 @@ async def ws_bus_read_memory(hass: HomeAssistant, connection, msg) -> None:
     connection.send_result(msg['id'], {'started': True})
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_BUS_CANCEL,
+    # without a gateway id every bus is freed - which is what "the bus hangs" needs when it is
+    # not even clear which of them is stuck
+    vol.Optional('gateway_id'): vol.Any(None, vol.Coerce(int)),
+})
+@websocket_api.async_response
+async def ws_bus_cancel(hass: HomeAssistant, connection, msg) -> None:
+    """Cancel the running bus operation and release the bus.
+
+    Deliberately allowed at any time, also when nothing seems to run: a scan whose thread
+    hangs in a serial read looks exactly like an idle bus from here, and that is precisely the
+    situation in which somebody presses this. It is idempotent - see
+    gateway.cancel_bus_operation() for the two steps and why the bus is released even when the
+    operation itself cannot be reached anymore.
+    """
+    from ..core.websocket import get_gateways
+
+    gateway_id = msg.get('gateway_id')
+    gateways = [g for g in get_gateways(hass)
+                if gateway_id is None or g.dev_id == gateway_id]
+    if gateway_id is not None and not gateways:
+        connection.send_error(msg['id'], 'unknown_gateway', f"No gateway with id {gateway_id}")
+        return
+
+    results = []
+    for gateway in gateways:
+        try:
+            results.append(gateway.cancel_bus_operation())
+        except Exception as e:  # noqa: BLE001 - one gateway must not stop the others
+            LOGGER.error(f"[{LOG_PREFIX_BUS}] Cannot cancel the bus operation of gateway "
+                         f"{gateway.dev_id}: {e}", exc_info=True)
+            results.append({'gateway_id': gateway.dev_id, 'was_busy': None, 'error': str(e),
+                            'released': False})
+
+    connection.send_result(msg['id'], {
+        'gateways': results,
+        # what was really stopped - the web ui says "nothing was running" instead of pretending
+        'cancelled': [entry for entry in results if entry.get('was_busy')],
+    })
+
+
 ### ---------------------------------------------------------------------------
 ### teaching in the home assistant sender addresses
 ### ---------------------------------------------------------------------------
@@ -823,6 +868,14 @@ TEACH_IN_TIMEOUT = 20       # seconds per device
 #     instead of probing all 255 addresses
 SCAN_PAUSE = 0.05           # seconds between two bus requests
 SCAN_EXCHANGE_TIMEOUT = 10  # seconds per request
+
+# "nobody answered at this position" arrives in three shapes, and one of them is a trap:
+# `eltakobus.error.TimeoutError` only shares its *name* with the builtin - it inherits from
+# Exception, so `except TimeoutError` does NOT catch it. The library raises it whenever the
+# gateway answers with an EltakoTimeout telegram ("the addressed device did not answer"),
+# which is a completely normal reply while scanning. Without it in this tuple a single silent
+# position ends the whole scan instead of being skipped.
+NO_ANSWER = (TimeoutError, asyncio.TimeoutError, BusTimeoutError)
 
 # Progress of the running scans, gateway id -> counters. Written by the scan thread, read by
 # whoever reports progress (the plug & play status, the bus members websocket). Single item
@@ -877,40 +930,63 @@ async def _scan_bus(gateway, positions: list[int]) -> None:
 
         skip_until = 0
         for index, position in enumerate(ordered):
+            if gateway.is_bus_cancelled:
+                break
             progress.update({'position': position, 'positions_done': index,
                              'memory_rows_read': None, 'memory_rows_total': None,
                              'percent': int(100 * index / total)})
             if position <= skip_until:
                 continue
+            # Everything about one position is guarded: a position which does not answer, or
+            # whose answer arrives damaged (the serial reader logs a ParseError and drops the
+            # frame), must cost that position - not the rest of the bus. Before this, one such
+            # position ended the scan and every position behind it stayed unread.
             try:
                 reply = await asyncio.wait_for(
                     bus.exchange(EltakoDiscoveryRequest(address=position), EltakoDiscoveryReply, retries=2),
                     timeout=SCAN_EXCHANGE_TIMEOUT)
-            except (TimeoutError, asyncio.TimeoutError):
-                continue
-            await asyncio.sleep(SCAN_PAUSE)
-            if reply is None:
-                continue
-
-            forward(reply)      # feeds the registry through the normal receive path
-            skip_until = position + reply.reported_size - 1
-
-            for line in range(reply.memory_size):
-                progress.update({'memory_rows_read': line + 1, 'memory_rows_total': reply.memory_size,
-                                 'percent': int(100 * (index + (line + 1) / max(reply.memory_size, 1))
-                                                / total)})
-                try:
-                    response = await asyncio.wait_for(
-                        bus.exchange(EltakoMemoryRequest(reply.reported_address, line), EltakoMemoryResponse,
-                                     retries=2),
-                        timeout=SCAN_EXCHANGE_TIMEOUT)
-                except (TimeoutError, asyncio.TimeoutError):
-                    continue
-                if response is not None:
-                    forward(response)
                 await asyncio.sleep(SCAN_PAUSE)
+                if reply is None:
+                    continue
 
-        LOGGER.info(f"[{LOG_PREFIX_BUS}] Paced bus scan of gateway {gateway.dev_id} finished.")
+                forward(reply)      # feeds the registry through the normal receive path
+                skip_until = position + reply.reported_size - 1
+
+                for line in range(reply.memory_size):
+                    if gateway.is_bus_cancelled:
+                        break
+                    progress.update({'memory_rows_read': line + 1, 'memory_rows_total': reply.memory_size,
+                                     'percent': int(100 * (index + (line + 1) / max(reply.memory_size, 1))
+                                                    / total)})
+                    try:
+                        response = await asyncio.wait_for(
+                            bus.exchange(EltakoMemoryRequest(reply.reported_address, line), EltakoMemoryResponse,
+                                         retries=2),
+                            timeout=SCAN_EXCHANGE_TIMEOUT)
+                    except NO_ANSWER:
+                        LOGGER.debug(f"[{LOG_PREFIX_BUS}] Gateway {gateway.dev_id}, position "
+                                     f"{position}: memory row {line} did not answer.")
+                        continue
+                    if response is not None:
+                        forward(response)
+                    await asyncio.sleep(SCAN_PAUSE)
+            except NO_ANSWER:
+                # the normal answer for a gap in the bus, and what a damaged reply ends up as
+                LOGGER.debug(f"[{LOG_PREFIX_BUS}] Gateway {gateway.dev_id}: position {position} "
+                             f"did not answer, skipping it.")
+                continue
+            except Exception as e:  # noqa: BLE001 - one position must not end the whole scan
+                LOGGER.warning(f"[{LOG_PREFIX_BUS}] Gateway {gateway.dev_id}: position {position} "
+                               f"could not be read ({type(e).__name__}: {e}) - skipping it.")
+                continue
+
+        if gateway.is_bus_cancelled:
+            # the memories read so far are kept: they are complete per position, and a position
+            # which was not visited simply has no memory image (async_parse_taught_in skips it)
+            LOGGER.warning(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} was "
+                           f"cancelled at position {progress.get('position')}.")
+        else:
+            LOGGER.info(f"[{LOG_PREFIX_BUS}] Paced bus scan of gateway {gateway.dev_id} finished.")
     finally:
         SCAN_PROGRESS.pop(gateway.dev_id, None)
         if is_locked:
@@ -963,13 +1039,18 @@ def start_bus_scan_thread(hass: HomeAssistant, gateway, positions: list[int]) ->
     if not gateway.try_acquire_bus("bus scan"):
         return False
 
+    # The bus can be taken away from this scan while it runs (cancel button of the web ui,
+    # gateway.cancel_bus_operation). Its own release must not then take the bus from whoever
+    # started afterwards, so it names the generation it acquired.
+    generation = gateway.bus_generation
+
     def runner():
         try:
             asyncio.run(_scan_bus(gateway, positions))
         except Exception as e:  # noqa: BLE001
             LOGGER.error(f"[{LOG_PREFIX_BUS}] Bus scan of gateway {gateway.dev_id} failed: {e}", exc_info=True)
         finally:
-            gateway.release_bus()
+            gateway.release_bus(generation)
 
     import threading
     thread = threading.Thread(target=runner, name=f"eltako-bus-scan-gw{gateway.dev_id}", daemon=True)

@@ -18,7 +18,6 @@
  */
 
 import { WS } from "../lib/api.js";
-import { BUS_SCAN_STYLES, renderBusScans } from "../lib/bus_scan.js";
 import { DETAILS_STYLES, bindDetails, deviceDetails, gatewayDetails, openInHomeAssistant,
          renderDetails } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
@@ -68,7 +67,7 @@ export const page = {
   modes: ["user"],
   // no refreshMs on purpose - see the module comment: the cards update themselves
 
-  styles: FORM_STYLES + BUS_SCAN_STYLES + DETAILS_STYLES + `
+  styles: FORM_STYLES + DETAILS_STYLES + `
     .device-groups h3 { font-size: .9rem; font-weight: 500; margin: 18px 0 8px;
                         color: var(--eltako-muted); display: flex; align-items: center; gap: 6px; }
     .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
@@ -116,14 +115,6 @@ export const page = {
     .detect-card p { font-size: .85rem; }
     .detect-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
     .detect-list .chip { display: inline-flex; align-items: center; gap: 5px; }
-    .detect-progress { height: 4px; border-radius: 3px; overflow: hidden;
-                       background: var(--eltako-tint-strong); margin: 10px 0; }
-    .detect-progress i { display: block; height: 100%; width: 35%; border-radius: 3px;
-                         background: var(--eltako-accent); animation: eltako-detect 1.4s ease-in-out infinite; }
-    @keyframes eltako-detect {
-      0%   { margin-left: -35%; }
-      100% { margin-left: 100%; }
-    }
   `,
 
   async load(ctx) {
@@ -233,22 +224,20 @@ export const page = {
       // every bus is read in parallel and each one takes minutes - they are listed one below
       // the other, so it is visible which bus is where instead of one bar for all of them
       const scans = pnp.bus_scans || [];
-      const gateways = (ctx.state.integrationInfo || {}).gateways || [];
-      const nameOf = (gatewayId) => (gateways.find((gateway) =>
-        String(gateway.id) === String(gatewayId)) || {}).name || `Gateway ${gatewayId}`;
 
       // the devices are added while the bus is being read, not at the end of the scan - so
       // the list below fills up during the run and the counter here says so
       const found = (report.devices_added || []).length;
 
+      // No progress bar here: the activity banner of the panel stands directly above this
+      // card on every page and shows exactly these bus scans with their counters. Two bars
+      // for one thing, a few pixels apart, only make the page look like two things run.
       return `
         <div class="notice detect-card">
           <h3>${icon("mdi:magnify-scan", "◎")} Searching for devices&hellip;</h3>
-          ${scans.length ? "" : `<div class="detect-progress"><i></i></div>`}
           <p>${escapeHtml(pnp.step || "Detection is running")}
             ${pnp.stage === "bus" ? ` - reading ${scans.length > 1 ? `the ${scans.length} buses`
               : "the bus"} takes a few minutes, your devices do not react meanwhile.` : ""}</p>
-          ${renderBusScans(scans, nameOf)}
           <p>${found
             ? `<b>${found} device${found === 1 ? "" : "s"}</b> found and added so far - `
               + "they are in the list below already. More appear while the search runs."

@@ -336,6 +336,7 @@ None of these can influence a device. All of them listen to the same signals as 
 | [`observation/bus_members.py`](../../custom_components/eltako/observation/bus_members.py) | Which devices sit on the bus, derived passively from the traffic, plus their memory images |
 | [`observation/device_activity.py`](../../custom_components/eltako/observation/device_activity.py) | Which addresses have ever reported, how often, when last |
 | [`observation/radio_comparison.py`](../../custom_components/eltako/observation/radio_comparison.py) | One radio telegram as *every* gateway received it: who heard it, where the bytes differ, how strong the signal was |
+| [`observation/integration_log.py`](../../custom_components/eltako/observation/integration_log.py) | The log of the integration itself in a ring buffer, and the log level of the `eltako` logger |
 | [`observation/timeseries.py`](../../custom_components/eltako/observation/timeseries.py) | Export into InfluxDB for Grafana |
 | [`observation/telegram_suggestions.py`](../../custom_components/eltako/observation/telegram_suggestions.py) | Which EEP and which device could an unknown address be? |
 
@@ -424,7 +425,8 @@ cache ES modules heuristically and your edits stay invisible.
 | Settings | `settings/{get,set,reset}` | `config/general_settings.py` |
 | Devices | `devices/{form,list,add,update,remove}`, `devices/{activity,activity_clear}` | `config/device_config.py`, `observation/device_activity.py` |
 | Gateways | `gateways/{form,add,update,remove,scan}` | `config/gateway_config.py`, `tools/gateway_scan.py` |
-| The bus | `bus/{members,read_memory,teach_in_senders}` | `observation/bus_members.py` |
+| The bus | `bus/{members,read_memory,cancel,teach_in_senders}` | `observation/bus_members.py` |
+| Logs | `logs/{recent,level,clear}` | `observation/integration_log.py` |
 | Telegrams | `telegram_log/{info,statistics,recent,subscribe,clear,refresh_devices}`, `radio_comparison/{report,clear}`, `send_telegram{,_form}`, `grafana/sync` | `observation/enocean_logger.py`, `observation/radio_comparison.py`, `core/websocket.py` |
 | Plug & play | `plug_and_play/{status,run,probe}` | `tools/plug_and_play.py` |
 | Device tests | `device_tests/{info,start,stop,subscribe}` | `tools/device_tests.py` |

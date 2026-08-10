@@ -15,7 +15,7 @@
  * The backend sends facts, the wording lives here.
  */
 
-import { renderBusScans } from "./bus_scan.js";
+import { renderBusCancel, renderBusScans } from "./bus_scan.js";
 import { escapeHtml, formatDuration } from "./utils.js";
 
 export const ACTIVITY_STYLES = `
@@ -39,6 +39,7 @@ export const ACTIVITY_STYLES = `
   .activity-job .activity-step { color: var(--eltako-muted); }
   .activity-wait { font-size: .78rem; color: var(--eltako-muted); }
   .activity-wait b { color: var(--primary-text-color); font-weight: 500; }
+  .activity-cancel { display: flex; flex-wrap: wrap; gap: 6px; }
   /* a button which cannot be pressed while something runs says so instead of looking broken */
   [data-busy-block][disabled] { cursor: wait; }
 `;
@@ -94,6 +95,8 @@ export function renderActivity(activity) {
 
   const oldest = jobs.map((job) => job.started_at).filter(Boolean).sort()[0];
   const scans = jobs.map((job) => job.progress).filter(Boolean);
+  // jobs which hold a bus: only those can be cancelled, and only they leave commands waiting
+  const busJobs = jobs.filter((job) => (job.blocks || []).includes("bus"));
   const nameOf = (gatewayId) => {
     const job = jobs.find((entry) => String(entry.gateway_id) === String(gatewayId));
     return (job && job.gateway_name) || `Gateway ${gatewayId}`;
@@ -114,6 +117,14 @@ export function renderActivity(activity) {
       }).join("")}
       ${renderBusScans(scans, nameOf)}
       <div class="activity-wait">${waitHint(jobs)}</div>
+      ${busJobs.length ? `<div class="activity-cancel">${
+        // the way out of the situation this banner describes: a bus operation which does not
+        // end blocks every command of the integration, and from the outside a hanging scan
+        // and a slow one look the same. One button per bus, plus "all" when several are busy.
+        busJobs.map((job) => renderBusCancel(job.gateway_id ?? "all",
+          busJobs.length > 1 && job.gateway_name
+            ? `cancel &amp; release ${escapeHtml(job.gateway_name)}` : "cancel &amp; release bus"))
+          .join(" ")}</div>` : ""}
     </div>`;
 }
 

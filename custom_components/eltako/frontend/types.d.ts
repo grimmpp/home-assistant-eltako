@@ -901,7 +901,28 @@ export interface WsResults {
 
   "eltako/bus/members": BusMembersResult;
   "eltako/bus/read_memory": any;
+  /** what was released - `cancelled` holds only the gateways which really were busy */
+  "eltako/bus/cancel": {
+    gateways: { gateway_id: number; was_busy: boolean | null; reason: string | null;
+                released: boolean; messages_waiting?: number; error?: string }[];
+    cancelled: { gateway_id: number; reason: string | null }[];
+  };
   "eltako/bus/teach_in_senders": { results: any[] };
+
+  /** the log of the integration itself (observation/integration_log.py) */
+  "eltako/logs/recent": {
+    entries: { time: string; timestamp: number; level: string; levelno: number;
+               logger: string; message: string; exception?: string }[];
+    total: number;
+    dropped: number;
+    buffer_size: number;
+    now?: number;
+    level: string;
+    effective: string;
+    options: string[];
+  };
+  "eltako/logs/level": { level: string; effective: string; options: string[] };
+  "eltako/logs/clear": { cleared: true };
 
   "eltako/gateways/form": GatewayFormDescriptor;
   "eltako/gateways/add": {

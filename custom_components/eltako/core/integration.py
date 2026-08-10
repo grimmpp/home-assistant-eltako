@@ -29,7 +29,7 @@ from . import onboarding
 # subpackage, because async_setup() below has to start all of them
 from ..config import config_helpers, config_import, device_config, gateway_config, general_settings
 from ..config.schema import CONFIG_SCHEMA
-from ..observation import bus_members, device_activity, reception
+from ..observation import bus_members, device_activity, integration_log, reception
 from ..observation.enocean_logger import async_setup_telegram_logger, is_telegram_logging_enabled
 from ..tools import device_tests, gateway_scan, plug_and_play, serial_bridge
 from .. import simulation
@@ -84,6 +84,7 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     # of this runtime, so they work in Home Assistant as well as standalone
     device_tests.register_websocket_commands(hass)
     reception.register_websocket_commands(hass)
+    integration_log.register_websocket_commands(hass)
     # bridge a serial port of another machine in as a pty - the way a usb gateway reaches a
     # container on macOS/windows without losing the automatic detection (docs/hardware-bridge)
     serial_bridge.register_websocket_commands(hass)
@@ -100,6 +101,10 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
 
     # Long term activity of all EnOcean addresses (independent of the telegram logging)
     await device_activity.async_setup_activity_tracker(hass)
+
+    # The log of the integration itself, kept in memory so the 'Logs' page can show it
+    # without any file access - and the configured log level of the 'eltako' logger.
+    integration_log.async_setup_integration_log(hass, general_settings_values)
 
     # Recording, statistics and live view of all EnOcean telegrams
     await async_setup_telegram_logger(hass, general_settings_values)

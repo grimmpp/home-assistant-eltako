@@ -100,7 +100,8 @@ const homeCtx = {
   api: { call: async () => null, lastError: null },
   root: null, requestRender() {}, requestContentRender() {},
 };
-const homeRows = rowsOf(home._renderDetection(homeCtx));
+const homeHtml = home._renderDetection(homeCtx);
+const homeRows = rowsOf(homeHtml);
 
 // the device page: one section per gateway, so the scans are below each other anyway - each
 // section shows the progress of its own bus
@@ -126,7 +127,7 @@ const devicesRows = rowsOf(devicesHtml);
 
 console.log(JSON.stringify({
   component, empty, withoutNames, patched, afterPatch, stale,
-  overviewRows, homeRows, devicesRows,
+  overviewRows, homeRows, homeHtml, devicesRows,
   devicesHasLeave: typeof devices.leave === 'function',
 }, null, 1));
 """
@@ -184,9 +185,20 @@ class TestParallelBusScansAreListed(unittest.TestCase):
                          [row['name'] for row in self.result['overviewRows']])
         self.assertEqual(['17%', '75%'], [row['percent'] for row in self.result['overviewRows']])
 
-    def test_the_simple_view_lists_both_buses(self):
-        self.assertEqual(['FAM14', 'FGW14-USB'],
-                         [row['name'] for row in self.result['homeRows']])
+    def test_the_simple_view_has_no_progress_bar_of_its_own(self):
+        """The activity banner of the panel stands directly above this card and already shows
+        every running bus scan with its counters. A second, nearly identical bar a few pixels
+        below it does not add information - it makes one operation look like two."""
+        self.assertEqual([], self.result['homeRows'])
+
+    def test_the_simple_view_still_says_what_is_going_on(self):
+        """Dropping the bar must not drop the words: this card is the only place which says
+        that the devices do not react meanwhile and how many were found so far."""
+        html = self.result['homeHtml']
+
+        self.assertIn('Searching for devices', html)
+        self.assertIn('the 2 buses', html)
+        self.assertIn('do not react meanwhile', html)
 
     def test_the_device_page_shows_the_progress_of_every_bus_section(self):
         self.assertEqual(['1', '2'], [row['gateway'] for row in self.result['devicesRows']])

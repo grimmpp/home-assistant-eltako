@@ -300,8 +300,29 @@ def build_fixtures() -> dict:
          'serial_path': '192.168.0.10', 'connected': True, 'simulated': False},
     ]}
 
+    # the log page: a few records of every level, incl. one with a traceback - what the page
+    # has to survive is a long message, a child logger and an exception block
+    log_entries = [
+        {'time': '2026-08-10T14:12:03.481', 'timestamp': 1786633923.481, 'level': 'INFO',
+         'levelno': 20, 'logger': 'eltako', 'message': "[Gateway] [Id: 1] Connected to /dev/ttyUSB0"},
+        {'time': '2026-08-10T14:12:04.002', 'timestamp': 1786633924.002, 'level': 'DEBUG',
+         'levelno': 10, 'logger': 'eltako.telegrams', 'message': "Received 0b 05 70 00 00 00 00 00 ff aa 80 01 30"},
+        {'time': '2026-08-10T14:12:09.917', 'timestamp': 1786633929.917, 'level': 'WARNING',
+         'levelno': 30, 'logger': 'eltako', 'message': "[Bus Members] Bus scan of gateway 1 was cancelled at position 7."},
+        {'time': '2026-08-10T14:12:11.640', 'timestamp': 1786633931.640, 'level': 'ERROR',
+         'levelno': 40, 'logger': 'eltako', 'message': "[Gateway] [Id: 1] Serial port is not available",
+         'exception': 'Traceback (most recent call last):\n  File "gateway.py", line 1, in send\nSerialException'},
+    ]
+
     return {
         'about': {'integrationInfo': integration_info},
+        'logs': {'logs': {'entries': log_entries, 'total': len(log_entries), 'dropped': 12,
+                          'buffer_size': 2000, 'level': 'debug', 'effective': 'debug',
+                          'options': ['inherit', 'debug', 'info', 'warning', 'error']}},
+        # the same page with nothing in the buffer - the branch a fresh installation shows
+        'logs_empty': {'logs': {'entries': [], 'total': 0, 'dropped': 0, 'buffer_size': 2000,
+                                'level': 'inherit', 'effective': 'warning',
+                                'options': ['inherit', 'debug', 'info', 'warning', 'error']}},
         'radio': {'integrationInfo': radio_gateways, 'radioComparison': build_radio_report()},
         # the same page restricted to two gateways, one sender and the telegrams which were
         # received differently - the direct comparison
@@ -391,9 +412,10 @@ class TestEveryPageRenders(unittest.TestCase):
         """Without a fixture only the loading branch would be checked."""
         report = self.report()
 
-        for page_id in ('about', 'help', 'tests', 'simulation', 'devices', 'radio'):
+        for page_id in ('about', 'help', 'tests', 'simulation', 'devices', 'radio', 'logs'):
             self.assertIn(f'{page_id}:fixture', report['rendered'])
         self.assertIn('radio:radio_restricted', report['rendered'])
+        self.assertIn('logs:logs_empty', report['rendered'])
         # the simulation page with an open form and a triggered telegram, and the devices page
         # while an exclusive operation has the bus
         for variant in ('simulation_editing', 'simulation_off'):

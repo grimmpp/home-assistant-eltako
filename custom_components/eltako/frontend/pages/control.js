@@ -160,6 +160,11 @@ export const page = {
   styles: `
     .control-area { margin-bottom: 18px; }
     .control-area h3 { margin: 12px 0 6px; opacity: .75; }
+    /* The table carries the same card as every other page (.table-wrapper) and a head which
+       says what the columns are - without it the four columns are four unnamed blocks, and
+       the widest row alone decides how they are split. */
+    .control-area .col-state { width: 110px; }
+    .control-area .col-message { width: 220px; }
     .control-row td { vertical-align: middle; }
     .control-row input[type=range] { vertical-align: middle; width: 130px; }
     .control-row .temp-input { width: 70px; }
@@ -473,7 +478,16 @@ export const page = {
     return groupByArea(entities).map(([area, items]) => `
       <div class="control-area">
         <h3>${icon("mdi:map-marker-outline", "📍")} ${escapeHtml(area)}</h3>
+        <div class="table-wrapper">
         <table>
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th class="col-state">State</th>
+              <th class="col-controls">Control</th>
+              <th class="col-message">Message</th>
+            </tr>
+          </thead>
           <tbody>
             ${sortForUse(items).map((entity) => {
               const device = this._deviceOf(ctx, entity);
@@ -501,6 +515,7 @@ export const page = {
             }).join("")}
           </tbody>
         </table>
+        </div>
       </div>`).join("");
   },
 

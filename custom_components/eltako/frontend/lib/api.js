@@ -25,6 +25,7 @@ export const WS = /** @type {const} @satisfies {Record<string, import("../types.
   SEND_TELEGRAM_FORM: "eltako/send_telegram_form",
   BUS_MEMBERS: "eltako/bus/members",
   BUS_READ_MEMORY: "eltako/bus/read_memory",
+  BUS_CANCEL: "eltako/bus/cancel",
   BUS_TEACH_IN: "eltako/bus/teach_in_senders",
   GATEWAY_FORM: "eltako/gateways/form",
   GRAFANA_SYNC: "eltako/grafana/sync",
@@ -60,6 +61,9 @@ export const WS = /** @type {const} @satisfies {Record<string, import("../types.
   LOG_REFRESH_DEVICES: "eltako/telegram_log/refresh_devices",
   RADIO_COMPARISON: "eltako/radio_comparison/report",
   RADIO_COMPARISON_CLEAR: "eltako/radio_comparison/clear",
+  LOGS_RECENT: "eltako/logs/recent",
+  LOGS_LEVEL: "eltako/logs/level",
+  LOGS_CLEAR: "eltako/logs/clear",
 });
 
 export class EltakoApi {
