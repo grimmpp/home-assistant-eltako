@@ -5,7 +5,7 @@ everything which *decides* what happens with a detection result is a pure functi
 covered completely.
 """
 import unittest
-from unittest import IsolatedAsyncioTestCase, TestCase
+from unittest import IsolatedAsyncioTestCase, TestCase, mock
 
 import voluptuous as vol
 
@@ -16,7 +16,8 @@ from custom_components.eltako.const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF
                                             CONF_GATEWAY_ADDRESS, CONF_GATEWAY_DESCRIPTION,
                                             CONF_GATEWAY_PORT, CONF_PLUG_AND_PLAY,
                                             CONF_PLUG_AND_PLAY_INTERVAL, CONF_SENDER, CONF_SERIAL_PATH,
-                                            CONF_UI_DEVICES, SETTING_GROUPS)
+                                            CONF_UI_DEVICES, DATA_BUS_MEMBERS, DATA_ELTAKO,
+                                            GatewayDeviceType, SETTING_GROUPS)
 
 from homeassistant.const import CONF_DEVICES, CONF_ID, CONF_NAME
 
@@ -733,6 +734,128 @@ class TestState(IsolatedAsyncioTestCase):
         result = await plug_and_play.async_run(hass)
 
         self.assertEqual(result['skipped'], 'already_running')
+
+
+class TestAutomaticBusScan(IsolatedAsyncioTestCase):
+    """A bus gateway which Home Assistant sees for the first time reads its bus on its own.
+
+    Without it the simple view shows an empty page next to a connected FAM14: a bus gateway
+    only reveals its actuators and the senders taught into them once the device memories were
+    read. The scan locks the bus for minutes, so it must happen exactly once - the checks that
+    make sure of that are what is tested here, not the scan itself.
+    """
+
+    class GatewayStub:
+        def __init__(self, dev_id=1, dev_type=None, is_simulated=False):
+            self.dev_id = dev_id
+            self.dev_type = dev_type or GatewayDeviceType.GatewayEltakoFAM14
+            self.is_simulated = is_simulated
+
+    def _hass(self, members: list = None) -> HassDataMock:
+        """A hass with a bus member registry, as the integration sets it up."""
+        from custom_components.eltako.observation.bus_members import BusMemberRegistry
+
+        hass = HassDataMock()
+        registry = BusMemberRegistry(hass)
+        registry._store = None                          # nothing is persisted in the test
+        for entry in members or []:
+            position = registry._entry(entry['gateway_id'], entry['bus_address'])
+            position['scanned_at'] = entry.get('scanned_at')
+        hass.data.setdefault(DATA_ELTAKO, {})[DATA_BUS_MEMBERS] = registry
+        return hass, registry
+
+    def _patched_run(self):
+        """Replaces async_run and records how it was called."""
+        calls = []
+
+        async def fake_run(hass, **kwargs):
+            calls.append(kwargs)
+            return {'buses_read': [{'gateway_id': 1, 'finished': True}]}
+
+        return calls, mock.patch.object(plug_and_play, 'async_run', fake_run)
+
+    def _connected(self, yes: bool = True):
+        async def wait(hass, gateway_id):
+            return yes
+        return mock.patch.object(plug_and_play, '_async_wait_for_gateway', wait)
+
+    async def test_a_new_bus_gateway_reads_its_bus(self):
+        hass, registry = self._hass()
+        calls, patched = self._patched_run()
+
+        with patched, self._connected():
+            await plug_and_play.async_auto_scan_bus(hass, self.GatewayStub())
+
+        # the ports are deliberately not probed: the gateway is already there and a probe
+        # would create gateways nobody asked for
+        self.assertEqual(calls, [{'detect_gateways': False}])
+        self.assertTrue(registry.was_auto_scanned(1))
+
+    async def test_the_scan_is_not_repeated_after_a_restart(self):
+        """The attempt is remembered, so a bus which did not answer is not locked again."""
+        hass, registry = self._hass()
+        registry.mark_auto_scanned(1)
+        calls, patched = self._patched_run()
+
+        with patched, self._connected():
+            await plug_and_play.async_auto_scan_bus(hass, self.GatewayStub())
+
+        self.assertEqual(calls, [])
+
+    async def test_a_bus_which_was_already_read_is_left_alone(self):
+        hass, registry = self._hass([{'gateway_id': 1, 'bus_address': 1,
+                                      'scanned_at': '2026-01-01T00:00:00+00:00'}])
+        calls, patched = self._patched_run()
+
+        with patched, self._connected():
+            await plug_and_play.async_auto_scan_bus(hass, self.GatewayStub())
+
+        self.assertEqual(calls, [])
+        # and it is not looked at again on the next start either
+        self.assertTrue(registry.was_auto_scanned(1))
+
+    async def test_a_transceiver_has_no_bus(self):
+        hass, registry = self._hass()
+        calls, patched = self._patched_run()
+
+        with patched, self._connected():
+            await plug_and_play.async_auto_scan_bus(
+                hass, self.GatewayStub(dev_type=GatewayDeviceType.EnOceanUSB300))
+
+        self.assertEqual(calls, [])
+        self.assertFalse(registry.was_auto_scanned(1))
+
+    async def test_a_simulated_bus_has_no_memory_to_read(self):
+        hass, _registry = self._hass()
+        calls, patched = self._patched_run()
+
+        with patched, self._connected():
+            await plug_and_play.async_auto_scan_bus(hass, self.GatewayStub(is_simulated=True))
+
+        self.assertEqual(calls, [])
+
+    async def test_a_running_detection_reads_the_bus_itself(self):
+        hass, registry = self._hass()
+        plug_and_play.get_state(hass)['running'] = True
+        calls, patched = self._patched_run()
+
+        with patched, self._connected():
+            await plug_and_play.async_auto_scan_bus(hass, self.GatewayStub())
+
+        self.assertEqual(calls, [])
+        # not marked: that run may be refused before it reaches the bus
+        self.assertFalse(registry.was_auto_scanned(1))
+
+    async def test_a_gateway_which_does_not_connect_is_tried_again_later(self):
+        """Nothing was locked, so there is no reason to give up on it for good."""
+        hass, registry = self._hass()
+        calls, patched = self._patched_run()
+
+        with patched, self._connected(False):
+            await plug_and_play.async_auto_scan_bus(hass, self.GatewayStub())
+
+        self.assertEqual(calls, [])
+        self.assertFalse(registry.was_auto_scanned(1))
 
 
 class TestConfiguredAddresses(IsolatedAsyncioTestCase):

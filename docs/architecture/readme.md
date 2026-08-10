@@ -341,7 +341,10 @@ None of these can influence a device. All of them listen to the same signals as 
 ### Discovery and tools
 
 Useful, never required to operate a device:
-[`tools/gateway_scan.py`](../../custom_components/eltako/tools/gateway_scan.py) (serial ports),
+[`tools/gateway_scan.py`](../../custom_components/eltako/tools/gateway_scan.py) (serial ports, and
+which stick belongs to which gateway),
+[`tools/gateway_identity.py`](../../custom_components/eltako/tools/gateway_identity.py) (chip id and
+base id of a stick - the ids which really identify the hardware),
 [`tools/plug_and_play.py`](../../custom_components/eltako/tools/plug_and_play.py) (detect gateways, read the
 bus, add unambiguous devices), [`tools/device_tests.py`](../../custom_components/eltako/tools/device_tests.py)
 (burst test, cover travel times),

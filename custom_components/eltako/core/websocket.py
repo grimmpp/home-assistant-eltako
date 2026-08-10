@@ -15,8 +15,8 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 
 from eltakobus.util import b2s
 
-from ..const import (DATA_ELTAKO, DOMAIN, INTEGRATION_DIR, LOGGER, WS_HELP_CATALOG, WS_INTEGRATION_INFO,
-                     WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM)
+from ..const import (DATA_ELTAKO, DOMAIN, INTEGRATION_DIR, LOGGER, WS_ACTIVITY, WS_HELP_CATALOG,
+                     WS_INTEGRATION_INFO, WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM)
 from .gateway import detect, EnOceanGateway
 
 
@@ -25,6 +25,7 @@ async def register_websockets(hass: HomeAssistant, config: ConfigEntry):
     websocket_api.async_register_command(hass, ws_usb_ports)
     websocket_api.async_register_command(hass, ws_configured_gateways)
     websocket_api.async_register_command(hass, ws_integration_info)
+    websocket_api.async_register_command(hass, ws_activity)
     websocket_api.async_register_command(hass, ws_help_catalog)
     websocket_api.async_register_command(hass, ws_send_telegram_form)
     websocket_api.async_register_command(hass, ws_send_telegram)
@@ -336,6 +337,77 @@ async def ws_help_catalog(hass: HomeAssistant, connection, msg):
 
     catalog = await hass.async_add_executor_job(help_catalog.build_catalog)
     connection.send_result(msg['id'], catalog)
+
+
+### ---------------------------------------------------------------------------
+### what runs right now
+### ---------------------------------------------------------------------------
+
+def get_activity(hass: HomeAssistant) -> dict:
+    """Everything the integration is busy with right now, in one answer.
+
+    The long operations of this integration are not instant and not invisible: reading the
+    memory of a bus takes minutes and locks the bus while it runs, so the devices on it do not
+    react and every other bus operation is refused. Without a single place which says what is
+    running, a user presses a button, nothing happens, and there is no way to tell a slow
+    operation from a broken one.
+
+    So the web ui polls this on **every** page and shows it as a banner. Deliberately cheap:
+    no io and no locks, only the state which is kept anyway (the plug & play state, the bus
+    lock of every gateway and the counters of the running scans).
+
+    Returns `{'busy': bool, 'jobs': [...]}`; a job carries what it is (`kind`), how far it is
+    (`progress`) and what it blocks (`blocks`), the wording is up to the web ui.
+    """
+    from ..observation import bus_members
+    from ..tools import plug_and_play
+
+    jobs = []
+
+    detection = plug_and_play.get_state(hass)
+    if detection.get('running'):
+        jobs.append({
+            'kind': 'detection',
+            'step': detection.get('step'),
+            'stage': detection.get('stage'),
+            'started_at': detection.get('started_at'),
+            # devices are added while the scan runs, not at its end - so this counter grows
+            # during the run and is what makes the progress tangible
+            'added': len(((detection.get('last_report') or {}).get('devices_added')) or []),
+            # a second detection is refused, and it reads the buses itself
+            'blocks': ['detection', 'bus'],
+        })
+
+    progress = {int(entry['gateway_id']): entry for entry in bus_members.get_scan_progress()
+                if entry.get('gateway_id') is not None}
+    for gateway in get_gateways(hass):
+        try:
+            if not gateway.is_bus_busy:
+                continue
+            reason = gateway.bus_busy_reason
+        except Exception:   # noqa: BLE001 - a gateway which is not initialized is not busy
+            continue
+        scan = progress.get(gateway.dev_id)
+        jobs.append({
+            'kind': 'bus',
+            'gateway_id': gateway.dev_id,
+            'gateway_name': gateway.dev_name,
+            # 'bus scan', 'teach in', 'base id request', ... - what took the bus
+            'reason': reason,
+            'progress': scan,
+            'started_at': (scan or {}).get('started_at'),
+            'blocks': ['bus', f"gateway:{gateway.dev_id}"],
+        })
+
+    return {'busy': bool(jobs), 'jobs': jobs}
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_ACTIVITY})
+@websocket_api.async_response
+async def ws_activity(hass: HomeAssistant, connection, msg):
+    """What is running right now - polled by the web ui on every page."""
+    connection.send_result(msg['id'], get_activity(hass))
 
 
 @websocket_api.require_admin

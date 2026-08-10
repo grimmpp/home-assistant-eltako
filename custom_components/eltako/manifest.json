@@ -5,10 +5,10 @@
     "@grimmpp"
   ],
   "config_flow": true,
-  "panel_custom": true,
   "dependencies": [
     "frontend",
     "http",
+    "panel_custom",
     "websocket_api",
     "zeroconf"
   ],

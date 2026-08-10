@@ -111,6 +111,19 @@ const hass = {
   // so the fallback hamburger is used; hide it by handling the toggle as no-op.
 };
 
+/** the panel element - created below, but the state events may arrive before that */
+let panel = null;
+
+/**
+ * Home Assistant assigns a new `hass` to a panel whenever a state changed; the panel uses
+ * that as the signal for its entity hub (lib/entity_hub.js), which is what lets a card
+ * update itself instead of the page being reloaded. Here the object stays the same, so
+ * the assignment is what has to be repeated after every event.
+ */
+function publishStates() {
+  if (panel) panel.hass = hass;
+}
+
 /** keep hass.states live so that the pages of the panel can show entity states */
 async function trackStates() {
   try {
@@ -118,8 +131,10 @@ async function trackStates() {
     (result.entities || []).forEach((entity) => {
       hass.states[entity.entity_id] = { state: entity.state, attributes: entity.attributes };
     });
+    publishStates();
     await connection.subscribeMessage((event) => {
       hass.states[event.entity_id] = { state: event.state, attributes: event.attributes };
+      publishStates();
     }, { type: "eltako/entities/subscribe" });
   } catch (err) {
     console.warn("Cannot subscribe to entity states:", err);
@@ -131,7 +146,7 @@ trackStates();
 
 await import("/eltako_frontend/eltako-panel.js");
 
-const panel = document.createElement("eltako-panel");
+panel = document.createElement("eltako-panel");
 panel.narrow = false;
 panel.hass = hass;
 document.body.appendChild(panel);

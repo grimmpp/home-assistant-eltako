@@ -95,6 +95,35 @@ and it is stored automatically.
 * a port which another program holds open - it cannot be opened a second time, so the probe skips it
   by itself
 
+### Which stick is which: the chip id
+
+`/dev/ttyUSB0` is not an identity - the kernel hands the numbers out in the order the sticks appear.
+A port therefore says nothing about *which* device is behind it, which is why every stick is asked for
+an id of its own ([`tools/gateway_identity.py`](../../custom_components/eltako/tools/gateway_identity.py)):
+
+| Id | Where it comes from | Reported by |
+| --- | --- | --- |
+| **chip id** | `CO_RD_VERSION`, from the factory, unchangeable | ESP3 sticks (USB300, USB500, ...) |
+| **base id** | `CO_RD_IDBASE` (ESP3) or `AB 58` (ESP2) | every transceiver, also the FAM-USB |
+| **usb serial** | usb descriptor, readable without opening the port | the FTDI/CP210x chip in front of it |
+
+The usb serial number is the cheapest but the weakest: cheap adapters carry none, both interfaces of a
+two port stick report the same one, inside a container sysfs holds none at all, and it is gone as soon
+as the adapter is replaced. The chip id belongs to the EnOcean hardware itself.
+
+Both are shown per port in the web ui (**Overview &rarr; scan usb ports**) and remembered per gateway.
+At every start the port of a gateway is resolved by that identity instead of by its name:
+
+1. the configured port exists and carries our stick &rarr; used, nothing happens (the normal case)
+2. it exists but carries a **different** stick &rarr; the port where ours sits is used instead. This is
+   the case of two sticks which traded their numbers - **the configuration does not have to be changed**
+3. the port is gone &rarr; the stick is searched by its ids, then by a usb descriptor which fits the type
+4. two ports report the same id &rarr; nothing is guessed, the configured port stays
+
+Steps 2 and 3 open the free candidate ports (at most four) only when the usb descriptors could not
+decide - a port which a running gateway uses is never opened. A FAM14 and an FGW14-USB have no
+transceiver of their own, so for those the usb serial number stays the only fingerprint.
+
 ### LAN gateways which announce themselves (mDNS)
 
 Yes &ndash; a LAN gateway which publishes an mDNS/bonjour service is picked up in **every** run, no
@@ -132,6 +161,35 @@ Reading the memory **locks the bus for minutes**, therefore it happens **once**:
 skips a bus which was already scanned (also across a restart - the memory images are persisted).
 Reading it again is the explicit button *Detect + re-read all buses*.
 
+### A bus gateway which was never read reads itself
+
+A FAM14 or FGW14-USB keeps what sits on its bus to itself until the device memories were read. So a
+bus gateway which Home Assistant sets up for the first time and whose bus was **never** read gets
+that one scan on its own - independently of the *Plug & play enabled* setting
+(`plug_and_play.async_auto_scan_bus`). Otherwise the [simple view](../web-ui/readme.md) would show an
+empty device page next to a gateway which is happily connected, and the only way out would be a
+button the user has to find first.
+
+This is the same one-off logic as everywhere else, only triggered by the gateway instead of by a
+detection run:
+
+| It does **not** happen when | Why |
+| --- | --- |
+| the gateway is no bus gateway | a transceiver (FAM-USB, USB300, LAN) has no RS485 bus |
+| the gateway is simulated | its devices have no memory to read, they are known anyway |
+| the bus was already read | by an earlier scan, by plug & play or by hand |
+| a detection is running | that run reads the bus itself |
+| the gateway is not connected | nothing was locked, so a later restart tries again |
+
+The attempt is remembered **before** the scan starts and is persisted next to the memory images, so a
+bus which does not answer is not locked for ten minutes again after every restart. What the scan
+reveals beyond doubt is adopted like any other detection result (step 3 below) - the port probe of
+step 1 is skipped, so no gateway is created that nobody asked for.
+
+Note that this is about a gateway which is **known** to Home Assistant. A stick which is plugged in
+while Home Assistant runs is only *noticed* by a detection run - by the periodic check when plug &
+play is on, or by *Search devices* / *Detect now* in the web ui.
+
 ## 3. Which devices are added?
 
 Only devices whose profile is certain. Three sources, in decreasing order of certainty:
@@ -151,6 +209,27 @@ Everything else lands in **"needs a decision"** with its reason, e.g.
 
 Take those over on the *Devices* page, where every candidate is listed with its possible EEPs and
 device models.
+
+### Devices appear while the bus is still being read
+
+Nobody waits for the end of the scan. Reading the bus of a FAM14 takes minutes - position by
+position, then memory row by memory row - and every position which answered is **adopted as soon
+as it is unambiguous** (`_adopt_while_scanning`, every `ADOPT_INTERVAL` seconds). The device list
+of the web ui therefore fills up during the search, the progress card counts along ("7 devices
+found and added so far"), and a scan which is interrupted by a timeout or a restart leaves
+everything it had already identified behind instead of nothing.
+
+What becomes clear only later - the senders taught into an actuator are known once *its* memory
+was read - simply appears in one of the next passes. The passes are paced instead of running after
+every single position, because each of them which finds something rewrites the options of the
+config entry (one write per gateway, not one per device).
+
+That last point is what makes the timing delicate: Home Assistant reloads a gateway whose options
+changed, and a reload closes the serial port **under the running scan**. So the reload of a gateway
+whose bus is busy is *postponed* (`core/integration.async_reload_entry`) and carried out when the
+bus is free again (`async_flush_pending_reloads`, at the end of the run and after every bus
+operation). In other words: the configuration is written immediately - which is what the web ui
+lists - and the entities of the new devices follow with one single reload at the end of the scan.
 
 ## After the detection
 

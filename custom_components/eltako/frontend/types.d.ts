@@ -75,11 +75,15 @@ export interface PanelState {
   configFilter: string;
   configSort: string;
   deviceView: string;
+  /** which device the details popup of the expert page shows: 'platform|address|gateway id' */
+  deviceDetails?: string | null;
   configSortDescending: boolean;
   onlySilent: boolean;
 
   simpleFilter: string;
   simpleEditor: any;
+  /** the popup of the simple view: {kind: 'device' | 'gateway', key} - see pages/home.js */
+  simpleDetails?: { kind: string; key: string } | null;
 
   settingsForm: SettingsFormDescriptor | null;
   settingsError: string | null;
@@ -116,8 +120,11 @@ export interface PanelState {
   controlSendNotes?: any;
   controlSendOpen?: any;
   controlSendValues?: any;
+  /** start values of the type bar; the buttons themselves write into controlTypes */
   controlShowSensors?: boolean;
   controlShowTeachInButtons?: boolean;
+  /** which kinds of entity the type bar shows: platform (or "teach_in") -> on */
+  controlTypes?: Record<string, boolean>;
   telegramForm?: any;
 
   /** pages/tests.js */
@@ -144,6 +151,8 @@ export interface PanelState {
   simulationNotes?: any;
   simulationTeachIn?: any;
   simulationUnavailable?: any;
+  /** what the integration is busy with right now - polled by the shell, see lib/activity.js */
+  activity?: Activity;
 }
 
 /** What the shell hands to every page hook (EltakoPanel._context). */
@@ -152,9 +161,16 @@ export interface PageContext {
   api: import("./lib/api.js").EltakoApi;
   state: PanelState;
   root: ShadowRoot;
+  /** live entity states: register the ids an element shows, patch it when they change */
+  entities: import("./lib/entity_hub.js").EntityHub;
   mode: PanelMode;
   setMode(mode: PanelMode, pageId?: string | null): void;
   loadIntegrationInfo(): Promise<IntegrationInfo | null>;
+  /** just started something long: show it in the banner of the panel right away */
+  refreshActivity(): Promise<void>;
+  /** may this be started now? token as in `data-busy-block` - see lib/activity.js */
+  isBusy(token?: string): boolean;
+  busyReason(token?: string): string | null;
   loadLogInfo(): Promise<LogInfo | null>;
   loadStatistics(): Promise<StatisticsResult | null>;
   loadRecentTelegrams(): Promise<TelegramRecord[]>;
@@ -196,6 +212,8 @@ export interface Page {
   bindToolbar?(ctx: PageContext, root: ShadowRoot): void;
   afterRender?(ctx: PageContext, root: ShadowRoot): void;
   onTelegram?(ctx: PageContext, telegram: TelegramRecord): void;
+  /** the page is closed: drop listeners and timers which would outlive its dom */
+  leave?(ctx: PageContext): void;
 
   /**
    * Pages keep their own helpers and state on the page object (`this._renderFeatures`,
@@ -491,6 +509,11 @@ export interface GatewayFormDescriptor {
     free: boolean;
     by_id: string | null;
     suggested_device_types: string[];
+    /** id of the EnOcean transceiver - only known once the port was opened, see gateway_identity.py */
+    chip_id: string | null;
+    base_id: string | null;
+    /** the ids above are what the stick answered earlier, not what it says right now */
+    ids_remembered: boolean;
   }>;
   default_base_id: string;
   editable_fields: string[];
@@ -542,6 +565,31 @@ export interface PlugAndPlayStatus {
   hint: string;
 }
 
+/**
+ * One thing the integration is busy with right now (core/websocket.get_activity). The web ui
+ * polls this on every page and shows it as a banner, so a user can tell a long operation from
+ * a broken one - see `_renderActivity` in eltako-panel.js.
+ */
+export interface ActivityJob {
+  /** 'detection' = a plug & play run, 'bus' = an operation which has the bus of one gateway */
+  kind: string;
+  step?: string | null;
+  stage?: string | null;
+  gateway_id?: number;
+  gateway_name?: string;
+  /** what took the bus: 'bus scan', 'teach in', ... */
+  reason?: string | null;
+  progress?: any;
+  started_at?: string | null;
+  /** tokens of what cannot be started meanwhile: 'bus', 'detection', 'gateway:<id>' */
+  blocks: string[];
+}
+
+export interface Activity {
+  busy: boolean;
+  jobs: ActivityJob[];
+}
+
 /* ------------------------------------------------------------------ command map */
 
 /**
@@ -553,6 +601,7 @@ export interface PlugAndPlayStatus {
  */
 export interface WsResults {
   "eltako/integration_info": IntegrationInfo;
+  "eltako/activity": Activity;
   "eltako/configured_gateways": Gateway[];
   /** core/gateway.detect(): candidate serial paths */
   "eltako/potential_usb_ports": string[];

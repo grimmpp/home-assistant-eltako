@@ -68,7 +68,7 @@ python -m eltako_standalone serve [--host 0.0.0.0] [--port 8124] [--token SECRET
 
 Serves the **same web ui** as inside Home Assistant (overview, telegram live
 view, device statistics, device config, unknown devices, settings) plus a
-standalone-only page **Control**: all entities grouped by area with buttons,
+standalone-only page **HA Entities**: all entities grouped by area with buttons,
 sliders and dropdowns - switch lights, move covers, set temperatures like on a
 Home Assistant dashboard.
 

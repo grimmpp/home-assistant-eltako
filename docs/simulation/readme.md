@@ -199,7 +199,7 @@ sensor has no *ELTAKO teach-in* button - it announces its profile instead.
 
 ## Step 5: switch a simulated actuator
 
-Turn a simulated light on in Home Assistant (dashboard, the *Control* page of the panel, an
+Turn a simulated light on in Home Assistant (dashboard, the *HA Entities* page of the panel, an
 automation, …) and it really turns on: the command is decoded and the simulated actuator answers
 with the status telegram its real counterpart would send.
 

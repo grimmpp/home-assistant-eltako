@@ -71,7 +71,7 @@ Addresses which sent telegrams but are not configured yet are listed as **unknow
 **Devices** page, including their EEP (from a teach-in telegram or guessed). A click takes such a
 candidate over: the device form opens prefilled, no yaml involved.
 
-The remaining pages (**Overview**, **Control**, **Tests**, **Settings**, **Help** and **About**) describe
+The remaining pages (**Overview**, **HA Entities**, **Tests**, **Settings**, **Help** and **About**) describe
 and configure the integration itself. All pages and the websocket api behind them are documented in
 [Web UI](../web-ui/readme.md).
 

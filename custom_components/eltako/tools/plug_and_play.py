@@ -60,6 +60,7 @@ from ..const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY, CON
                      WS_PLUG_AND_PLAY_PROBE, WS_PLUG_AND_PLAY_RUN, WS_PLUG_AND_PLAY_STATUS)
 from ..config import config_helpers
 from ..catalog.device_catalog import describe_gateway_type
+from . import gateway_identity
 
 LOG_PREFIX_PNP = "Plug & Play"
 
@@ -67,15 +68,10 @@ LOG_PREFIX_PNP = "Plug & Play"
 ### probing of the serial ports
 ### ---------------------------------------------------------------------------
 
-# A port which is no gateway cannot be distinguished from a gateway which does not answer,
-# so every test costs its full timeout. Therefore the number of retries is kept low - a
-# gateway which is there answers on the first attempt.
-PROBE_CONNECT_TIMEOUT = 1.0         # time granted to a communicator to open the port
-PROBE_BASE_ID_TIMEOUT = 1.0         # the base id request of a FAM-USB really needs up to 1 s
-PROBE_BASE_ID_RETRIES = 1
-
-# base id request of a FAM-USB (ESP2, 'AB 58')
-FAM_USB_BASE_ID_REQUEST = b'\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+# A port which is no gateway cannot be distinguished from a gateway which does not answer, so
+# every test costs its full timeout. The timeouts and the requests themselves live in
+# `gateway_identity` - the probe asks the same questions whose answers identify a stick.
+PROBE_CONNECT_TIMEOUT = gateway_identity.CONNECT_TIMEOUT
 
 # gateway types which the probe can prove. An FGW14-USB is missing on purpose: its test
 # matches every reachable port which does not echo, so it is a suggestion, not a detection.
@@ -118,8 +114,15 @@ def _is_usb_port(port: dict) -> bool:
     return bool(port.get('serial_number') or port.get('manufacturer') or port.get('by_id'))
 
 
-async def _async_detect_gateway(device: str, baud_rate: int, is_usb_port: bool = True) -> str | None:
-    """Probe one serial port with one baud rate and return the gateway type or None.
+async def _async_detect_gateway(device: str, baud_rate: int, is_usb_port: bool = True) -> dict | None:
+    """Probe one serial port with one baud rate. None, or what was found:
+
+        {'device_type', 'baud_rate', 'chip_id', 'base_id', ...}
+
+    The ids are a by-product of the probe and the reason it is worth reading them here: the
+    port is open anyway, and asking for the base id is what proves an ESP3 stick or a FAM-USB
+    in the first place. A gateway which cannot report an id of its own (FAM14, FGW14-USB)
+    simply carries none - see `gateway_identity`.
 
     The order of the tests must not be changed:
       * an ESP3 stick answers a base id request only at 57600 baud
@@ -132,6 +135,9 @@ async def _async_detect_gateway(device: str, baud_rate: int, is_usb_port: bool =
     from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
     from eltakobus.serial import RS485SerialInterfaceV2
 
+    def found(device_type: str, identity: dict = None) -> dict:
+        return {'device_type': device_type, 'baud_rate': baud_rate, **(identity or {})}
+
     communicator = None
     try:
         # opening the port with pyserial is the cheapest check whether it exists at all
@@ -140,77 +146,48 @@ async def _async_detect_gateway(device: str, baud_rate: int, is_usb_port: bool =
 
         if baud_rate == 57600:
             communicator = ESP3SerialCommunicator(device, auto_reconnect=False)
-            _start_communicator(communicator)
+            gateway_identity.start_communicator(communicator)
             if communicator.is_serial_connected.wait(PROBE_CONNECT_TIMEOUT):
-                base_id = await communicator.async_base_id
-                if base_id and isinstance(base_id, list):
-                    return GatewayDeviceType.ESP3.value
+                identity = await gateway_identity.async_read_esp3_identity(communicator)
+                if identity.get('base_id'):
+                    return found(GatewayDeviceType.ESP3.value, identity)
             # no ESP3 gateway - the port can still be a FAM14 or an FGW14-USB
-            _stop_communicator(communicator)
+            gateway_identity.stop_communicator(communicator)
             communicator = None
 
         communicator = RS485SerialInterfaceV2(device, baud_rate=baud_rate, delay_message=0.2,
                                               auto_reconnect=False)
-        _start_communicator(communicator)
+        gateway_identity.start_communicator(communicator)
         if not communicator.is_serial_connected.wait(PROBE_CONNECT_TIMEOUT):
             return None
 
         if communicator.suppress_echo:
-            return GatewayDeviceType.GatewayEltakoFAM14.value
+            return found(GatewayDeviceType.GatewayEltakoFAM14.value)
 
         if baud_rate == 9600:
             if not is_usb_port:
                 LOGGER.debug(f"[{LOG_PREFIX_PNP}] {device} has no usb descriptor - "
                              f"skipping the FAM-USB test.")
-            elif await _async_query_fam_usb_base_id(communicator) not in (None, '00-00-00-00'):
-                return GatewayDeviceType.GatewayEltakoFAMUSB.value
+            else:
+                base_id = await gateway_identity.async_read_esp2_base_id(communicator)
+                if base_id not in (None, gateway_identity.EMPTY_BASE_ID):
+                    return found(GatewayDeviceType.GatewayEltakoFAMUSB.value, {'base_id': base_id})
 
         if baud_rate == 57600:
             # reachable, no echo, no ESP3 answer: an FGW14-USB behaves like this - but so does
             # every other serial device. Only a suggestion, see CONFIDENT_GATEWAY_TYPES.
-            return GatewayDeviceType.GatewayEltakoFGW14USB.value
+            return found(GatewayDeviceType.GatewayEltakoFGW14USB.value)
 
         return None
     except Exception as e:  # noqa: BLE001 - a port which is no gateway is the normal case
         LOGGER.debug(f"[{LOG_PREFIX_PNP}] {device} is no gateway with {baud_rate} baud: {e}")
         return None
     finally:
-        _stop_communicator(communicator)
-
-
-async def _async_query_fam_usb_base_id(communicator) -> str | None:
-    """A FAM-USB answers a base id request - that is the proof that it is one."""
-    from eltakobus.message import ESP2Message
-    from eltakobus.util import b2s
-
-    try:
-        communicator.set_callback(None)
-        response = await communicator.exchange(ESP2Message(bytes(FAM_USB_BASE_ID_REQUEST)),
-                                               ESP2Message, retries=PROBE_BASE_ID_RETRIES,
-                                               timeout=PROBE_BASE_ID_TIMEOUT)
-        return b2s(response.body[2:6])
-    except Exception:   # noqa: BLE001 - no answer means: no FAM-USB
-        return None
-
-
-def _start_communicator(communicator) -> None:
-    """A port which blocks while being probed must not keep the process alive."""
-    communicator.daemon = True
-    communicator.start()
-
-
-def _stop_communicator(communicator) -> None:
-    if communicator is None:
-        return
-    try:
-        communicator.stop()
-        communicator.join(0.5)
-    except Exception as e:  # noqa: BLE001
-        LOGGER.debug(f"[{LOG_PREFIX_PNP}] Cannot stop the probe communicator: {e}")
+        gateway_identity.stop_communicator(communicator)
 
 
 def probe_ports(ports: list[dict]) -> dict[str, dict]:
-    """Probe a list of ports (entries of gateway_scan) -> {device: {device_type, baud_rate}}.
+    """Probe a list of ports (entries of gateway_scan) -> {device: detection}.
 
     Runs the whole probing in an event loop of its own, therefore it must NOT be called in
     the event loop of Home Assistant - `async_probe_ports` moves it into the executor.
@@ -223,12 +200,14 @@ def probe_ports(ports: list[dict]) -> dict[str, dict]:
                 device = str(port.get('device') or '')
                 if not device or device in detected:
                     continue
-                gateway_type = await _async_detect_gateway(device, baud_rate, _is_usb_port(port))
-                if gateway_type is None:
+                detection = await _async_detect_gateway(device, baud_rate, _is_usb_port(port))
+                if detection is None:
                     continue
-                detected[device] = {'device_type': gateway_type, 'baud_rate': baud_rate}
-                LOGGER.info(f"[{LOG_PREFIX_PNP}] {gateway_type} detected on {device} "
-                            f"({baud_rate} baud).")
+                detected[device] = detection
+                LOGGER.info(f"[{LOG_PREFIX_PNP}] {detection['device_type']} detected on {device} "
+                            f"({baud_rate} baud"
+                            f"{', chip id ' + detection['chip_id'] if detection.get('chip_id') else ''}"
+                            f"{', base id ' + detection['base_id'] if detection.get('base_id') else ''}).")
         return detected
 
     return asyncio.run(run())
@@ -367,6 +346,11 @@ def describe_candidate(device: str, detection: dict, port: dict = None) -> dict:
         'hw_type': hw_type,
         'description': description,
         'port_name': (port or {}).get('name'),
+        # the ids the stick reported while it was open. They are what identifies the hardware
+        # itself - the usb serial number below only identifies the serial chip in front of it.
+        'chip_id': detection.get('chip_id'),
+        'base_id': detection.get('base_id'),
+        'usb_serial': (port or {}).get('serial_number'),
         # only a gateway which the probe could prove is created automatically
         'confident': device_type in CONFIDENT_GATEWAY_TYPES,
         'reason': "Answered the probe." if device_type in CONFIDENT_GATEWAY_TYPES else
@@ -723,6 +707,11 @@ GATEWAY_SETUP_TIMEOUT = 30
 BUS_SCAN_TIMEOUT = 600
 # after the scan the taught-in senders are parsed from the memory images
 BUS_SCAN_SETTLE = 3
+# how often the devices which are already identified are adopted while a bus is still being
+# read (see _adopt_while_scanning). Each pass which finds something writes the options of the
+# config entry once per gateway, so this is a compromise between "appears at once" and "does
+# not rewrite the configuration every second".
+ADOPT_INTERVAL = 5
 
 
 def _utc_now_iso() -> str:
@@ -766,7 +755,7 @@ async def async_detect_gateways(hass: HomeAssistant, include_mdns: bool = True) 
     the tests. The result carries the same candidate dicts `async_run` would act on, so a
     caller can feed one straight into `build_gateway`.
     """
-    from .gateway_scan import scan as scan_ports
+    from .gateway_scan import async_remember_stick_identities, scan as scan_ports
 
     scan = await hass.async_add_executor_job(scan_ports, hass)
     probe_list = ports_to_probe(scan, configured_serial_paths(hass))
@@ -781,6 +770,11 @@ async def async_detect_gateways(hass: HomeAssistant, include_mdns: bool = True) 
         async_discover_mdns_gateways(hass) if include_mdns
         else asyncio.sleep(0, result=[]),
     )
+
+    # a probe is the only moment at which a stick nobody uses says who it is - remember the
+    # ids, so the passive port scan can show them and a gateway created from this candidate
+    # can be found again after the ports were renumbered
+    await async_remember_stick_identities(hass, detected, ports_by_device)
 
     candidates = [describe_candidate(device, detection, ports_by_device.get(device))
                   for device, detection in detected.items()]
@@ -800,12 +794,17 @@ async def async_detect_gateways(hass: HomeAssistant, include_mdns: bool = True) 
 
 
 async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
-                    add_devices: bool = True) -> dict:
+                    add_devices: bool = True, detect_gateways: bool = True) -> dict:
     """One complete plug & play pass. Returns the report.
 
     rescan_bus reads the bus of every bus gateway again, also of those which were scanned
     before. Without it only a bus which was never scanned is read - locking the bus for
     minutes must not happen behind the back of the user over and over again.
+
+    detect_gateways=False skips the port probe and the creation of gateways and starts at the
+    bus. That is what the automatic scan of a newly set up bus gateway uses
+    (async_auto_scan_bus): the gateway is already there, and probing the ports would create
+    gateways the user never asked for.
     """
     from ..observation import bus_members
     from ..config import device_config
@@ -817,8 +816,9 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
         LOGGER.debug(f"[{LOG_PREFIX_PNP}] A detection is already running - skipped.")
         return dict(state.get('last_report') or {}, skipped='already_running')
 
-    state.update({'running': True, 'started_at': _utc_now_iso(), 'stage': STAGE_PORTS,
-                  'step': "Scanning serial ports"})
+    state.update({'running': True, 'started_at': _utc_now_iso(),
+                  'stage': STAGE_PORTS if detect_gateways else STAGE_BUS,
+                  'step': "Scanning serial ports" if detect_gateways else "Reading the bus"})
     report = {
         'started_at': state['started_at'], 'finished_at': None, 'rescan_bus': bool(rescan_bus),
         'gateways_detected': [], 'gateways_added': [], 'gateways_suggested': [],
@@ -829,32 +829,33 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
     state['last_report'] = report
 
     try:
-        ### 1) which gateway is plugged in or announces itself on the network?
-        # one call for both sources - `async_detect_gateways` probes the free serial ports and
-        # browses mDNS **in parallel**, so this stage costs max(probe, browse), not their sum
-        _set_step(hass, STAGE_PORTS, "Probing the free serial ports and listening for "
-                                     "LAN gateways (mDNS) in parallel")
-        detection = await async_detect_gateways(hass)
-        candidates = list(detection['gateways_detected'])
-        report['ports_probed'] = detection['ports_probed']
-        report['mdns_found'] = detection['mdns_found']
+        if detect_gateways:
+            ### 1) which gateway is plugged in or announces itself on the network?
+            # one call for both sources - `async_detect_gateways` probes the free serial ports and
+            # browses mDNS **in parallel**, so this stage costs max(probe, browse), not their sum
+            _set_step(hass, STAGE_PORTS, "Probing the free serial ports and listening for "
+                                         "LAN gateways (mDNS) in parallel")
+            detection = await async_detect_gateways(hass)
+            candidates = list(detection['gateways_detected'])
+            report['ports_probed'] = detection['ports_probed']
+            report['mdns_found'] = detection['mdns_found']
 
-        report['gateways_detected'] = list(candidates)
-        report['gateways_suggested'] = [candidate for candidate in candidates
-                                       if not candidate['confident']]
+            report['gateways_detected'] = list(candidates)
+            report['gateways_suggested'] = [candidate for candidate in candidates
+                                            if not candidate['confident']]
 
-        ### 2) create the gateways which were identified beyond doubt
-        for candidate in candidates:
-            if not candidate['confident']:
-                continue
-            where = candidate.get('serial_path') or \
-                f"{candidate.get('address')}:{candidate.get('port')}"
-            _set_step(hass, STAGE_PORTS, f"Creating gateway {candidate['hw_type']} on {where}")
-            try:
-                created = await _async_create_gateway(hass, candidate)
-                report['gateways_added'].append(created)
-            except vol.Invalid as e:
-                report['warnings'].append(f"{candidate['hw_type']} on {where}: {e}")
+            ### 2) create the gateways which were identified beyond doubt
+            for candidate in candidates:
+                if not candidate['confident']:
+                    continue
+                where = candidate.get('serial_path') or \
+                    f"{candidate.get('address')}:{candidate.get('port')}"
+                _set_step(hass, STAGE_PORTS, f"Creating gateway {candidate['hw_type']} on {where}")
+                try:
+                    created = await _async_create_gateway(hass, candidate)
+                    report['gateways_added'].append(created)
+                except vol.Invalid as e:
+                    report['warnings'].append(f"{candidate['hw_type']} on {where}: {e}")
 
         ### 3) read the bus of the bus gateways - every bus in parallel: each one is its own
         ### serial or tcp connection with its own lock, they cannot talk over each other. The
@@ -872,11 +873,15 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
                                        f"(this can take a few minutes)")
             watcher = asyncio.ensure_future(
                 _watch_bus_progress(hass, bus_members, [g.dev_id for g in bus_targets]))
+            # every position which answered is adopted while the other positions are still
+            # being read - see _adopt_while_scanning
+            adopter = asyncio.ensure_future(_adopt_while_scanning(hass, report, add_devices))
             try:
                 reads = await asyncio.gather(
                     *[_async_read_bus(hass, bus_members, gateway) for gateway in bus_targets])
             finally:
                 watcher.cancel()
+                adopter.cancel()
             for gateway, read in zip(bus_targets, reads):
                 report['buses_read'].append(read)
                 if read.get('finished'):
@@ -887,29 +892,11 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
                     report['warnings'].append(f"The bus scan of gateway {gateway.dev_id} did "
                                               f"not finish within {BUS_SCAN_TIMEOUT} s.")
 
-        ### 4) add every device which is identified without any doubt
+        ### 4) add every device which is identified without any doubt. Most of them are already
+        ### in by now (they were adopted during the scan); this pass catches what became clear
+        ### only with the last memory row and everything outside the bus.
         _set_step(hass, STAGE_DEVICES, "Collecting the devices which can be identified")
-        registry = bus_members.get_registry(hass)
-        if registry is not None:
-            await registry.async_parse_taught_in()
-        members = registry.get_members(hass) if registry is not None else []
-        configured = device_config.get_configured_addresses(hass)
-
-        merged = merge_candidates(
-            # a simulated device states everything about itself, so it comes first
-            simulation.derive_candidates(hass, configured),
-            derive_bus_candidates(members, configured),
-            derive_memory_candidates(members, configured),
-            derive_telegram_candidates(_unknown_devices(hass), configured),
-        )
-        report['devices_skipped'] = merged['skipped']
-
-        if add_devices:
-            added, warnings = await _async_add_devices(hass, device_config, merged['candidates'])
-            report['devices_added'] = added
-            report['warnings'].extend(warnings)
-        else:
-            report['devices_pending'] = merged['candidates']
+        await _async_collect_and_add(hass, report, add_devices)
 
         report['finished_at'] = _utc_now_iso()
         LOGGER.info(f"[{LOG_PREFIX_PNP}] Finished: {len(report['gateways_added'])} gateway(s) and "
@@ -923,8 +910,90 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
         report['warnings'].append(f"The detection failed: {e}")
         return report
     finally:
+        # The buses are free again, so the gateways whose reload was postponed while they were
+        # being read get it now - that is what turns the devices which were added during the
+        # scan into entities. Still *before* running=False: a reload sets the gateway up again,
+        # and the automatic bus scan of a new gateway steps aside while a detection runs.
+        from ..core.integration import async_flush_pending_reloads
+        await async_flush_pending_reloads(hass)
         state.update({'running': False, 'step': None, 'stage': None,
                       'last_run': _utc_now_iso(), 'last_report': report})
+
+
+async def _async_collect_and_add(hass: HomeAssistant, report: dict, add_devices: bool) -> int:
+    """Derive the devices from everything which is known *right now* and add the new ones.
+
+    Called repeatedly: every few seconds while a bus is being read and once at the end of the
+    run. Adding twice is impossible without any bookkeeping here - `get_configured_addresses`
+    is read again on every pass, so a device which is already in the configuration is not a
+    candidate anymore. Returns how many devices were added in this pass.
+    """
+    from ..observation import bus_members
+    from ..config import device_config
+    from .. import simulation
+
+    registry = bus_members.get_registry(hass)
+    if registry is not None:
+        await registry.async_parse_taught_in()
+    members = registry.get_members(hass) if registry is not None else []
+    configured = device_config.get_configured_addresses(hass)
+
+    merged = merge_candidates(
+        # a simulated device states everything about itself, so it comes first
+        simulation.derive_candidates(hass, configured),
+        derive_bus_candidates(members, configured),
+        derive_memory_candidates(members, configured),
+        derive_telegram_candidates(_unknown_devices(hass), configured),
+    )
+    # what still needs a human decision is a snapshot of this pass, not a sum of all passes -
+    # a device which was unclear a minute ago may be identified by now
+    report['devices_skipped'] = merged['skipped']
+
+    if not add_devices:
+        report['devices_pending'] = merged['candidates']
+        return 0
+
+    added, warnings = await _async_add_devices(hass, device_config, merged['candidates'])
+    report['devices_added'].extend(added)
+    report['warnings'].extend(warnings)
+    return len(added)
+
+
+async def _adopt_while_scanning(hass: HomeAssistant, report: dict, add_devices: bool) -> None:
+    """Add the devices which are already identified while the bus is still being read.
+
+    Reading a bus takes minutes: a FAM14 with 30 actuators is asked position by position and
+    then memory row by memory row. Waiting for the last row before writing anything meant that
+    a user watched a progress bar for minutes with an empty device list, and a scan which was
+    interrupted (a timeout, a restart) left nothing at all behind.
+
+    So every position which has answered is adopted as soon as it is unambiguous. What the
+    scan adds later - the senders taught into a device, which are only known once its memory
+    was read - simply appears in one of the next passes.
+
+    Deliberately not after every single position: adding rewrites the options of the config
+    entry, so the passes are paced and each of them adds everything which became clear since
+    the last one, in one write per gateway.
+
+    The gateway is *not* reloaded meanwhile (core/integration.async_reload_entry postpones
+    that while the bus is busy) - a reload would close the serial port under the running scan.
+    """
+    try:
+        while True:
+            await asyncio.sleep(ADOPT_INTERVAL)
+            try:
+                count = await _async_collect_and_add(hass, report, add_devices)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:  # noqa: BLE001 - the scan must not die with the adoption
+                LOGGER.warning(f"[{LOG_PREFIX_PNP}] Could not adopt the devices found so far: {e}",
+                               exc_info=True)
+                continue
+            if count:
+                LOGGER.info(f"[{LOG_PREFIX_PNP}] {count} device(s) added while the bus is still "
+                            f"being read ({len(report['devices_added'])} in this run so far).")
+    except asyncio.CancelledError:
+        pass
 
 
 def _unknown_devices(hass: HomeAssistant) -> list[dict]:
@@ -987,6 +1056,66 @@ async def _async_create_gateway(hass: HomeAssistant, candidate: dict) -> dict:
     LOGGER.info(f"[{LOG_PREFIX_PNP}] Created gateway {created['name']} (id {created['id']}) "
                 f"on {created['serial_path']}.")
     return created
+
+
+async def async_auto_scan_bus(hass: HomeAssistant, gateway) -> dict | None:
+    """Read the bus of a bus gateway which Home Assistant sees for the first time.
+
+    A FAM14 or FGW14-USB does not tell anybody what sits on its bus: the actuators and the
+    senders taught into them are only known once the device memories were read. So a bus
+    gateway which was never scanned is scanned once, on its own - otherwise the simple view
+    shows an empty page next to a gateway which is connected, and the only way out is a button
+    the user has to find first.
+
+    Exactly once, and only where it is harmless:
+
+    * only for a real bus gateway (a transceiver has no bus, a simulated one no memory)
+    * not when the bus was already read - by an earlier scan, by plug & play or by hand
+    * not when a detection is running anyway: that one reads the bus itself
+    * the attempt is remembered **before** it starts and persisted, so a bus which does not
+      answer is not locked for BUS_SCAN_TIMEOUT again after every restart
+
+    Reading is deliberately left to `async_run` (without the port probe): the web ui shows its
+    progress and its report already, and whatever the scan reveals beyond doubt is adopted the
+    same way a detection started by hand would adopt it.
+    """
+    from ..observation import bus_members
+
+    gateway_id = getattr(gateway, 'dev_id', None)
+    if gateway_id is None:
+        return None
+    if not GatewayDeviceType.is_bus_gateway(getattr(gateway, 'dev_type', None)):
+        return None
+    if getattr(gateway, 'is_simulated', False):
+        return None
+
+    registry = bus_members.get_registry(hass)
+    if registry is None:
+        return None
+    if registry.was_auto_scanned(gateway_id):
+        return None
+    if _bus_was_read(hass, bus_members, gateway_id):
+        # nothing to do, but do not try again on the next restart either
+        registry.mark_auto_scanned(gateway_id)
+        return None
+
+    # a scan needs a live connection; if the gateway never comes up nothing is marked, so a
+    # later restart with working hardware still gets its scan
+    if not await _async_wait_for_gateway(hass, gateway_id):
+        LOGGER.debug(f"[{LOG_PREFIX_PNP}] Gateway {gateway_id} is not connected - the automatic "
+                     f"bus scan is postponed.")
+        return None
+
+    if get_state(hass).get('running'):
+        LOGGER.debug(f"[{LOG_PREFIX_PNP}] A detection is already running - it reads the bus of "
+                     f"gateway {gateway_id} itself.")
+        return None
+
+    registry.mark_auto_scanned(gateway_id)
+    LOGGER.info(f"[{LOG_PREFIX_PNP}] Gateway {gateway_id} is a bus gateway whose bus was never "
+                f"read - reading it once now. This takes a few minutes and the devices on the "
+                f"bus do not react while it runs.")
+    return await async_run(hass, detect_gateways=False)
 
 
 async def _async_wait_for_gateway(hass: HomeAssistant, gateway_id: int) -> bool:

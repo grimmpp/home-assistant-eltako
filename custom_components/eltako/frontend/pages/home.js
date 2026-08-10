@@ -9,9 +9,18 @@
  * The add form is the same backend form descriptor (eltako/devices/form) as in the expert
  * mode, reduced to the fields a user has to fill in - the backend applies its defaults for
  * everything which is left out, so a device created here is identical to one created there.
+ *
+ * The page has **no periodic reload**. Switching a light used to look dead until the next
+ * refresh of the whole content redrew the card (and that refresh wiped the add form while
+ * it was being filled in). Instead every card registers the entities it shows at the entity
+ * hub of the panel (lib/entity_hub.js) and patches its own chip and its own button when a
+ * state arrives; the telegram stream keeps the "last reported" line current the same way.
  */
 
 import { WS } from "../lib/api.js";
+import { BUS_SCAN_STYLES, renderBusScans } from "../lib/bus_scan.js";
+import { DETAILS_STYLES, bindDetails, deviceDetails, gatewayDetails, openInHomeAssistant,
+         renderDetails } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { escapeHtml, formatDuration, icon, matchesFilter } from "../lib/utils.js";
 
@@ -23,6 +32,9 @@ const NEEDS_SENDER = ["light", "switch", "cover", "climate"];
 
 /** entity domains without a state worth showing on a card (a button, a teach-in helper, ...) */
 const STATELESS_DOMAINS = ["button", "datetime", "event", "text"];
+
+/** entity domains whose state chip is a switch as well - a click toggles them */
+const SWITCHABLE_DOMAINS = ["light", "switch", "cover"];
 
 const PLATFORM_ICONS = {
   light: ["mdi:lightbulb-outline", "☀"],
@@ -54,9 +66,9 @@ export const page = {
   icon: "mdi:home-outline",
   glyph: "⌂",
   modes: ["user"],
-  refreshMs: 15000,
+  // no refreshMs on purpose - see the module comment: the cards update themselves
 
-  styles: FORM_STYLES + `
+  styles: FORM_STYLES + BUS_SCAN_STYLES + DETAILS_STYLES + `
     .device-groups h3 { font-size: .9rem; font-weight: 500; margin: 18px 0 8px;
                         color: var(--eltako-muted); display: flex; align-items: center; gap: 6px; }
     .device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
@@ -73,9 +85,18 @@ export const page = {
     .device-card .device-name { font-weight: 500; overflow-wrap: anywhere; }
     .device-card .device-kind { font-size: .72rem; color: var(--eltako-muted); }
     .device-card .device-states { display: flex; flex-wrap: wrap; gap: 5px; }
-    .device-card .state-chip { font-size: .75rem; padding: 2px 9px; border-radius: 12px;
-                               background: var(--eltako-tint-strong); white-space: nowrap; }
-    .device-card .state-chip b { font-weight: 600; }
+    /* a chip exists for every entity and is only shown once it has a value (see
+       _applyEntityState) - the display of the row has to lose against [hidden] for that */
+    .device-states[hidden], .state-chip[hidden] { display: none; }
+    .state-chip { font: inherit; font-size: .75rem; padding: 2px 9px; border-radius: 12px;
+                  border: 1px solid transparent; color: var(--primary-text-color);
+                  background: var(--eltako-tint-strong); white-space: nowrap; }
+    .state-chip b { font-weight: 600; }
+    /* a state which can be switched is the switch - see _renderChip */
+    button.state-chip.switchable { cursor: pointer; }
+    button.state-chip.switchable:hover { border-color: var(--eltako-accent); color: var(--eltako-accent); }
+    button.state-chip.switchable:active { transform: scale(.97); }
+    button.state-chip[disabled] { opacity: .6; cursor: progress; }
     .device-card .device-foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
                                 margin-top: auto; padding-top: 4px; }
     .device-card .device-foot .spacer { flex: 1 1 auto; }
@@ -89,6 +110,7 @@ export const page = {
     }
     .device-card.telegram-flash { animation: eltako-card-flash 1.4s ease-out; }
     .simple-hint { font-size: .78rem; color: var(--eltako-muted); margin: 10px 0 0; }
+    .gateway-card .device-note { font-size: .72rem; }
     /* result and progress of the automatic detection */
     .detect-card h3 { display: flex; align-items: center; gap: 6px; }
     .detect-card p { font-size: .85rem; }
@@ -130,10 +152,10 @@ export const page = {
       <input id="simple-filter" type="search" placeholder="Search device or room&hellip;"
              value="${escapeHtml(ctx.state.simpleFilter || "")}" />
       <span class="spacer"></span>
-      <button id="simple-detect" class="action" ${running ? "disabled" : ""}
+      <button id="simple-detect" class="action" data-busy-block="any" ${running ? "disabled" : ""}
               title="Searches for gateways, bus devices, sensors and actuators and lists what was found">
         ${icon("mdi:magnify-scan", "◎")} ${running ? "Searching&hellip;" : "Search devices"}</button>
-      <button id="simple-reset" class="action danger" ${running ? "disabled" : ""}
+      <button id="simple-reset" class="action danger" data-busy-block="any" ${running ? "disabled" : ""}
               title="Removes every device created here and searches again from scratch - including a fresh read of every bus. Devices from configuration.yaml are kept.">
         ${icon("mdi:refresh", "↻")} Remove all &amp; search again</button>
       <button id="simple-add" class="action primary">+ Add device</button>`;
@@ -162,8 +184,10 @@ export const page = {
 
     return `
       ${this._renderEditor(ctx)}
+      ${this._renderDetails(ctx)}
       ${this._renderDetection(ctx)}
       ${this._renderSummary(ctx, all, gateways)}
+      ${this._renderGateways(ctx, gateways)}
       ${devices.length
         ? this._renderGroups(ctx, devices)
         : `<div class="empty">${all.length ? "No device matches your search."
@@ -184,7 +208,7 @@ export const page = {
         <p>Your devices talk to Home Assistant through an ELTAKO gateway (FAM14, FGW14-USB,
           FAM-USB, a LAN gateway, ...). <b>Search devices</b> finds a gateway which is plugged in
           all by itself; the expert mode has the wizard for entering one by hand.</p>
-        <p><button class="action primary" id="simple-detect-empty">${icon("mdi:magnify-scan", "◎")}
+        <p><button class="action primary" id="simple-detect-empty" data-busy-block="any">${icon("mdi:magnify-scan", "◎")}
              Search devices</button>
            <button class="action" id="simple-to-expert">Switch to expert mode</button></p>
       </div>`;
@@ -206,13 +230,30 @@ export const page = {
     if (!pnp.running && !report.started_at) return "";
 
     if (pnp.running) {
+      // every bus is read in parallel and each one takes minutes - they are listed one below
+      // the other, so it is visible which bus is where instead of one bar for all of them
+      const scans = pnp.bus_scans || [];
+      const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+      const nameOf = (gatewayId) => (gateways.find((gateway) =>
+        String(gateway.id) === String(gatewayId)) || {}).name || `Gateway ${gatewayId}`;
+
+      // the devices are added while the bus is being read, not at the end of the scan - so
+      // the list below fills up during the run and the counter here says so
+      const found = (report.devices_added || []).length;
+
       return `
         <div class="notice detect-card">
           <h3>${icon("mdi:magnify-scan", "◎")} Searching for devices&hellip;</h3>
-          <div class="detect-progress"><i></i></div>
+          ${scans.length ? "" : `<div class="detect-progress"><i></i></div>`}
           <p>${escapeHtml(pnp.step || "Detection is running")}
-            ${pnp.stage === "bus" ? " - reading the bus takes a few minutes, "
-              + "your devices do not react meanwhile." : ""}</p>
+            ${pnp.stage === "bus" ? ` - reading ${scans.length > 1 ? `the ${scans.length} buses`
+              : "the bus"} takes a few minutes, your devices do not react meanwhile.` : ""}</p>
+          ${renderBusScans(scans, nameOf)}
+          <p>${found
+            ? `<b>${found} device${found === 1 ? "" : "s"}</b> found and added so far - `
+              + "they are in the list below already. More appear while the search runs."
+            : "Every device which is identified is added right away - you do not have to wait "
+              + "for the end of the search."}</p>
         </div>`;
     }
 
@@ -246,7 +287,7 @@ export const page = {
         ${suggested.length ? `<p class="device-note warn">${suggested.length}
           possible gateway${suggested.length === 1 ? "" : "s"} could not be identified for sure -
           confirm ${suggested.length === 1 ? "it" : "them"} in the expert mode.</p>` : ""}
-        <p><button class="action" id="simple-detect-again">Search again</button></p>
+        <p><button class="action" id="simple-detect-again" data-busy-block="any">Search again</button></p>
       </div>`;
   },
 
@@ -274,6 +315,77 @@ export const page = {
       </div>`;
   },
 
+  /**
+   * The gateways, as cards like the devices.
+   *
+   * Every device of this page talks to Home Assistant through one of them, so a user who
+   * wonders why nothing reports has to be able to see whether the box is connected at all -
+   * without switching to the expert view. The card says the state in words, everything
+   * technical (port, base id, protocol) is one click away in the details.
+   *
+   * A gateway which is configured but was never set up by Home Assistant is listed too:
+   * it is in no other list of this view, and it is exactly the case which explains "my
+   * devices do nothing".
+   */
+  _renderGateways(ctx, gateways) {
+    const orphans = (ctx.state.integrationInfo || {}).gateways_not_set_up || [];
+    if (!gateways.length && !orphans.length) return "";
+    const devices = ctx.state.configuredDevices || [];
+    const count = (gatewayId) => devices.filter((device) =>
+      String(device.gateway_id) === String(gatewayId)).length;
+
+    return `
+      <div class="device-groups">
+        <h3>${icon("mdi:router-wireless", "((‧))")} Gateways
+          <span class="hint-inline">${gateways.length} connection${gateways.length === 1 ? "" : "s"}
+            to your ELTAKO devices</span></h3>
+        <div class="device-grid">
+          ${gateways.map((gateway) => `
+            <article class="device-card gateway-card ${gateway.connected ? "" : "silent"}
+                            ${gateway.simulated ? "simulated-card" : ""}">
+              <div class="device-head">
+                ${icon("mdi:router-wireless", "((‧))")}
+                <div style="min-width:0">
+                  <div class="device-name">${escapeHtml(gateway.name)}</div>
+                  <div class="device-kind">${escapeHtml(gateway.type || "Gateway")}
+                    ${gateway.simulated ? `<span class="tag simulated" title="No hardware: this gateway is simulated">simulated</span>` : ""}</div>
+                </div>
+              </div>
+              <div class="device-states">
+                <span class="state-chip"><span class="chip-label">Status</span>
+                  <b>${gateway.connected ? "connected" : "not connected"}</b></span>
+                <span class="state-chip"><span class="chip-label">Devices</span>
+                  <b>${count(gateway.id)}</b></span>
+              </div>
+              <div class="device-note ${gateway.connected ? "" : "warn"}">${gateway.connected
+                ? escapeHtml(gateway.serial_path || "connected")
+                : "No connection - check the plug, the port and the power supply."}</div>
+              <div class="device-foot">
+                <button class="action small" data-gateway-details="${escapeHtml(gateway.id)}"
+                  title="Port, base id and everything else about this gateway">details</button>
+                <span class="spacer"></span>
+              </div>
+            </article>`).join("")}
+          ${orphans.map((gateway) => `
+            <article class="device-card silent">
+              <div class="device-head">
+                ${icon("mdi:router-wireless-off", "((✕))")}
+                <div style="min-width:0">
+                  <div class="device-name">${escapeHtml(gateway.name || `Gateway ${gateway.id}`)}</div>
+                  <div class="device-kind">${escapeHtml(gateway.device_type || "")}</div>
+                </div>
+              </div>
+              <div class="device-note warn">Configured but not set up by Home Assistant - it does
+                nothing. The expert mode can set it up again or remove it.</div>
+              <div class="device-foot">
+                <span class="spacer"></span>
+                <button class="action small" data-simple-to-expert>Open expert mode</button>
+              </div>
+            </article>`).join("")}
+        </div>
+      </div>`;
+  },
+
   _renderGroups(ctx, devices) {
     const groups = new Map();
     for (const device of devices) {
@@ -292,15 +404,24 @@ export const page = {
         .map((device) => this._renderCard(ctx, device)).join("")}</div>`).join("")}</div>`;
   },
 
+  /**
+   * One card. Everything which can change while the page is open carries the entity it
+   * belongs to (`data-entity`), so a state signal of the hub finds its chip and its button
+   * without the page being rendered again - see `_applyEntityState`. A chip is rendered for
+   * every entity, hidden while it has no value: an entity which reports for the first time
+   * has its chip ready and only needs to be unhidden.
+   */
   _renderCard(ctx, device) {
     const [mdi, glyph] = PLATFORM_ICONS[device.platform] || ["mdi:chip", "▪"];
     const entities = this._entitiesOf(ctx, device);
     const activity = this._activityOf(device);
+    const anyState = entities.some((entity) => entity.text);
 
     return `
       <article class="device-card ${activity ? "" : "silent"} ${device.simulated ? "simulated-card" : ""}"
                data-address="${escapeHtml(device.address)}"
-               data-external="${escapeHtml(device.external_address || "")}">
+               data-external="${escapeHtml(device.external_address || "")}"
+               data-device-name="${escapeHtml(device.name || "")}">
         <div class="device-head">
           ${icon(mdi, glyph)}
           <div style="min-width:0">
@@ -309,15 +430,14 @@ export const page = {
               ${device.simulated ? `<span class="tag simulated" title="No hardware: this device is simulated (see the simulation page in the expert view)">simulated</span>` : ""}</div>
           </div>
         </div>
-        ${entities.filter((entity) => entity.text).length
-          ? `<div class="device-states">${entities.filter((entity) => entity.text).map((entity) => `
-          <span class="state-chip">${escapeHtml(entity.label)} <b>${escapeHtml(entity.text)}</b></span>`)
-          .join("")}</div>` : ""}
+        ${entities.length
+          ? `<div class="device-states" ${anyState ? "" : "hidden"}>${entities.map((entity) =>
+              this._renderChip(entity)).join("")}</div>` : ""}
         ${this._renderControls(ctx, device, entities)}
-        <div class="device-note ${activity ? "" : "warn"}">${this._renderStatusLine(device)}</div>
+        <div class="device-note device-status ${activity ? "" : "warn"}">${this._renderStatusLine(device)}</div>
         <div class="device-foot">
-          ${device.ha_device_id ? `<button class="action small" data-ha-device="${escapeHtml(device.ha_device_id)}"
-             title="Open this device in Home Assistant">details</button>` : ""}
+          <button class="action small" data-simple-details="${this._key(device)}"
+             title="Address, profile, gateway and everything else about this device">details</button>
           <span class="spacer"></span>
           ${device.editable ? `
             <button class="action small" data-simple-edit="${this._key(device)}">rename</button>
@@ -325,6 +445,26 @@ export const page = {
             : `<span class="device-note">from configuration.yaml</span>`}
         </div>
       </article>`;
+  },
+
+  /**
+   * One state as a chip. A state which can be switched *is* the switch: clicking the chip of
+   * a light, a socket or a cover toggles it. That is what a user tries first - the chip is
+   * the thing which says "on", so it is the thing they press - and a chip which only looked
+   * like a button was the reason switching felt broken. The explicit buttons stay: they say
+   * which direction a cover takes, a chip cannot.
+   */
+  _renderChip(entity) {
+    const id = escapeHtml(entity.entityId);
+    const label = `<span class="chip-label">${escapeHtml(entity.label)}</span>
+      <b>${escapeHtml(entity.text)}</b>`;
+    if (!SWITCHABLE_DOMAINS.includes(entity.domain)) {
+      return `<span class="state-chip" data-entity="${id}" ${entity.text ? "" : "hidden"}
+        >${label}</span>`;
+    }
+    return `<button class="state-chip switchable" data-entity="${id}"
+      data-service="${id}|${entity.domain}|toggle" ${entity.text ? "" : "hidden"}
+      title="Click to switch ${escapeHtml(entity.label)}">${label}</button>`;
   },
 
   /** On/off, up/down - only for what can be operated and only if a service call is possible. */
@@ -341,8 +481,10 @@ export const page = {
           <button class="action small" data-service="${id}|cover|stop_cover" title="Stop">&#9632;</button>
           <button class="action small" data-service="${id}|cover|close_cover" title="Close">&#9660;</button>`;
       }
+      // data-entity marks the button as one which shows a state: it is relabelled as soon
+      // as the entity reports the new one, without the card being rendered again
       const on = entity.state === "on";
-      return `<button class="action small ${on ? "primary" : ""}"
+      return `<button class="action small ${on ? "primary" : ""}" data-entity="${id}"
                 data-service="${id}|${entity.domain}|toggle">${on ? "on" : "off"}</button>`;
     }).join("")}</div>`;
   },
@@ -400,6 +542,45 @@ export const page = {
             </article>`;
         }).join("")}</div>
       </div>`;
+  },
+
+  /* ------------------------------------------------------------------ details */
+
+  /**
+   * Everything about one device or one gateway, as a popup.
+   *
+   * The card shows what a user acts on - name, state, switch. Everything which answers "what
+   * *is* this thing" (address, profile, gateway, sender, entities, when it last reported) is
+   * here, one click away, instead of forcing a switch into the expert view. The button used
+   * to jump straight into the device page of Home Assistant, which did nothing at all in the
+   * standalone runtime and left the panel in the other case; that jump is now one button
+   * inside this popup - offered where it exists.
+   */
+  _renderDetails(ctx) {
+    const details = ctx.state.simpleDetails;
+    if (!details) return "";
+
+    if (details.kind === "gateway") {
+      const gateway = ((ctx.state.integrationInfo || {}).gateways || [])
+        .find((entry) => String(entry.id) === String(details.key));
+      if (!gateway) return "";
+      return renderDetails(gatewayDetails(gateway, {
+        deviceCount: (ctx.state.configuredDevices || []).filter((device) =>
+          String(device.gateway_id) === String(gateway.id)).length,
+      }), icon);
+    }
+
+    const device = this._deviceByKey(ctx, details.key);
+    if (!device) return "";
+    const parts = deviceDetails(device, {
+      icon: PLATFORM_ICONS[device.platform],
+      subtitle: PLATFORM_LABELS[device.platform] || device.platform,
+      entities: this._entitiesOf(ctx, device),
+      lastSeen: this._renderStatusLine(device).replace("last reported ", ""),
+    });
+    return renderDetails(parts, icon, device.editable ? `
+      <button class="action" data-simple-edit="${escapeHtml(details.key)}">Rename</button>
+      <button class="action danger" data-simple-remove="${escapeHtml(details.key)}">Remove</button>` : "");
   },
 
   /* -------------------------------------------------------------------- forms */
@@ -504,6 +685,8 @@ export const page = {
   /* ------------------------------------------------------------------ actions */
 
   afterRender(ctx, root) {
+    this._watchEntities(ctx, root);
+
     root.getElementById("simple-to-expert")?.addEventListener("click", () => {
       ctx.setMode("expert", "overview");
     });
@@ -521,11 +704,30 @@ export const page = {
       });
     });
 
-    root.querySelectorAll("[data-ha-device]").forEach((element) => {
-      element.addEventListener("click", () => {
-        history.pushState(null, "", `/config/devices/device/${element.dataset.haDevice}`);
-        window.dispatchEvent(new CustomEvent("location-changed"));
+    // the popup with everything about one device or one gateway
+    root.querySelectorAll("button[data-simple-details]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ctx.state.simpleDetails = { kind: "device", key: button.dataset.simpleDetails };
+        ctx.requestContentRender(true);
       });
+    });
+    root.querySelectorAll("button[data-gateway-details]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ctx.state.simpleDetails = { kind: "gateway", key: button.dataset.gatewayDetails };
+        ctx.requestContentRender(true);
+      });
+    });
+    root.querySelectorAll("button[data-simple-to-expert]").forEach((button) => {
+      button.addEventListener("click", () => ctx.setMode("expert", "overview"));
+    });
+
+    bindDetails(root, () => {
+      ctx.state.simpleDetails = null;
+      ctx.requestContentRender(true);
+    });
+
+    root.querySelectorAll("[data-ha-device]").forEach((element) => {
+      element.addEventListener("click", () => openInHomeAssistant(ctx, element.dataset.haDevice));
     });
 
     root.querySelectorAll("button[data-simple-edit]").forEach((button) => {
@@ -536,6 +738,7 @@ export const page = {
           mode: "edit", platform: device.platform, gatewayId: device.gateway_id,
           values: { ...(device.config || {}) }, originalAddress: device.address, error: null,
         };
+        ctx.state.simpleDetails = null;             // the form replaces the popup
         ctx.requestContentRender(true);
         root.getElementById("simple-editor")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
@@ -551,6 +754,7 @@ export const page = {
           gateway_id: Number(device.gateway_id), platform: device.platform, address: device.address,
         });
         if (result) {
+          ctx.state.simpleDetails = null;           // it is gone - its popup has to go as well
           await this.load(ctx);
           ctx.requestRender();
         }
@@ -646,21 +850,141 @@ export const page = {
     });
   },
 
-  /** A telegram arrived: let the card of that device flash. */
+  /* ------------------------------------------------------------ live updates */
+
+  /**
+   * Registers every entity of the rendered cards at the entity hub of the panel, so a state
+   * change patches the one chip or the one button it belongs to. The dom is replaced on each
+   * render, so the listeners of the previous one are dropped first.
+   */
+  _watchEntities(ctx, root) {
+    if (this._unwatchEntities) {
+      this._unwatchEntities();
+      this._unwatchEntities = null;
+    }
+    if (!ctx.entities || !root) return;
+
+    const entityIds = [...root.querySelectorAll("[data-entity]")]
+      .map((element) => element.getAttribute("data-entity"));
+    if (!entityIds.length) return;
+
+    this._unwatchEntities = ctx.entities.subscribe(entityIds,
+      (entityId, state) => this._applyEntityState(root, entityId, state));
+  },
+
+  /** A state arrived: update what shows it - the chip of the value, the label of a toggle. */
+  _applyEntityState(root, entityId, state) {
+    const selector = String(entityId).replace(/"/g, "");
+    const value = (state || {}).state;
+    const attributes = (state || {}).attributes || {};
+    const text = this._stateText(value, attributes.unit_of_measurement);
+
+    root.querySelectorAll(`.state-chip[data-entity="${selector}"]`).forEach((chip) => {
+      const card = chip.closest("article");
+      const label = chip.querySelector(".chip-label");
+      if (label) {
+        label.textContent = this._entityLabel(card ? card.getAttribute("data-device-name") : "",
+                                              attributes.friendly_name, entityId);
+      }
+      const slot = chip.querySelector("b");
+      if (slot) slot.textContent = text;
+      chip.hidden = !text;
+      // the row of chips itself disappears when the device has no value at all
+      const chips = chip.parentElement;
+      if (chips) chips.hidden = ![...chips.children].some((entry) => !entry.hidden);
+    });
+
+    root.querySelectorAll(`button[data-entity="${selector}"]`).forEach((button) => {
+      // a chip is a button too (it switches) - but it shows the value, not an on/off label,
+      // and it was filled in above
+      if (button.classList.contains("state-chip")) return;
+      const on = value === "on";
+      button.textContent = on ? "on" : "off";
+      button.classList.toggle("primary", on);
+    });
+  },
+
+  /** The page is left: drop everything which would outlive its dom. */
+  leave(ctx) {
+    if (ctx && ctx.state) ctx.state.simpleDetails = null;   // no popup waiting on the way back
+    if (this._unwatchEntities) {
+      this._unwatchEntities();
+      this._unwatchEntities = null;
+    }
+    clearTimeout(this._detectTimer);
+    clearTimeout(this._discoverTimer);
+    this._detectPending = false;
+  },
+
+  /**
+   * A telegram arrived: let the card of that device flash and say that it just reported.
+   * A telegram of an address which is not configured yet is the only case which needs data
+   * the page does not have - that one reloads the statistics once, debounced.
+   */
   onTelegram(ctx, telegram) {
     const root = ctx.root;
     if (!root) return;
+    let matched = false;
     for (const address of [telegram.address, telegram.local_address].filter(Boolean)) {
       const escaped = String(address).replace(/"/g, "");
       root.querySelectorAll(`article[data-address="${escaped}"], article[data-external="${escaped}"]`)
         .forEach((card) => {
+          matched = true;
           card.classList.remove("telegram-flash");
           void card.offsetWidth;              // restart the animation on the next telegram
           card.classList.add("telegram-flash");
           clearTimeout(card._flashTimer);
           card._flashTimer = setTimeout(() => card.classList.remove("telegram-flash"), 1400);
+          this._markReported(ctx, card, address);
         });
     }
+    if (!matched) this._scheduleDiscovery(ctx, telegram);
+  },
+
+  /**
+   * The device just sent something, so "never reported yet" is over. The activity of the
+   * device itself is updated as well - it is what the next render and the counters above
+   * the list read.
+   */
+  _markReported(ctx, card, address) {
+    card.classList.remove("silent");
+    const note = card.querySelector(".device-status");
+    if (note) {
+      note.textContent = "last reported just now";
+      note.classList.remove("warn");
+    }
+
+    const device = (ctx.state.configuredDevices || []).find((entry) =>
+      entry.address === card.getAttribute("data-address"));
+    if (!device) return;
+    // the sender address of an actuator has its own activity - which one just reported is
+    // what the address of the telegram says
+    const own = String(address).toUpperCase() === String(device.address).toUpperCase();
+    const key = own ? "activity" : "sender_activity";
+    device[key] = { ...(device[key] || {}),
+                    last_seen: new Date().toISOString(), silent_since_seconds: 0 };
+  },
+
+  /**
+   * An address which has no card: either it is not configured yet (then it belongs into
+   * "Newly discovered" and the statistics have to be read once) or it is a foreign device.
+   * Debounced, so a talkative bus does not turn into a request per telegram.
+   */
+  _scheduleDiscovery(ctx, telegram) {
+    if (telegram.known || ctx.state.simpleEditor) return;    // known, or a form is open
+    const address = String(telegram.address || "").toUpperCase();
+    if (!address) return;
+    const listed = ((ctx.state.statistics || {}).unknown_devices || [])
+      .some((entry) => String(entry.address || "").toUpperCase() === address);
+    if (listed) return;
+
+    clearTimeout(this._discoverTimer);
+    this._discoverTimer = setTimeout(async () => {
+      if (!ctx.root || !ctx.root.getElementById("simple-filter")) return;   // page was left
+      if (ctx.state.simpleEditor) return;
+      await ctx.loadStatistics();
+      ctx.requestContentRender();
+    }, 2000);
   },
 
   /* ---------------------------------------------------------- auto detection */
@@ -676,9 +1000,12 @@ export const page = {
    * adopted, a gateway which was re-cabled. Deleting them one by one is tedious, and a plain
    * search does not help - a device which already exists is skipped by the detection.
    *
-   * Asks **twice** on purpose: the first dialog names the number and what survives, the second
-   * one is the normal search warning (a bus is locked while it is read). Nothing is written
-   * into any device - only the configuration of this integration is reset.
+   * Asks **once**, for both halves: the dialog names the number, what survives and what the
+   * search costs (a bus is locked while it is read). It used to ask a second time with the
+   * wording of the plain search button - a question nobody expects after having just
+   * confirmed "and search again", and answering it with "cancel" left the devices deleted and
+   * nothing searched. Nothing is written into any device - only the configuration of this
+   * integration is reset.
    */
   async _resetAndDetect(ctx) {
     if ((ctx.state.plugAndPlay || {}).running) return;
@@ -699,62 +1026,146 @@ export const page = {
                  + "Everything listed here is deleted first - names, areas and EEPs you "
                  + "corrected by hand are lost - and then detected from scratch.\n\n"
                  + (fromYaml ? `${fromYaml} device(s) from configuration.yaml are kept.\n` : "")
-                 + "Your gateways are kept, and nothing is changed in the devices themselves.")) return;
+                 + "Your gateways are kept, and nothing is changed in the devices themselves.\n\n"
+                 + "The search which follows reads every serial port and the bus of each "
+                 + "gateway: it takes a few minutes, and while a bus is read the devices on it "
+                 + "do not react.")) return;
 
-    const result = await ctx.api.call(WS.DEVICE_REMOVE_ALL, {});
-    if (!result) {
-      alert((ctx.api.lastError || {}).message || "Could not remove the devices.");
-      ctx.api.lastError = null;
-      return;
-    }
+    // how the gateways look before the removal - the wait below compares against it
+    const expected = this._gatewayCounts(ctx);
 
-    await this.load(ctx);
+    // while the search is being prepared neither button may start a second one
+    this._detectPending = true;
     ctx.requestContentRender(true);
-    await this._startDetection(ctx);
+    try {
+      const result = await ctx.api.call(WS.DEVICE_REMOVE_ALL, {});
+      if (!result) {
+        alert((ctx.api.lastError || {}).message || "Could not remove the devices.");
+        ctx.api.lastError = null;
+        return;
+      }
+
+      await this.load(ctx);
+      ctx.requestContentRender(true);
+      await this._waitForGateways(ctx, expected);
+    } finally {
+      this._detectPending = false;
+    }
+    // the question was asked above - this must not ask a second one
+    await this._runDetection(ctx);
+  },
+
+  _gatewayCounts(ctx) {
+    const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+    return { total: gateways.length,
+             connected: gateways.filter((gateway) => gateway.connected).length };
+  },
+
+  /**
+   * Removing the devices rewrites the options of every gateway, and Home Assistant reloads a
+   * gateway whose options changed: while that runs the gateway is gone from the integration
+   * info and its serial port is closed. A search started in that moment probes the port of a
+   * gateway which is just coming up and finds no bus to read - which is why the reset used to
+   * look as if it had searched for nothing. So the gateways are waited for first.
+   *
+   * The state before the removal is the target, not "all connected": a gateway which was
+   * offline anyway (unplugged, wrong port) must not hold the search up. And bounded either
+   * way - a gateway which never comes back must not block it forever.
+   */
+  async _waitForGateways(ctx, expected, seconds = 30) {
+    const back = () => {
+      const now = this._gatewayCounts(ctx);
+      return now.total >= expected.total && now.connected >= expected.connected;
+    };
+    if (back()) return;
+
+    ctx.state.plugAndPlay = { ...(ctx.state.plugAndPlay || {}), running: true, stage: "ports",
+                              step: "The gateways are reloading - waiting for them to connect" };
+    ctx.requestContentRender(true);
+
+    for (let attempt = 0; attempt < seconds && !back(); attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await ctx.loadIntegrationInfo();
+    }
   },
 
   async _startDetection(ctx) {
-    if ((ctx.state.plugAndPlay || {}).running) return;
+    if ((ctx.state.plugAndPlay || {}).running || this._detectPending) return;
     if (!confirm("Search for gateways, actuators and sensors?\n\n"
                  + "Every serial port and the network are searched, then the bus of each gateway "
                  + "is read. This takes a few minutes, and while a bus is read the devices on it "
                  + "do not react. Nothing is changed in your devices - what is found without any "
                  + "doubt is added to Home Assistant, everything else is only listed.")) return;
+    await this._runDetection(ctx);
+  },
 
+  /** Start the run itself. Whoever calls this has asked the user already. */
+  async _runDetection(ctx) {
     // optimistic: the page shows the progress before the answer of the backend arrives
     ctx.state.plugAndPlay = { ...(ctx.state.plugAndPlay || {}), running: true,
                               step: "Searching for gateways", stage: "ports" };
+    this._detectPending = true;
+    this._addedSeen = 0;              // how many devices of this run are in the list already
     ctx.requestContentRender(true);
 
     const result = await ctx.api.call(WS.PNP_RUN, { rescan_bus: true });
+    this._detectPending = false;
     if (result && result.status) {
-      ctx.state.plugAndPlay = result.status;
+      // the backend answers before its task ran, so its status still says "not running" -
+      // keeping the optimistic flag stops the progress card from blinking out until the
+      // first poll (and the buttons from being clickable again meanwhile)
+      ctx.state.plugAndPlay = result.started === false
+        ? result.status : { ...result.status, running: true };
+      if (result.started === false) {
+        alert(result.reason === "already_running"
+          ? "A search is already running - its result appears here when it is done."
+          : "The search was not started - plug & play is switched off in the settings.");
+      }
     } else if (!result) {
       ctx.state.plugAndPlay = { ...(ctx.state.plugAndPlay || {}), running: false };
       alert((ctx.api.lastError || {}).message || "Could not start the search.");
       ctx.api.lastError = null;
     }
     ctx.requestContentRender(true);
+    // the banner of the panel says on every page what runs - it must not wait for its poll
+    await ctx.refreshActivity?.();
     this._pollDetection(ctx);
   },
 
   /**
    * While a search runs the page needs a faster heartbeat than its normal refresh: the status
-   * carries the current stage, and when it is done the new devices have to appear. The timer
-   * stops itself as soon as the run is over or the user left the page.
+   * carries the current stage and the report grows while the scan runs - the detection adds
+   * every device it identifies right away instead of at the end (plug_and_play.async_run), so
+   * the list below has to fill up during the search and not only after it. Reloading it costs
+   * a handful of requests, so that happens when the number of added devices changed, not on
+   * every tick. The timer stops itself as soon as the run is over or the user left the page.
    */
   _pollDetection(ctx) {
     clearTimeout(this._detectTimer);
     this._detectTimer = setTimeout(async () => {
       if (!ctx.root || !ctx.root.getElementById("simple-detect")) return;   // page was left
-      const status = await ctx.api.call(WS.PNP_STATUS);
-      if (status) ctx.state.plugAndPlay = status;
-      if (status && status.running) {
-        ctx.requestContentRender(true);
+      // a start which is still on its way: the backend does not know about it yet, so its
+      // "not running" would drop the progress card and hand the buttons back for a moment
+      if (this._detectPending) {
         this._pollDetection(ctx);
         return;
       }
-      // finished: the devices which were added have to show up in the list
+      const status = await ctx.api.call(WS.PNP_STATUS);
+      if (status) ctx.state.plugAndPlay = status;
+      if (status && status.running) {
+        const added = ((status.last_report || {}).devices_added || []).length;
+        if (added !== this._addedSeen) {
+          this._addedSeen = added;
+          await this.load(ctx);            // the new devices belong into the list below
+          ctx.requestRender();
+        } else {
+          ctx.requestContentRender(true);
+        }
+        this._pollDetection(ctx);
+        return;
+      }
+      // finished: whatever the last pass added has to show up as well
+      this._addedSeen = 0;
       await this.load(ctx);
       ctx.requestRender();
     }, 2000);
@@ -764,7 +1175,8 @@ export const page = {
   _syncDetectButton(ctx) {
     const button = ctx.root && ctx.root.getElementById("simple-detect");
     if (!button) return;
-    const running = !!(ctx.state.plugAndPlay || {}).running;
+    // "pending" is a start which was sent but not confirmed yet - it locks the buttons too
+    const running = !!(ctx.state.plugAndPlay || {}).running || !!this._detectPending;
     button.disabled = running;
     button.innerHTML = `${icon("mdi:magnify-scan", "◎")} ${running ? "Searching&hellip;" : "Search devices"}`;
     // the reset starts a search as its second half, so it is locked by the same flag
@@ -881,23 +1293,34 @@ export const page = {
     return entityIds.filter((entityId) => !STATELESS_DOMAINS.includes(entityId.split(".")[0]))
       .map((entityId) => {
       const state = states[entityId] || {};
-      const unit = (state.attributes || {}).unit_of_measurement;
-      const friendly = (state.attributes || {}).friendly_name || entityId;
-      // "Kitchen light Temperature" -> "Temperature": the device name is already in the card
-      const label = device.name && friendly.startsWith(device.name)
-        ? (friendly.slice(device.name.length).trim() || "state") : friendly;
+      const attributes = state.attributes || {};
       return {
         entityId,
         domain: entityId.split(".")[0],
         state: state.state,
-        label,
-        // an entity which has no value yet says nothing - the status line of the card
-        // already tells that the device has not reported
-        text: state.state === undefined || state.state === null
-          || state.state === "unknown" || state.state === "unavailable"
-          ? "" : `${state.state}${unit ? ` ${unit}` : ""}`,
+        label: this._entityLabel(device.name, attributes.friendly_name, entityId),
+        text: this._stateText(state.state, attributes.unit_of_measurement),
       };
     });
+  },
+
+  /** "Kitchen light Temperature" -> "Temperature": the device name is already on the card. */
+  _entityLabel(deviceName, friendlyName, entityId) {
+    const friendly = friendlyName || entityId;
+    return deviceName && friendly.startsWith(deviceName)
+      ? (friendly.slice(deviceName.length).trim() || "state") : friendly;
+  },
+
+  /**
+   * The value of an entity as it is shown on its chip. An entity without a value says
+   * nothing - the status line of the card already tells that the device has not reported,
+   * so the chip stays empty (and hidden) instead of showing "unknown".
+   */
+  _stateText(state, unit) {
+    if (state === undefined || state === null || state === "unknown" || state === "unavailable") {
+      return "";
+    }
+    return `${state}${unit ? ` ${unit}` : ""}`;
   },
 
   /** Service call which works in Home Assistant and in the standalone runtime alike. */

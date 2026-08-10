@@ -1,7 +1,7 @@
 """Websocket commands to list, watch and control the entities of the integration.
 
 These commands only exist in the standalone runtime (they are registered by
-runtime.py, not by the integration). The CLI and the 'Control' page of the web
+runtime.py, not by the integration). The CLI and the 'HA Entities' page of the web
 ui use them - together they replace the Home Assistant dashboard:
 
     eltako/entities/list        all entities incl. state and attributes

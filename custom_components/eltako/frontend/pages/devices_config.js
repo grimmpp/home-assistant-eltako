@@ -5,8 +5,12 @@
  */
 
 import { WS } from "../lib/api.js";
+import { BUS_SCAN_STYLES, applyBusScans, renderBusScans } from "../lib/bus_scan.js";
+import { DETAILS_STYLES, bindDetails, deviceDetails, openInHomeAssistant,
+         renderDetails } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
-import { card, escapeHtml, formatDateTime, formatNumber, matchesFilter, sortRows } from "../lib/utils.js";
+import { card, escapeHtml, formatDateTime, formatNumber, icon, matchesFilter,
+         sortRows } from "../lib/utils.js";
 
 // TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
@@ -15,7 +19,7 @@ export const page = {
   subtitle: "All configured devices - from configuration.yaml and from this web ui",
   icon: "mdi:format-list-bulleted",
   glyph: "▤",
-  styles: FORM_STYLES,
+  styles: FORM_STYLES + BUS_SCAN_STYLES + DETAILS_STYLES,
   refreshMs: 15000,
 
   async load(ctx) {
@@ -143,6 +147,7 @@ export const page = {
     return `
       ${this._renderEditor(ctx)}
       ${this._renderMemoryPanel(ctx)}
+      ${this._renderDetails(ctx)}
       <div class="cards">
         ${card("Devices", gateways.length + all.length, "",
                `${gateways.length} gateway${gateways.length === 1 ? "" : "s"}, `
@@ -300,13 +305,55 @@ export const page = {
         <td>${this._renderLastSeen(device)}</td>
         <td><span class="tag ${device.source === "ui" ? "source-ui" : "source-yaml"}">${device.source === "ui" ? "web ui" : "yaml"}</span></td>
         <td class="actions">
-          ${device.ha_device_id ? `<button class="action small" data-ha-device="${escapeHtml(device.ha_device_id)}">open</button>` : ""}
+          <button class="action small" data-device-details="${escapeHtml(device.platform)}|${escapeHtml(device.address)}|${device.gateway_id}"
+            title="Everything about this device in one place">details</button>
           ${device.editable ? `
             <button class="action small" data-edit="${escapeHtml(device.platform)}|${escapeHtml(device.address)}|${device.gateway_id}">edit</button>
             <button class="action small danger" data-remove="${escapeHtml(device.platform)}|${escapeHtml(device.address)}|${device.gateway_id}">delete</button>`
             : `<span class="hint">edit in yaml</span>`}
         </td>
       </tr>`;
+  },
+
+  /**
+   * The same popup as in the simple view (lib/details.js): address, profile, gateway, sender,
+   * entities, activity - the whole row without having to read a table which is 11 columns
+   * wide, plus the way into the device page of Home Assistant.
+   */
+  _renderDetails(ctx) {
+    const key = ctx.state.deviceDetails;
+    if (!key) return "";
+    const [platform, address, gatewayId] = String(key).split("|");
+    const device = (ctx.state.configuredDevices || []).find((entry) =>
+      entry.platform === platform && entry.address === address
+      && String(entry.gateway_id) === gatewayId);
+    if (!device) return "";
+
+    const states = (ctx.hass || {}).states || {};
+    const parts = deviceDetails(device, {
+      subtitle: device.platform,
+      lastSeen: this._lastSeenText(device),
+      entities: (device.entity_ids || []).map((entityId) => ({
+        entityId,
+        text: (states[entityId] || {}).state || "",
+      })),
+      rows: [["Entities", (device.entity_ids || []).length ? null : "none in Home Assistant yet"]],
+    });
+    return renderDetails(parts, icon, device.editable ? `
+      <button class="action" data-edit="${escapeHtml(key)}">Edit</button>
+      <button class="action danger" data-remove="${escapeHtml(key)}">Delete</button>` : "");
+  },
+
+  /** The "last seen" of the table as plain text - the popup has no room for a badge. */
+  _lastSeenText(device) {
+    const activity = this._activityOf(device);
+    if (!activity || !activity.last_seen) return "never reported yet";
+    const silent = activity.silent_since_seconds;
+    if (silent === null || silent === undefined) return formatDateTime(activity.last_seen);
+    return silent < 90 ? "just now"
+      : silent < 3600 ? `${Math.round(silent / 60)} min ago`
+      : silent < 86400 ? `${Math.round(silent / 3600)} h ago`
+      : `${Math.round(silent / 86400)} d ago`;
   },
 
   _renderTable(ctx, devices) {
@@ -517,8 +564,11 @@ export const page = {
           ${gw.ha_device_id ? `<button class="action small" data-ha-device="${escapeHtml(gw.ha_device_id)}">open device</button>` : ""}
           ${((ctx.state.busMembers || {}).scans_running || {})[String(gw.id)]
             ? `<button class="action small" disabled title="While this runs no other telegram may go over the bus - the buttons come back afterwards.">${escapeHtml(busyLabel(gw))}&hellip;</button>`
-            : `<button class="action small primary" data-bus-scan="${escapeHtml(gw.id)}">scan bus &amp; read memory</button>
-               <button class="action small" data-teach-in="${escapeHtml(gw.id)}">check &amp; teach in HA senders</button>`}</h3>
+            : `<button class="action small primary" data-bus-scan="${escapeHtml(gw.id)}"
+                 data-busy-block="bus">scan bus &amp; read memory</button>
+               <button class="action small" data-teach-in="${escapeHtml(gw.id)}"
+                 data-busy-block="bus">check &amp; teach in HA senders</button>`}</h3>
+        ${renderBusScans([((ctx.state.busMembers || {}).scan_progress || {})[String(gw.id)]])}
         ${rows.length ? `<div class="table-wrapper"><table>
             <thead><tr>${this.TABLE_HEAD}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`
           : `<div class="empty">No bus positions detected yet - they appear within a minute of polling.</div>`}`);
@@ -874,7 +924,52 @@ export const page = {
     });
   },
 
+  /**
+   * While a bus is read the page needs a faster heartbeat than its refresh interval: a scan
+   * takes minutes and reports new counters every second. Only the progress rows are patched -
+   * the tables around them keep their dom, so nothing jumps while the user reads them and an
+   * open form is not touched.
+   *
+   * Several buses can be scanned at the same time (one scan per gateway, each bus is its own
+   * connection); every one of them has its own row under its own heading, so they are read
+   * below each other. As soon as the set of running scans changes - one finished, another
+   * started - the page is loaded and rendered again: what a finished scan found belongs into
+   * the tables.
+   */
+  _pollBusScans(ctx) {
+    clearTimeout(this._scanTimer);
+    const busMembers = ctx.state.busMembers || {};
+    const running = Object.values(busMembers.scans_running || {}).some(Boolean)
+      || Object.keys(busMembers.scan_progress || {}).length > 0;
+    if (!running) return;
+
+    this._scanTimer = setTimeout(async () => {
+      // the view select of this toolbar is gone as soon as another page is open ('filter'
+      // would not do - three pages have a filter input of that id)
+      if (!ctx.root || !ctx.root.getElementById("device-view")) return;
+      const bus = await ctx.api.call(WS.BUS_MEMBERS);
+      if (!bus) {
+        this._pollBusScans(ctx);        // the request failed - keep watching
+        return;
+      }
+      ctx.state.busMembers = bus;
+      if (applyBusScans(ctx.root, Object.values(bus.scan_progress || {}))) {
+        this._pollBusScans(ctx);
+        return;
+      }
+      await this.load(ctx);
+      ctx.requestContentRender();
+    }, 1500);
+  },
+
+  /** The page is left: the poll must not outlive its dom. */
+  leave() {
+    clearTimeout(this._scanTimer);
+  },
+
   afterRender(ctx, root) {
+    this._pollBusScans(ctx);
+
     // memory details of a bus device open in the side panel on the right
     root.querySelectorAll("button[data-memory-details]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -911,8 +1006,15 @@ export const page = {
           ctx.api.lastError = null;
           return;
         }
-        // results stream in through the registry - reload after a while and on the next refresh
-        setTimeout(async () => { await this.load(ctx); ctx.requestContentRender(); }, 8000);
+        // the progress line under the heading takes over from here (_pollBusScans); the flag
+        // is set right away so the poll starts even if the backend has not published the
+        // first counters of this scan yet
+        const busMembers = ctx.state.busMembers || {};
+        ctx.state.busMembers = { ...busMembers,
+          scans_running: { ...(busMembers.scans_running || {}), [button.dataset.busScan]: true } };
+        ctx.requestContentRender();
+        // and the banner of the panel says on every page that this bus is busy now
+        await ctx.refreshActivity?.();
       });
     });
 
@@ -1000,10 +1102,21 @@ export const page = {
     root.querySelectorAll("[data-ha-device]").forEach((element) => {
       element.addEventListener("click", (event) => {
         event.stopPropagation();
-        const path = `/config/devices/device/${element.dataset.haDevice}`;
-        history.pushState(null, "", path);
-        window.dispatchEvent(new CustomEvent("location-changed"));
+        openInHomeAssistant(ctx, element.dataset.haDevice);
       });
+    });
+
+    // everything about one device in one popup - the same one the simple view uses
+    root.querySelectorAll("button[data-device-details]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();                  // the row itself toggles the relations
+        ctx.state.deviceDetails = button.dataset.deviceDetails;
+        ctx.requestContentRender(true);
+      });
+    });
+    bindDetails(root, () => {
+      ctx.state.deviceDetails = null;
+      ctx.requestContentRender(true);
     });
 
     root.querySelectorAll("th[data-sort]").forEach((header) => {
@@ -1029,6 +1142,7 @@ export const page = {
           mode: "edit", platform, gatewayId: Number(gatewayId),
           values: device ? device.config : {}, originalAddress: address, error: null,
         };
+        ctx.state.deviceDetails = null;           // the form replaces the popup
         ctx.requestContentRender(true);
       });
     });
@@ -1041,6 +1155,7 @@ export const page = {
           gateway_id: Number(gatewayId), platform, address,
         });
         if (result) {
+          ctx.state.deviceDetails = null;         // it is gone - its popup has to go as well
           await this.load(ctx);
           ctx.requestRender();
         }

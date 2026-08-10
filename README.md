@@ -121,7 +121,7 @@ Own panel in the sidebar, part of the integration. Every page has its own url an
 | Page | What it is for |
 | --- | --- |
 | **Overview** | One tile per gateway (type, protocol, base id, connection, serial path) with add / edit / remove, counters for devices, entities and telegram rate, the plug & play run with its report, and the usb/serial port scan. |
-| **Control** | Use the devices &ndash; switch, dim, move covers, adjust temperatures. |
+| **HA Entities** | Use the devices &ndash; switch, dim, move covers, adjust temperatures. |
 | **Devices** | All configured devices of all gateways with their source (yaml / web ui), the hierarchical view of the bus incl. the passively detected bus members, the active bus scan with the memory read-out, and add/edit/remove. |
 | **Live telegrams** | Live stream of every telegram: time, direction, gateway, address, device name, entity ids, EEP, raw data and decoded values. Filterable, pausable, exportable, and telegrams can be sent from here. |
 | **Statistics** | One row per EnOcean address: telegram counters, intervals, first/last seen, message types, entity ids, current state and the last decoded values. |

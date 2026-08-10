@@ -253,3 +253,181 @@ class TestPortRelocation(TestCase):
 
         self.assertEqual(path, '/dev/ttyUSB0')
         self.assertIsNone(reason)
+
+    def test_the_chip_id_decides_before_the_usb_serial_number(self):
+        """The usb serial number belongs to the adapter, the chip id to the EnOcean hardware."""
+        ports = [{'device': '/dev/ttyUSB4', 'free': True, 'serial_number': 'ANOTHER-ADAPTER',
+                  'chip_id': '01-93-8B-2C', 'suggested_device_types': ['esp3-gateway'],
+                  'name': 'EnOcean USB 500'}]
+
+        path, reason = gateway_scan.choose_port(
+            ports, '/dev/ttyUSB0', {'chip_id': '01-93-8B-2C', 'usb_serial': 'GONE'}, 'esp3-gateway')
+
+        self.assertEqual(path, '/dev/ttyUSB4')
+        self.assertIn('01-93-8B-2C', reason)
+
+    def test_the_interface_tells_the_two_ports_of_one_stick_apart(self):
+        """if00 and if01 of a two port stick report the same usb serial number - only one of
+        them carries the telegrams."""
+        ports = [{'device': '/dev/ttyUSB2', 'free': True, 'serial_number': 'FT7YTP3Y',
+                  'interface': 'if00', 'suggested_device_types': ['fam-usb'], 'name': 'if00'},
+                 {'device': '/dev/ttyUSB3', 'free': True, 'serial_number': 'FT7YTP3Y',
+                  'interface': 'if01', 'suggested_device_types': ['fam-usb'], 'name': 'if01'}]
+
+        path, _ = gateway_scan.choose_port(
+            ports, '/dev/ttyUSB0', {'usb_serial': 'FT7YTP3Y', 'interface': 'if01'}, 'fam-usb')
+
+        self.assertEqual(path, '/dev/ttyUSB3')
+
+    def test_two_sticks_with_the_same_id_are_not_guessed(self):
+        ports = [{'device': '/dev/ttyUSB2', 'free': True, 'chip_id': '01-93-8B-2C',
+                  'suggested_device_types': ['esp3-gateway'], 'name': 'one'},
+                 {'device': '/dev/ttyUSB3', 'free': True, 'chip_id': '01-93-8B-2C',
+                  'suggested_device_types': ['esp3-gateway'], 'name': 'clone'}]
+
+        path, reason = gateway_scan.choose_port(ports, '/dev/ttyUSB0',
+                                                {'chip_id': '01-93-8B-2C'}, 'esp3-gateway')
+
+        self.assertEqual(path, '/dev/ttyUSB0')
+        self.assertIsNone(reason)
+
+
+class TestSwappedSticks(TestCase):
+    """Two sticks which are plugged in the other way round keep their gateways.
+
+    The configured port exists in this case - it just carries the wrong stick, which is why
+    the port alone cannot be trusted and the identity has to decide.
+    """
+
+    def setUp(self):
+        import tempfile
+
+        self.first = tempfile.NamedTemporaryFile()      # 'was ttyUSB0'
+        self.second = tempfile.NamedTemporaryFile()     # 'was ttyUSB1'
+        self.addCleanup(self.first.close)
+        self.addCleanup(self.second.close)
+
+        self.ports = [
+            {'device': self.first.name, 'free': True, 'serial_number': 'STICK-B',
+             'chip_id': '11-22-33-44', 'suggested_device_types': ['esp3-gateway'], 'name': 'B'},
+            {'device': self.second.name, 'free': True, 'serial_number': 'STICK-A',
+             'chip_id': 'AA-BB-CC-DD', 'suggested_device_types': ['esp3-gateway'], 'name': 'A'},
+        ]
+
+    def test_the_gateway_follows_its_own_chip_id(self):
+        path, reason = gateway_scan.choose_port(self.ports, self.first.name,
+                                                {'chip_id': 'AA-BB-CC-DD'}, 'esp3-gateway')
+
+        self.assertEqual(path, self.second.name)
+        self.assertIn('AA-BB-CC-DD', reason)
+        self.assertIn('does not have to be changed', reason)
+
+    def test_the_usb_serial_number_does_the_same(self):
+        path, reason = gateway_scan.choose_port(self.ports, self.first.name,
+                                                {'usb_serial': 'STICK-A'}, 'esp3-gateway')
+
+        self.assertEqual(path, self.second.name)
+        self.assertIn('STICK-A', reason)
+
+    def test_a_stick_which_is_nowhere_leaves_the_port_alone_but_says_so(self):
+        """Taking a random other port would be worse than staying - but this explains a
+        gateway which receives nothing."""
+        path, reason = gateway_scan.choose_port(self.ports, self.first.name,
+                                                {'chip_id': 'DE-AD-BE-EF'}, 'esp3-gateway')
+
+        self.assertEqual(path, self.first.name)
+        self.assertIn('another stick', reason)
+
+    def test_a_port_whose_stick_is_ours_is_never_touched(self):
+        path, reason = gateway_scan.choose_port(self.ports, self.first.name,
+                                                {'chip_id': '11-22-33-44'}, 'esp3-gateway')
+
+        self.assertEqual(path, self.first.name)
+        self.assertIsNone(reason)
+
+    def test_a_partner_which_already_runs_on_the_port_is_not_stolen(self):
+        """Order of setup: if the other gateway got there first, its port stays its own."""
+        self.ports[1]['free'] = False
+
+        path, reason = gateway_scan.choose_port(self.ports, self.first.name,
+                                                {'chip_id': 'AA-BB-CC-DD'}, 'esp3-gateway')
+
+        self.assertEqual(path, self.first.name)
+        self.assertIn('was not found', reason)
+
+    def test_without_a_known_identity_nothing_is_moved(self):
+        """The first start of an installation which never read an id: the port is the truth."""
+        path, reason = gateway_scan.choose_port(self.ports, self.first.name, None, 'esp3-gateway')
+
+        self.assertEqual(path, self.first.name)
+        self.assertIsNone(reason)
+
+
+class TestRememberedIdentity(TestCase):
+    """What is stored for a gateway, and what happens when the hardware is replaced."""
+
+    def test_the_first_version_of_the_store_held_a_plain_usb_serial(self):
+        self.assertEqual(gateway_scan._normalize_identity('AQ028YCS'), {'usb_serial': 'AQ028YCS'})
+
+    def test_an_id_which_the_port_did_not_report_is_kept(self):
+        """The chip id is only read when it is needed - forgetting it would defeat its purpose."""
+        identity = {'chip_id': 'AA-BB-CC-DD', 'usb_serial': 'STICK-A'}
+        port = {'device': '/dev/ttyUSB1', 'serial_number': 'STICK-A'}
+
+        merged = gateway_scan._merge_identity(identity, port, '/dev/ttyUSB1')
+
+        self.assertEqual(merged['chip_id'], 'AA-BB-CC-DD')
+        self.assertEqual(merged['device'], '/dev/ttyUSB1')
+
+    def test_a_replaced_stick_does_not_inherit_the_ids_of_the_old_one(self):
+        identity = {'chip_id': 'AA-BB-CC-DD', 'usb_serial': 'STICK-A'}
+        port = {'device': '/dev/ttyUSB1', 'serial_number': 'BRAND-NEW'}
+
+        merged = gateway_scan._merge_identity(identity, port, '/dev/ttyUSB1')
+
+        self.assertNotIn('chip_id', merged)
+        self.assertEqual(merged['usb_serial'], 'BRAND-NEW')
+
+    def test_a_new_adapter_in_front_of_the_same_chip_keeps_the_gateway(self):
+        """The chip id proves that it is the same EnOcean hardware, whatever the adapter says."""
+        identity = {'chip_id': 'AA-BB-CC-DD', 'usb_serial': 'STICK-A'}
+        port = {'device': '/dev/ttyUSB1', 'serial_number': 'OTHER', 'chip_id': 'AA-BB-CC-DD'}
+
+        merged = gateway_scan._merge_identity(identity, port, '/dev/ttyUSB1')
+
+        self.assertEqual(merged['chip_id'], 'AA-BB-CC-DD')
+        self.assertEqual(merged['usb_serial'], 'OTHER')
+
+    def test_the_ids_of_a_stick_are_keyed_by_its_usb_serial_and_interface(self):
+        sticks = {}
+        gateway_scan._remember_sticks(sticks, [
+            {'device': '/dev/ttyUSB0', 'serial_number': 'FT7YTP3Y', 'interface': 'if01',
+             'chip_id': '01-93-8B-2C', 'base_id': 'FF-9B-8C-00'},
+            {'device': '/dev/ttyUSB9', 'chip_id': 'NO-KEY-FOR-THIS'},     # no usb serial number
+        ])
+
+        self.assertEqual(sticks, {'FT7YTP3Y/if01': {'chip_id': '01-93-8B-2C',
+                                                    'base_id': 'FF-9B-8C-00',
+                                                    'device': '/dev/ttyUSB0'}})
+
+    def test_the_scan_shows_what_was_read_from_a_stick_before(self):
+        """The passive scan cannot ask - it may only show remembered ids, marked as such."""
+        port = {'device': '/dev/ttyUSB0', 'serial_number': 'FT7YTP3Y', 'interface': 'if01',
+                'chip_id': None, 'base_id': None, 'ids_remembered': False}
+
+        gateway_scan._apply_known_ids(port, None, {'FT7YTP3Y/if01': {'chip_id': '01-93-8B-2C'}}, {})
+
+        self.assertEqual(port['chip_id'], '01-93-8B-2C')
+        self.assertTrue(port['ids_remembered'])
+
+    def test_the_base_id_of_a_running_gateway_is_current_and_not_remembered(self):
+        port = {'device': '/dev/ttyUSB0', 'serial_number': 'FT7YTP3Y',
+                'chip_id': None, 'base_id': None, 'ids_remembered': False}
+
+        gateway_scan._apply_known_ids(port, {'id': 1, 'base_id': 'FF-9B-8C-00'}, {},
+                                      {'1': {'chip_id': '01-93-8B-2C'}})
+
+        self.assertEqual(port['base_id'], 'FF-9B-8C-00')
+        # the port of a running gateway is not opened again, so its chip id can only be stored
+        self.assertEqual(port['chip_id'], '01-93-8B-2C')
+        self.assertTrue(port['ids_remembered'])

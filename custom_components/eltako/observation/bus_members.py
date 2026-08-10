@@ -127,8 +127,23 @@ class BusMemberRegistry:
         # so a restored image can be validated against the next discovery reply - the reply
         # objects themselves are not serializable.
         self._signatures: dict[tuple[int, int], tuple] = {}
+        # gateways whose bus was read automatically once (plug_and_play.async_auto_scan_bus).
+        # Persisted, because that scan locks the bus for minutes - repeating it on every
+        # restart is exactly what must not happen, not even when it did not succeed.
+        self._auto_scanned: set[int] = set()
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY) if hass is not None else None
         self._unsubscribe = None
+
+    ### the one automatic bus scan per gateway
+
+    def was_auto_scanned(self, gateway_id: int) -> bool:
+        """True if the bus of this gateway was already read automatically once."""
+        return int(gateway_id) in self._auto_scanned
+
+    def mark_auto_scanned(self, gateway_id: int) -> None:
+        """Remember the attempt before it starts, so a restart never repeats it."""
+        self._auto_scanned.add(int(gateway_id))
+        self._schedule_save()
 
     def _entry(self, gateway_id: int, bus_address: int) -> dict:
         members = self._members.setdefault(gateway_id, {})
@@ -168,6 +183,12 @@ class BusMemberRegistry:
         except Exception as e:  # noqa: BLE001 - a broken store must not prevent the setup
             LOGGER.warning(f"[{LOG_PREFIX_BUS}] Cannot load persisted memory images: {e}")
             stored = None
+
+        for gateway_id in ((stored or {}).get('auto_scanned') or []):
+            try:
+                self._auto_scanned.add(int(gateway_id))
+            except (TypeError, ValueError):
+                continue
 
         devices = (stored or {}).get('devices')
         if isinstance(devices, dict):
@@ -259,7 +280,7 @@ class BusMemberRegistry:
                 'taught_in': entry.get('taught_in') or [],
                 'memory': {str(line): value.hex() for line, value in sorted(rows.items())},
             }
-        return {'devices': devices}
+        return {'devices': devices, 'auto_scanned': sorted(self._auto_scanned)}
 
     ### collecting
 
@@ -953,7 +974,34 @@ def start_bus_scan_thread(hass: HomeAssistant, gateway, positions: list[int]) ->
     import threading
     thread = threading.Thread(target=runner, name=f"eltako-bus-scan-gw{gateway.dev_id}", daemon=True)
     thread.start()
+    # a device which is created (by hand or by the detection) while this runs is stored but
+    # not loaded - reloading the gateway would close the port under the scan. This carries
+    # that reload out when the bus is free again.
+    _schedule_reload_flush(hass, gateway)
     return True
+
+
+def _schedule_reload_flush(hass: HomeAssistant, gateway, timeout: int = 900) -> None:
+    """Wait until the bus of this gateway is free and then do the postponed reloads."""
+    async def _wait_and_flush() -> None:
+        from ..core.integration import async_flush_pending_reloads
+        from ..tools.plug_and_play import get_state
+
+        for _ in range(timeout):
+            if not gateway.is_bus_busy:
+                break
+            await asyncio.sleep(1)
+        # a detection does this itself when it is completely done - it is very likely still
+        # adding the devices of the bus which was just read, and a reload in the middle of
+        # that would only rebuild the gateway twice
+        if get_state(hass).get('running'):
+            return
+        await async_flush_pending_reloads(hass)
+
+    try:
+        hass.async_create_task(_wait_and_flush())
+    except Exception as e:  # noqa: BLE001 - no event loop (cli, tests): nothing was postponed
+        LOGGER.debug(f"[{LOG_PREFIX_BUS}] Cannot watch for postponed reloads: {e}")
 
 
 async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str = None) -> list[dict]:
@@ -1061,6 +1109,9 @@ async def async_teach_in_senders(hass: HomeAssistant, gateway, only_address: str
         bus.set_callback(original_callback)
         # commands which arrived while this was running are sent now
         gateway.release_bus()
+        # and a gateway whose reload was postponed while the bus was taken gets it now
+        from ..core.integration import async_flush_pending_reloads
+        await async_flush_pending_reloads(hass)
 
     return results
 

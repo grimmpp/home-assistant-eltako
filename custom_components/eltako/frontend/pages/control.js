@@ -1,5 +1,5 @@
 /**
- * Control page: use the devices like on a Home Assistant dashboard.
+ * "HA Entities" page: use the devices like on a Home Assistant dashboard.
  *
  * Only available in the standalone runtime (eltako_standalone) - it provides the
  * backend commands eltako/entities/* which list and control the entities. In
@@ -27,9 +27,32 @@ const SENDER_DRIVEN = ["light", "switch", "cover", "climate"];
 // same action twice - once under a row which says nothing but "Press". It is left out here; the
 // toolbar brings it back, and the setting removes the entities altogether.
 const TEACH_IN_ENTITY = /_teach_in_button$/;
+// key of the teach-in buttons in the type bar - they are no platform of their own
+const TEACH_IN = "teach_in";
 
 const CONTROLLABLE = ["light", "switch", "cover", "climate", "select", "button"];
 const READ_ONLY = ["sensor", "binary_sensor"];
+
+/**
+ * The type bar of the toolbar: one button per kind of entity, in the order of the rows.
+ *
+ * Each button switches its kind on and off; `on` is what a fresh panel shows. Sensors and the
+ * teach-in buttons are off, because a bus with a dozen actuators brings hundreds of measured
+ * values and one button per actuator with it - what you came for are the devices you operate.
+ */
+const TYPES = [
+  { key: "light", label: "Lights", icon: "mdi:lightbulb-outline", glyph: "💡", on: true },
+  { key: "switch", label: "Switches", icon: "mdi:toggle-switch-outline", glyph: "⏻", on: true },
+  { key: "cover", label: "Covers", icon: "mdi:window-shutter", glyph: "▤", on: true },
+  { key: "climate", label: "Heating", icon: "mdi:thermostat", glyph: "🌡", on: true },
+  { key: "select", label: "Selections", icon: "mdi:form-dropdown", glyph: "▾", on: true },
+  { key: "button", label: "Buttons", icon: "mdi:gesture-tap-button", glyph: "⊙", on: true },
+  { key: "binary_sensor", label: "Contacts", icon: "mdi:electric-switch", glyph: "◫", on: false },
+  { key: "sensor", label: "Sensors", icon: "mdi:gauge", glyph: "◔", on: false },
+  { key: TEACH_IN, label: "Teach-in", icon: "mdi:school-outline", glyph: "🎓", on: false,
+    title: "One entity per actuator which sends the teach-in telegram. The same action sits in "
+         + "the row of the device itself, so they are off." },
+];
 
 // What a row is used for, in that order. A device you switch belongs above a button which
 // teaches a sender in: those buttons carry the *same name* as their device ("FSR14_4x ch1"),
@@ -126,8 +149,8 @@ function controlsFor(entity) {
 // TODO type check: add /** @type {import("../types.js").Page} */ once the dom casts are in
 export const page = {
   id: "control",
-  title: "Control",
-  subtitle: "Use your devices - switch, dim, move, adjust",
+  title: "HA Entities",
+  subtitle: "The Home Assistant entities of your devices - switch, dim, move, adjust",
   icon: "mdi:toggle-switch-outline",
   glyph: "⏻",
   standaloneOnly: true,
@@ -150,6 +173,45 @@ export const page = {
     .send-form input, .send-form select { width: 118px; }
     .send-form .unit { opacity: .6; }
     .send-form .send-note { font-size: 12px; }
+
+    /* The type bar of the toolbar: which kinds of entity are shown. A button says what it
+       switches (icon + name) and how many rows that is (the count), and whether it is on -
+       an inactive one keeps its place, so the bar never jumps while it is used. */
+    .type-bar {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      padding: 3px; border-radius: 999px; border: 1px solid var(--eltako-border);
+      background: color-mix(in srgb, var(--eltako-blue) 6%, var(--eltako-card));
+    }
+    .type-chip {
+      font: inherit; font-size: .78rem; display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border: 1px solid transparent; border-radius: 999px; cursor: pointer;
+      background: none; color: var(--eltako-muted); white-space: nowrap;
+    }
+    .type-chip:hover { color: var(--eltako-accent); background: var(--eltako-hover); }
+    .type-chip.on {
+      background: var(--eltako-accent); color: var(--text-primary-color, #fff); font-weight: 500;
+    }
+    .type-chip.on:hover { color: var(--text-primary-color, #fff); background: var(--eltako-accent); }
+    .type-chip ha-icon, .type-chip .glyph {
+      --mdc-icon-size: 16px; width: 16px; flex: 0 0 16px; text-align: center;
+    }
+    .type-chip .type-count {
+      font-size: .68rem; padding: 0 5px; border-radius: 999px; font-variant-numeric: tabular-nums;
+      background: var(--eltako-tint-strong); color: var(--eltako-muted);
+    }
+    .type-chip.on .type-count {
+      background: color-mix(in srgb, #000 18%, transparent); color: var(--text-primary-color, #fff);
+    }
+    /* a kind which no entity has says nothing - it is left out until one appears */
+    .type-chip.is-empty { display: none; }
+    .type-bar .type-sep { width: 1px; align-self: stretch; margin: 2px 3px;
+                          background: var(--eltako-border); }
+    .type-chip.plain:hover { border-color: var(--eltako-accent); }
+    /* on a phone the bar has to stay on one line: icons and counts only */
+    @media (max-width: 640px) {
+      .type-chip .type-label { display: none; }
+      .type-bar { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+    }
   `,
 
   async load(ctx) {
@@ -277,16 +339,59 @@ export const page = {
     }, { type: SUBSCRIBE }).catch(() => { this._unsubscribe = null; });
   },
 
+  /**
+   * Whether a kind of entity is shown.
+   *
+   * What the buttons switch is remembered per type in `controlTypes`; a type nobody touched
+   * yet falls back to its default. `controlShowSensors` / `controlShowTeachInButtons` are the
+   * two switches this bar replaced - they still decide the start value, so a link or a test
+   * which sets them keeps working.
+   */
+  _showsType(ctx, key) {
+    const chosen = (ctx.state.controlTypes || {})[key];
+    if (chosen !== undefined) return chosen;
+    if (key === TEACH_IN) return !!ctx.state.controlShowTeachInButtons;
+    if (READ_ONLY.includes(key)) return !!ctx.state.controlShowSensors;
+    return (TYPES.find((type) => type.key === key) || {}).on === true;
+  },
+
+  /** how many entities each button stands for - the teach-in buttons count as their own kind */
+  _typeCounts(ctx) {
+    const counts = {};
+    for (const type of TYPES) counts[type.key] = 0;
+    for (const entity of ctx.state.controlEntities || []) {
+      const key = TEACH_IN_ENTITY.test(entity.entity_id) ? TEACH_IN : entity.platform;
+      if (key in counts) counts[key] += 1;
+    }
+    return counts;
+  },
+
   renderToolbar(ctx) {
+    const counts = this._typeCounts(ctx);
+    const chips = TYPES.map((type) => {
+      const on = this._showsType(ctx, type.key);
+      return `
+        <button class="type-chip ${on ? "on" : ""} ${counts[type.key] ? "" : "is-empty"}"
+                data-type="${type.key}" aria-pressed="${on}"
+                title="${escapeHtml(type.title || `Show or hide: ${type.label.toLowerCase()}`)}">
+          ${icon(type.icon, type.glyph)}<span class="type-label">${escapeHtml(type.label)}</span>
+          <span class="type-count">${counts[type.key]}</span>
+        </button>`;
+    }).join("");
+
     return `
       <input id="control-filter" type="search" placeholder="Filter name or entity id&hellip;"
              value="${escapeHtml(ctx.state.controlFilter || "")}" />
-      <label><input type="checkbox" id="control-show-sensors"
-             ${ctx.state.controlShowSensors ? "checked" : ""}/> show sensors</label>
-      <label title="One entity per actuator which sends the teach-in telegram. The same action
-                    sits in the row of the device itself, so they are hidden."><input
-             type="checkbox" id="control-show-teach-in"
-             ${ctx.state.controlShowTeachInButtons ? "checked" : ""}/> show teach-in buttons</label>`;
+      <div class="type-bar" role="group" aria-label="Which kinds of entity are shown">
+        ${chips}
+        <span class="type-sep"></span>
+        <button class="type-chip plain" data-type-all="1"
+                title="Show every kind of entity">${
+          icon("mdi:checkbox-multiple-marked-outline", "✓")}<span class="type-label">All</span></button>
+        <button class="type-chip plain" data-type-reset="1"
+                title="Back to the devices you operate - sensors and teach-in buttons off">${
+          icon("mdi:restore", "↺")}<span class="type-label">Reset</span></button>
+      </div>`;
   },
 
   bindToolbar(ctx, root) {
@@ -294,13 +399,52 @@ export const page = {
       ctx.state.controlFilter = event.target.value;
       ctx.requestContentRender();
     });
-    root.getElementById("control-show-sensors").addEventListener("change", (event) => {
-      ctx.state.controlShowSensors = event.target.checked;
+
+    // The toolbar is built once per page (it must not lose the caret of the filter input),
+    // so the buttons update themselves - _syncTypeBar does that after every content render.
+    const apply = () => {
+      this._syncTypeBar(ctx, root);
       ctx.requestContentRender();
+    };
+    root.querySelectorAll(".type-bar [data-type]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const types = ctx.state.controlTypes || (ctx.state.controlTypes = {});
+        types[button.dataset.type] = !this._showsType(ctx, button.dataset.type);
+        apply();
+      });
     });
-    root.getElementById("control-show-teach-in").addEventListener("change", (event) => {
-      ctx.state.controlShowTeachInButtons = event.target.checked;
-      ctx.requestContentRender();
+    root.querySelectorAll(".type-bar [data-type-all]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ctx.state.controlTypes = Object.fromEntries(TYPES.map((type) => [type.key, true]));
+        apply();
+      });
+    });
+    root.querySelectorAll(".type-bar [data-type-reset]").forEach((button) => {
+      button.addEventListener("click", () => {
+        ctx.state.controlTypes = Object.fromEntries(TYPES.map((type) => [type.key, type.on]));
+        apply();
+      });
+    });
+  },
+
+  /**
+   * Counts and pressed states of the type bar, written into the buttons which already exist.
+   *
+   * The counts are only known once the entities are loaded - and that happens after the
+   * toolbar was rendered. A kind which no entity has is hidden, so the bar shows what this
+   * installation really has instead of every kind the integration knows.
+   */
+  _syncTypeBar(ctx, root) {
+    if (!root) return;
+    const counts = this._typeCounts(ctx);
+    root.querySelectorAll(".type-bar [data-type]").forEach((button) => {
+      const key = button.dataset.type;
+      const on = this._showsType(ctx, key);
+      button.classList.toggle("on", on);
+      button.classList.toggle("is-empty", !counts[key]);
+      button.setAttribute("aria-pressed", String(on));
+      const count = button.querySelector(".type-count");
+      if (count) count.textContent = String(counts[key]);
     });
   },
 
@@ -312,15 +456,19 @@ export const page = {
     }
 
     const filter = (ctx.state.controlFilter || "").toLowerCase();
-    const platforms = ctx.state.controlShowSensors
-      ? [...CONTROLLABLE, ...READ_ONLY] : CONTROLLABLE;
+    const known = [...CONTROLLABLE, ...READ_ONLY];
     const entities = all.filter((entity) =>
-      platforms.includes(entity.platform) &&
-      (ctx.state.controlShowTeachInButtons || !TEACH_IN_ENTITY.test(entity.entity_id)) &&
+      known.includes(entity.platform) &&
+      // a teach-in button belongs to its own switch, not to the one of the buttons
+      (TEACH_IN_ENTITY.test(entity.entity_id)
+        ? this._showsType(ctx, TEACH_IN) : this._showsType(ctx, entity.platform)) &&
       (!filter || entity.entity_id.toLowerCase().includes(filter) ||
         (entity.name || "").toLowerCase().includes(filter)));
 
-    if (!entities.length) return `<div class="empty">Nothing matches the filter.</div>`;
+    if (!entities.length) {
+      return `<div class="empty">Nothing to show - no entity matches the filter and the
+              kinds switched on above.</div>`;
+    }
 
     return groupByArea(entities).map(([area, items]) => `
       <div class="control-area">
@@ -357,6 +505,9 @@ export const page = {
   },
 
   afterRender(ctx, root) {
+    // the toolbar lives outside the content, but its counts follow what was just rendered
+    this._syncTypeBar(ctx, root);
+
     const call = async (entityId, action, data) => {
       const result = await ctx.api.call(CALL, { entity_id: entityId, action, data: data || {} });
       const errorCell = root.querySelector(`[data-error="${entityId.replace(/"/g, "")}"]`);

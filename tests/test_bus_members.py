@@ -325,7 +325,7 @@ class TestMemoryPersistence(IsolatedAsyncioTestCase):
         registry.note_polled(GatewayMock(dev_id=1), 9)
         registry.unload()
 
-        self.assertEqual(registry._store.saved, {'devices': {}})
+        self.assertEqual(registry._store.saved['devices'], {})
 
     ### loading
 
@@ -398,7 +398,34 @@ class TestMemoryPersistence(IsolatedAsyncioTestCase):
         registry.clear()
 
         self.assertEqual(registry.get_members(), [])
-        self.assertEqual(registry._store.saved, {'devices': {}})
+        self.assertEqual(registry._store.saved['devices'], {})
+
+    async def test_the_one_automatic_bus_scan_is_remembered_across_restarts(self):
+        """plug_and_play.async_auto_scan_bus reads the bus of a new gateway once.
+
+        That locks the bus for minutes, so the attempt must survive a restart - also when it
+        did not succeed, otherwise every start would lock the bus of a gateway which is silent.
+        """
+        registry = self._registry()
+        self.assertFalse(registry.was_auto_scanned(7))
+
+        registry.mark_auto_scanned(7)
+
+        self.assertTrue(registry.was_auto_scanned(7))
+        self.assertEqual(registry._store.saved['auto_scanned'], [7])
+
+        restarted = self._registry(registry._store.saved)
+        await restarted.async_load()
+
+        self.assertTrue(restarted.was_auto_scanned(7))
+        self.assertFalse(restarted.was_auto_scanned(8))
+
+    async def test_a_store_of_an_older_version_has_no_scan_marker(self):
+        """Upgrading must not look like 'the bus of every gateway was already read'."""
+        registry = self._registry(self._stored_fsr14())       # no 'auto_scanned' key
+        await registry.async_load()
+
+        self.assertFalse(registry.was_auto_scanned(1))
 
     async def test_without_hass_nothing_is_persisted(self):
         """The registry is usable standalone (e.g. in tests) without a store."""

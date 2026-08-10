@@ -10,6 +10,7 @@
 // is an error here instead of silently falling back to `any`.
 export const WS = /** @type {const} @satisfies {Record<string, import("../types.js").WsCommand>} */ ({
   INTEGRATION_INFO: "eltako/integration_info",
+  ACTIVITY: "eltako/activity",
   CONFIGURED_GATEWAYS: "eltako/configured_gateways",
   USB_PORTS: "eltako/potential_usb_ports",
   MANIFEST: "eltako/info",

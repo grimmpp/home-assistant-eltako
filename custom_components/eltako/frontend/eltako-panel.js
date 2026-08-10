@@ -9,7 +9,11 @@
  * custom_components/eltako/observation/enocean_logger.py.
  */
 
+import { ACTIVITY_STYLES, applyBusyLocks, blockingJob, describeJob, jobsOf,
+         renderActivity } from "./lib/activity.js";
 import { EltakoApi, WS } from "./lib/api.js";
+import { BUS_SCAN_STYLES } from "./lib/bus_scan.js";
+import { EntityHub } from "./lib/entity_hub.js";
 import { STYLES } from "./lib/styles.js";
 import { escapeHtml, icon } from "./lib/utils.js";
 
@@ -82,9 +86,12 @@ class EltakoPanel extends HTMLElement {
     this._pageId = this._pageIdFromLocation();
     this._unsubscribeTelegrams = null;
     this._refreshTimer = null;
+    this._activityTimer = null;
     this._renderScheduled = false;
     this._contentRenderScheduled = false;
     this._renderedToolbarFor = null;
+    /** live entity states: a page registers the ids it shows and patches its own dom */
+    this._entities = new EntityHub(() => (this._hass || {}).states || {});
 
     /** data shared between all pages */
     this.state = {
@@ -92,6 +99,8 @@ class EltakoPanel extends HTMLElement {
       logInfo: null,
       statistics: null,
       telegrams: [],
+      /** what the integration is busy with right now - see _renderActivity */
+      activity: { busy: false, jobs: [] },
       // view state of the pages
       paused: false,
       telegramFilter: "",
@@ -144,6 +153,11 @@ class EltakoPanel extends HTMLElement {
 
   /* ------------------------------------------------------------- lifecycle */
 
+  /**
+   * Home Assistant assigns a new `hass` on every state change (the standalone shell re-sets
+   * its own one after each pushed state event). That is the signal the entity hub runs on:
+   * the elements which show a state update themselves, without the page being rendered again.
+   */
   set hass(hass) {
     const isFirst = this._hass === null;
     this._hass = hass;
@@ -152,7 +166,10 @@ class EltakoPanel extends HTMLElement {
       this._api = new EltakoApi(hass);
       this._renderShell();
       this._start();
+      return;
     }
+    this._api.hass = hass;
+    this._entities.update();
   }
 
   get hass() {
@@ -176,7 +193,10 @@ class EltakoPanel extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener("hashchange", this._onHashChange);
+    this._leavePage();
     this._stopRefreshTimer();
+    clearTimeout(this._activityTimer);
+    this._activityTimer = null;
     if (this._unsubscribeTelegrams) {
       this._unsubscribeTelegrams.then((unsubscribe) => unsubscribe()).catch(() => {});
       this._unsubscribeTelegrams = null;
@@ -186,9 +206,12 @@ class EltakoPanel extends HTMLElement {
   async _start() {
     // integration info is needed by the navigation (pages can hide themselves
     // depending on the general settings, see page.visible)
-    await Promise.all([this.loadLogInfo(), this.loadIntegrationInfo()]);
+    // the activity is loaded before the first render: a bus scan which was started somewhere
+    // else has to be visible the moment the panel opens, not ten seconds later
+    await Promise.all([this.loadLogInfo(), this.loadIntegrationInfo(), this.loadActivity()]);
     this._subscribeTelegrams();
     await this._enterPage();
+    this._pollActivity();
   }
 
   /* ------------------------------------------------------------------- mode */
@@ -255,6 +278,7 @@ class EltakoPanel extends HTMLElement {
     // the mode along with the page instead of running into a page which is not shown
     const target = PAGES.find((page) => page.id === pageId);
     if (target && !pageModes(target).includes(this._mode)) this._applyMode(pageModes(target)[0]);
+    this._leavePage();
     this._pageId = pageId;
     if (this._pageIdFromLocation() !== pageId) {
       window.location.hash = `#/${pageId}`;   // keeps the page bookmarkable/reloadable
@@ -284,6 +308,16 @@ class EltakoPanel extends HTMLElement {
     }
   }
 
+  /**
+   * The page is left: it drops what outlives its dom - the listeners it registered at the
+   * entity hub and its own timers. Called before another page is opened and when the panel
+   * is removed; a page without live listeners does not need the hook.
+   */
+  _leavePage() {
+    const page = this._page;
+    if (page && page.leave) page.leave(this._context());
+  }
+
   _stopRefreshTimer() {
     if (this._refreshTimer) {
       clearInterval(this._refreshTimer);
@@ -309,6 +343,55 @@ class EltakoPanel extends HTMLElement {
     const statistics = await this._api.call(WS.LOG_STATISTICS);
     if (statistics) this.state.statistics = statistics;
     return this.state.statistics;
+  }
+
+  /* --------------------------------------------------------------- activity */
+
+  /**
+   * What the integration is busy with right now (core/websocket.get_activity).
+   *
+   * This is the one thing every page needs and no page owns: reading a bus takes minutes,
+   * locks that bus and makes every other bus operation fail. Whoever started it sees a
+   * progress card on their page - but a user who switches to another page, reloads or comes
+   * back later sees nothing and presses a button which then does nothing. So the panel polls
+   * it centrally and shows it above the content of *every* page.
+   */
+  async loadActivity() {
+    const activity = await this._api.call(WS.ACTIVITY);
+    if (activity) this.state.activity = activity;
+    return this.state.activity;
+  }
+
+  /** Fast while something runs (the counters move), slow while nothing does. */
+  _pollActivity() {
+    clearTimeout(this._activityTimer);
+    const delay = (this.state.activity || {}).busy ? 2000 : 10000;
+    this._activityTimer = setTimeout(async () => {
+      if (!this.isConnected) return;
+      const before = JSON.stringify(this.state.activity || {});
+      await this.loadActivity();
+      this._renderActivity();
+      this._applyBusyLocks();
+      // a job which appeared or disappeared changes what the page itself shows (a finished
+      // scan brings new devices), so the page is asked to reload once
+      if (before !== JSON.stringify(this.state.activity || {})) this._onActivityChanged(before);
+      this._pollActivity();
+    }, delay);
+  }
+
+  /**
+   * The set of running jobs changed. While something runs the page is left alone (it polls
+   * its own detail if it wants to); when the last job is done every page gets one reload, so
+   * the devices a scan found appear without the user having to press anything.
+   */
+  async _onActivityChanged(before) {
+    const wasBusy = (JSON.parse(before || "{}") || {}).busy;
+    if (!wasBusy || (this.state.activity || {}).busy) return;
+    const page = this._page;
+    if (this.state.editor || this.state.gatewayEditor || this.state.sendForm) return;
+    if (page.isEditing && page.isEditing(this._context())) return;
+    if (page.load) await page.load(this._context());
+    this._render();
   }
 
   async loadRecentTelegrams() {
@@ -352,9 +435,25 @@ class EltakoPanel extends HTMLElement {
       api: this._api,
       state: this.state,
       root: this.shadowRoot,
+      // live entity states - see lib/entity_hub.js and pages/home.js
+      entities: this._entities,
       mode: this._mode,
       setMode: (mode, pageId = null) => this._setMode(mode, pageId),
       loadIntegrationInfo: () => this.loadIntegrationInfo(),
+      // a page which just started something long calls this: the banner appears at once
+      // instead of at the next poll, and the buttons it blocks are locked right away
+      refreshActivity: async () => {
+        await this.loadActivity();
+        this._renderActivity();
+        this._applyBusyLocks();
+        this._pollActivity();
+      },
+      // "may I start this now?" - the same tokens as data-busy-block, see lib/activity.js
+      isBusy: (token = "any") => !!blockingJob(jobsOf(this.state.activity), token),
+      busyReason: (token = "any") => {
+        const job = blockingJob(jobsOf(this.state.activity), token);
+        return job ? describeJob(job).title : null;
+      },
       loadLogInfo: () => this.loadLogInfo(),
       loadStatistics: () => this.loadStatistics(),
       loadRecentTelegrams: () => this.loadRecentTelegrams(),
@@ -395,7 +494,7 @@ class EltakoPanel extends HTMLElement {
 
   _renderShell() {
     this.shadowRoot.innerHTML = `
-      <style>${STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
+      <style>${STYLES}${BUS_SCAN_STYLES}${ACTIVITY_STYLES}${PAGES.map((page) => page.styles || "").join("")}</style>
       <div class="shell">
         <div class="topbar">
           <header class="app-head">
@@ -422,6 +521,8 @@ class EltakoPanel extends HTMLElement {
             </div>
             <div class="head-status" id="page-status"></div>
           </header>
+          <!-- above the toolbar on purpose: the buttons it disables are right below it -->
+          <section class="activity" id="activity"></section>
           <section class="toolbar" id="toolbar"></section>
           <section id="content"><div class="empty">Loading&hellip;</div></section>
         </main>
@@ -476,6 +577,7 @@ class EltakoPanel extends HTMLElement {
     if (!this.shadowRoot.getElementById("content")) return;
     this._renderNav();
     this._renderHead();
+    this._renderActivity();
     this._renderToolbar();
     this._renderContent();
   }
@@ -525,6 +627,19 @@ class EltakoPanel extends HTMLElement {
     this.shadowRoot.getElementById("page-subtitle").textContent = page.subtitle || "";
     this.shadowRoot.getElementById("page-status").innerHTML =
       page.renderStatus ? page.renderStatus(this._context()) : "";
+  }
+
+  /* ------------------------------------------------------ what runs right now */
+
+  /** The banner above the content of every page - see lib/activity.js for what it says. */
+  _renderActivity() {
+    const section = this.shadowRoot.getElementById("activity");
+    if (section) section.innerHTML = renderActivity(this.state.activity);
+  }
+
+  /** Buttons which would collide with a running job are disabled and say why. */
+  _applyBusyLocks() {
+    applyBusyLocks(this.shadowRoot, jobsOf(this.state.activity));
   }
 
   _renderToolbar() {
@@ -603,10 +718,17 @@ class EltakoPanel extends HTMLElement {
       // scrolling with it: they are moved out of the scrolling <main> into the shell.
       // position:fixed is no option - ancestors of the panel in home assistant use css
       // transforms, which turn "fixed" into "absolute inside that ancestor".
+      // the same for the popup of the simple view (aside.modal-overlay) - it is fixed to the
+      // viewport and would be trapped inside the transformed ancestor as well
       const outlet = this.shadowRoot.getElementById("drawer-outlet");
-      if (outlet) outlet.replaceChildren(...content.querySelectorAll("aside.detail-drawer"));
+      if (outlet) {
+        outlet.replaceChildren(
+          ...content.querySelectorAll("aside.detail-drawer, aside.modal-overlay"));
+      }
       if (page.afterRender) page.afterRender(this._context(), this.shadowRoot);
       this._restoreScroll(content, captured);
+      // last, so a button which a page just rendered (toolbar included) is locked as well
+      this._applyBusyLocks();
     } catch (err) {
       content.innerHTML = `<div class="notice warn"><h3>Cannot display this page</h3>
         <pre>${escapeHtml(err && err.stack ? err.stack : err)}</pre></div>`;

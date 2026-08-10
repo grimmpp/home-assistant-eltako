@@ -38,8 +38,14 @@ DATA_SIMULATOR: Final = "simulator_registry"
 DATA_ADDITIONAL_SENDERS: Final = "additional_senders"
 DATA_PORT_FINGERPRINTS: Final = "port_fingerprints"
 DATA_PORT_FINGERPRINT_STORE: Final = "port_fingerprint_store"
+# ids a stick reported when it was last opened, keyed by its usb serial number:
+# {'<usb serial>/<interface>': {'chip_id', 'base_id', 'device'}}. See tools/gateway_identity.py.
+DATA_PORT_STICK_IDS: Final = "port_stick_ids"
 # state of the plug & play detection: {'running', 'last_run', 'last_report', 'unsubscribe'}
 DATA_PLUG_AND_PLAY: Final = "plug_and_play"
+# entry ids whose reload was postponed because the bus of that gateway was being read - a
+# reload closes the serial port under the running scan. See core/integration.async_reload_entry.
+DATA_PENDING_RELOADS: Final = "pending_entry_reloads"
 ELTAKO_GATEWAY: Final = "gateway"
 ELTAKO_CONFIG: Final = "config"
 MANUFACTURER: Final = "ELTAKO"
@@ -244,6 +250,8 @@ CONF_UI_DEVICES: Final = "ui_devices"
 
 ### Websocket commands
 WS_INTEGRATION_INFO: Final = "eltako/integration_info"
+# what the integration is busy with right now - polled by every page of the web ui
+WS_ACTIVITY: Final = "eltako/activity"
 WS_DEVICE_FORM: Final = "eltako/devices/form"
 WS_DEVICE_LIST: Final = "eltako/devices/list"
 WS_DEVICE_ADD: Final = "eltako/devices/add"

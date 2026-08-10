@@ -70,8 +70,18 @@ const withButtons = page.render(ctx);
 const rowsWithButtons = [...withButtons.matchAll(/data-entity="([^"]+)"/g)].map((m) => m[1]);
 ctx.state.controlShowTeachInButtons = false;
 
+// the type bar of the toolbar: one button per kind of entity, and what it filters
+const toolbar = page.renderToolbar(ctx);
+const counts = page._typeCounts(ctx);
+ctx.state.controlTypes = { light: false };
+const rowsWithoutLights = [...page.render(ctx).matchAll(/data-entity="([^"]+)"/g)].map((m) => m[1]);
+ctx.state.controlTypes = { teach_in: true };
+const rowsWithTeachInType = [...page.render(ctx).matchAll(/data-entity="([^"]+)"/g)].map((m) => m[1]);
+delete ctx.state.controlTypes;
+
 console.log(JSON.stringify({
   rows, rowsWithButtons, telegrams, dimmingForm,
+  toolbar, counts, rowsWithoutLights, rowsWithTeachInType,
   teachIn: [...html.matchAll(/data-teach-in="([^"]+)"/g)].map((match) => match[1]),
   teachInHtml: (() => {
     const at = html.indexOf('data-teach-in="light.eltako_gw_0_00_00_00_01"');
@@ -282,6 +292,71 @@ class TestControlPageOrder(unittest.TestCase):
 
         # this run has "show sensors" ticked, so they are there - the filter is what hides them
         self.assertIn('sensor.eltako_ff_aa_dd_81', rows)
+
+
+@unittest.skipUnless(NODE, 'node is not installed - the page cannot be rendered here')
+class TestTypeBar(unittest.TestCase):
+    """The toolbar: one button per kind of entity instead of two checkboxes."""
+
+    @classmethod
+    def setUpClass(cls):
+        # the same render run as above - node is started once, no matter in which order
+        # (or alone) these classes are executed
+        if getattr(TestControlPageOrder, 'result', None) is None:
+            TestControlPageOrder.setUpClass()
+        cls.result = TestControlPageOrder.result
+
+    def test_every_kind_has_a_button(self):
+        toolbar = self.result['toolbar']
+
+        for key in ('light', 'switch', 'cover', 'climate', 'select', 'button',
+                    'binary_sensor', 'sensor', 'teach_in'):
+            self.assertIn(f'data-type="{key}"', toolbar, msg=f"no button for {key}")
+        self.assertIn('data-type-all', toolbar)
+        self.assertIn('data-type-reset', toolbar)
+
+    def test_a_button_says_how_many_rows_it_stands_for(self):
+        counts = self.result['counts']
+
+        self.assertEqual(2, counts['light'])          # FSR14 channel and FUD14
+        self.assertEqual(1, counts['climate'])
+        self.assertEqual(2, counts['sensor'])
+        # the teach-in buttons are counted as their own kind, not as buttons
+        self.assertEqual(2, counts['teach_in'])
+        self.assertEqual(0, counts['button'])
+
+    def _button(self, key: str) -> str:
+        """The whole <button> of one kind - its classes stand in front of its data-type."""
+        toolbar = self.result['toolbar']
+        at = toolbar.index(f'data-type="{key}"')
+        return toolbar[toolbar.rindex('<button', 0, at):toolbar.index('</button>', at)]
+
+    def test_a_kind_which_no_entity_has_is_left_out(self):
+        """Otherwise the bar shows every kind the integration knows, not this installation."""
+        self.assertIn('is-empty', self._button('cover'),
+                      msg="the empty 'covers' button must be hidden")
+        self.assertNotIn('is-empty', self._button('light'))
+
+    def test_a_kind_which_is_shown_is_marked_as_pressed(self):
+        light = self._button('light')
+        sensor = self._button('sensor')
+
+        self.assertIn('aria-pressed="true"', light)
+        # this run has "show sensors" ticked - the old switch decides the start value
+        self.assertIn('aria-pressed="true"', sensor)
+
+    def test_switching_a_kind_off_removes_its_rows(self):
+        rows = self.result['rowsWithoutLights']
+
+        self.assertNotIn('light.eltako_gw_0_00_00_00_01', rows)
+        self.assertNotIn('light.eltako_gw_0_00_00_00_05', rows)
+        self.assertIn('climate.eltako_gw_0_00_00_00_08', rows)
+
+    def test_the_teach_in_button_has_its_own_switch(self):
+        rows = self.result['rowsWithTeachInType']
+
+        self.assertIn('button.eltako_gw_0_00_00_00_01_teach_in_button', rows)
+        self.assertIn('light.eltako_gw_0_00_00_00_01', rows)
 
 
 # load() with the *real* initial state of the panel. It is what decides whether the buttons are

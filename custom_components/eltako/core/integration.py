@@ -18,7 +18,7 @@ from ..const import (BAUD_RATE_DEVICE_TYPE_MAPPING, CONF_BASE_ID, CONF_CORE_ENTR
                      CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
                      CONF_GATEWAY_PORT, CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS, CONF_SERIAL_PATH,
                      CORE_TITLE, DATA_ADDITIONAL_SENDERS, DATA_ELTAKO, DATA_ENTITIES, DATA_INITIAL_DETECTION,
-                     DATA_YAML_CONFIGURED, ELTAKO_CONFIG, INTEGRATION_DIR, OLD_CORE_TITLES,
+                     DATA_PENDING_RELOADS, DATA_YAML_CONFIGURED, ELTAKO_CONFIG, INTEGRATION_DIR, OLD_CORE_TITLES,
                      OLD_GATEWAY_DEFAULT_NAME, PANEL_ICON, PANEL_JS_FILE, PANEL_STATIC_URL, PANEL_TITLE,
                      PANEL_URL_PATH, PANEL_WEBCOMPONENT, PLATFORMS)
 
@@ -540,6 +540,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             await gateway_config.async_update_gateway_base_id(hass, gateway.dev_id, b2s(base_id[0]))
         except Exception as e:  # noqa: BLE001 - persisting is a convenience, never break reception
             LOGGER.warning(f"[{LOG_PREFIX_INIT}] Cannot store the reported base id: {e}")
+        try:
+            # the base id also identifies the hardware behind the port, so it is what lets the
+            # gateway find its stick again after the usb ports came up in another order
+            await gateway_scan.async_remember_base_id(hass, gateway.dev_id, b2s(base_id[0]),
+                                                      gateway.serial_path)
+        except Exception as e:  # noqa: BLE001
+            LOGGER.warning(f"[{LOG_PREFIX_INIT}] Cannot remember the identity of the stick: {e}")
     gateway.add_base_id_change_handler(_persist_reported_base_id)
 
     await gateway.async_setup()
@@ -552,13 +559,72 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # change makes them appear (or disappear) without restarting Home Assistant.
     config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
 
+    # A bus gateway (FAM14, FGW14-USB) keeps what is on its bus to itself until the device
+    # memories were read. If that never happened for this gateway, it happens now - once, in
+    # the background, so the setup is not blocked by a scan which takes minutes. Everything
+    # which makes this safe to do unasked (already read, not connected, detection running,
+    # remembered across restarts) is decided in async_auto_scan_bus.
+    hass.async_create_task(plug_and_play.async_auto_scan_bus(hass, gateway))
+
     return True
 
 
 async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    """Reload the gateway when its options (e.g. devices created in the web ui) changed."""
+    """Reload the gateway when its options (e.g. devices created in the web ui) changed.
+
+    Not while its bus is being read. A reload unloads the gateway and closes its serial port,
+    and the running scan would talk into a port which is not there anymore. That matters since
+    the detection adds every device it identifies **right away** instead of at the end of the
+    scan (see plug_and_play.async_run): the configuration is written while the bus is still
+    being read, so the web ui lists the devices as they are found - the entities follow with
+    one single reload as soon as the bus is free (async_flush_pending_reloads).
+    """
+    gateway = get_gateway_from_hass(hass, config_entry)
+    if gateway is not None and getattr(gateway, 'is_bus_busy', False):
+        hass.data.setdefault(DATA_ELTAKO, {}).setdefault(DATA_PENDING_RELOADS, set()) \
+            .add(config_entry.entry_id)
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] Options of {config_entry.title} changed while its bus "
+                    f"is busy with '{gateway.bus_busy_reason}' - the reload waits until that is "
+                    f"done. The new devices are stored already.")
+        return
+
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] Options of {config_entry.title} changed. Reload gateway.")
     await hass.config_entries.async_reload(config_entry.entry_id)
+
+
+async def async_flush_pending_reloads(hass: HomeAssistant) -> list[str]:
+    """Carry out the reloads which were postponed while a bus was being read.
+
+    Called when a bus operation is over (see observation/bus_members and tools/plug_and_play).
+    A gateway whose bus is busy again in the meantime keeps its entry in the list, so no reload
+    is lost and none happens at the wrong moment. Returns the entry ids which were reloaded.
+
+    Never raises: this runs at the end of a bus operation, and a gateway which cannot be
+    reloaded (removed, broken configuration) must not turn a finished scan into a failed one.
+    """
+    pending = (hass.data.get(DATA_ELTAKO) or {}).get(DATA_PENDING_RELOADS)
+    if not pending:
+        return []
+
+    reloaded = []
+    for entry_id in list(pending):
+        config_entry = hass.config_entries.async_get_entry(entry_id)
+        if config_entry is None:                      # gateway removed meanwhile
+            pending.discard(entry_id)
+            continue
+        gateway = get_gateway_from_hass(hass, config_entry)
+        if gateway is not None and getattr(gateway, 'is_bus_busy', False):
+            continue                                  # still busy - try again next time
+        pending.discard(entry_id)
+        LOGGER.info(f"[{LOG_PREFIX_INIT}] The bus of {config_entry.title} is free again - "
+                    f"reloading it now so its new devices become entities.")
+        try:
+            await hass.config_entries.async_reload(entry_id)
+            reloaded.append(entry_id)
+        except Exception as e:  # noqa: BLE001
+            LOGGER.error(f"[{LOG_PREFIX_INIT}] Cannot reload {config_entry.title} after the bus "
+                         f"operation: {e}", exc_info=True)
+    return reloaded
 
 
 async def async_remove_config_entry_device(hass: HomeAssistant, config_entry: ConfigEntry,

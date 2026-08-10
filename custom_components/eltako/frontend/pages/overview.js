@@ -1,6 +1,7 @@
 /** Overview page: gateways, entity summary and status of the telegram recording. */
 
 import { WS } from "../lib/api.js";
+import { BUS_SCAN_STYLES, renderBusScans } from "../lib/bus_scan.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { card, chip, definitionRows, escapeHtml, formatDuration, formatNumber, icon } from "../lib/utils.js";
 
@@ -162,7 +163,7 @@ export const page = {
   subtitle: "Gateways, devices and status of this integration",
   icon: "mdi:view-dashboard",
   glyph: "⌂",
-  styles: FORM_STYLES + PNP_STYLES,
+  styles: FORM_STYLES + PNP_STYLES + BUS_SCAN_STYLES,
   refreshMs: 5000,
 
   async load(ctx) {
@@ -338,12 +339,13 @@ export const page = {
 
         ${this._renderPnpFlow(ctx, pnp, report)}
 
-        ${running ? this._renderRunningBar(pnp) : ""}
+        ${running ? this._renderRunningBar(ctx, pnp) : ""}
 
         <div class="pnp-actions">
-          <button id="pnp-run" class="action ${report.started_at ? "" : "primary"}" ${running ? "disabled" : ""}>
+          <button id="pnp-run" class="action ${report.started_at ? "" : "primary"}"
+                  data-busy-block="detection" ${running ? "disabled" : ""}>
             ${running ? "Detecting&hellip;" : report.started_at ? "Detect again" : "Detect now"}</button>
-          <button id="pnp-rescan" class="action" ${running ? "disabled" : ""}
+          <button id="pnp-rescan" class="action" data-busy-block="bus" ${running ? "disabled" : ""}
                   title="Reads the bus of every bus gateway again - the bus is locked while it runs">
             Detect + re-read all buses</button>
           <span class="spacer" style="flex:1 1 auto"></span>
@@ -368,23 +370,28 @@ export const page = {
 
   /** The three stages as tiles, connected by arrows which animate while a run is active. */
   /**
-   * The bar under the stage flow while a run is active. Indeterminate by default; as soon
-   * as a bus scan reports its counters (pnp.bus_scans, filled once a second by the backend)
-   * it becomes a real progress bar - with several buses in parallel it shows their average.
+   * What is going on while a run is active.
+   *
+   * The buses are read **in parallel** (plug_and_play stage 3), and each one takes minutes.
+   * One bar over all of them would show their average - which says nothing about the bus
+   * that is stuck. So every scan gets its own row with its own counters (lib/bus_scan.js);
+   * the indeterminate bar is only there as long as no scan reports numbers yet.
    */
-  _renderRunningBar(pnp) {
+  _renderRunningBar(ctx, pnp) {
     const scans = pnp.bus_scans || [];
-    const percent = scans.length
-      ? Math.round(scans.reduce((sum, scan) => sum + (scan.percent || 0), 0) / scans.length)
-      : null;
+    const gateways = (ctx.state.integrationInfo || {}).gateways || [];
+    const nameOf = (gatewayId) => (gateways.find((gateway) =>
+      String(gateway.id) === String(gatewayId)) || {}).name || `Gateway ${gatewayId}`;
+
     return `
-      <div class="pnp-progress${percent !== null ? " determinate" : ""}">
-        <i${percent !== null ? ` style="width:${Math.max(percent, 2)}%"` : ""}></i></div>
+      ${scans.length ? "" : `<div class="pnp-progress"><i></i></div>`}
       <div class="pnp-step-text">${escapeHtml(pnp.step || "Detection is running")}&hellip;
-        ${percent !== null ? `<b>${percent}%</b>` : ""}
         <span class="pnp-hint">${pnp.stage === "bus"
-          ? "the bus is locked meanwhile" : "this page updates itself"}</span>
-      </div>`;
+          ? `${scans.length > 1 ? `${scans.length} buses are read at the same time - each one is`
+                                : "the bus is"} locked meanwhile`
+          : "this page updates itself"}</span>
+      </div>
+      ${renderBusScans(scans, nameOf)}`;
   },
 
   _renderPnpFlow(ctx, pnp, report) {
@@ -693,6 +700,11 @@ export const page = {
         <td class="mono">${escapeHtml(port.device)}
           ${port.interface ? `<span class="hint">interface ${escapeHtml(port.interface)}</span>` : ""}</td>
         <td>${escapeHtml(port.name || "-")}</td>
+        <td>${port.chip_id || port.base_id
+            ? `${port.chip_id ? `<span class="mono">${escapeHtml(port.chip_id)}</span>` : ""}
+               ${port.base_id ? `<span class="hint">base id ${escapeHtml(port.base_id)}</span>` : ""}
+               ${port.ids_remembered ? `<span class="hint">last known</span>` : ""}`
+            : `<span class="hint">not read</span>`}</td>
         <td>${port.used_by
             ? `<span class="tag source-ui">gateway ${escapeHtml(port.used_by.id)}</span>
                <span class="hint">${escapeHtml(port.used_by.name || "")}${port.used_by.connected === false ? " (not connected)" : ""}</span>`
@@ -700,7 +712,7 @@ export const page = {
         <td class="mono">${(port.suggested_device_types || []).map((type) => escapeHtml(type)).join(", ") || "-"}</td>
         <td>${port.by_id ? `<span class="mono" style="white-space:normal">${escapeHtml(port.by_id)}</span>` : "-"}</td>
       </tr>
-      ${port.hint ? `<tr><td colspan="5" class="hint" style="padding-top:0">${escapeHtml(port.hint)}</td></tr>` : ""}`).join("");
+      ${port.hint ? `<tr><td colspan="6" class="hint" style="padding-top:0">${escapeHtml(port.hint)}</td></tr>` : ""}`).join("");
 
     return `
       <div class="toolbar">${button}
@@ -716,13 +728,17 @@ export const page = {
         </div>` : ""}
       ${(scan.ports || []).length ? `
         <div class="table-wrapper"><table>
-          <thead><tr><th>Device</th><th>USB descriptor</th><th>Used by</th>
+          <thead><tr><th>Device</th><th>USB descriptor</th><th>Chip ID</th><th>Used by</th>
             <th>Suggested device_type</th><th>Stable path (by-id)</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
-        <div class="footnote">Use the stable <code>by-id</code> path in your configuration if the
-          <code>/dev/ttyUSB*</code> numbering changes between reboots. A stick with two interfaces
-          (if00/if01) usually carries the telegrams on only one of them.</div>`
+        <div class="footnote">The chip id and the base id come from the EnOcean hardware itself and
+          are the only ids which really identify a stick. Reading them means opening the port, so
+          the passive scan shows what was read the last time (&ldquo;last known&rdquo;) - run
+          <b>detect gateways</b> to read them from every free port. A gateway follows its stick by
+          that id: if two sticks trade their <code>/dev/ttyUSB*</code> numbers, nothing has to be
+          reconfigured. A stick with two interfaces (if00/if01) usually carries the telegrams on
+          only one of them.</div>`
         : `<div class="empty">No serial port found.</div>`}`;
   },
 
@@ -862,6 +878,8 @@ export const page = {
       }
       // the page refreshes every few seconds and picks up the progress and the report
       ctx.requestContentRender(true);
+      // and the banner of the panel says on every page that this is running now
+      await ctx.refreshActivity?.();
     };
 
     const toggle = root.getElementById("pnp-toggle");

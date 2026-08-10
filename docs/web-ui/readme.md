@@ -82,10 +82,10 @@ e.g. `/eltako#/telegrams`. The *View* column says in which of the two views a pa
 
 | Page | Url | View | Content |
 |---|---|---|---|
-| **My devices** | `/eltako#/home` | simple | All devices as cards, grouped by room: state, on/off and up/down for what can be operated, rename, move to another room, remove. Plus the automatic detection ("Search devices"), **"Remove all & search again"** (deletes every device created here and detects from scratch - for a configuration which drifted; asks first, names the number, keeps the gateways and everything from `configuration.yaml`), a reduced add form and the devices which were discovered but are not set up yet. |
+| **My devices** | `/eltako#/home` | simple | All devices as cards, grouped by room: state, on/off and up/down for what can be operated, rename, move to another room, remove. **The state is the switch**: the chip of a light, a socket or a cover toggles it when it is clicked - it is the element which says "on", so it is the element people press; the explicit buttons stay for the direction of a cover. **"details"** opens a popup with everything about that device (address, profile, gateway, sender and whether it is taught in, entities with their state, when it last reported, where it comes from) and, inside Home Assistant, the button *Open in Home Assistant* which goes to its device page. The **gateways** are cards of their own at the top - connected or not, how many devices are on them, with the same details popup (port, base id, protocol) - including a gateway which is configured but was never set up, which is otherwise invisible in this view. Plus the automatic detection ("Search devices"), **"Remove all & search again"** (deletes every device created here and detects from scratch - for a configuration which drifted; asks once for both halves and names the number, keeps the gateways and everything from `configuration.yaml`, and waits for the gateways to be back before it searches - removing the devices reloads them), a reduced add form and the devices which were discovered but are not set up yet. |
 | **Overview** | `/eltako#/overview` | expert | One tile per gateway (type, protocol, base id, connection, serial path, recorded telegrams) with "edit gateway" and "remove gateway" for gateways created here, counters for devices, entities and telegram rate, the [plug & play](../plug-and-play/readme.md) push button with the report of the last detection run, the serial port scan, entities per platform and the configured areas. |
-| **Control** | `/eltako#/control` | both | Use the configured devices: switch, dim, move covers, adjust temperatures. Grouped by room, and inside a room ordered by what a row is for - lights, sockets, covers, heating, then the buttons (teach-in, reconnect). A teach-in button carries the same name as its device, so every row says which kind it is. Sensors are hidden until "show sensors" is ticked. Every device additionally has **"telegram&hellip;"**: the values of its profile as input fields - dropdowns with names ("on", "up", "closed"), numbers with their unit and range - and a send button. For an actuator that is the profile of its **sender** (what it listens to), for a sensor its own. An actuator whose sender is not in its memory carries a **"teach in"** button; the teach-in button *entities* are left out here, their action sits in the row of the device itself. |
-| **Devices** | `/eltako#/devices` | expert | All configured devices of all gateways with their source (yaml / web ui), the hierarchical view of every RS485 bus incl. the passively detected bus members and the active bus scan, add/edit/remove, the import of `.eodm` projects, PCT14 exports and yaml - and the **unknown devices**: addresses which sent telegrams but are not configured yet, incl. their EEP (from a 4BS teach-in telegram if available, otherwise guessed). One click opens the device form prefilled. |
+| **HA Entities** | `/eltako#/control` | both | Use the configured devices: switch, dim, move covers, adjust temperatures. Grouped by room, and inside a room ordered by what a row is for - lights, sockets, covers, heating, then the buttons (teach-in, reconnect). A teach-in button carries the same name as its device, so every row says which kind it is. The toolbar carries a **type bar**: one button per kind of entity (lights, switches, covers, heating, selections, buttons, contacts, sensors, teach-in buttons) with its own icon and the number of rows behind it - a click switches that kind on or off, **All** shows everything, **Reset** goes back to the devices you operate (sensors and teach-in buttons off). Kinds which no entity has are left out. Every device additionally has **"telegram&hellip;"**: the values of its profile as input fields - dropdowns with names ("on", "up", "closed"), numbers with their unit and range - and a send button. For an actuator that is the profile of its **sender** (what it listens to), for a sensor its own. An actuator whose sender is not in its memory carries a **"teach in"** button; the teach-in button *entities* are left out here, their action sits in the row of the device itself. |
+| **Devices** | `/eltako#/devices` | expert | All configured devices of all gateways with their source (yaml / web ui), **"details"** per row (the same popup as in the simple view: address, profile, gateway, sender and whether it is taught in, entities with their state, last report, origin - and *Open in Home Assistant*), the hierarchical view of every RS485 bus incl. the passively detected bus members and the active bus scan, add/edit/remove, the import of `.eodm` projects, PCT14 exports and yaml - and the **unknown devices**: addresses which sent telegrams but are not configured yet, incl. their EEP (from a 4BS teach-in telegram if available, otherwise guessed). One click opens the device form prefilled. |
 | **Live telegrams** | `/eltako#/telegrams` | expert | Live stream of all telegrams: time, direction, gateway, address, device name, entity ids, EEP, message type, raw data and decoded values. A telegram which comes from a [simulated](../simulation/readme.md) gateway is marked as such. Filterable by text, direction and "only unknown", can be paused, exported as CSV, and a click on a row shows the complete record. Telegrams can be sent from here as well. |
 | **Statistics** | `/eltako#/statistics` | expert | One row per EnOcean address: number of telegrams (incoming/outgoing), average/min/max interval, first/last seen, message types, platform, area, entity ids, current state and the last decoded values. Sortable and exportable. |
 | **Tests** | `/eltako#/tests` | expert | [Functional device tests](../device-tests/readme.md) against the real hardware: configuration check, teach-in test, burst test, cover travel times. |
@@ -93,6 +93,36 @@ e.g. `/eltako#/telegrams`. The *View* column says in which of the two views a pa
 | **Settings** | `/eltako#/settings` | expert | The general settings of the integration, editable. Values changed here are stored as overrides which win over `configuration.yaml`. |
 | **Help** | `/eltako#/help` | both | Documentation and tutorials, plus every supported device, EEP, gateway and platform. The lists are compiled by the backend from the device catalog, the platform schemas and the EEP registry of `eltakobus`, so they always match the version you run. |
 | **About** | `/eltako#/about` | both | Information about the integration: version, Home Assistant version, gateways, devices/entities, the feature list and the dependencies. |
+
+## What runs right now
+
+Some operations of this integration take minutes and block the RS485 bus while they run: an
+active bus scan, a teach-in, the base id request of a FAM14 and a plug &amp; play detection.
+While one of them has the bus, the devices on it do not react and every other bus operation is
+refused &ndash; a fact the user has to *see*, otherwise a button which does nothing looks like a
+defect.
+
+The panel therefore polls `eltako/activity` (`core/websocket.get_activity`, cheap: no io, only
+the state which is kept anyway) and shows a banner **above the content of every page** &ndash;
+independent of who started the job, on which page, in which browser tab, and whether the page
+was reloaded since:
+
+* what is running, in plain words ("Reading the bus of FAM14"), one line per job
+* how far it is: one progress bar per bus with its position and memory counters
+* since when it has been running
+* and what it means: it takes a few minutes, the devices on that bus do not react, other
+  buttons are refused &ndash; and nothing has to be pressed, the page updates itself and shows
+  the result when it is done.
+
+Buttons which would collide are disabled instead of failing: a page marks such a button with
+`data-busy-block` (`any`, `bus`, `detection` or `gateway:<id>` &ndash; the tokens a job reports
+in `blocks`), the shell disables it while a matching job runs and puts the reason into its
+tooltip. When the job is done the buttons come back with their own tooltip, and the page is
+reloaded once so the result is on screen without anybody pressing anything.
+
+The wording lives in `frontend/lib/activity.js`, the banner in the shell (`eltako-panel.js`);
+`ctx.isBusy(token)` / `ctx.busyReason(token)` answer the same question inside a page, and
+`ctx.refreshActivity()` makes the banner appear the moment a page starts something long.
 
 ## Structure of the frontend
 
@@ -104,6 +134,8 @@ custom_components/eltako/
     frontend/                     # frontend only, no python
         eltako-panel.js           # entry point: shell, navigation, routing, live subscription
         lib/api.js                # websocket commands
+        lib/entity_hub.js         # live entity states: an element registers, a signal reaches it
+        lib/bus_scan.js           # progress of the running bus scans - one row per bus
         lib/form.js               # forms rendered from the schemas of the backend
         lib/styles.js             # styles (uses the Home Assistant theme variables)
         lib/utils.js              # formatting helpers
@@ -138,15 +170,40 @@ Every page module exports one object with this contract:
 | `renderStatus(ctx)` | optional status pills next to the page title |
 | `afterRender(ctx, root)` | event handlers of the content (optional) |
 | `onTelegram(ctx, telegram)` | called for every telegram of the live stream (optional) |
+| `leave(ctx)` | the page is closed: give listeners and timers back (optional) |
 | `badge(ctx)` | optional badge in the navigation |
 | `modes` | views the page appears in, e.g. `["user", "expert"]` (optional, default: expert only) |
-| `refreshMs` | reload interval of the page (optional) |
+| `refreshMs` | reload interval of the page (optional - see *live updates* below) |
 | `needsRecording` | if true, the page shows a hint when telegram recording is off |
 
 `ctx` gives access to `hass`, the websocket api, the shared `state` (loaded data and view state), the
-current view (`ctx.mode`, `ctx.setMode(mode, pageId)`) and to the render/navigation functions of the
-shell. The shell owns the telegram subscription, so the live data keeps running while another page is
-open.
+current view (`ctx.mode`, `ctx.setMode(mode, pageId)`), the entity hub (`ctx.entities`) and to the
+render/navigation functions of the shell. The shell owns the telegram subscription, so the live data
+keeps running while another page is open.
+
+### Live updates
+
+`refreshMs` renders the whole content of a page again, which is right for a page whose data only
+exists in the backend (statistics, a running bus scan) and wrong for anything a user operates: the
+answer to a click arrives with the next tick, and a form which is open while the timer fires loses
+what was typed. The simple view therefore has no interval at all - it updates per element:
+
+* the panel hands every `hass` it receives to the **entity hub** ([`lib/entity_hub.js`](../../custom_components/eltako/frontend/lib/entity_hub.js)).
+  Home Assistant sets a new one on every state change; the standalone shell re-sets its own after
+  each pushed state event,
+* a page registers the entity ids it displays (`ctx.entities.subscribe(ids, callback)`) and patches
+  exactly the element which shows them - see `_watchEntities`/`_applyEntityState` in
+  [`pages/home.js`](../../custom_components/eltako/frontend/pages/home.js),
+* the listeners belong to the rendered dom: they are dropped before the next render and in
+  `leave(ctx)`, which the shell calls when another page is opened,
+* the telegram stream keeps the rest current: a card flashes and says "last reported just now"
+  without anything being loaded again.
+
+The same idea carries the bus scans ([`lib/bus_scan.js`](../../custom_components/eltako/frontend/lib/bus_scan.js)).
+Several buses are read **in parallel** - plug & play scans every bus at once, and the device page has
+a scan button per gateway - and each scan takes minutes, so they are listed one below the other with
+their own position/memory counters instead of one bar over their average. While a scan runs the
+device page polls its counters and patches those rows only; the tables around them keep their dom.
 
 To add a page: create a module in `pages/`, export a `page` object and add it to the `PAGES` array in
 `eltako-panel.js`. Without `modes` it belongs to the expert view; `modes: ["user", "expert"]` puts it

@@ -124,7 +124,7 @@ All commands accept `--config <folder>` and `--debug`.
 ## Web ui
 
 The **same** web ui as inside Home Assistant (overview, live telegrams, devices incl. the
-unconfigured addresses, statistics, settings) plus a standalone-only page **Control**: every
+unconfigured addresses, statistics, settings) plus a standalone-only page **HA Entities**: every
 entity grouped by area with buttons, sliders and dropdowns.
 
 ## Device tests (calibration)
