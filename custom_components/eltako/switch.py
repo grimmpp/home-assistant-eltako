@@ -101,7 +101,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             self.send_message(released_msg)
 
         elif self._sender_eep == A5_38_08:
-            switching = CentralCommandSwitching(0, 1, 0, 0, 1)
+            switching = CentralCommandSwitching(0, 1, 1, 0, 1)
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 
@@ -134,7 +134,7 @@ class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
             self.send_message(released_msg)
 
         elif self._sender_eep == A5_38_08:
-            switching = CentralCommandSwitching(0, 1, 0, 0, 0)
+            switching = CentralCommandSwitching(0, 1, 1, 0, 0)
             msg = A5_38_08(command=0x01, switching=switching).encode_message(address)
             self.send_message(msg)
 

@@ -115,7 +115,7 @@ class EnOceanGateway:
         self._bus_task = None
         self.baud_rate = baud_rate
         self._auto_reconnect = auto_reconnect
-        self._message_delay = message_delay
+        self._message_delay = message_delay if message_delay is not None else 0.01
         self.port = port
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
@@ -450,6 +450,12 @@ class EnOceanGateway:
 
 
     def dev_id_validation_by_bus_gateway(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        # Bus actuators (F4SR14, FUD14, FSB14, F4HK14) always start with 00-00-xx-xx.
+        # Wireless devices (thermostats 05-xx, buttons FF-xx / FE-xx) are legitimately
+        # configured here as listeners only — skip the strict check for them.
+        if dev_id[0][0] != 0x00:
+            # Non-zero first byte → wireless/radio device, always valid in config.
+            return True
         result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
         if not result:
             LOGGER.warning(f"{device_name}: Device id {b2s(dev_id[0])} is not a local bus address; gateway "

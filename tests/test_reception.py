@@ -19,7 +19,7 @@ from unittest import TestCase, mock
 from custom_components.eltako.observation import reception
 from custom_components.eltako.observation.reception import quality_of, survey
 
-NOW = datetime(2026, 8, 10, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime.now(timezone.utc).replace(microsecond=0)
 
 
 def telegram(seconds_ago: int = 0, **overrides) -> dict:

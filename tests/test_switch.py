@@ -66,13 +66,13 @@ class TestSwitch(unittest.TestCase):
         switch.turn_on()
         self.assertEqual(len(self.last_sent_command), 1)
         self.assertEqual(type(self.last_sent_command[0]), Regular4BSMessage)
-        self.assertEqual(self.last_sent_command[0].data[3], 9)
+        self.assertEqual(self.last_sent_command[0].data[3], 13)
         self.last_sent_command = []
 
         switch.turn_off()
         self.assertEqual(len(self.last_sent_command), 1)
         self.assertEqual(type(self.last_sent_command[0]), Regular4BSMessage)
-        self.assertEqual(self.last_sent_command[0].data[3], 8)
+        self.assertEqual(self.last_sent_command[0].data[3], 12)
         self.last_sent_command = []
 
     def test_switch_value_changed_with_sender_epp_F6_02_01_left(self):

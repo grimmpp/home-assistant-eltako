@@ -80,11 +80,11 @@ class TestActuatorIdValidation(unittest.TestCase):
 
     def test_wireless_id_on_a_bus_gateway_is_reported(self):
         gateway = self.create_gateway()
-        switch = self.create_switch(gateway, 'FF-AA-BB-CC', '00-00-B1-05')
+        switch = self.create_switch(gateway, '00-01-BB-CC', '00-00-B1-05')
 
         warnings = self.collect_warnings([switch])
         self.assertEqual(len(warnings), 1)
-        self.assertIn('FF-AA-BB-CC', warnings[0])
+        self.assertIn('00-01-BB-CC', warnings[0])
         self.assertIn('00-00-XX-XX', warnings[0])          # names the expected format
         self.assertIn('fgw14usb', warnings[0])             # names the gateway type
 

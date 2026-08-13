@@ -181,7 +181,7 @@ class TestSwitchableLight(unittest.TestCase):
         light.turn_on()
         self.assertEqual(
             self.last_sent_command[0].body,
-            b'k\x07\x01\x00\x00\t\x00\x00\xb0\x01\x00')
+            b'k\x07\x01\x00\x00\r\x00\x00\xb0\x01\x00')
 
     def test_switchable_light_trun_off(self):
         light = self.create_switchable_light()
@@ -192,7 +192,7 @@ class TestSwitchableLight(unittest.TestCase):
         light.turn_off()
         self.assertEqual(
             self.last_sent_command[0].body,
-            b'k\x07\x01\x00\x00\x08\x00\x00\xb0\x01\x00')
+            b'k\x07\x01\x00\x00\x0c\x00\x00\xb0\x01\x00')
 
     def test_initial_loading_on(self):
         sl = self.create_switchable_light()

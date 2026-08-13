@@ -147,7 +147,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         self.thermostat = thermostat
         if self.thermostat:
-            self.listen_to_addresses.append(self.thermostat.id)
+            self.listen_to_addresses.append(self.thermostat.id[0])
 
         self.room_sensor_entity_id = room_sensor_entity_id
         self._room_sensor_temp = None
@@ -300,6 +300,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         if hvac_mode == HVACMode.OFF:
             if hvac_mode != self.hvac_mode:
                 self._send_mode_off()
+                self._attr_actuator_mode = A5_10_06.HeaterMode.OFF
+                self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
 
             # when cooling is active swtich from off to cooling
             elif self._get_mode() == HVACMode.COOL:
@@ -313,6 +315,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         elif hvac_mode == self._get_mode():
             self._attr_hvac_mode = hvac_mode
             self._send_set_normal_mode()
+            self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
+            self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
 
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -337,12 +341,17 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     def _send_command(self, mode: A5_10_06.HeaterMode, target_temp: float, priority:A5_10_06.ControllerPriority) -> None:
         """Send command to set target temperature."""
         address, _ = self._sender_id
-        if target_temp is not None and 0 <= target_temp <= 40:
-            current_temp = 40
-            if self._room_sensor_temp is not None:
-                current_temp = self._room_sensor_temp
+        if target_temp is not None:
+            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, mode: {mode}, priority: '{priority.description}'")
+            
+            # if current temperature is not available yet use 20°C as default
+            current_temp = self.current_temperature if self.current_temperature else 20
+            # Clamp current_temp to valid 0-40°C range to prevent ValueError in
+            # encode_message when stale bogus values (e.g. -9559.4) are loaded from HA state.
+            current_temp = max(0.0, min(40.0, float(current_temp)))
+            # Clamp target_temp as well to prevent out-of-range encoding
+            target_temp = max(float(self._attr_min_temp), min(float(self._attr_max_temp), float(target_temp)))
 
-            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, current temp: {current_temp}, mode: {mode}, priority: '{priority.description}'")
             msg = A5_10_06(mode, target_temp, current_temp=current_temp, priority=priority).encode_message(address)
             self.send_message(msg)
         else:
@@ -461,9 +470,23 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
+        if preset_mode == PRESET_HOME:
+            self._attr_actuator_mode = A5_10_06.HeaterMode.NORMAL
+            self._send_set_normal_mode()
+        elif preset_mode == PRESET_ECO:
+            self._attr_actuator_mode = A5_10_06.HeaterMode.STAND_BY_2_DEGREES
+            self._send_mode_setback()
+        elif preset_mode == PRESET_SLEEP:
+            self._attr_actuator_mode = A5_10_06.HeaterMode.NIGHT_SET_BACK_4_DEGREES
+            self._send_mode_night()
+        else:
+            LOGGER.warning(f"[climate {self.dev_id}] Preset mode {preset_mode} not supported")
+            return
+
+        self._send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
 
         self._attr_preset_mode = preset_mode
-        self._send_command_to_change_mode_()
+        self.schedule_update_ha_state()
 
 
     def change_temperature_values(self, msg: ESP2Message) -> None:

@@ -20,6 +20,14 @@ Home Assistant expects the setup functions in this file, so it only re-exports t
 See docs/architecture/readme.md for the guided tour.
 """
 import os
+import warnings
+
+# Suppress BeautifulSoup HTML parsing warning in third-party enocean library
+try:
+    from bs4 import XMLParsedAsHTMLWarning
+    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+except ImportError:
+    pass
 
 # Optionally do not load the integration init: when using e.g. const as a library in a different
 # project, the whole of Home Assistant would be loaded because it expects the setup functions in

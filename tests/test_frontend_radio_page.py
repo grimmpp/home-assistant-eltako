@@ -381,8 +381,11 @@ class TestRadioPage(unittest.TestCase):
         with open(outlier, 'w', encoding='utf-8') as handle:
             json.dump(build_outlier_report(), handle)
 
+        env = os.environ.copy()
+        env['LC_ALL'] = 'C.UTF-8'
+        env['LANG'] = 'C.UTF-8'
         process = subprocess.run([NODE, script, FRONTEND, report, outlier],
-                                 capture_output=True, text=True, timeout=120, cwd=REPO)
+                                 capture_output=True, text=True, env=env, timeout=120, cwd=REPO)
         assert process.returncode == 0, f"node failed:\n{process.stderr[-3000:]}"
         cls.result = json.loads(process.stdout)
 

@@ -196,9 +196,7 @@ class EltakoEntity(Entity):
         """Handle incoming messages."""
         msg = data['esp2_msg']
 
-        msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
-
-        if type(msg) in msg_types:
+        if hasattr(msg, 'address'):
             adr = AddressExpression((msg.address, None))
             if adr.is_local_address():
                 adr = adr.add(self.gateway.base_id)
@@ -206,7 +204,10 @@ class EltakoEntity(Entity):
             # LOGGER.debug(f"[{self.platform} {self.dev_id}] check if message address {b2s(msg.address)} is in registered list {', '.join([b2s(a) for a in self.listen_to_addresses])}")
             if adr[0] in self.listen_to_addresses:
                 ## TODO: filter out message sent twice through other gateways
-                self.value_changed(msg)
+                try:
+                    self.value_changed(msg)
+                except Exception as e:
+                    LOGGER.error("[%s %s] Error in value_changed: %s", self._attr_ha_platform, str(self.dev_id), str(e), exc_info=True)
 
 
     def value_changed(self, msg: ESP2Message):
