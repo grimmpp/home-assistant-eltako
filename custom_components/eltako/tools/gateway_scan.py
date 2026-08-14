@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import glob
 import os
+from types import SimpleNamespace
 
 import voluptuous as vol
 
@@ -25,6 +26,7 @@ from homeassistant.core import HomeAssistant
 from ..const import (DATA_ELTAKO, DATA_PORT_FINGERPRINTS, DATA_PORT_FINGERPRINT_STORE,
                      DATA_PORT_STICK_IDS, DOMAIN, GatewayDeviceType, LOGGER, WS_GATEWAY_SCAN)
 from . import gateway_identity
+from eltakobus.gateway_scan import scan_serial_ports as _library_scan_serial_ports
 
 LOG_PREFIX_SCAN = "Gateway Scan"
 
@@ -179,74 +181,49 @@ def _pyserial_ports() -> list[dict]:
 
 
 def scan_serial_ports() -> list[dict]:
-    """All serial ports incl. usb descriptor and a suggestion for the device type."""
-    by_id = _read_link(SERIAL_BY_ID_DIR)
-    by_path = _read_link(SERIAL_BY_PATH_DIR)
+    """All serial ports, using the passive scanner from ``eltako14bus``.
 
-    ports: dict[str, dict] = {}
+    The library owns enumeration, udev links and descriptor hints. The integration
+    only adds sysfs data, the UI-shaped dictionary and the remembered identity fields.
+    """
+    raw_ports = []
+    for info in _pyserial_ports():
+        raw_ports.append(SimpleNamespace(
+            device=info.get('device'), manufacturer=info.get('manufacturer'),
+            product=info.get('product'), description=info.get('product'),
+            serial_number=info.get('serial_number'), interface=info.get('interface_name')))
 
-    def entry_for(device: str) -> dict:
-        return ports.setdefault(os.path.realpath(device), {
-            'device': device, 'by_id': None, 'by_path': None, 'descriptor': None,
-            'name': os.path.basename(device), 'interface': None,
-            'suggested_device_types': [], 'hint': "", 'device_node': False,
-            # ids of the EnOcean hardware. Unknown here by definition - the passive scan
-            # cannot ask, `scan()` fills in what was remembered for this stick.
+    result = []
+    for info in _library_scan_serial_ports(device_globs=DEVICE_GLOBS,
+                                           by_id_dir=SERIAL_BY_ID_DIR,
+                                           by_path_dir=SERIAL_BY_PATH_DIR,
+                                           ports=raw_ports):
+        entry = info.as_dict()
+        entry.update({
+            'descriptor': None,
+            'name': os.path.basename(entry['device']),
+            'interface': entry.get('interface'),
+            'device_node': any(glob.glob(pattern) and entry['device'] in glob.glob(pattern)
+                               for pattern in DEVICE_GLOBS),
             'chip_id': None, 'base_id': None, 'ids_remembered': False,
         })
-
-    # 1) the device nodes themselves - the only source which also works inside a container.
-    # `device_node` remembers that a port matched one of the globs above, which is what makes
-    # it a candidate at all: inside a container a passed-through gateway carries no usb
-    # information whatsoever, so being one of these nodes is the only thing left to go by.
-    for pattern in DEVICE_GLOBS:
-        for device in glob.glob(pattern):
-            entry_for(device)['device_node'] = True
-
-    # 1b) pyserial enumeration - the globs and udev above are linux specific, this also
-    # finds COM3 on windows and /dev/cu.usbserial-* on macOS (relevant for the standalone
-    # runtime, which runs directly on the developer machine)
-    for info in _pyserial_ports():
-        entry = entry_for(info['device'])
-        for key in ('manufacturer', 'product', 'serial_number', 'interface_name'):
-            if info.get(key) and not entry.get(key):
-                entry[key] = info[key]
-
-    # 2) stable names from udev, if available
-    for descriptor, device in by_id.items():
-        entry = entry_for(device)
-        entry['by_id'] = os.path.join(SERIAL_BY_ID_DIR, descriptor)
-        entry['descriptor'] = descriptor
-        entry['name'] = _pretty_name(descriptor)
-        for part in descriptor.split('-'):
-            if part.startswith('if'):
-                entry['interface'] = part
-
-    for descriptor, device in by_path.items():
-        entry_for(device)['by_path'] = os.path.join(SERIAL_BY_PATH_DIR, descriptor)
-
-    # 3) usb descriptor from sysfs (linux) and the resulting suggestion. The entry may
-    # already carry manufacturer/product from the pyserial enumeration (macOS, windows).
-    for entry in ports.values():
-        info = _read_sysfs_info(entry['device'])
-        entry.update({key: value for key, value in info.items()})
-
-        if not entry.get('descriptor'):
-            readable = " ".join(part for part in [entry.get('manufacturer'), entry.get('product'),
-                                                  entry.get('serial_number')] if part)
-            if readable:
-                entry['name'] = readable
-        if entry.get('interface_name') and not entry.get('interface'):
-            entry['interface'] = entry['interface_name']
-
-        # the suggestion is derived from every available text
-        haystack = " ".join(str(value) for value in [entry.get('descriptor'), entry.get('product'),
-                                                    entry.get('manufacturer'), entry.get('interface_name')] if value)
+        entry.update(_read_sysfs_info(entry['device']))
+        if entry.get('by_id'):
+            descriptor = os.path.basename(entry['by_id'])
+            entry['descriptor'] = descriptor
+            entry['name'] = _pretty_name(descriptor)
+            entry['interface'] = entry.get('interface') or next(
+                (part for part in descriptor.split('-') if part.startswith('if')), None)
+        elif any(entry.get(key) for key in ('manufacturer', 'product', 'serial_number')):
+            entry['name'] = ' '.join(str(entry[key]) for key in
+                                     ('manufacturer', 'product', 'serial_number') if entry.get(key))
+        haystack = ' '.join(str(entry.get(key)) for key in
+                            ('descriptor', 'product', 'manufacturer', 'interface') if entry.get(key))
         types, hint = _describe_descriptor(haystack)
-        entry['suggested_device_types'] = types
-        entry['hint'] = hint
-
-    return sorted(ports.values(), key=lambda port: port['device'])
+        entry['suggested_device_types'] = types or entry.get('suggested_device_types', [])
+        entry['hint'] = hint or entry.get('hint', '')
+        result.append(entry)
+    return sorted(result, key=lambda port: port['device'])
 
 
 def _get_configured_gateways(hass: HomeAssistant) -> dict[str, dict]:

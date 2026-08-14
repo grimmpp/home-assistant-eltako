@@ -57,11 +57,6 @@
       "section": "install-specific-version-or-branch.md"
     },
     {
-      "title": "Installation Example",
-      "path": "docs/simple_eltako_setup.md",
-      "section": "simple_eltako_setup.md"
-    },
-    {
       "title": "Integrated Relays and Switches with ELTAKO FSR14*, FSR61, ...",
       "path": "docs/relays-and-switches/readme.md",
       "section": "relays-and-switches"
@@ -110,6 +105,11 @@
       "title": "Simulation - gateways and devices without hardware",
       "path": "docs/simulation/readme.md",
       "section": "simulation"
+    },
+    {
+      "title": "Software Requirements Specification (SRS)",
+      "path": "docs/requirements/readme.md",
+      "section": "requirements"
     },
     {
       "title": "Standalone runtime - the integration without Home Assistant",

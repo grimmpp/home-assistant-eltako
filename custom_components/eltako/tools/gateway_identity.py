@@ -28,7 +28,17 @@ from __future__ import annotations
 import asyncio
 import time
 
-from ..const import BAUD_RATE_DEVICE_TYPE_MAPPING, GatewayDeviceType, LOGGER
+from eltakobus.gateway_identity import (
+    VERSION_RESPONSE_LENGTH,
+    fam_usb_base_id_request,
+    format_id,
+    identity_capabilities,
+    parse_fam_usb_base_id,
+    parse_version_response,
+)
+from eltakobus.const import baud_rate_for
+
+from ..const import GatewayDeviceType, LOGGER
 
 LOG_PREFIX_ID = "Gateway Identity"
 
@@ -40,74 +50,25 @@ BASE_ID_RETRIES = 1
 CHIP_ID_TIMEOUT = 1.0
 
 # base id request of a FAM-USB (ESP2, 'AB 58')
-FAM_USB_BASE_ID_REQUEST = b'\xAB\x58\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-
 # a base id which is not one - the FAM-USB answers this while it is still starting up
 EMPTY_BASE_ID = '00-00-00-00'
 
 # CO_RD_VERSION (ESP3 common command 0x03) is answered with 32 bytes:
 # app version (4), api version (4), chip id (4), chip version (4), app description (16)
-VERSION_RESPONSE_LENGTH = 32
-
-# gateway types which can be asked for an id of their own. Everything else on this list would
-# only cost a timeout, see the module docstring.
-IDENTIFIABLE_TYPES = {
-    GatewayDeviceType.GatewayEltakoFAMUSB.value,        # base id only (ESP2 has no chip id)
-    GatewayDeviceType.EnOceanUSB300.value,
-    GatewayDeviceType.ESP3.value,
-}
-
-
 def can_identify(device_type) -> bool:
     """Whether opening this gateway's port can produce a chip id or base id."""
-    return str(getattr(device_type, 'value', device_type)) in IDENTIFIABLE_TYPES
+    capabilities = identity_capabilities(getattr(device_type, 'value', device_type))
+    return capabilities['can_read_base_id'] or capabilities['can_read_chip_id']
 
 
 def baud_rate_of(device_type) -> int:
     """Baud rate the stick of this gateway type is opened with (0 if it has no serial port)."""
-    resolved = device_type if isinstance(device_type, GatewayDeviceType) \
-        else GatewayDeviceType.find(str(device_type))
-    return max(0, BAUD_RATE_DEVICE_TYPE_MAPPING.get(resolved, 0))
+    return max(0, baud_rate_for(getattr(device_type, 'value', device_type), 0))
 
 
 ### ---------------------------------------------------------------------------
 ### reading the ids of an open communicator
 ### ---------------------------------------------------------------------------
-
-def format_id(value) -> str | None:
-    """4 bytes (or a list of ints, as the esp3 library returns them) -> 'FF-9B-8C-00'."""
-    if value is None:
-        return None
-    try:
-        data = bytes(value)
-    except (TypeError, ValueError):
-        return None
-    if len(data) != 4:
-        return None
-    return '-'.join(f'{byte:02X}' for byte in data)
-
-
-def parse_version_response(response_data) -> dict:
-    """The ids inside a CO_RD_VERSION answer. Pure, so it can be tested without hardware."""
-    try:
-        data = bytes(response_data or b'')
-    except (TypeError, ValueError):
-        return {}
-    if len(data) < VERSION_RESPONSE_LENGTH:
-        return {}
-
-    def version(part: bytes) -> str:
-        return '.'.join(str(byte) for byte in part)
-
-    description = data[16:32].split(b'\x00')[0].decode('ascii', errors='replace').strip()
-    return {
-        'app_version': version(data[0:4]),
-        'api_version': version(data[4:8]),
-        'chip_id': format_id(data[8:12]),
-        'chip_version': version(data[12:16]),
-        'app_description': description or None,
-    }
-
 
 async def async_read_esp2_base_id(communicator, timeout: float = BASE_ID_TIMEOUT,
                                   retries: int = BASE_ID_RETRIES) -> str | None:
@@ -120,9 +81,9 @@ async def async_read_esp2_base_id(communicator, timeout: float = BASE_ID_TIMEOUT
 
     try:
         communicator.set_callback(None)
-        response = await communicator.exchange(ESP2Message(bytes(FAM_USB_BASE_ID_REQUEST)),
+        response = await communicator.exchange(fam_usb_base_id_request(),
                                                ESP2Message, retries=retries, timeout=timeout)
-        return format_id(response.body[2:6])
+        return parse_fam_usb_base_id(response)
     except Exception:   # noqa: BLE001 - no answer means: nothing which answers this request
         return None
 

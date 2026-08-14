@@ -301,6 +301,27 @@ export function renderDetails(parts, icon, actions = "") {
         </div>`);
 }
 
+/**
+ * The gateway details popup, given only what every page already has: its gateway list, the id
+ * of the gateway to show, and the configured devices to count against it. Both the simple view
+ * and the expert device table open this popup the same way (find the gateway, count its
+ * devices, render it) - this is that lookup done once instead of twice.
+ *
+ * Returns "" for an id which names no configured gateway - a card removed from under the popup
+ * while it was open.
+ *
+ * @param {(name: string, glyph: string) => string} icon the icon helper of the page
+ */
+export function renderGatewayDetails(gateways, gatewayId, configuredDevices, icon) {
+  const gateway = (gateways || []).find((entry) => String(entry.id) === String(gatewayId));
+  if (!gateway) return "";
+
+  return renderDetails(gatewayDetails(gateway, {
+    deviceCount: (configuredDevices || []).filter((device) =>
+      String(device.gateway_id) === String(gateway.id)).length,
+  }), icon);
+}
+
 /** The three ways out of the popup which are the same everywhere: ×, Close, click next to it. */
 export function bindDetails(root, close) {
   bindModal(root, close, {

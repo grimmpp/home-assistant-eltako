@@ -24,7 +24,7 @@ import { page as devicesConfigPage } from "./pages/devices_config.js";
 import { page as telegramsPage } from "./pages/telegrams.js";
 import { page as radioPage } from "./pages/radio.js";
 import { page as receptionPage } from "./pages/reception.js";
-import { page as statisticsPage } from "./pages/devices.js";
+import { page as statisticsPage } from "./pages/statistics.js";
 import { page as logsPage } from "./pages/logs.js";
 import { page as testsPage } from "./pages/tests.js";
 import { page as simulationPage } from "./pages/simulation.js";

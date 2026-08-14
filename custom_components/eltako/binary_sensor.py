@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Dict
 
 from eltakobus.util import AddressExpression
-from eltakobus.eep import (A5_07_01, A5_08_01, A5_30_01, A5_30_03, D5_00_01, EEP, F6_01_01, F6_02_01,
-                           F6_02_02, F6_10_00)
+from eltakobus.eep import (A5_07_01, A5_08_01, A5_14_09, A5_14_0A, A5_30_01, A5_30_03, D5_00_01, EEP,
+                           F6_01_01, F6_02_01, F6_02_02, F6_05_01, F6_05_02, F6_10_00)
 
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant import config_entries
@@ -24,6 +24,9 @@ from .config import config_helpers
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 
 import json
+
+A5_07_02 = EEP.find("A5-07-02")
+A5_07_03 = EEP.find("A5-07-03")
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -74,6 +77,23 @@ async def async_setup_entry(
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="low_battery", name=name), dev_conf.area ))
+                        elif dev_conf.eep in [F6_05_01, F6_05_02]:
+                            name = "Water detected" if dev_conf.eep == F6_05_01 else "Smoke alarm"
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="alarm", name=name), dev_conf.area))
+                            if dev_conf.eep == F6_05_02:
+                                entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, "Low battery", dev_conf.eep,
+                                                                    dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                    EntityDescription(key="low_battery", name="Low battery"), dev_conf.area))
+                        elif dev_conf.eep in [A5_14_09, A5_14_0A]:
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep,
+                                                                dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                EntityDescription(key="window", name=dev_conf.name or "Window"), dev_conf.area))
+                            if dev_conf.eep == A5_14_0A:
+                                entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, "Alarm", dev_conf.eep,
+                                                                    dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
+                                                                    EntityDescription(key="alarm", name="Alarm"), dev_conf.area))
                         else:
                             entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
@@ -143,10 +163,19 @@ class EltakoBinarySensor(AbstractBinarySensor):
             if dev_eep in [A5_07_01, A5_08_01]:
                 self._attr_device_class = BinarySensorDeviceClass.OCCUPANCY
                 self._attr_icon = 'mdi:motion-sensor'
+            if dev_eep in [A5_07_02, A5_07_03]:
+                self._attr_device_class = BinarySensorDeviceClass.MOTION
+                self._attr_icon = 'mdi:motion-sensor'
             if dev_eep in [D5_00_01]:
                 self._attr_device_class = BinarySensorDeviceClass.WINDOW
             if dev_eep in [F6_10_00]:
                 self._attr_device_class = BinarySensorDeviceClass.WINDOW
+            if dev_eep in [A5_14_09, A5_14_0A]:
+                self._attr_device_class = BinarySensorDeviceClass.WINDOW
+            if dev_eep == F6_05_01:
+                self._attr_device_class = BinarySensorDeviceClass.MOISTURE
+            if dev_eep == F6_05_02 and self._channel == "alarm":
+                self._attr_device_class = BinarySensorDeviceClass.SMOKE
 
 
     def value_changed(self, msg: ESP2Message):
@@ -299,6 +328,9 @@ class EltakoBinarySensor(AbstractBinarySensor):
 
             self._attr_is_on = self.invert_signal != decoded.pir_status_on == 1
 
+        elif self.dev_eep in [A5_07_02, A5_07_03]:
+            self._attr_is_on = self.invert_signal != decoded.motion_detected
+
         elif self.dev_eep in [A5_30_01]:
 
             if self.description_key == "low_battery":
@@ -307,6 +339,21 @@ class EltakoBinarySensor(AbstractBinarySensor):
             else:
                 event_data['pressed'] = decoded._contact_closed
                 self._attr_is_on = self.invert_signal != decoded._contact_closed
+
+        elif self.dev_eep in [A5_14_09, A5_14_0A]:
+            if self.description_key == "alarm":
+                self._attr_is_on = self.invert_signal != bool(decoded.alarm)
+            else:
+                self._attr_is_on = self.invert_signal != (decoded.window_state != 0x08)
+
+        elif self.dev_eep == F6_05_01:
+            self._attr_is_on = self.invert_signal != decoded.water_detected
+
+        elif self.dev_eep == F6_05_02:
+            if self.description_key == "low_battery":
+                self._attr_is_on = self.invert_signal != decoded.low_battery
+            else:
+                self._attr_is_on = self.invert_signal != decoded.smoke_alarm
 
 
         elif self.dev_eep in [A5_30_03]:

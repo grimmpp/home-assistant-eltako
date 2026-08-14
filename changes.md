@@ -1,5 +1,12 @@
 # Changes and Feature List
 
+## Version 2.2.1
+
+* Updated the `eltako14bus` dependency to version `1.0.1`.
+* Added twilight sensor support for EEP `A5-06-01`.
+* Added the missing ELTAKO catalogue profiles `FIH65B` (`A5-06-02`) and `FFG7B` (`F6-10-00`).
+* Updated the generated device documentation and catalogue tests.
+
 ## Version 2.2.0
 * **The values of a telegram can be picked instead of guessed.** A profile field is the parameter of a class in the library, and its name alone says nothing: `state`, `command`, `movement`, `dimming_range` are plain numbers, and `mode = 112` is not something anybody types by accident. Every field now says what it is - a **choice with named options** ("on / off", "up / down / stop", "closed / open / tilted", "data telegram / teach-in telegram") or a **number with its unit and range** (°C, %, lx, m/s, 0.1 s steps for a cover). The tables live in `simulation/core/field_info.py`, next to the encoders they were read from, and the enums of a profile (the modes and priorities of `A5-10-06`) become their options by themselves - two members which share one code are one option whose label names both, because the telegram cannot tell them apart either.
   * **Only the fields which are really read** are offered: the central command writes completely different bytes for switching and for dimming, a weather station reports either wind or sun - picking the one decides the other fields, the rest disappear instead of promising a value which is dropped.
@@ -492,4 +499,3 @@ TODO: improve performance of controlling groups. (send only one group telegram i
 * Fast status change added. You can set per configuration is you want to wait for actuator response or if you directly want to see the status change in HA.
 
 ## Version 1.0.0 Baseline
-

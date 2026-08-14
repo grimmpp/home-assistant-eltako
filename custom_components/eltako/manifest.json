@@ -20,10 +20,10 @@
     "eltako"
   ],
   "requirements": [
-    "eltako14bus==0.0.82",
+    "eltako14bus==1.0.1",
     "enocean>=0.60.1",
     "StrEnum",
     "esp2-gateway-adapter==0.2.21"
   ],
-  "version": "2.2.0rc2"
+  "version": "2.2.1"
 }

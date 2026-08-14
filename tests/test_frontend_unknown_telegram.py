@@ -250,7 +250,7 @@ class TestTheUnknownPopup(unittest.TestCase):
 
 
 STATISTICS_SCRIPT = DOM_STUB + r"""
-const { page } = await import(`${process.argv[2]}/pages/devices.js`);
+const { page } = await import(`${process.argv[2]}/pages/statistics.js`);
 
 const True_ = true, False_ = false;
 globalThis.window = { eltakoStandalone: False_, dispatchEvent: () => {} };

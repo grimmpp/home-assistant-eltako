@@ -45,7 +45,22 @@ def default_state(eep: str) -> dict:
     They are chosen so that a device which was just created sends a telegram its entity can
     really decode - a plain 0 is not a valid state for every profile (see DEFAULT_STATE_BY_EEP).
     """
-    per_eep = DEFAULT_STATE_BY_EEP.get(str(eep).upper(), {})
+    eep_name = str(eep).upper()
+    per_eep = dict(DEFAULT_STATE_BY_EEP.get(eep_name, {}))
+    # eltako14bus v1.0.0 exposes the complete A5-02 temperature family. Those
+    # profiles have different legal ranges, so a generic zero is not encodable
+    # for most of them. Use the midpoint declared by the profile.
+    if eep_name.startswith('A5-02-') and 'temperature' not in per_eep:
+        eep_class = find_eep(eep_name)
+        if eep_class is not None:
+            minimum = getattr(eep_class, 'temp_min', None)
+            maximum = getattr(eep_class, 'temp_max', None)
+            if minimum is not None and maximum is not None:
+                per_eep['temperature'] = (minimum + maximum) / 2
+    if eep_name in ('A5-14-09', 'A5-14-0A'):
+        # v1.0.0 validates the documented window-state marker instead of
+        # accepting an arbitrary zero.
+        per_eep.setdefault('window_state', 0x08)
     return {field: per_eep.get(field, DEFAULT_FIELD_VALUES.get(field, 0))
             for field in eep_fields(eep)}
 

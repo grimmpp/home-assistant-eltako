@@ -155,7 +155,7 @@ custom_components/eltako/
         pages/devices_config.js   # 'Devices'
         pages/telegrams.js
         pages/radio.js            # 'Radio reception' - one telegram as every gateway got it
-        pages/devices.js          # 'Statistics'
+        pages/statistics.js       # 'Statistics'
         pages/logs.js             # 'Logs' - the log of the integration and its level
         pages/tests.js
         pages/simulation.js       # 'Simulation' - gateways and devices without hardware

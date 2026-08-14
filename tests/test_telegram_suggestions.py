@@ -38,6 +38,19 @@ class TestMessageTypeLimitsTheProfiles(TestCase):
         for candidate in candidates:
             self.assertTrue(candidate['eep'].startswith('A5'), msg=candidate['eep'])
 
+    def test_candidates_are_built_from_all_library_profiles(self):
+        """Every incoming profile in eltako14bus is eligible for its transport family."""
+        from eltakobus.eep import EEP
+
+        registry = getattr(EEP, '_EEP__sublasses_by_string')
+        candidates = {eep for profiles in suggestions.EEP_BY_MESSAGE_TYPE.values() for eep in profiles}
+        expected = {
+            eep for eep, profile in registry.items()
+            if profile.get_metadata().org in (0x05, 0x06, 0x07)
+            and eep[:2] in {'A5', 'D5', 'F6'}
+        }
+        self.assertEqual(expected, candidates)
+
     def test_wrapped_bus_messages_are_recognized_too(self):
         """A bus gateway wraps the telegrams (EltakoWrappedRPS etc.)."""
         candidates = suggest(msg_types={'EltakoWrappedRPS': 4}, data='70')
@@ -227,6 +240,20 @@ class TestRobustness(TestCase):
 
         self.assertTrue(all(candidate['eep'].startswith('F6') for candidate in single))
         self.assertTrue(all(candidate['eep'].startswith('A5') for candidate in four))
+
+    def test_candidates_include_profile_metadata(self):
+        candidate = suggest(msg_types={'Regular4BSMessage': 1}, data='00-50-64-0A')[0]
+
+        self.assertEqual(candidate['eep'], 'A5-04-02')
+        self.assertEqual(candidate['metadata']['org'], 0x07)
+        fields = {field['name']: field for field in candidate['metadata']['fields']}
+        self.assertEqual(fields['humidity']['value_range'], (0.0, 100.0))
+
+    def test_unknown_teach_in_profile_is_reported_as_unknown(self):
+        candidate = suggest(teach_in_profile='A5-FF-FF')[0]
+
+        self.assertEqual(candidate['confidence'], 'unknown')
+        self.assertIsNone(candidate['metadata'])
 
     def test_enrich_survives_a_broken_record(self):
         device = enrich_unknown({'address': None, 'msg_types': 'not-a-dict'})

@@ -154,10 +154,10 @@ def build_fixtures() -> dict:
     from custom_components.eltako.catalog.help_catalog import build_catalog
 
     integration_info = {
-        'domain': 'eltako', 'name': 'ELTAKO', 'version': '2.2.0',
+        'domain': 'eltako', 'name': 'ELTAKO', 'version': '2.2.1',
         'home_assistant_version': '2026.7.2', 'iot_class': 'local_push',
         'issue_tracker': 'https://example.invalid/issues',
-        'requirements': ['eltako14bus==0.0.82', 'esp2-gateway-adapter==0.2.21'],
+        'requirements': ['eltako14bus==1.0.1', 'esp2-gateway-adapter==0.2.21'],
         'general_settings': {
             'enable_frontend': True, 'enable_test_page': True, 'plug_and_play': True,
             'log_enocean_telegrams': True, 'timeseries_enabled': False,

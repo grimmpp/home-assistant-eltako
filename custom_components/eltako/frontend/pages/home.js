@@ -17,9 +17,10 @@
  * state arrives; the telegram stream keeps the "last reported" line current the same way.
  */
 
+import { activityOf } from "../lib/activity.js";
 import { WS } from "../lib/api.js";
-import { DETAILS_STYLES, bindDetails, deviceDetails, gatewayDetails, openInHomeAssistant,
-         renderDetails } from "../lib/details.js";
+import { DETAILS_STYLES, bindDetails, deviceDetails, openInHomeAssistant,
+         renderDetails, renderGatewayDetails } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { assignSenderGateway, defaultGatewayChoices, describeAssignResult, gatewayOption,
          isBusGatewayType, senderGatewayOf, senderTargets } from "../lib/sender_gateway.js";
@@ -449,11 +450,11 @@ export const page = {
 
   _renderSummary(ctx, devices, gateways) {
     const online = devices.filter((device) => {
-      const activity = this._activityOf(device);
+      const activity = activityOf(device);
       return activity && activity.silent_since_seconds !== null
         && activity.silent_since_seconds !== undefined && activity.silent_since_seconds < 86400;
     }).length;
-    const silent = devices.filter((device) => !this._activityOf(device)).length;
+    const silent = devices.filter((device) => !activityOf(device)).length;
     const connected = gateways.filter((gateway) => gateway.connected).length;
 
     return `
@@ -570,7 +571,7 @@ export const page = {
   _renderCard(ctx, device) {
     const [mdi, glyph] = PLATFORM_ICONS[device.platform] || ["mdi:chip", "▪"];
     const entities = this._entitiesOf(ctx, device);
-    const activity = this._activityOf(device);
+    const activity = activityOf(device);
     const anyState = entities.some((entity) => entity.text);
 
     return `
@@ -664,7 +665,7 @@ export const page = {
   },
 
   _renderStatusLine(device) {
-    const activity = this._activityOf(device);
+    const activity = activityOf(device);
     if (!activity || !activity.last_seen) {
       return "never reported yet";
     }
@@ -735,13 +736,8 @@ export const page = {
     if (!details) return "";
 
     if (details.kind === "gateway") {
-      const gateway = ((ctx.state.integrationInfo || {}).gateways || [])
-        .find((entry) => String(entry.id) === String(details.key));
-      if (!gateway) return "";
-      return renderDetails(gatewayDetails(gateway, {
-        deviceCount: (ctx.state.configuredDevices || []).filter((device) =>
-          String(device.gateway_id) === String(gateway.id)).length,
-      }), icon);
+      return renderGatewayDetails((ctx.state.integrationInfo || {}).gateways,
+        details.key, ctx.state.configuredDevices, icon);
     }
 
     const device = this._deviceByKey(ctx, details.key);
@@ -1648,10 +1644,6 @@ export const page = {
   _formatAddress(value) {
     return [24, 16, 8, 0].map((shift) =>
       ((value >>> shift) & 0xFF).toString(16).toUpperCase().padStart(2, "0")).join("-");
-  },
-
-  _activityOf(device) {
-    return device.activity || device.sender_activity || null;
   },
 
   _key(device) {

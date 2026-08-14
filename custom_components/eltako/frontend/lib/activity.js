@@ -49,6 +49,11 @@ export function jobsOf(activity) {
   return (((activity || {}).jobs) || []).filter(Boolean);
 }
 
+/** Activity of the device itself, or of its sender for pure actuators. */
+export function activityOf(device) {
+  return device.activity || device.sender_activity || null;
+}
+
 /** One job in plain words: what it is (title) and what it is doing right now (step). */
 export function describeJob(job) {
   if (!job) return { title: "", step: null };

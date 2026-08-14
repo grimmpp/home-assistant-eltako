@@ -7,10 +7,12 @@ import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 
 
-from eltakobus.eep import (A5_04_01, A5_04_02, A5_04_03, A5_06_01, A5_07_01, A5_08_01, A5_09_0C, A5_10_03,
+from eltakobus.eep import (A5_04_01, A5_04_02, A5_04_03, A5_06_01, A5_06_02, A5_06_03, A5_07_01,
+                           A5_08_01, A5_09_04, A5_09_05, A5_09_0C, A5_10_03,
                            A5_10_06, A5_10_12, A5_12_01, A5_12_02, A5_12_03, A5_13_01, A5_30_01, A5_30_03,
-                           A5_38_08, D5_00_01, F6_01_01, F6_02_01, F6_02_02, F6_10_00, G5_3F_7F, H5_3F_7F,
-                           M5_38_08, VOC_SubstancesType)
+                           A5_14_09, A5_14_0A, A5_20_04, A5_38_08, D5_00_01, F6_01_01, F6_02_01, F6_02_02,
+                           F6_05_01, F6_05_02, F6_10_00, G5_3F_7F, H5_3F_7F,
+                           M5_38_08, VOC_SubstancesType, EEP)
 
 from ..observation.integration_log import LOG_LEVELS as INTEGRATION_LOG_LEVELS
 from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_DEPRECATED_ENABLE_FRONTEND,
@@ -54,6 +56,12 @@ from homeassistant.const import (
     CONF_LANGUAGE,
 )
 
+A5_02_EEPS = [EEP.find(f"A5-02-{suffix}").eep_string for suffix in (
+    "01", "02", "03", "04", "05", "06", "07", "08", "09", "0A", "0B",
+    "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "1A", "1B", "20", "30",
+)]
+A5_07_EEPS = [A5_07_01.eep_string, EEP.find("A5-07-02").eep_string, EEP.find("A5-07-03").eep_string]
+
 CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_01_01.eep_string,
                                     F6_02_01.eep_string,
                                     F6_02_02.eep_string,
@@ -62,7 +70,13 @@ CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_01_01.eep_string,
                                     A5_07_01.eep_string,
                                     A5_08_01.eep_string,
                                     A5_30_01.eep_string,
-                                    A5_30_03.eep_string]
+                                    A5_30_03.eep_string,
+                                    EEP.find("A5-07-02").eep_string,
+                                    EEP.find("A5-07-03").eep_string,
+                                    A5_14_09.eep_string,
+                                    A5_14_0A.eep_string,
+                                    F6_05_01.eep_string,
+                                    F6_05_02.eep_string]
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
 
 def _get_sender_schema(supported_sender_eep) -> vol.Schema:
@@ -232,12 +246,17 @@ class SensorSchema(EltakoPlatformSchema):
     """Voluptuous schema for Eltako sensors."""
     PLATFORM = Platform.SENSOR
 
-    CONF_EEP_SUPPORTED = [A5_04_01.eep_string,
+    CONF_EEP_SUPPORTED = [*A5_02_EEPS,
+                          A5_04_01.eep_string,
                           A5_04_02.eep_string,
                           A5_04_03.eep_string,
                           A5_06_01.eep_string,
-                          A5_07_01.eep_string,
+                          A5_06_02.eep_string,
+                          A5_06_03.eep_string,
+                          *A5_07_EEPS,
                           A5_08_01.eep_string,
+                          A5_09_04.eep_string,
+                          A5_09_05.eep_string,
                           A5_09_0C.eep_string,
                           A5_10_03.eep_string,
                           A5_10_06.eep_string,
@@ -246,6 +265,7 @@ class SensorSchema(EltakoPlatformSchema):
                           A5_12_02.eep_string,
                           A5_12_03.eep_string,
                           A5_13_01.eep_string,
+                          A5_20_04.eep_string,
                           F6_10_00.eep_string,
                           ]
 

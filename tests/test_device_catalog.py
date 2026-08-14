@@ -11,6 +11,13 @@ from custom_components.eltako.catalog.device_catalog import (
 
 class TestCatalogConsistency(TestCase):
 
+    def test_pdf_catalog_profiles_are_available(self):
+        profiles = {(entry['hw_type'], entry.get('eep')) for entry in DEVICE_CATALOG}
+
+        self.assertIn(('FIH65B', 'A5-06-02'), profiles)
+        self.assertIn(('FFG7B', 'A5-14-09'), profiles)
+        self.assertIn(('FFG7B', 'F6-10-00'), profiles)
+
     def test_entries_are_complete(self):
         for entry in DEVICE_CATALOG:
             self.assertIn('hw_type', entry, msg=entry)
@@ -144,8 +151,8 @@ class TestFormDescriptorIntegration(TestCase):
         # gateways are found as well - they carry a gateway type instead of a platform
         self.assertEqual(find_hw_type('FGW14')['hw_type'], 'FGW14')
         self.assertEqual(find_hw_type('FGW14-USB')['gateway_type'], 'fgw14usb')
-        # unknown devices are reported as such, not guessed
-        self.assertEqual(find_hw_type('FSR14SSR'), {})
+        # a device from the technical catalogue is found as well
+        self.assertEqual(find_hw_type('FSR14SSR')['hw_type'], 'FSR14SSR')
         self.assertEqual(find_hw_type(''), {})
         self.assertEqual(find_hw_type(None), {})
 

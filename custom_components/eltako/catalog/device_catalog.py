@@ -1,378 +1,243 @@
-"""Central catalog of known Eltako/EnOcean devices.
+"""Compatibility adapter for the device catalog supplied by ``eltako14bus``.
 
-Single source of the device knowledge used by the integration:
-
-* the device form of the web ui offers these devices as templates - selecting a device
-  prefills its EEP and sender EEP (like the device list of the EnOcean Device Manager)
-* the device page describes identified bus devices with it (see bus_members.py)
-
-The catalog is served to the frontend through the form websocket (eltako/devices/form),
-so the web ui never hardcodes device knowledge - it renders what this module delivers.
-
-Ported from the EEP_MAPPING of the EnOcean Device Manager
-(https://github.com/grimmpp/enocean-device-manager, eo_man/data/data_helper.py, MIT,
-same author as this integration). One physical device can appear several times when it
-speaks more than one EEP (e.g. FTS14EM inputs, F3Z14D meters, FLGTF air quality).
-The first entry of a hw type is its primary use.
-
-Entry fields:
-    hw_type                device name as printed on the housing (FSR14_4x, FUD61NP-230V)
-    brand                  manufacturer
-    description            what the device is
-    platform               home assistant platform of the template (None for gateways)
-    eep                    EEP the device sends with
-    sender_eep             EEP home assistant sends commands with (actuators only)
-    pct14_function_group   where the sender id is entered when teaching in with PCT14
-    pct14_key_function     key function of the teach-in entry
-    address_count          bus positions / addresses the device occupies
-    bus_device             True for devices mounted on the RS485 bus (series 14)
+The catalog is maintained by the bus library since v1.0.0.  This module remains as a
+small import-compatible shim for integrations and third-party consumers which used the
+old Home Assistant path.
 """
 
-from __future__ import annotations
+from eltakobus.device_catalog import (  # noqa: F401
+    DEVICE_CATALOG,
+    as_display_text,
+    catalog_eep_references,
+    describe_gateway_type,
+    describe_hw_type as _library_describe_hw_type,
+    devices_for_eep,
+    eep_device_mapping,
+    entries_for_hw_type,
+    find_hw_type as _library_find_hw_type,
+    get_device_templates as _library_get_device_templates,
+    normalize_hw_type,
+)
 
-from ..const import LOGGER  # noqa: F401 - imported for consistency with the other modules
-
+# Documentation links are integration metadata, not part of the reusable library catalog.
 GATEWAY_DOCS = 'https://github.com/grimmpp/home-assistant-eltako/tree/main/docs/gateways'
 
-DEVICE_CATALOG: list[dict] = [
-    # gateways (no platform - they are added as gateway, not as device). `gateway_type`
-    # matches GatewayDeviceType of this integration.
-    {'hw_type': 'FAM14', 'brand': 'ELTAKO', 'description': 'Bus Gateway', 'bus_device': True,
-     'gateway_type': 'fam14', 'docs': GATEWAY_DOCS},
-    {'hw_type': 'FGW14_USB', 'brand': 'ELTAKO', 'description': 'Bus Gateway', 'bus_device': True,
-     'gateway_type': 'fgw14usb', 'docs': GATEWAY_DOCS},
-    {'hw_type': 'FTD14', 'brand': 'ELTAKO', 'description': 'Bus Gateway', 'bus_device': True,
-     'gateway_type': 'ftd14', 'docs': GATEWAY_DOCS},
-    {'hw_type': 'FGW14', 'brand': 'ELTAKO', 'description': 'Bus Gateway', 'bus_device': True},
-    {'hw_type': 'FAM-USB', 'brand': 'ELTAKO', 'description': 'USB Gateway (ESP2)',
-     'gateway_type': 'fam-usb', 'docs': GATEWAY_DOCS},
-    {'hw_type': 'USB300', 'brand': 'EnOcean', 'description': 'USB Gateway (ESP3)',
-     'gateway_type': 'enocean-usb300', 'docs': GATEWAY_DOCS},
-    {'hw_type': 'MGW (LAN)', 'brand': 'PioTek', 'description': 'LAN Gateway (ESP3)',
-     'gateway_type': 'lan', 'docs': GATEWAY_DOCS},
-    {'hw_type': 'MGW (USB)', 'brand': 'PioTek', 'description': 'USB Gateway (ESP3)',
-     'gateway_type': 'esp3-gateway', 'docs': GATEWAY_DOCS},
 
-    # wired inputs (bus)
-    {'hw_type': 'FTS14EM', 'brand': 'ELTAKO', 'description': 'Wired inputs (switches, contacts)',
-     'platform': 'binary_sensor', 'eep': 'F6-02-01', 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FTS14EM', 'brand': 'ELTAKO', 'description': 'Wired rocker switch (US style)',
-     'platform': 'binary_sensor', 'eep': 'F6-02-02', 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FTS14EM', 'brand': 'ELTAKO', 'description': 'Wired window handle',
-     'platform': 'binary_sensor', 'eep': 'F6-10-00', 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FTS14EM', 'brand': 'ELTAKO', 'description': 'Wired contact sensor',
-     'platform': 'binary_sensor', 'eep': 'D5-00-01', 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FTS14EM', 'brand': 'ELTAKO', 'description': 'Wired occupancy sensor',
-     'platform': 'binary_sensor', 'eep': 'A5-08-01', 'address_count': 1, 'bus_device': True},
-
-    # wireless pushbuttons
-    {'hw_type': 'FT55', 'brand': 'ELTAKO', 'description': 'Wireless 4-way pushbutton',
-     'platform': 'binary_sensor', 'eep': 'F6-02-01', 'address_count': 1},
-    {'hw_type': 'F4T55E', 'brand': 'ELTAKO', 'description': 'Wireless 4-way pushbutton (E-Design55)',
-     'platform': 'binary_sensor', 'eep': 'F6-02-01', 'address_count': 1},
-    {'hw_type': 'FMH1W', 'brand': 'ELTAKO', 'description': 'Wireless single button',
-     'platform': 'binary_sensor', 'eep': 'F6-01-01', 'address_count': 1},
-
-    # window and door contacts
-    {'hw_type': 'FFTE', 'brand': 'ELTAKO', 'description': 'Window/door contact',
-     'platform': 'binary_sensor', 'eep': 'F6-10-00', 'address_count': 1},
-    {'hw_type': 'FTKE', 'brand': 'ELTAKO', 'description': 'Window/door contact',
-     'platform': 'binary_sensor', 'eep': 'F6-10-00', 'address_count': 1},
-    {'hw_type': 'FTK', 'brand': 'ELTAKO', 'description': 'Window/door contact',
-     'platform': 'binary_sensor', 'eep': 'F6-10-00', 'address_count': 1},
-    {'hw_type': 'FSM60B', 'brand': 'ELTAKO', 'description': 'Digital input with battery status',
-     'platform': 'binary_sensor', 'eep': 'A5-30-01', 'address_count': 1},
-
-    # occupancy
-    {'hw_type': 'FB55EB', 'brand': 'ELTAKO', 'description': 'Occupancy sensor',
-     'platform': 'binary_sensor', 'eep': 'A5-07-01', 'address_count': 1},
-
-    # metering (bus)
-    {'hw_type': 'FSDG14', 'brand': 'ELTAKO', 'description': 'Electricity Meter',
-     'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'F3Z14D', 'brand': 'ELTAKO', 'description': 'Electricity/Gas/Water Meter',
-     'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 3, 'bus_device': True},
-    {'hw_type': 'F3Z14D', 'brand': 'ELTAKO', 'description': 'Gas Meter',
-     'platform': 'sensor', 'eep': 'A5-12-02', 'address_count': 3, 'bus_device': True},
-    {'hw_type': 'F3Z14D', 'brand': 'ELTAKO', 'description': 'Water Meter',
-     'platform': 'sensor', 'eep': 'A5-12-03', 'address_count': 3, 'bus_device': True},
-    {'hw_type': 'FWZ14_65A', 'brand': 'ELTAKO', 'description': 'Electricity Meter',
-     'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 1, 'bus_device': True},
-
-    # weather stations
-    {'hw_type': 'FWG14MS', 'brand': 'ELTAKO', 'description': 'Weather Station Gateway',
-     'platform': 'sensor', 'eep': 'A5-13-01', 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'MS', 'brand': 'ELTAKO', 'description': 'Weather Station',
-     'platform': 'sensor', 'eep': 'A5-13-01', 'address_count': 1},
-    {'hw_type': 'WMS', 'brand': 'ELTAKO', 'description': 'Weather Station',
-     'platform': 'sensor', 'eep': 'A5-13-01', 'address_count': 1},
-    {'hw_type': 'FWS61', 'brand': 'ELTAKO', 'description': 'Weather Station',
-     'platform': 'sensor', 'eep': 'A5-13-01', 'address_count': 1},
-
-    # temperature and humidity
-    {'hw_type': 'FLGTF', 'brand': 'ELTAKO', 'description': 'Temperature and Humidity Sensor',
-     'platform': 'sensor', 'eep': 'A5-04-02', 'address_count': 1},
-    {'hw_type': 'FLGTF', 'brand': 'ELTAKO', 'description': 'Air Quality, Temperature and Humidity Sensor',
-     'platform': 'sensor', 'eep': 'A5-09-0C', 'address_count': 1},
-    {'hw_type': 'FLT58', 'brand': 'ELTAKO', 'description': 'Temperature and Humidity Sensor',
-     'platform': 'sensor', 'eep': 'A5-04-02', 'address_count': 1},
-    {'hw_type': 'FFT60', 'brand': 'ELTAKO', 'description': 'Temperature and Humidity Sensor',
-     'platform': 'sensor', 'eep': 'A5-04-02', 'address_count': 1},
-    {'hw_type': 'FTFSB', 'brand': 'ELTAKO', 'description': 'Temperature and Humidity Sensor',
-     'platform': 'sensor', 'eep': 'A5-04-02', 'address_count': 1},
-
-    # light sensors
-    {'hw_type': 'FHD60SB', 'brand': 'ELTAKO', 'description': 'Twilight and daylight sensor',
-     'platform': 'sensor', 'eep': 'A5-06-01', 'address_count': 1},
-
-    # occupancy with light and temperature
-    {'hw_type': 'FABH65S', 'brand': 'ELTAKO', 'description': 'Light, temperature and occupancy sensor',
-     'platform': 'sensor', 'eep': 'A5-08-01', 'address_count': 1},
-    {'hw_type': 'FBH65', 'brand': 'ELTAKO', 'description': 'Light, temperature and occupancy sensor',
-     'platform': 'sensor', 'eep': 'A5-08-01', 'address_count': 1},
-    {'hw_type': 'FBH65S', 'brand': 'ELTAKO', 'description': 'Light, temperature and occupancy sensor',
-     'platform': 'sensor', 'eep': 'A5-08-01', 'address_count': 1},
-    {'hw_type': 'FBH65TF', 'brand': 'ELTAKO', 'description': 'Light, temperature and occupancy sensor',
-     'platform': 'sensor', 'eep': 'A5-08-01', 'address_count': 1},
-
-    # thermostats (as sensor)
-    {'hw_type': 'FUTH', 'brand': 'ELTAKO', 'description': 'Temperature sensor and controller',
-     'platform': 'sensor', 'eep': 'A5-10-06', 'address_count': 1},
-    {'hw_type': 'FUTH', 'brand': 'ELTAKO', 'description': 'Temperature and humidity sensor and controller',
-     'platform': 'sensor', 'eep': 'A5-10-12', 'address_count': 1},
-    {'hw_type': 'FTR78S', 'brand': 'ELTAKO', 'description': 'Thermostat',
-     'platform': 'sensor', 'eep': 'A5-10-03', 'address_count': 1},
-
-    # dimmers (bus)
-    {'hw_type': 'FUD14', 'brand': 'ELTAKO', 'description': 'Light dimmer',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 3, 'pct14_key_function': 32, 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FUD14_800W', 'brand': 'ELTAKO', 'description': 'Light dimmer',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 3, 'pct14_key_function': 32, 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FSG14_1_10V', 'brand': 'ELTAKO', 'description': 'Dimming for electr. ballasts (1-10V)',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 3, 'pct14_key_function': 32, 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FDG14', 'brand': 'ELTAKO', 'description': 'Dali Gateway',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 1, 'pct14_key_function': 32, 'address_count': 16, 'bus_device': True},
-    {'hw_type': 'FD2G14', 'brand': 'ELTAKO', 'description': 'Dali Gateway',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 1, 'pct14_key_function': 32, 'address_count': 16, 'bus_device': True},
-
-    # relays (bus)
-    {'hw_type': 'FMZ14', 'brand': 'ELTAKO', 'description': 'Relay (multifunction)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'F6-02-01',
-     'pct14_function_group': 1, 'pct14_key_function': 1, 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FSR14', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 2, 'pct14_key_function': 51, 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FSR14_1x', 'brand': 'ELTAKO', 'description': 'Relay (1 channel)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 2, 'pct14_key_function': 51, 'address_count': 1, 'bus_device': True},
-    {'hw_type': 'FSR14_2x', 'brand': 'ELTAKO', 'description': 'Relay (2 channels)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 2, 'pct14_key_function': 51, 'address_count': 2, 'bus_device': True},
-    {'hw_type': 'FSR14_4x', 'brand': 'ELTAKO', 'description': 'Relay (4 channels)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 2, 'pct14_key_function': 51, 'address_count': 4, 'bus_device': True},
-    {'hw_type': 'FSR14M_2x', 'brand': 'ELTAKO', 'description': 'Relay (2 channels, with metering)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 2, 'pct14_key_function': 51, 'address_count': 2, 'bus_device': True},
-    # metering feature of the FSR14M_2x (eo_man: 'FSR14M_2x-feature')
-    {'hw_type': 'FSR14M_2x', 'brand': 'ELTAKO', 'description': 'Relay power meter',
-     'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 2, 'bus_device': True},
-    {'hw_type': 'F4SR14_LED', 'brand': 'ELTAKO', 'description': 'Relay for LED (4 channels)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08',
-     'pct14_function_group': 2, 'pct14_key_function': 51, 'address_count': 4, 'bus_device': True},
-
-    # covers (bus)
-    {'hw_type': 'FSB14', 'brand': 'ELTAKO', 'description': 'Cover',
-     'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F',
-     'pct14_function_group': 2, 'pct14_key_function': 31, 'address_count': 2, 'bus_device': True},
-
-    # heating and cooling (bus)
-    {'hw_type': 'FHK14', 'brand': 'ELTAKO', 'description': 'Heating/Cooling',
-     'platform': 'climate', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06',
-     'pct14_function_group': 3, 'pct14_key_function': 65, 'address_count': 2, 'bus_device': True},
-    {'hw_type': 'F4HK14', 'brand': 'ELTAKO', 'description': 'Heating/Cooling (4 channels)',
-     'platform': 'climate', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06',
-     'pct14_function_group': 3, 'pct14_key_function': 65, 'address_count': 4, 'bus_device': True},
-    {'hw_type': 'FAE14SSR', 'brand': 'ELTAKO', 'description': 'Heating/Cooling',
-     'platform': 'climate', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06',
-     'pct14_function_group': 3, 'pct14_key_function': 65, 'address_count': 2, 'bus_device': True},
-
-    # other bus modules (no template - kept for the device page)
-    {'hw_type': 'FMSR14', 'brand': 'ELTAKO', 'description': 'Multisensor relay', 'bus_device': True},
-    {'hw_type': 'FSU14', 'brand': 'ELTAKO', 'description': 'Clock/timer module', 'bus_device': True},
-
-    # decentralized relays
-    {'hw_type': 'FMZ61', 'brand': 'ELTAKO', 'description': 'Relay (multifunction)',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'F6-02-01', 'address_count': 1},
-    {'hw_type': 'FSR61-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSR61NP-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSR61/8-24V UC', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSR61G-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSR61LN-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 2},
-    {'hw_type': 'FLC61NP-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FR62-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FR62NP-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FL62-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FL62NP-230V', 'brand': 'ELTAKO', 'description': 'Relay',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSSA-230V', 'brand': 'ELTAKO', 'description': 'Socket switch actuator',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSVA-230V-10A', 'brand': 'ELTAKO', 'description': 'Socket switch actuator',
-     'platform': 'light', 'eep': 'M5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FSVA-230V-10A', 'brand': 'ELTAKO', 'description': 'Socket switch actuator (power meter)',
-     'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 1},
-
-    # decentralized dimmers
-    {'hw_type': 'FUD61NP-230V', 'brand': 'ELTAKO', 'description': 'Light dimmer',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FUD61NPN-230V', 'brand': 'ELTAKO', 'description': 'Light dimmer',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FD62NP-230V', 'brand': 'ELTAKO', 'description': 'Light dimmer',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-    {'hw_type': 'FD62NPN-230V', 'brand': 'ELTAKO', 'description': 'Light dimmer',
-     'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08', 'address_count': 1},
-
-    # decentralized covers
-    {'hw_type': 'FSB61-230V', 'brand': 'ELTAKO', 'description': 'Cover',
-     'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'address_count': 1},
-    {'hw_type': 'FSB61NP-230V', 'brand': 'ELTAKO', 'description': 'Cover',
-     'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'address_count': 1},
-    {'hw_type': 'FJ62/12-36V DC', 'brand': 'ELTAKO', 'description': 'Cover',
-     'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'address_count': 1},
-    {'hw_type': 'FJ62NP-230V', 'brand': 'ELTAKO', 'description': 'Cover',
-     'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'address_count': 1},
-    {'hw_type': 'FSUD-230V', 'brand': 'ELTAKO', 'description': 'Cover',
-     'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F', 'address_count': 1},
+# Products named in the ELTAKO technical catalogue (Kapitel T) whose telegram
+# profile is implemented by eltako14bus v1.0.0. The reusable library keeps the
+# protocol catalog independent of this product/documentation list; these rows
+# are therefore integration metadata layered on top of it.
+PDF_DEVICE_CATALOG_ADDITIONS: list[dict] = [
+    # Sensors and transmitters
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Temperature sensor',
+       'platform': 'sensor', 'eep': eep, 'address_count': 1}
+      for name, eep in (
+          ('FTF65S', 'A5-02-05'), ('FMMS44SB', 'A5-02-05'), ('FMS55SB', 'A5-02-05'),
+          ('FMS55ESB', 'A5-02-05'), ('FMS65ESB', 'A5-02-05'),
+          ('FFT65B', 'A5-04-02'), ('FFTF65B', 'A5-04-02'), ('FFT55B', 'A5-04-02'),
+          ('FTFB', 'A5-04-02'), ('FTFSB', 'A5-04-02'), ('FFT60SB', 'A5-04-02'),
+          ('FLGTF65', 'A5-04-02'), ('FLGTF55', 'A5-04-02'),
+          ('FBH65SB', 'A5-04-03'), ('FBH55SB', 'A5-04-03'), ('FBHF65SB', 'A5-04-03'),
+          ('FAH65S', 'A5-06-01'), ('FIH65S', 'A5-06-01'), ('FHD60SB', 'A5-06-01'),
+          ('FHD65SB', 'A5-06-02'),
+          ('FABH65S', 'A5-08-01'), ('FBH65', 'A5-08-01'), ('FBH65S', 'A5-08-01'),
+          ('FBH65TF', 'A5-08-01'), ('FB65B', 'A5-08-01'), ('FB55B', 'A5-08-01'),
+          ('FBH65SB', 'A5-08-01'), ('FBH55SB', 'A5-08-01'), ('FBHF65SB', 'A5-08-01'),
+          ('FIH65B', 'A5-06-02'),
+          ('FCO2TF65', 'A5-09-04'), ('FCO2TS', 'A5-09-04'),
+          ('FLT58', 'A5-09-05'), ('FLGTF65', 'A5-09-0C'), ('FLGTF55', 'A5-09-0C'),
+          ('FTR78S', 'A5-10-03'), ('FTR86B', 'A5-10-06'),
+          ('FTR65DSB', 'A5-10-06'), ('FTR55DSB', 'A5-10-06'), ('FTR65HB', 'A5-10-06'),
+          ('FTRF65HB', 'A5-10-06'), ('FTR55HB', 'A5-10-06'), ('FTR65SB', 'A5-10-06'),
+          ('FTRF65SB', 'A5-10-06'), ('FTR55SB', 'A5-10-06'), ('FTR65HS', 'A5-10-06'),
+          ('FTAF65D', 'A5-10-06'), ('FUTH65D', 'A5-10-06'), ('FUTH55D', 'A5-10-06'),
+          ('FUTH65D', 'A5-10-12'), ('FUTH55D', 'A5-10-12'),
+          ('FWS61', 'A5-13-01'),
+          ('FKS-H', 'A5-20-04'), ('FSM60B', 'A5-30-01'), ('FHMB', 'A5-30-03'),
+          ('FRWB', 'A5-30-03'),
+          ('FNS55B', 'F6-01-01'), ('FNS55EB', 'F6-01-01'), ('FNS65EB', 'F6-01-01'),
+          ('FSTAP', 'A5-10-03'),
+          ('FASM60', 'F6-10-00'), ('FSM14', 'F6-10-00'), ('FSM61', 'F6-10-00'),
+          ('FTK', 'D5-00-01'), ('FTKB-RW', 'D5-00-01'), ('FFKB', 'D5-00-01'),
+          ('FTKB-gr', 'D5-00-01'), ('FTKE', 'F6-10-00'), ('FFTE', 'F6-10-00'),
+          ('F1T65', 'F6-01-01'), ('F1FT65', 'F6-01-01'), ('F1T55E', 'F6-01-01'),
+          ('FET55E', 'F6-01-01'), ('FKD', 'F6-01-01'), ('FMH1W', 'F6-01-01'),
+          ('F4T65', 'F6-02-01'), ('F4T65B', 'F6-02-01'), ('F4FT65', 'F6-02-01'),
+          ('F4FT65B', 'F6-02-01'), ('F4PT', 'F6-02-01'), ('FT4F', 'F6-02-01'),
+          ('F4T55E', 'F6-02-01'), ('F4T55EB', 'F6-02-01'), ('F4PT55', 'F6-02-01'),
+          ('FHS4', 'F6-02-01'), ('FMH4', 'F6-02-01'), ('FMH4S', 'F6-02-01'),
+          ('FF8', 'F6-02-01'), ('FMH8', 'F6-02-01'), ('F4T55B', 'F6-02-01'),
+          ('FT55', 'F6-02-01'), ('FS55', 'F6-02-01'), ('FS55E', 'F6-02-01'),
+          ('FS65E', 'F6-02-01'),
+      )],
+    # Additional wireless devices listed in Kapitel T. These products use EEPs for which
+    # the integration already has a binary-sensor, sensor or light platform.
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Wireless pushbutton',
+       'platform': 'binary_sensor', 'eep': 'F6-01-01', 'address_count': 1}
+      for name in ('FPE-1', 'FTTB')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Wireless rocker switch',
+       'platform': 'binary_sensor', 'eep': 'F6-02-01', 'address_count': 1}
+      for name in ('F2T65', 'F2T65B', 'F2FT65', 'F2FT65B', 'F2ZT65', 'F2FZT65B',
+                   'F2T55E', 'F2T55EB', 'F2ZT55E', 'FZT55', 'FHS2', 'FMH2', 'FMH2S',
+                   'F6T65B', 'F6T55B')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Occupancy sensor',
+       'platform': 'binary_sensor', 'eep': 'A5-07-01', 'address_count': 1}
+      for name in ('FABH130', 'FB65B', 'FB55B', 'FBH65SB', 'FBH55SB', 'FBHF65SB')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Temperature and humidity sensor',
+       'platform': 'sensor', 'eep': 'A5-04-03', 'address_count': 1}
+      for name in ('FFT65B', 'FFTF65B', 'FFT55B', 'FTFB', 'FTFSB', 'FFT60SB')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Electricity meter',
+       'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 1}
+      for name in ('FWZ14', 'FWZ12', 'DSZ14DRS', 'DSZ14WDRS', 'FSR61VA', 'FSVA-230V')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Light actuator',
+       'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
+       'address_count': 1}
+      for name in ('FDT55B', 'FDT55EB', 'FDT65B', 'FDTF65B', 'FZK14', 'FHD62NP',
+                   'FLC61', 'FMS61NP-230V', 'FMZ61-230V', 'FSR70S-230V',
+                   'FUD70S-230V', 'FZK61NP-230V')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Cover actuator',
+       'platform': 'cover', 'eep': 'G5-3F-7F', 'sender_eep': 'H5-3F-7F',
+       'address_count': 1}
+      for name in ('FRGBW71L', 'FWWKW71L')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Light actuator',
+       'platform': 'light', 'eep': 'A5-38-08', 'sender_eep': 'A5-38-08',
+       'address_count': 1}
+      for name in ('FDG71L', 'FLC61NP', 'FMS61', 'FSR14SSR', 'FSR61/8-24V',
+                   'FUD61', 'FSUD-230V')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Heating/Cooling',
+       'platform': 'climate', 'eep': 'A5-10-06', 'sender_eep': 'A5-10-06',
+       'address_count': 1}
+      for name in ('FAE14LPR', 'FHK61U')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Electricity meter',
+       'platform': 'sensor', 'eep': 'A5-12-01', 'address_count': 1}
+      for name in ('FSR61VA-10A',)],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': 'Multisensor',
+       'platform': 'sensor', 'eep': eep, 'address_count': 1}
+      for name in ('FMMS44SB', 'FMS55SB', 'FMS55ESB', 'FMS65ESB')
+      for eep in ('A5-04-01', 'A5-04-03', 'A5-06-02', 'A5-06-03')],
+    # Actuators using the Eltako command/status profiles documented in Kap. T.
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': description,
+       'platform': platform, 'eep': eep, 'sender_eep': sender, 'address_count': 1}
+      for name, description, platform, eep, sender in (
+          ('F2L14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FFR14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FMS14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FTN14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FAE14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('F4SR14-LED', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FHK61', 'Heating/Cooling', 'climate', 'A5-10-06', 'A5-10-06'),
+          ('FHK61SSR', 'Heating/Cooling', 'climate', 'A5-10-06', 'A5-10-06'),
+          ('FHK61U-230V', 'Heating/Cooling', 'climate', 'A5-10-06', 'A5-10-06'),
+          ('FSUD', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FUD70S', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FUD70S-230V', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FDG71', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FSG71/1-10V', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FKLD61', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FDH62', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FLD61', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FUD71', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FUD71L', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FUD61NP', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FUD61NPN', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FSR61', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSR61NP', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSR61G', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSR61LN', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSR71', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSR71NP-4x', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSR70S', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSSA', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSSG', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSVA', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSHA', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSHA-230V', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FUA12-230V', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FTN61', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FHK61SSR-230V', 'Heating/Cooling', 'climate', 'A5-10-06', 'A5-10-06'),
+          ('FLC61NP-230V', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FSVA-230V', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FTN61NP-230V', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FD62NP-230V', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FD62NPN-230V', 'Light dimmer', 'light', 'A5-38-08', 'A5-38-08'),
+          ('FJ62/12-36V DC', 'Cover', 'cover', 'G5-3F-7F', 'H5-3F-7F'),
+          ('FJ62NP-230V', 'Cover', 'cover', 'G5-3F-7F', 'H5-3F-7F'),
+          ('FSB61', 'Cover', 'cover', 'G5-3F-7F', 'H5-3F-7F'),
+          ('FSB61NP', 'Cover', 'cover', 'G5-3F-7F', 'H5-3F-7F'),
+          ('FSB71', 'Cover', 'cover', 'G5-3F-7F', 'H5-3F-7F'),
+          ('FSB71NP', 'Cover', 'cover', 'G5-3F-7F', 'H5-3F-7F'),
+          ('FR62', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FR62NP', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FL62', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FL62NP', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FZK61NP', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FZK61NP-230V', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
+          ('FHK61-230V', 'Heating/Cooling', 'climate', 'A5-10-06', 'A5-10-06'),
+      )],
+    *[{'hw_type': 'FFGB-hg', 'brand': 'ELTAKO', 'description': 'Window/door contact',
+       'platform': 'binary_sensor', 'eep': eep, 'address_count': 1}
+      for eep in ('A5-14-09', 'A5-14-0A')],
+    *[{'hw_type': name, 'brand': 'ELTAKO', 'description': description,
+       'platform': 'binary_sensor', 'eep': eep, 'address_count': 1}
+      for name, description, eep in (
+          ('FFG7B', 'Window/door contact', 'A5-14-09'),
+          ('FFG7B', 'Window/door contact', 'F6-10-00'),
+          ('mTronic', 'Window/door contact', 'A5-14-0A'),
+          ('FWS81', 'Water leakage detector', 'F6-05-01'),
+          ('FZS65', 'Smoke detector', 'F6-05-02'),
+      )],
 ]
 
-# hw type -> primary catalog entry (first occurrence wins - it is the primary use)
-_PRIMARY_BY_HW_TYPE: dict[str, dict] = {}
-for _entry in DEVICE_CATALOG:
-    _PRIMARY_BY_HW_TYPE.setdefault(_entry['hw_type'], _entry)
-
-
-#: how the brand is written wherever a text is shown to a user. The `eltakobus` library spells it
-#: 'Eltako' in its profile descriptions; those descriptions end up in the device form, on the help
-#: page and in the generated documentation, so they are adjusted while they are rendered - the
-#: library itself and every identifier stay untouched.
-BRAND = 'ELTAKO'
-
-
-def as_display_text(text: str | None) -> str:
-    """A text of the library, written the way the ui writes the brand."""
-    return (text or '').replace('Eltako', BRAND)
-
-
-def normalize_hw_type(name: str | None) -> str:
-    """Device name of any tool -> comparable key ('FSR14-4x', 'fsr14 4x' -> 'FSR14_4X').
-
-    Other tools write the same device differently than the housing does: PCT14 exports
-    'FSR14-4x' and 'FUD14/800W', the EnOcean Device Manager 'FSR14_4x'. Separators are
-    therefore all the same character and the case is dropped.
-    """
-    key = str(name or '').strip().upper()
-    for character in ('-', ' ', '/', '.'):
-        key = key.replace(character, '_')
-    return key
-
-
-# normalized hw type -> primary catalog entry
-_PRIMARY_BY_NORMALIZED: dict[str, dict] = {}
-for _entry in DEVICE_CATALOG:
-    _PRIMARY_BY_NORMALIZED.setdefault(normalize_hw_type(_entry['hw_type']), _entry)
+# Keep one row per product/profile pair while preserving the library catalog order.
+_catalog_rows = list(DEVICE_CATALOG)
+_catalog_keys = {(row.get('hw_type'), row.get('eep'), row.get('sender_eep'))
+                 for row in _catalog_rows}
+for _row in PDF_DEVICE_CATALOG_ADDITIONS:
+    _key = (_row.get('hw_type'), _row.get('eep'), _row.get('sender_eep'))
+    if _key not in _catalog_keys:
+        _catalog_rows.append(_row)
+        _catalog_keys.add(_key)
+DEVICE_CATALOG = _catalog_rows
 
 
 def find_hw_type(name: str | None) -> dict:
-    """Primary catalog entry of a device name written by another tool (PCT14, eo_man).
-
-    Falls back to the part before the first variant separator, so a device which only
-    differs in a detail the catalog does not distinguish is still found
-    ('FUD14/800W' -> FUD14_800W if known, otherwise FUD14).
-    """
-    key = normalize_hw_type(name)
-    if not key:
-        return {}
-    entry = _PRIMARY_BY_NORMALIZED.get(key)
-    if entry is not None:
-        return entry
-    base = normalize_hw_type(str(name).split('/')[0])
-    return _PRIMARY_BY_NORMALIZED.get(base, {})
-
-
-# gateway type of this integration (GatewayDeviceType) -> catalog entry of that gateway
-_GATEWAY_BY_TYPE: dict[str, dict] = {}
-for _entry in DEVICE_CATALOG:
-    if _entry.get('gateway_type'):
-        _GATEWAY_BY_TYPE.setdefault(_entry['gateway_type'], _entry)
-
-
-def describe_gateway_type(gateway_type: str | None) -> dict:
-    """Catalog entry of a gateway type, e.g. 'fam14' -> the FAM14 entry."""
-    if not gateway_type:
-        return {}
-    return _GATEWAY_BY_TYPE.get(str(gateway_type), {})
+    """Find a library or PDF-catalog product, including normalized aliases."""
+    found = _library_find_hw_type(name)
+    if found:
+        return found
+    wanted = normalize_hw_type(name)
+    return next((row for row in DEVICE_CATALOG
+                 if normalize_hw_type(row.get('hw_type')) == wanted), {})
 
 
 def describe_hw_type(hw_type: str | None) -> dict:
-    """Primary catalog entry of a hw type (e.g. for a bus device identified by discovery)."""
-    if not hw_type:
-        return {}
-    return _PRIMARY_BY_HW_TYPE.get(hw_type, {})
+    """Return the primary row for a library or PDF-catalog product."""
+    found = _library_describe_hw_type(hw_type)
+    return found or find_hw_type(hw_type)
 
 
 def get_device_templates(platform: str, supported_eeps: list[str] = None,
-                         supported_sender_eeps: list[str] = None) -> list[dict]:
-    """Device templates of one platform for the device form of the web ui.
-
-    A template carries everything the form prefills when the device is selected. Templates
-    whose EEP the platform schema does not support are dropped (safety net - the catalog
-    must never offer something the validation would reject).
-    """
-    templates = []
+                          supported_sender_eeps: list[str] = None) -> list[dict]:
+    """Return templates from the library catalog plus the PDF additions."""
+    templates = _library_get_device_templates(platform, supported_eeps, supported_sender_eeps)
+    known = {template['value'] for template in templates}
     for entry in DEVICE_CATALOG:
         if entry.get('platform') != platform or not entry.get('eep'):
             continue
         if supported_eeps is not None and entry['eep'] not in supported_eeps:
             continue
-        sender_eep = entry.get('sender_eep')
-        if sender_eep and supported_sender_eeps is not None and sender_eep not in supported_sender_eeps:
-            sender_eep = None
-
-        label = f"{entry['hw_type']} - {entry['description']}"
-        same_hw = [e for e in DEVICE_CATALOG if e['hw_type'] == entry['hw_type']
-                   and e.get('platform') == platform and e.get('eep')]
-        if len(same_hw) > 1:
-            label += f" ({entry['eep']})"
-
-        template = {
-            'value': f"{entry['hw_type']}|{entry['eep']}",
-            'label': label,
-            'hw_type': entry['hw_type'],
-            'description': entry['description'],
-            'eep': entry['eep'],
-        }
-        if sender_eep:
-            template['sender_eep'] = sender_eep
-        if entry.get('pct14_function_group'):
-            template['pct14_function_group'] = entry['pct14_function_group']
-            template['pct14_key_function'] = entry['pct14_key_function']
+        sender = entry.get('sender_eep')
+        if sender and supported_sender_eeps is not None and sender not in supported_sender_eeps:
+            sender = None
+        value = f"{entry['hw_type']}|{entry['eep']}"
+        if value in known:
+            continue
+        template = {'value': value, 'label': f"{entry['hw_type']} - {entry['description']}",
+                    'hw_type': entry['hw_type'], 'description': entry['description'],
+                    'eep': entry['eep']}
+        if sender:
+            template['sender_eep'] = sender
         if entry.get('address_count'):
             template['address_count'] = entry['address_count']
         templates.append(template)
-
-    templates.sort(key=lambda t: t['label'])
-    return templates
+    return sorted(templates, key=lambda template: template['label'])

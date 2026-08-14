@@ -5,9 +5,10 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from eltakobus.util import AddressExpression, b2s
-from eltakobus.eep import (A5_04_01, A5_04_02, A5_04_03, A5_06_01, A5_07_01, A5_08_01, A5_09_0C, A5_10_03,
+from eltakobus.eep import (A5_04_01, A5_04_02, A5_04_03, A5_06_01, A5_06_02, A5_06_03, A5_07_01,
+                           A5_08_01, A5_09_04, A5_09_05, A5_09_0C, A5_10_03, A5_07_02, A5_07_03,
                            A5_10_06, A5_10_12, A5_12_01, A5_12_02, A5_12_03, A5_13_01, EEP, F6_01_01,
-                           F6_02_01, F6_02_02, F6_10_00, VOC_SubstancesType, WindowHandlePosition)
+                           F6_02_01, F6_02_02, F6_10_00, VOC_SubstancesType, WindowHandlePosition, A5_20_04)
 from eltakobus.message import ESP2Message
 
 from homeassistant.components.sensor import (
@@ -58,6 +59,11 @@ DEFAULT_DEVICE_NAME_HYGROSTAT = "Hygrostat"
 DEFAULT_DEVICE_NAME_THERMOMETER = "Thermometer"
 DEFAULT_DEVICE_NAME_AIR_QUAILTY_SENSOR = "Air Quality Sensor"
 
+A5_02_EEPS = tuple(EEP.find(f"A5-02-{suffix}") for suffix in (
+    "01", "02", "03", "04", "05", "06", "07", "08", "09", "0A", "0B",
+    "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "1A", "1B", "20", "30",
+))
+
 SENSOR_TYPE_BATTERY_VOLTAGE = "electricity_voltage"
 SENSOR_TYPE_ELECTRICITY_CUMULATIVE = "electricity_cumulative"
 SENSOR_TYPE_ELECTRICITY_CURRENT = "electricity_current"
@@ -79,6 +85,10 @@ SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_WEST = "weather_station_illuminance_west
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_CENTRAL = "weather_station_illuminance_central"
 SENSOR_TYPE_WEATHER_STATION_ILLUMINANCE_EAST = "weather_station_illuminance_east"
 SENSOR_TYPE_ILLUMINANCE = "illuminance"
+SENSOR_TYPE_TWILIGHT = "twilight"
+SENSOR_TYPE_CO2 = "co2"
+SENSOR_TYPE_VOC = "voc"
+SENSOR_TYPE_VALVE_POSITION = "valve_position"
 
 
 @dataclass
@@ -236,6 +246,16 @@ SENSOR_DESC_ILLUMINATION = EltakoSensorEntityDescription(
     suggested_display_precision=0,
 )
 
+SENSOR_DESC_TWILIGHT = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_TWILIGHT,
+    name="Twilight",
+    native_unit_of_measurement=LIGHT_LUX,
+    icon="mdi:weather-sunset",
+    device_class=SensorDeviceClass.ILLUMINANCE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
+)
+
 SENSOR_DESC_TEMPERATURE = EltakoSensorEntityDescription(
     key=SENSOR_TYPE_TEMPERATURE,
     name="Temperature",
@@ -244,6 +264,21 @@ SENSOR_DESC_TEMPERATURE = EltakoSensorEntityDescription(
     device_class=SensorDeviceClass.TEMPERATURE,
     state_class=SensorStateClass.MEASUREMENT,
     suggested_display_precision=1,
+)
+
+SENSOR_DESC_CO2 = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_CO2, name="CO₂", native_unit_of_measurement="ppm",
+    icon="mdi:molecule-co2", device_class=SensorDeviceClass.CO2,
+    state_class=SensorStateClass.MEASUREMENT,
+)
+SENSOR_DESC_VOC = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_VOC, name="VOC concentration", native_unit_of_measurement="ppm",
+    icon="mdi:air-filter", device_class=SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+    state_class=SensorStateClass.MEASUREMENT,
+)
+SENSOR_DESC_VALVE_POSITION = EltakoSensorEntityDescription(
+    key=SENSOR_TYPE_VALVE_POSITION, name="Valve position", native_unit_of_measurement=PERCENTAGE,
+    icon="mdi:valve", state_class=SensorStateClass.MEASUREMENT,
 )
 
 SENSOR_DESC_TARGET_TEMPERATURE = EltakoSensorEntityDescription(
@@ -355,6 +390,36 @@ async def async_setup_entry(
                     if dev_conf.eep in [A5_10_12]:
                         entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
 
+                elif dev_conf.eep in A5_02_EEPS:
+                    entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
+                elif dev_conf.eep in [A5_06_02, A5_06_03]:
+                    entities.append(EltakoIlluminationSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_VOLTAGE, "supply_voltage"))
+
+                elif dev_conf.eep in [A5_07_02, A5_07_03]:
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_VOLTAGE, "supply_voltage"))
+                    if dev_conf.eep == A5_07_03:
+                        entities.append(EltakoIlluminationSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
+                elif dev_conf.eep in [A5_09_04]:
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_CO2, "co2"))
+                    entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+                    entities.append(EltakoHumiditySensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
+
+                elif dev_conf.eep in [A5_09_05]:
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_VOC, "concentration"))
+
+                elif dev_conf.eep in [A5_20_04]:
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_VALVE_POSITION, "valve_position"))
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_TEMPERATURE, "temperature"))
+
                 elif dev_conf.eep in [A5_10_06, A5_10_03]:
                     entities.append(EltakoTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
                     entities.append(EltakoTargetTemperatureSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
@@ -377,7 +442,8 @@ async def async_setup_entry(
 
                 elif dev_conf.eep in [A5_06_01]:
                     entities.append(EltakoIlluminationSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep))
-                    #TODO: add twilight
+                    entities.append(EltakoFieldSensor(platform, gateway, dev_conf.id, dev_name, dev_conf.eep,
+                                                      SENSOR_DESC_TWILIGHT, "twilight"))
                     #TODO: add daylight
                     # both are currently combined in illumination
 
@@ -491,6 +557,23 @@ class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
         self.schedule_update_ha_state()
 
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id} ({type(self).__name__})] value initially loaded: [native_value: {self.native_value}, state: {self.state}]")
+
+
+class EltakoFieldSensor(EltakoSensor):
+    """Expose a decoded EEP field as a Home Assistant sensor."""
+
+    def __init__(self, platform, gateway, dev_id, dev_name, dev_eep, description, field):
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep, description)
+        self._field = field
+
+    def value_changed(self, msg: ESP2Message):
+        try:
+            decoded = self.dev_eep.decode_message(msg)
+            self._attr_native_value = getattr(decoded, self._field)
+        except Exception as e:  # noqa: BLE001 - malformed telegrams must not stop other entities
+            LOGGER.warning("[Field Sensor %s] Could not decode message: %s", self.dev_id, str(e))
+            return
+        self.schedule_update_ha_state()
 
 class EltakoPirSensor(EltakoSensor):
     """Occupancy Sensor"""

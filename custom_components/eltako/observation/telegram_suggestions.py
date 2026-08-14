@@ -15,41 +15,47 @@ source the device form uses, so the web ui never carries its own device knowledg
 
 from __future__ import annotations
 
+from eltakobus.eep import EEP
+
 from ..const import LOGGER
 from ..catalog.device_catalog import DEVICE_CATALOG
 
 LOG_PREFIX_SUGGEST = "Telegram Suggestions"
 
-# message type of a telegram -> EEPs which can be transported by it. The message type is the
-# hard limit: an RPS telegram never carries an A5 profile.
-EEP_BY_MESSAGE_TYPE = {
-    'RPS': ['F6-02-01', 'F6-02-02', 'F6-01-01', 'F6-10-00'],
-    '1BS': ['D5-00-01'],
-    '4BS': ['A5-04-02', 'A5-04-01', 'A5-04-03', 'A5-08-01', 'A5-06-01', 'A5-07-01',
-            'A5-10-03', 'A5-10-06', 'A5-10-12', 'A5-12-01', 'A5-12-02', 'A5-12-03',
-            'A5-13-01', 'A5-30-01', 'A5-30-03', 'A5-09-04', 'A5-09-0C', 'A5-38-08'],
-}
+def _known_profiles() -> list[type[EEP]]:
+    """Return every concrete profile registered by eltako14bus."""
+    registry = getattr(EEP, '_EEP__sublasses_by_string', {})
+    return [registry[key] for key in sorted(registry) if registry.get(key)]
 
-# plausible range of a decoded value. A candidate whose decoded value leaves the range is
-# dropped - this is what makes the data bytes decide between the profiles.
-PLAUSIBLE_RANGES = {
-    'temperature': (-40, 80),
-    'current_temperature': (-40, 80),
-    'target_temperature': (0, 45),
-    'target_temp': (0, 45),
-    'current_temp': (-40, 80),
-    'humidity': (0, 100),
-    'illumination': (0, 100000),
-    'illuminance': (0, 100000),
-    'supply_voltage': (0, 6),
-    'support_voltage': (0, 6),
-    'battery_voltage': (0, 6),
-    'wind_speed': (0, 70),
-    'dawn_sensor': (0, 1000),
-    'co2': (0, 5000),
-    'voc': (0, 65535),
-    'meter_reading': (0, 1e9),
-}
+
+def _profiles_by_message_type() -> dict[str, list[str]]:
+    """Build transport candidates from the library's EEP metadata."""
+    families = {0x05: 'RPS', 0x06: '1BS', 0x07: '4BS'}
+    result = {'RPS': [], '1BS': [], '4BS': []}
+    for profile in _known_profiles():
+        # M5/H5 are actuator command/sender profiles. They are valid EEPs, but are not
+        # useful candidates when identifying an unknown incoming sensor telegram.
+        if profile.eep_string[:2] not in {'A5', 'D5', 'F6'}:
+            continue
+        family = families.get(profile.get_metadata().org)
+        if family:
+            result[family].append(profile.eep_string)
+    preferred = {
+        'RPS': ['F6-02-01', 'F6-02-02', 'F6-01-01', 'F6-05-01', 'F6-05-02', 'F6-10-00'],
+        '1BS': ['D5-00-01'],
+        '4BS': ['A5-04-02', 'A5-04-01', 'A5-04-03', 'A5-08-01', 'A5-06-01', 'A5-07-01',
+                'A5-10-03', 'A5-10-06', 'A5-10-12', 'A5-12-01', 'A5-12-02', 'A5-12-03',
+                'A5-13-01', 'A5-30-01', 'A5-30-03', 'A5-09-04', 'A5-09-05', 'A5-09-0C'],
+    }
+    for family, profiles in result.items():
+        order = {eep: index for index, eep in enumerate(preferred[family])}
+        profiles.sort(key=lambda eep: (order.get(eep, len(order)), eep))
+    return result
+
+
+# The library registry and its ``org`` metadata are the source of truth. This includes new
+# profiles automatically and avoids a second, drifting EEP list in the integration.
+EEP_BY_MESSAGE_TYPE = _profiles_by_message_type()
 
 
 def _message_family(msg_type: str) -> str | None:
@@ -124,8 +130,16 @@ def _decoded_values(decoded) -> dict | None:
         return None
 
 
-def _plausibility(decoded) -> tuple[bool, list[str]]:
-    """Are the decoded values within a physically sensible range?
+def _profile_metadata(eep_string: str) -> dict | None:
+    """Return JSON-safe metadata for a candidate profile."""
+    try:
+        return EEP.find(eep_string).get_metadata().as_dict()
+    except Exception:  # noqa: BLE001 - unknown EEPs are expected in diagnostics
+        return None
+
+
+def _plausibility(eep_string: str, decoded) -> tuple[bool, list[str]]:
+    """Check decoded values against ranges declared by eltako14bus metadata.
 
     Returns (plausible, list of 'name=value' of the checked values). A profile without any
     checkable value stays a candidate - it just gets no confirmation from the data.
@@ -134,7 +148,14 @@ def _plausibility(decoded) -> tuple[bool, list[str]]:
         return False, []
 
     values = []
-    for name, (minimum, maximum) in PLAUSIBLE_RANGES.items():
+    try:
+        fields = EEP.find(eep_string).get_metadata().fields
+    except Exception:  # noqa: BLE001 - a missing profile has no evidence
+        return False, []
+    for field in fields:
+        if not field.value_range:
+            continue
+        name = field.name
         if not hasattr(decoded, name):
             continue
         try:
@@ -143,6 +164,7 @@ def _plausibility(decoded) -> tuple[bool, list[str]]:
             continue
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             continue
+        minimum, maximum = field.value_range
         if not minimum <= value <= maximum:
             return False, []
         values.append(f"{name}={round(value, 2)}")
@@ -167,9 +189,13 @@ def suggest(msg_types=None, data: str = None, status: str = None, address: str =
 
     # 1) a teach-in telegram states the EEP - highest confidence, independent of the data
     if teach_in_profile:
-        candidates.append({'eep': str(teach_in_profile).upper(), 'confidence': 'confirmed',
-                           'reason': 'reported by the 4BS teach-in telegram of the device',
-                           'values': []})
+        profile = str(teach_in_profile).upper()
+        metadata = _profile_metadata(profile)
+        candidates.append({'eep': profile,
+                           'confidence': 'confirmed' if metadata else 'unknown',
+                           'reason': ('reported by the 4BS teach-in telegram of the device'
+                                      if metadata else 'reported EEP is not known to eltako14bus'),
+                           'values': [], 'metadata': metadata, 'decoded': None})
 
     # 2) the message type limits the possible profiles
     possible: list[str] = []
@@ -184,7 +210,7 @@ def suggest(msg_types=None, data: str = None, status: str = None, address: str =
         # 3) the data bytes decide: decode and check the values
         if raw:
             decoded = _decode(eep, raw, status_value)
-            plausible, values = _plausibility(decoded)
+            plausible, values = _plausibility(eep, decoded)
             if decoded is None:
                 continue
             if not plausible:
@@ -200,11 +226,12 @@ def suggest(msg_types=None, data: str = None, status: str = None, address: str =
                 # decodes, and it is what lets a human decide which candidate is the right
                 # one ("22.4 °C, 41 %" against "button B pressed").
                 'decoded': _decoded_values(decoded),
+                'metadata': _profile_metadata(eep),
             })
         else:
             candidates.append({'eep': eep, 'confidence': 'possible',
                                'reason': f"fits the {'/'.join(sorted(families))} type",
-                               'values': [], 'decoded': None})
+                               'values': [], 'decoded': None, 'metadata': _profile_metadata(eep)})
 
     # 4) a wired FTS14EM input is recognizable by its low local address
     if local_id is not None and local_id < 0x1500:
@@ -217,8 +244,8 @@ def suggest(msg_types=None, data: str = None, status: str = None, address: str =
     for candidate in candidates:
         candidate['devices'] = devices_for_eep(candidate['eep'])
 
-    # confidence first, then profiles for which the catalog actually knows a device - an EEP
-    # nobody sells a device for is a worse suggestion than one with a concrete model
+    # Confidence first, then profiles with concrete catalog evidence. Within those groups the
+    # stable metadata-derived profile order keeps the suggestions predictable.
     order = {'confirmed': 0, 'likely': 1, 'possible': 2}
     candidates.sort(key=lambda candidate: (order.get(candidate['confidence'], 3),
                                            0 if candidate['devices'] else 1))

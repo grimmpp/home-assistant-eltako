@@ -194,7 +194,7 @@ class TestFrontendSettings(TestCase):
     def test_frontend_files_exist(self):
         self.assertTrue(os.path.isfile(os.path.join(self.FRONTEND_DIR, PANEL_JS_FILE)))
         for module in ['lib/api.js', 'lib/utils.js', 'lib/styles.js',
-                       'pages/overview.js', 'pages/telegrams.js', 'pages/devices.js',
+                       'pages/overview.js', 'pages/telegrams.js', 'pages/statistics.js',
                        'pages/devices_config.js', 'pages/about.js',
                        # the header shows the svg and falls back to the png; both ship with
                        # the integration and must not get lost

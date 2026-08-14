@@ -6,7 +6,9 @@ signal and file named here exists.
 
 > **Reading order.** [The shape of the thing](#the-shape-of-the-thing) →
 > [Startup](#startup-what-happens-when) → [The life of a telegram](#the-life-of-a-telegram).
-> Those three explain nine tenths of the code. The rest is reference.
+> Those three explain nine tenths of the code. The rest is reference. For a checklist to
+> validate a change against - requirement by requirement, each with its test - see
+> [docs/requirements](../requirements/readme.md) instead.
 
 ---
 

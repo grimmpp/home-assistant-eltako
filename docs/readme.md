@@ -48,6 +48,7 @@
 
 * **Development**
   * [Architecture - how this integration is built](architecture/readme.md)
+  * [Requirements specification - a checklist to validate a change against](requirements/readme.md)
   * [Websocket api - every command of the web ui, with its parameters](architecture/websocket-api.md)
   * [Generating the documentation](../generate_docs.py) - the supported devices and EEPs are rendered from the code (`python generate_docs.py`)
   * [Development container (Home Assistant + example data + Grafana)](dev-container/readme.md)

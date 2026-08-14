@@ -4,11 +4,13 @@
  * latter. The form fields are delivered by the backend (eltako/devices/form).
  */
 
+import { activityOf } from "../lib/activity.js";
 import { WS } from "../lib/api.js";
 import { BUS_SCAN_STYLES, applyBusScans, bindBusCancel, renderBusCancel,
          renderBusScans } from "../lib/bus_scan.js";
-import { DETAILS_STYLES, bindDetails, bindModal, deviceDetails, gatewayDetails,
-         openInHomeAssistant, renderDetails, renderModal } from "../lib/details.js";
+import { DETAILS_STYLES, bindDetails, bindModal, deviceDetails,
+         openInHomeAssistant, renderDetails, renderGatewayDetails,
+         renderModal } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { SENDER_PICKER_STYLES, bindSenderPickers, describeAssignResult, gatewayOption,
          isBusGatewayType, renderSenderPicker } from "../lib/sender_gateway.js";
@@ -165,9 +167,9 @@ export const page = {
     // which gateway may switch which actuator - read once, used by every row (_deviceRow)
     this._senderGateways = ((ctx.state.integrationInfo || {}).gateways || []);
     const fromUi = all.filter((d) => d.source === "ui").length;
-    const neverSeen = all.filter((d) => !this._activityOf(d)).length;
+    const neverSeen = all.filter((d) => !activityOf(d)).length;
     const activeToday = all.filter((d) => {
-      const activity = this._activityOf(d);
+      const activity = activityOf(d);
       return activity && activity.silent_since_seconds !== null && activity.silent_since_seconds < 86400;
     }).length;
 
@@ -246,13 +248,8 @@ export const page = {
     }
   },
 
-  /** Activity of the device itself, or of its sender for pure actuators. */
-  _activityOf(device) {
-    return device.activity || device.sender_activity || null;
-  },
-
   _renderActivity(device) {
-    const activity = this._activityOf(device);
+    const activity = activityOf(device);
     if (!activity) {
       return `<span class="tag unknown">never</span>`;
     }
@@ -265,7 +262,7 @@ export const page = {
   },
 
   _renderLastSeen(device) {
-    const activity = this._activityOf(device);
+    const activity = activityOf(device);
     if (!activity || !activity.last_seen) return "-";
     const silent = activity.silent_since_seconds;
     const label = silent === null || silent === undefined ? formatDateTime(activity.last_seen)
@@ -280,7 +277,7 @@ export const page = {
 
   /** Sorting incl. the columns which come from the activity (telegram count, last reported). */
   _sortValue(device, column) {
-    const activity = this._activityOf(device);
+    const activity = activityOf(device);
     if (column === "count") return activity ? activity.count : -1;
     if (column === "last_seen") {
       if (!activity || !activity.last_seen) return 0;
@@ -319,7 +316,7 @@ export const page = {
 
   _deviceRow(device, indent = false, senderBadge = "") {
     return `
-      <tr class="${this._activityOf(device) ? "" : "unknown-row"} ${indent ? "channel-row" : ""} ${
+      <tr class="${activityOf(device) ? "" : "unknown-row"} ${indent ? "channel-row" : ""} ${
             device.simulated ? "simulated-row" : ""}"
           data-address="${escapeHtml(device.address)}"
           data-external="${escapeHtml(device.external_address || "")}"
@@ -483,19 +480,13 @@ export const page = {
    * where that page exists (canOpenInHa).
    */
   _renderGatewayDetails(ctx) {
-    const gateway = ((ctx.state.integrationInfo || {}).gateways || [])
-      .find((entry) => String(entry.id) === String(ctx.state.gatewayDetails));
-    if (!gateway) return "";
-
-    return renderDetails(gatewayDetails(gateway, {
-      deviceCount: (ctx.state.configuredDevices || []).filter((device) =>
-        String(device.gateway_id) === String(gateway.id)).length,
-    }), icon);
+    return renderGatewayDetails((ctx.state.integrationInfo || {}).gateways,
+      ctx.state.gatewayDetails, ctx.state.configuredDevices, icon);
   },
 
   /** The "last seen" of the table as plain text - the popup has no room for a badge. */
   _lastSeenText(device) {
-    const activity = this._activityOf(device);
+    const activity = activityOf(device);
     if (!activity || !activity.last_seen) return "never reported yet";
     const silent = activity.silent_since_seconds;
     if (silent === null || silent === undefined) return formatDateTime(activity.last_seen);
@@ -1605,7 +1596,7 @@ export const page = {
 
   _filtered(ctx) {
     return (ctx.state.configuredDevices || []).filter((device) => {
-      if (ctx.state.onlySilent && this._activityOf(device)) return false;
+      if (ctx.state.onlySilent && activityOf(device)) return false;
       return matchesFilter(ctx.state.configFilter, [
         device.address, device.external_address, device.name, device.eep, device.platform,
         device.area, device.gateway_name, device.source,
