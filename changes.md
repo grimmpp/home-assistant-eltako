@@ -2,6 +2,7 @@
 
 ## Version 2.2.1
 
+* **Release candidate `2.2.1rc1`.** This pre-release is intended for final testing before the stable `2.2.1` release.
 * Updated the `eltako14bus` dependency to version `1.0.1`.
 * Added twilight sensor support for EEP `A5-06-01`.
 * Added the missing ELTAKO catalogue profiles `FIH65B` (`A5-06-02`) and `FFG7B` (`F6-10-00`).
