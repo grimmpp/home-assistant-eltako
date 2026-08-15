@@ -119,6 +119,8 @@ PDF_DEVICE_CATALOG_ADDITIONS: list[dict] = [
     *[{'hw_type': name, 'brand': 'ELTAKO', 'description': description,
        'platform': platform, 'eep': eep, 'sender_eep': sender, 'address_count': 1}
       for name, description, platform, eep, sender in (
+          ('FUD14', 'Ventilation fan', 'fan', 'A5-38-08', 'A5-38-08'),
+          ('FSR14', 'Ventilation fan', 'fan', 'M5-38-08', 'A5-38-08'),
           ('F2L14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
           ('FFR14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
           ('FMS14', 'Relay', 'light', 'M5-38-08', 'A5-38-08'),
@@ -194,7 +196,10 @@ _catalog_keys = {(row.get('hw_type'), row.get('eep'), row.get('sender_eep'))
                  for row in _catalog_rows}
 for _row in PDF_DEVICE_CATALOG_ADDITIONS:
     _key = (_row.get('hw_type'), _row.get('eep'), _row.get('sender_eep'))
-    if _key not in _catalog_keys:
+    # A product may intentionally be offered on more than one HA platform,
+    # e.g. FSR14 as both a light relay and a ventilation fan. Keep the old
+    # de-duplication behavior for all other catalog additions.
+    if _key not in _catalog_keys or _row.get('platform') == 'fan':
         _catalog_rows.append(_row)
         _catalog_keys.add(_key)
 DEVICE_CATALOG = _catalog_rows

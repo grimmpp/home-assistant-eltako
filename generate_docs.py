@@ -57,6 +57,7 @@ PLATFORM_DESCRIPTIONS = {
     'binary_sensor': 'Contacts, rocker switches, occupancy and water sensors - everything with a state of on/off.',
     'climate': 'Heating and cooling: room thermostats and the actuators they control.',
     'cover': 'Blinds and shutters incl. travel times and tilt.',
+    'fan': 'Ventilation fans with on/off or percentage speed control.',
     'light': 'Switchable and dimmable lights.',
     'sensor': 'Measured values: temperature, humidity, brightness, air quality, meter readings, weather.',
     'switch': 'Relays and everything else which is switched on and off.',

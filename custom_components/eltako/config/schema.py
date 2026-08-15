@@ -358,6 +358,27 @@ class ClimateSchema(EltakoPlatformSchema):
         ),
     )
 
+
+class FanSchema(EltakoPlatformSchema):
+    """Voluptuous schema for Eltako ventilation fans."""
+    PLATFORM = Platform.FAN
+
+    CONF_EEP_SUPPORTED = [A5_38_08.eep_string, M5_38_08.eep_string]
+    CONF_SENDER_EEP_SUPPORTED = [A5_38_08.eep_string]
+    DEFAULT_NAME = "Fan"
+
+    ENTITY_SCHEMA = vol.All(
+        vol.Schema(
+            {
+                vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+                vol.Required(CONF_EEP): vol.In(CONF_EEP_SUPPORTED),
+                vol.Required(CONF_SENDER): _get_sender_schema(CONF_SENDER_EEP_SUPPORTED),
+                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+                vol.Optional(CONF_AREA): cv.string,
+            }
+        ),
+    )
+
 class GatewaySchema(EltakoPlatformSchema):
     """Voluptuous schema for bus gateway"""
     PLATFORM = CONF_GATEWAY
@@ -383,6 +404,7 @@ class GatewaySchema(EltakoPlatformSchema):
                 **SensorSchema.platform_node(),
                 **CoverSchema.platform_node(),
                 **ClimateSchema.platform_node(),
+                **FanSchema.platform_node(),
             })),
         })
 

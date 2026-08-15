@@ -36,6 +36,7 @@ from .schema import (
     BinarySensorSchema,
     ClimateSchema,
     CoverSchema,
+    FanSchema,
     LightSchema,
     SensorSchema,
     SwitchSchema,
@@ -51,6 +52,7 @@ SUPPORTED_PLATFORMS: dict[str, type] = {
     Platform.SWITCH.value: SwitchSchema,
     Platform.COVER.value: CoverSchema,
     Platform.CLIMATE.value: ClimateSchema,
+    Platform.FAN.value: FanSchema,
 }
 
 # fields which are offered per platform in the web ui. The EEP lists are taken from the
@@ -264,6 +266,20 @@ def get_form_descriptor() -> dict:
                          {'name': CONF_ID, 'label': 'Thermostat address', 'type': 'address', 'required': True},
                          _eep_field(ClimateSchema.CONF_CLIMATE_SENDER_EEP, 'Thermostat EEP'),
                      ]},
+                ],
+            },
+            {
+                'platform': Platform.FAN.value,
+                'label': 'Fan',
+                'help': "Ventilation fans (FUD14, FSR14, ...)",
+                'device_types': get_device_templates(
+                    Platform.FAN.value, supported_eeps=FanSchema.CONF_EEP_SUPPORTED,
+                    supported_sender_eeps=FanSchema.CONF_SENDER_EEP_SUPPORTED),
+                'fields': [
+                    FIELD_ID,
+                    _eep_field(FanSchema.CONF_EEP_SUPPORTED),
+                    _sender_field(FanSchema.CONF_SENDER_EEP_SUPPORTED, required=True),
+                    FIELD_NAME, FIELD_AREA,
                 ],
             },
         ],

@@ -2,7 +2,7 @@
 
 *This page is generated from the code by [`generate_docs.py`](../generate_docs.py) &ndash; do not edit it by hand.*
 
-The integration knows **240 device types** and **71 EnOcean Equipment Profiles**, of which **60** can become a Home Assistant entity on one of **6 platforms**. It is not limited to ELTAKO hardware - any device which speaks one of these profiles works.
+The integration knows **240 device types** and **71 EnOcean Equipment Profiles**, of which **60** can become a Home Assistant entity on one of **7 platforms**. It is not limited to ELTAKO hardware - any device which speaks one of these profiles works.
 
 The **Help** page of the web ui shows the same lists for the version you actually run.
 
@@ -16,6 +16,7 @@ EEPs are accepted - anything else is rejected by the configuration check.
 | **binary sensor** | Contacts, rocker switches, occupancy and water sensors - everything with a state of on/off. | `A5-07-01`, `A5-07-02`, `A5-07-03`, `A5-08-01`, `A5-14-09`, `A5-14-0A`, `A5-30-01`, `A5-30-03`, `D5-00-01`, `F6-01-01`, `F6-02-01`, `F6-02-02`, `F6-05-01`, `F6-05-02`, `F6-10-00` | &ndash; |
 | **[climate](heating-and-cooling/readme.md)** | Heating and cooling: room thermostats and the actuators they control. | `A5-10-06` | `A5-10-06`, `F6-02-01`, `F6-02-02` |
 | **[cover](relays-and-switches/readme.md)** | Blinds and shutters incl. travel times and tilt. | `G5-3F-7F` | `H5-3F-7F` |
+| **fan** | Ventilation fans with on/off or percentage speed control. | `A5-38-08`, `M5-38-08` | `A5-38-08` |
 | **[light](lights-tutorial/readme.md)** | Switchable and dimmable lights. | `A5-38-08`, `M5-38-08` | `A5-38-08`, `F6-02-01`, `F6-02-02` |
 | **sensor** | Measured values: temperature, humidity, brightness, air quality, meter readings, weather. | `A5-02-01`, `A5-02-02`, `A5-02-03`, `A5-02-04`, `A5-02-05`, `A5-02-06`, `A5-02-07`, `A5-02-08`, `A5-02-09`, `A5-02-0A`, `A5-02-0B`, `A5-02-10`, `A5-02-11`, `A5-02-12`, `A5-02-13`, `A5-02-14`, `A5-02-15`, `A5-02-16`, `A5-02-17`, `A5-02-18`, `A5-02-19`, `A5-02-1A`, `A5-02-1B`, `A5-02-20`, `A5-02-30`, `A5-04-01`, `A5-04-02`, `A5-04-03`, `A5-06-01`, `A5-06-02`, `A5-06-03`, `A5-07-01`, `A5-07-02`, `A5-07-03`, `A5-08-01`, `A5-09-04`, `A5-09-05`, `A5-09-0C`, `A5-10-03`, `A5-10-06`, `A5-10-12`, `A5-12-01`, `A5-12-02`, `A5-12-03`, `A5-13-01`, `A5-20-04`, `F6-10-00` | &ndash; |
 | **[switch](relays-and-switches/readme.md)** | Relays and everything else which is switched on and off. | `F6-02-01`, `F6-02-02`, `M5-38-08` | `A5-38-08`, `F6-02-01`, `F6-02-02` |
@@ -178,7 +179,7 @@ long as they speak one of the profiles below.
 | **FSM14** | ELTAKO | Temperature sensor | wireless | 1 | sensor | `F6-10-00` | &ndash; |
 | **FSM60B** | ELTAKO | Digital input with battery status | wireless | 1 | binary_sensor | `A5-30-01` | &ndash; |
 | **FSM61** | ELTAKO | Temperature sensor | wireless | 1 | sensor | `F6-10-00` | &ndash; |
-| **FSR14** | ELTAKO | Relay | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
+| **FSR14** | ELTAKO | Relay | RS485 bus | 1 | light, fan | `M5-38-08` | `A5-38-08` |
 | **FSR14M_2x** | ELTAKO | Relay (2 channels, with metering) | RS485 bus | 2 | light, sensor | `A5-12-01`, `M5-38-08` | `A5-38-08` |
 | **FSR14SSR** | ELTAKO | Light actuator | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
 | **FSR14_1x** | ELTAKO | Relay (1 channel) | RS485 bus | 1 | light | `M5-38-08` | `A5-38-08` |
@@ -239,7 +240,7 @@ long as they speak one of the profiles below.
 | **FTS14EM** | ELTAKO | Wired inputs (switches, contacts) | RS485 bus | 1 | binary_sensor | `A5-08-01`, `D5-00-01`, `F6-02-01`, `F6-02-02`, `F6-10-00` | &ndash; |
 | **FTTB** | ELTAKO | Wireless pushbutton | wireless | 1 | binary_sensor | `F6-01-01` | &ndash; |
 | **FUA12-230V** | ELTAKO | Relay | wireless | 1 | light | `M5-38-08` | `A5-38-08` |
-| **FUD14** | ELTAKO | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
+| **FUD14** | ELTAKO | Light dimmer | RS485 bus | 1 | light, fan | `A5-38-08` | `A5-38-08` |
 | **FUD14_800W** | ELTAKO | Light dimmer | RS485 bus | 1 | light | `A5-38-08` | `A5-38-08` |
 | **FUD61** | ELTAKO | Light actuator | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
 | **FUD61NP** | ELTAKO | Light dimmer | wireless | 1 | light | `A5-38-08` | `A5-38-08` |
@@ -334,7 +335,7 @@ telegram is decoded, logged and can be analysed, but no platform turns it into a
 | `A5-20-04` | ELTAKO FKS-H valve and temperature telegram. | sensor | &ndash; | FKS-H |
 | `A5-30-01` | Digital Input with battery status | binary_sensor | &ndash; | FSM60B |
 | `A5-30-03` | Digital Inputs | binary_sensor | &ndash; | FHMB, FRWB |
-| `A5-38-08` | Central Command Gateway | light | light, switch | F2L14, F4SR14-LED, F4SR14_LED, FAE14, FD2G14, FD62NP-230V, FD62NPN-230V, FDG14, FDG71, FDG71L, FDH62, FDT55B, FDT55EB, FDT65B, FDTF65B, FFR14, FHD62NP, FKLD61, FL62, FL62-230V, FL62NP, FL62NP-230V, FLC61, FLC61NP, FLC61NP-230V, FLD61, FMS14, FMS61, FMS61NP-230V, FMZ61-230V, FR62, FR62-230V, FR62NP, FR62NP-230V, FSG14_1_10V, FSG71/1-10V, FSHA, FSHA-230V, FSR14, FSR14M_2x, FSR14SSR, FSR14_1x, FSR14_2x, FSR14_4x, FSR61, FSR61-230V, FSR61/8-24V, FSR61/8-24V UC, FSR61G, FSR61G-230V, FSR61LN, FSR61LN-230V, FSR61NP, FSR61NP-230V, FSR70S, FSR70S-230V, FSR71, FSR71NP-4x, FSSA, FSSA-230V, FSSG, FSUD, FSUD-230V, FSVA, FSVA-230V, FSVA-230V-10A, FTN14, FTN61, FTN61NP-230V, FUA12-230V, FUD14, FUD14_800W, FUD61, FUD61NP, FUD61NP-230V, FUD61NPN, FUD61NPN-230V, FUD70S, FUD70S-230V, FUD71, FUD71L, FZK14, FZK61NP, FZK61NP-230V |
+| `A5-38-08` | Central Command Gateway | fan, light | fan, light, switch | F2L14, F4SR14-LED, F4SR14_LED, FAE14, FD2G14, FD62NP-230V, FD62NPN-230V, FDG14, FDG71, FDG71L, FDH62, FDT55B, FDT55EB, FDT65B, FDTF65B, FFR14, FHD62NP, FKLD61, FL62, FL62-230V, FL62NP, FL62NP-230V, FLC61, FLC61NP, FLC61NP-230V, FLD61, FMS14, FMS61, FMS61NP-230V, FMZ61-230V, FR62, FR62-230V, FR62NP, FR62NP-230V, FSG14_1_10V, FSG71/1-10V, FSHA, FSHA-230V, FSR14, FSR14M_2x, FSR14SSR, FSR14_1x, FSR14_2x, FSR14_4x, FSR61, FSR61-230V, FSR61/8-24V, FSR61/8-24V UC, FSR61G, FSR61G-230V, FSR61LN, FSR61LN-230V, FSR61NP, FSR61NP-230V, FSR70S, FSR70S-230V, FSR71, FSR71NP-4x, FSSA, FSSA-230V, FSSG, FSUD, FSUD-230V, FSVA, FSVA-230V, FSVA-230V-10A, FTN14, FTN61, FTN61NP-230V, FUA12-230V, FUD14, FUD14_800W, FUD61, FUD61NP, FUD61NP-230V, FUD61NPN, FUD61NPN-230V, FUD70S, FUD70S-230V, FUD71, FUD71L, FZK14, FZK61NP, FZK61NP-230V |
 | `D2-00-01` | RCP/window handle controller with temperature and environment data. | *recording only* | *recording only* | FMMS44SB |
 | `D2-14-40` | Indoor multisensor proposal profile without a contact bit. | *recording only* | *recording only* | FMS55SB |
 | `D2-14-41` | Indoor multisensor proposal profile with a window/contact bit. | *recording only* | *recording only* | FMS55ESB, FMS65ESB |
@@ -347,7 +348,7 @@ telegram is decoded, logged and can be analysed, but no platform turns it into a
 | `F6-10-00` | Windows handle | binary_sensor, sensor | &ndash; | FASM60, FFG7B, FFTE, FSM14, FSM61, FTK, FTKE, FTS14EM |
 | `G5-3F-7F` | ELTAKO Shutters | cover | &ndash; | FJ62/12-36V DC, FJ62NP-230V, FRGBW71L, FSB14, FSB61, FSB61-230V, FSB61NP, FSB61NP-230V, FSB71, FSB71NP, FSUD-230V, FWWKW71L |
 | `H5-3F-7F` | ELTAKO Shutter Command | &ndash; | cover | FJ62/12-36V DC, FJ62NP-230V, FRGBW71L, FSB14, FSB61, FSB61-230V, FSB61NP, FSB61NP-230V, FSB71, FSB71NP, FSUD-230V, FWWKW71L |
-| `M5-38-08` | ELTAKO Gateway Switching - This is implemented pretty rudimentary | light, switch | &ndash; | F2L14, F4SR14-LED, F4SR14_LED, FAE14, FFR14, FL62, FL62-230V, FL62NP, FL62NP-230V, FLC61NP-230V, FMS14, FMZ14, FMZ61, FR62, FR62-230V, FR62NP, FR62NP-230V, FSHA, FSHA-230V, FSR14, FSR14M_2x, FSR14_1x, FSR14_2x, FSR14_4x, FSR61, FSR61-230V, FSR61/8-24V UC, FSR61G, FSR61G-230V, FSR61LN, FSR61LN-230V, FSR61NP, FSR61NP-230V, FSR70S, FSR71, FSR71NP-4x, FSSA, FSSA-230V, FSSG, FSVA, FSVA-230V, FSVA-230V-10A, FTN14, FTN61, FTN61NP-230V, FUA12-230V, FZK61NP, FZK61NP-230V |
+| `M5-38-08` | ELTAKO Gateway Switching - This is implemented pretty rudimentary | fan, light, switch | &ndash; | F2L14, F4SR14-LED, F4SR14_LED, FAE14, FFR14, FL62, FL62-230V, FL62NP, FL62NP-230V, FLC61NP-230V, FMS14, FMZ14, FMZ61, FR62, FR62-230V, FR62NP, FR62NP-230V, FSHA, FSHA-230V, FSR14, FSR14M_2x, FSR14_1x, FSR14_2x, FSR14_4x, FSR61, FSR61-230V, FSR61/8-24V UC, FSR61G, FSR61G-230V, FSR61LN, FSR61LN-230V, FSR61NP, FSR61NP-230V, FSR70S, FSR71, FSR71NP-4x, FSSA, FSSA-230V, FSSG, FSVA, FSVA-230V, FSVA-230V-10A, FTN14, FTN61, FTN61NP-230V, FUA12-230V, FZK61NP, FZK61NP-230V |
 
 ## Gateways
 

@@ -390,7 +390,8 @@ PLATFORMS: Final = [
     Platform.COVER,
     Platform.CLIMATE,
     Platform.BUTTON,
-    Platform.SELECT
+    Platform.SELECT,
+    Platform.FAN,
 ]
 
 

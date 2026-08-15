@@ -248,7 +248,7 @@ custom_components/eltako/
   const.py             the shared vocabulary: constants, signals, websocket command names
   config_flow.py       the "add integration" dialog and the "configure" options flow
                        (loaded by this name)
-  light.py switch.py cover.py climate.py sensor.py binary_sensor.py button.py select.py
+  light.py switch.py cover.py climate.py fan.py sensor.py binary_sensor.py button.py select.py
                        one entity platform each, also loaded by name
   manifest.json  strings.json  services.yaml  docs_index.json
 
@@ -291,7 +291,7 @@ as soon as that module moves into another subpackage - so nothing does.
 
 ### Entity platforms
 
-`light`, `switch`, `cover`, `climate`, `sensor`, `binary_sensor`, `button`, `select` - all listed
+`light`, `switch`, `cover`, `climate`, `fan`, `sensor`, `binary_sensor`, `button`, `select` - all listed
 in `const.PLATFORMS`, all following the `async_setup_entry` pattern above. `sensor.py` (1098
 lines) is the largest because one EEP can produce many measurements.
 
