@@ -109,6 +109,12 @@ const identifyButtons = root.querySelectorAll('button[data-unknown-details]');
 await identifyButtons[0].click();
 const opened = ctx.state.unknownDetails;
 
+const taughtCtx = makeContext({ statistics: {
+  unknown_devices: [{ ...unknownEntry, teach_in_profile: 'A5-04-02' }], devices: [],
+} });
+const taughtRoot = show(taughtCtx);
+await taughtRoot.querySelector('button[data-unknown-details]').click();
+
 // the click above fetched the candidates of that telegram - they are what the popup shows
 const liveRoot = show(ctx);
 const liveHtml = page.render(ctx);
@@ -125,6 +131,15 @@ const metaOf = (rootElement) => {
   const values = rootElement.querySelectorAll('.meta-grid dd').map((dd) => dd.textContent.trim());
   return Object.fromEntries(terms.map((term, index) => [term, values[index]]));
 };
+
+const eepChoiceCtx = makeContext({ open: 'FF-EE-DD-CC' });
+const eepChoiceRoot = show(eepChoiceCtx);
+await eepChoiceRoot.querySelector('button[data-add-candidate]').click();
+
+const modelChoiceCtx = makeContext({ open: 'FF-EE-DD-CC' });
+const modelChoiceRoot = show(modelChoiceCtx);
+await modelChoiceRoot.querySelector('.candidate-models button[data-add-candidate]').click();
+
 await popupRoot.querySelector('button[data-add-unknown]').click();
 
 // an address which sent its very first telegram is not in the statistics yet
@@ -148,6 +163,7 @@ console.log(JSON.stringify({
   candidates: popupRoot.querySelectorAll('.candidate-list .candidate')
     .map((element) => element.textContent.replace(/\s+/g, ' ').trim()),
   suggestionCall: ctx.api.calls.find((call) => call.type === 'eltako/telegram_log/suggestions'),
+  taughtSuggestionCall: taughtCtx.api.calls.find((call) => call.type === 'eltako/telegram_log/suggestions'),
   // the stub drops the text next to an element, so the names come from the dom and the
   // values from the markup
   valuesPerEep: liveRoot.querySelectorAll('.candidate-list .candidate').map((candidate) => ({
@@ -162,6 +178,10 @@ console.log(JSON.stringify({
   pendingNewDevice: popupCtx.state.pendingNewDevice,
   navigatedTo: popupCtx.navigatedTo,
   closedOnAdd: popupCtx.state.unknownDetails,
+  eepChoice: eepChoiceCtx.state.pendingNewDevice,
+  eepChoiceNavigatedTo: eepChoiceCtx.navigatedTo,
+  modelChoice: modelChoiceCtx.state.pendingNewDevice,
+  modelChoiceNavigatedTo: modelChoiceCtx.navigatedTo,
   freshMeta: metaOf(freshRoot),
   freshNote: freshRoot.querySelector('.modal-note').textContent.trim(),
   freshCandidates: freshRoot.querySelectorAll('.candidate-list .candidate').length,
@@ -223,11 +243,23 @@ class TestTheUnknownPopup(unittest.TestCase):
         self.assertEqual('devices', self.result['navigatedTo'])
         self.assertIsNone(self.result['closedOnAdd'])
 
+    def test_clicking_eep_or_model_opens_the_prefilled_add_form(self):
+        self.assertEqual({'address': 'FF-EE-DD-CC', 'eep': 'A5-04-01', 'platform': 'sensor',
+                          'name': ''}, self.result['eepChoice'])
+        self.assertEqual('devices', self.result['eepChoiceNavigatedTo'])
+        self.assertEqual({'address': 'FF-EE-DD-CC', 'eep': 'A5-04-01', 'platform': 'sensor',
+                          'name': 'FTKB'}, self.result['modelChoice'])
+        self.assertEqual('devices', self.result['modelChoiceNavigatedTo'])
+
     def test_the_candidates_are_fetched_for_the_selected_telegram(self):
         call = self.result['suggestionCall']
         self.assertIsNotNone(call, 'the popup did not ask about this telegram')
         self.assertEqual({'address': 'FF-EE-DD-CC', 'data': '08 28 46 0F', 'status': None,
                           'msg_type': '4BS', 'teach_in_profile': None}, call['payload'])
+
+    def test_a_stored_teach_in_profile_is_sent_for_the_value_telegram(self):
+        call = self.result['taughtSuggestionCall']
+        self.assertEqual('A5-04-02', call['payload']['teach_in_profile'])
 
     def test_every_profile_shows_what_this_telegram_would_mean(self):
         """The values are the evidence: one profile reads 22.4 °C, the other -13.2."""

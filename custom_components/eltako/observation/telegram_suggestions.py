@@ -191,11 +191,15 @@ def suggest(msg_types=None, data: str = None, status: str = None, address: str =
     if teach_in_profile:
         profile = str(teach_in_profile).upper()
         metadata = _profile_metadata(profile)
-        candidates.append({'eep': profile,
-                           'confidence': 'confirmed' if metadata else 'unknown',
-                           'reason': ('reported by the 4BS teach-in telegram of the device'
-                                      if metadata else 'reported EEP is not known to eltako14bus'),
-                           'values': [], 'metadata': metadata, 'decoded': None})
+        candidate = {'eep': profile,
+                     'confidence': 'confirmed' if metadata else 'unknown',
+                     'reason': ('reported by the 4BS teach-in telegram of the device'
+                                if metadata else 'reported EEP is not known to eltako14bus'),
+                     'values': [], 'metadata': metadata, 'decoded': None}
+        candidate['devices'] = devices_for_eep(profile)
+        # A 4BS teach-in contains the sender's actual EEP. It is authoritative, so do not
+        # dilute that fact with data-based guesses for other profiles in the UI.
+        return [candidate][:limit]
 
     # 2) the message type limits the possible profiles
     possible: list[str] = []

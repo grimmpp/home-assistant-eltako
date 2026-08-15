@@ -218,6 +218,15 @@ export const page = {
       });
     });
 
+    root.querySelectorAll("button[data-add-candidate]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const [address, eep, platform, model] = button.dataset.addCandidate.split("|");
+        ctx.state.unknownDetails = null;
+        ctx.state.pendingNewDevice = { address, eep, platform, name: model || "" };
+        ctx.navigate("devices");
+      });
+    });
+
     root.querySelectorAll("th[data-sort]").forEach((header) => {
       header.addEventListener("click", () => {
         const column = header.dataset.sort;

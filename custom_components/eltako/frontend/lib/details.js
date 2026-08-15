@@ -53,6 +53,8 @@ export const DETAILS_STYLES = `
                                                   flex-wrap: wrap; gap: 4px; }
   /* what this telegram means read as that profile - the evidence a human judges by */
   .modal-card .candidate-values { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; }
+  .modal-card .candidate-choice { border: 1px solid var(--eltako-border); background: transparent;
+                                  color: inherit; cursor: pointer; font: inherit; }
 `;
 
 /**
@@ -93,7 +95,7 @@ export function unknownDetails(entry, telegram, options = {}) {
       ["Probably a device", best.hw_type],
       ...(options.rows || []),
     ],
-    extra: renderCandidates(seen.suggestions || []),
+    extra: renderCandidates(seen.suggestions || [], { address }),
     note: best.eep ? null
       : "No profile could be derived yet. A device usually reveals itself with the next "
         + "telegram which carries data - press its button again, or teach it in (4BS).",
@@ -101,8 +103,13 @@ export function unknownDetails(entry, telegram, options = {}) {
 }
 
 /** The possible profiles of an unknown address, each with the models which speak it. */
-export function renderCandidates(candidates) {
+export function renderCandidates(candidates, options = {}) {
   if (!candidates.length) return "";
+
+  const address = options.address || "";
+  const choice = (candidate, model = {}) => escapeHtml([
+    address, candidate.eep || "", model.platform || "sensor", model.hw_type || "",
+  ].join("|"));
 
   return `
     <div class="meta-section">
@@ -110,7 +117,8 @@ export function renderCandidates(candidates) {
       <div class="candidate-list">
         ${candidates.map((candidate) => `
           <div class="candidate">
-            <span class="mono">${escapeHtml(candidate.eep)}</span>
+            <button class="chip candidate-choice mono" data-add-candidate="${choice(candidate)}"
+                    title="Add device with this EEP">${escapeHtml(candidate.eep)}</button>
             <span class="tag ${candidate.confidence === "confirmed" ? "taught"
               : candidate.confidence === "likely" ? "role" : "unknown"}"
               >${escapeHtml(candidate.confidence || "")}</span>
@@ -119,8 +127,8 @@ export function renderCandidates(candidates) {
               <span class="candidate-values">${formatDecoded(candidate.decoded, 6)}</span>` : ""}
             ${(candidate.devices || []).length ? `
               <span class="candidate-models">${candidate.devices.map((model) => `
-                <span class="chip" title="${escapeHtml([model.hw_type, model.brand, model.description,
-                  model.platform].filter(Boolean).join(" - "))}">${escapeHtml(model.hw_type)}</span>`).join("")}
+                <button class="chip candidate-choice" data-add-candidate="${choice(candidate, model)}"
+                        title="Add ${escapeHtml(model.hw_type)} with this EEP">${escapeHtml(model.hw_type)}</button>`).join("")}
               </span>` : ""}
           </div>`).join("")}
       </div>

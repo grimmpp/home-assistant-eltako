@@ -282,7 +282,7 @@ export const page = {
     // statistics answer for the last telegram of the address, which is not necessarily the
     // row the user is looking at
     if (this._suggestionsFor === address && this._suggestions) {
-      parts.extra = renderCandidates(this._suggestions);
+      parts.extra = renderCandidates(this._suggestions, { address });
     }
     return renderDetails(parts, icon, `
       <button class="action primary" data-add-unknown="${escapeHtml(address)}|${escapeHtml(best.eep || "")}|${escapeHtml(best.platform || "")}|${escapeHtml(best.hw_type || "")}"
@@ -453,16 +453,19 @@ export const page = {
         // two sources: the statistics know how often this address was seen and what it looks
         // like over time, and the backend reads *this* telegram with every profile which
         // fits - its values are the evidence which tells the candidates apart
-        const [, suggestions] = await Promise.all([
-          ctx.loadStatistics(),
-          ctx.api.call(WS.LOG_SUGGESTIONS, {
-            address,
-            data: (telegram || {}).data || null,
-            status: (telegram || {}).status || null,
-            msg_type: (telegram || {}).msg_type || null,
-            teach_in_profile: (telegram || {}).teach_in_profile || null,
-          }),
-        ]);
+        await ctx.loadStatistics();
+        const knownFromStatistics = ((ctx.state.statistics || {}).unknown_devices || []).find((record) =>
+          String(record.address || "").toUpperCase() === String(address).toUpperCase());
+        const suggestions = await ctx.api.call(WS.LOG_SUGGESTIONS, {
+          address,
+          data: (telegram || {}).data || null,
+          status: (telegram || {}).status || null,
+          msg_type: (telegram || {}).msg_type || null,
+          // The selected value telegram normally has no teach-in profile itself. The
+          // statistics keep the profile announced by an earlier teach-in for this address.
+          teach_in_profile: (telegram || {}).teach_in_profile
+            || (knownFromStatistics || {}).teach_in_profile || null,
+        });
         this._suggestionsFor = address;
         this._suggestions = (suggestions || {}).suggestions || null;
         ctx.state.unknownDetails = address;
@@ -480,6 +483,16 @@ export const page = {
       button.addEventListener("click", (event) => {
         event.stopPropagation();
         const [address, eep, platform, model] = button.dataset.addUnknown.split("|");
+        ctx.state.unknownDetails = null;
+        ctx.state.pendingNewDevice = { address, eep, platform, name: model || "" };
+        ctx.navigate("devices");
+      });
+    });
+
+    root.querySelectorAll("button[data-add-candidate]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const [address, eep, platform, model] = button.dataset.addCandidate.split("|");
         ctx.state.unknownDetails = null;
         ctx.state.pendingNewDevice = { address, eep, platform, name: model || "" };
         ctx.navigate("devices");

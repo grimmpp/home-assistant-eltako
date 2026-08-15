@@ -77,6 +77,7 @@ export const page = {
         platform: pending.platform || "binary_sensor",
         gatewayId: pending.gatewayId !== undefined && pending.gatewayId !== null
           ? pending.gatewayId : this._defaultGatewayId(ctx),
+        deviceType: pending.name && pending.eep ? `${pending.name}|${pending.eep}` : null,
         values: { id: pending.address, eep: pending.eep || "", name: pending.name || "" },
         error: null,
       };

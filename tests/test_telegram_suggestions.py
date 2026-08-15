@@ -122,10 +122,19 @@ class TestDataDecidesBetweenProfiles(TestCase):
 
 class TestTeachInWins(TestCase):
 
+    def test_teach_in_profile_is_the_only_candidate(self):
+        """A confirmed teach-in EEP must suppress all data-based alternatives."""
+        candidates = suggest(msg_types={'Regular4BSMessage': 43}, data='00-52-98-0F',
+                             teach_in_profile='A5-04-02')
+
+        self.assertEqual([candidate['eep'] for candidate in candidates], ['A5-04-02'])
+        self.assertEqual(candidates[0]['confidence'], 'confirmed')
+
     def test_teach_in_profile_is_confirmed_and_first(self):
         candidates = suggest(msg_types={'Regular4BSMessage': 3}, data='00-50-64-0A',
                              teach_in_profile='A5-10-06')
 
+        self.assertEqual([c['eep'] for c in candidates], ['A5-10-06'])
         self.assertEqual(candidates[0]['eep'], 'A5-10-06')
         self.assertEqual(candidates[0]['confidence'], 'confirmed')
         self.assertIn('teach-in', candidates[0]['reason'])
@@ -250,7 +259,10 @@ class TestRobustness(TestCase):
         self.assertEqual(fields['humidity']['value_range'], (0.0, 100.0))
 
     def test_unknown_teach_in_profile_is_reported_as_unknown(self):
-        candidate = suggest(teach_in_profile='A5-FF-FF')[0]
+        candidates = suggest(msg_types={'Regular4BSMessage': 1}, data='00-50-64-0A',
+                             teach_in_profile='A5-FF-FF')
+        self.assertEqual([candidate['eep'] for candidate in candidates], ['A5-FF-FF'])
+        candidate = candidates[0]
 
         self.assertEqual(candidate['confidence'], 'unknown')
         self.assertIsNone(candidate['metadata'])

@@ -91,6 +91,12 @@ page.bindToolbar(ctx, toolbar);
 await toolbar.getElementById('add-device').click();
 const openedByToolbar = !!ctx.state.editor && ctx.state.editor.mode;
 
+const pendingCtx = makeContext({ pendingNewDevice: {
+  address: 'FF-EE-DD-CC', eep: 'A5-04-01', platform: 'sensor', name: 'FTKB',
+} });
+await page.load(pendingCtx);
+const editorFromSuggestion = pendingCtx.state.editor;
+
 const addCtx = makeContext({ editor: { mode: 'add', platform: 'light', gatewayId: 1,
                                        values: {}, error: null } });
 const add = show(addCtx);
@@ -134,6 +140,11 @@ await saveRoot.getElementById('editor-save').click();
 
 console.log(JSON.stringify({
   openedByToolbar,
+  editorFromSuggestion: editorFromSuggestion && {
+    platform: editorFromSuggestion.platform,
+    deviceType: editorFromSuggestion.deviceType,
+    values: editorFromSuggestion.values,
+  },
   // the popup markup: an overlay the panel can lift out of the page, with a card inside
   isOverlay: !!overlay,
   cardIsInsideOverlay: !!card && !!card.closest('aside.modal-overlay'),
@@ -174,6 +185,12 @@ class TestTheDeviceFormIsAPopup(unittest.TestCase):
 
     def test_add_device_opens_the_form(self):
         self.assertEqual('add', self.result['openedByToolbar'])
+
+    def test_a_suggestion_prefills_the_device_selector_too(self):
+        self.assertEqual({
+            'platform': 'sensor', 'deviceType': 'FTKB|A5-04-01',
+            'values': {'id': 'FF-EE-DD-CC', 'eep': 'A5-04-01', 'name': 'FTKB'},
+        }, self.result['editorFromSuggestion'])
 
     def test_the_form_is_rendered_as_a_popup(self):
         """An `aside.modal-overlay` - that is what the panel lifts out of the scrolling page."""
