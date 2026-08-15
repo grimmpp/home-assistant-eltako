@@ -90,6 +90,8 @@ EVENT_BUTTON_PRESSED: Final = "btn_pressed"
 EVENT_CONTACT_CLOSED: Final = "contact_closed"
 ELTAKO_GLOBAL_EVENT_BUS_ID: Final = "eltako_global_event_bus"
 EVENT_CLIMATE_PRIORITY_SELECTED: Final = "climate_priority_selected"
+EVENT_CLIMATE_COOLING_SELECTED: Final = "climate_cooling_selected"
+EVENT_CLIMATE_COOLING_STATE_CHANGED: Final = "climate_cooling_state_changed"
 
 LOGGER: Final = logging.getLogger(DOMAIN)
 

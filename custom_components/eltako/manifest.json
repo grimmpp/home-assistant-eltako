@@ -22,7 +22,7 @@
   "requirements": [
     "eltako14bus==1.0.1",
     "enocean>=0.60.1",
-    "StrEnum",
+    "strenum",
     "esp2-gateway-adapter==0.2.21"
   ],
   "version": "2.2.1rc2"

@@ -29,10 +29,24 @@ from .core.entity import (EltakoEntity, RPSMessage, RestoreEntity, State, log_en
                           validate_actuators_dev_and_sender_id)
 from .const import (CONF_COOLING_MODE, CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE,
                     CONF_OFF_TEMPERATURE, CONF_ROOM_SENSOR, CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SENSOR,
-                    CONF_SWITCH_BUTTON, EVENT_BUTTON_PRESSED, EVENT_CLIMATE_PRIORITY_SELECTED, LOGGER)
+                    CONF_SWITCH_BUTTON, EVENT_BUTTON_PRESSED, EVENT_CLIMATE_COOLING_SELECTED,
+                    EVENT_CLIMATE_COOLING_STATE_CHANGED, EVENT_CLIMATE_PRIORITY_SELECTED, LOGGER)
 from .config.config_helpers import DeviceConf
 from .config import config_helpers
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
+
+
+def _get_cooling_components(entity_config: ConfigType) -> tuple[DeviceConf | None, DeviceConf | None]:
+    """Build the optional cooling-mode sensor and sender from one climate config."""
+    cooling_config = entity_config.get(CONF_COOLING_MODE)
+    if not cooling_config:
+        return None, None
+
+    cooling_switch = config_helpers.get_device_conf(
+        cooling_config, CONF_SENSOR, [CONF_SWITCH_BUTTON]
+    )
+    cooling_sender = config_helpers.get_device_conf(cooling_config, CONF_SENDER)
+    return cooling_switch, cooling_sender
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -56,13 +70,7 @@ async def async_setup_entry(
                 room_sensor_entity_id = entity_config.get(CONF_ROOM_SENSOR)
                 off_temperature = entity_config.get(CONF_OFF_TEMPERATURE)
 
-                cooling_switch = None
-                cooling_sender = None
-                if CONF_COOLING_MODE in config.keys():
-                    LOGGER.debug("[Climate] Read cooling switch config")
-                    cooling_switch = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENSOR [CONF_SWITCH_BUTTON])
-                    LOGGER.debug("[Climate] Read cooling sender config")
-                    cooling_sender = config_helpers.get_device_conf(entity_config.get(CONF_COOLING_MODE), CONF_SENDER)
+                cooling_switch, cooling_sender = _get_cooling_components(entity_config)
 
                 if dev_conf.eep in [A5_10_06]:
                     ###### This way it is decouple from the order how devices will be loaded.
@@ -87,6 +95,11 @@ async def async_setup_entry(
                         event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_PRIORITY_SELECTED, dev_conf.id)
                         LOGGER.debug(f"Subscribe for listening to priority change events: {event_id}")
                         hass.bus.async_listen(event_id, climate_entity.async_handle_priority_events)
+
+                    if cooling_switch is not None:
+                        event_id = config_helpers.get_bus_event_type(gateway.base_id, EVENT_CLIMATE_COOLING_SELECTED, dev_conf.id)
+                        LOGGER.debug(f"Subscribe for listening to HA cooling selection: {event_id}")
+                        hass.bus.async_listen(event_id, climate_entity.async_handle_cooling_selection)
 
             except Exception as e:   # noqa: BLE001 - one bad device configuration must not stop the platform
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -154,6 +167,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         self.cooling_switch = cooling_switch
         self.cooling_switch_last_signal_timestamp = 0
+        # None means that the Eltako cooling input decides. A boolean is an explicit
+        # selection made by the Home Assistant cooling switch.
+        self._cooling_override: bool | None = None
 
         self.cooling_sender = cooling_sender
 
@@ -280,7 +296,13 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         LOGGER.debug(f"[climate {self.dev_id}] Cooling Switch {call.data['switch_address']} for button {hex(call.data['data'])} timestamp set.")
         self.cooling_switch_last_signal_timestamp = time.time()
+        self._cooling_override = None
 
+        await self._async_check_if_cooling_is_activated()
+
+    async def async_handle_cooling_selection(self, call):
+        """Handle an explicit heating/cooling selection from Home Assistant."""
+        self._cooling_override = bool(call.data.get("cooling", False))
         await self._async_check_if_cooling_is_activated()
 
     async def async_handle_priority_events(self, call):
@@ -408,6 +430,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
     def _get_mode(self) -> HVACMode:
 
+        if self._cooling_override is not None:
+            return HVACMode.COOL if self._cooling_override else HVACMode.HEAT
+
         # if no cooling switch is define return mode from config
         if self.cooling_switch is None:
             return self._hvac_mode_from_heating
@@ -429,6 +454,13 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         if new_mode != self._hvac_mode_from_heating:
             self._hvac_mode_from_heating = new_mode
             await self.async_set_hvac_mode(self._hvac_mode_from_heating)
+
+        self.hass.bus.fire(
+            config_helpers.get_bus_event_type(
+                self.gateway.base_id, EVENT_CLIMATE_COOLING_STATE_CHANGED, self.dev_id
+            ),
+            {"cooling": new_mode == HVACMode.COOL},
+        )
 
         LOGGER.debug(f"[climate {self.dev_id}] {new_mode} mode is activated.")
 

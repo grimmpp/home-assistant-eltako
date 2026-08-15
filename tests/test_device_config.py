@@ -7,7 +7,9 @@ import voluptuous as vol
 
 from custom_components.eltako.config import device_config
 from custom_components.eltako.const import (CONF_AREA, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
-                                            CONF_GATEWAY_DESCRIPTION, CONF_INVERT_SIGNAL, CONF_SENDER,
+                                            CONF_GATEWAY_DESCRIPTION, CONF_INVERT_SIGNAL,
+                                            CONF_COOLING_MODE, CONF_OFF_TEMPERATURE, CONF_ROOM_SENSOR,
+                                            CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SENSOR,
                                             CONF_TIME_CLOSES, CONF_UI_DEVICES, CONF_VOC_TYPE_INDEXES,
                                             DATA_ELTAKO, ELTAKO_CONFIG)
 
@@ -74,6 +76,25 @@ class TestFormDescriptor(TestCase):
             self.assertTrue(sender['required'], msg=platform_name)
             self.assertEqual([f['name'] for f in sender['fields']], [CONF_ID, CONF_EEP])
 
+    def test_climate_form_offers_room_sensor_and_off_temperature(self):
+        climate = [p for p in device_config.get_form_descriptor()['platforms']
+                   if p['platform'] == 'climate'][0]
+        fields = {field['name']: field for field in climate['fields']}
+        self.assertEqual(fields[CONF_ROOM_SENSOR]['type'], 'text')
+        self.assertFalse(fields[CONF_ROOM_SENSOR]['required'])
+        self.assertEqual(fields[CONF_OFF_TEMPERATURE]['type'], 'number')
+        self.assertFalse(fields[CONF_OFF_TEMPERATURE]['required'])
+
+    def test_climate_form_offers_cooling_mode(self):
+        climate = [p for p in device_config.get_form_descriptor()['platforms']
+                   if p['platform'] == 'climate'][0]
+        fields = {field['name']: field for field in climate['fields']}
+        cooling = fields[CONF_COOLING_MODE]
+        self.assertFalse(cooling['required'])
+        nested = {field['name']: field for field in cooling['fields']}
+        self.assertEqual(nested[CONF_SENSOR]['fields'][0]['name'], CONF_ID)
+        self.assertFalse(nested[CONF_SENDER]['required'])
+
     def test_area_field_is_a_combo(self):
         """The area is picked from the areas home assistant knows - or typed freely."""
         for platform in device_config.get_form_descriptor()['platforms']:
@@ -139,6 +160,19 @@ class TestDeviceValidation(TestCase):
         })
 
         self.assertEqual(validated[CONF_SENDER][CONF_EEP], 'A5-38-08')
+
+    def test_climate_options_are_accepted_from_the_web_form(self):
+        validated = device_config.validate_device('climate', {
+            CONF_ID: '00-00-00-01', CONF_EEP: 'A5-10-06',
+            CONF_SENDER: {CONF_ID: '00-00-B0-01', CONF_EEP: 'A5-10-06'},
+            CONF_ROOM_SENSOR: 'sensor.room_temperature', CONF_OFF_TEMPERATURE: 8,
+            CONF_COOLING_MODE: {
+                CONF_SENSOR: {CONF_ID: '00-00-10-08'},
+            },
+        })
+        self.assertEqual(validated[CONF_ROOM_SENSOR], 'sensor.room_temperature')
+        self.assertEqual(validated[CONF_OFF_TEMPERATURE], 8)
+        self.assertEqual(validated[CONF_COOLING_MODE][CONF_SENSOR][CONF_ID], '00-00-10-08')
 
     def test_empty_sender_group_is_dropped_and_therefore_rejected(self):
         with self.assertRaises(vol.Invalid):
@@ -494,6 +528,15 @@ class TestTeachInOfADevice(unittest.IsolatedAsyncioTestCase):
                  CONF_SENDER: {CONF_ID: 'FF-AA-80-15', CONF_EEP: 'A5-38-08'}},
             ],
             'sensor': [{CONF_ID: 'FF-AA-DD-81', CONF_EEP: 'A5-04-02', CONF_NAME: 'Sensor'}],
+            'climate': [{
+                CONF_ID: 'FF-AA-80-06', CONF_EEP: 'A5-10-06', CONF_NAME: 'Climate',
+                CONF_SENDER: {CONF_ID: 'FF-AA-80-16', CONF_EEP: 'A5-10-06'},
+                CONF_ROOM_THERMOSTAT: {CONF_ID: 'FF-AA-80-17', CONF_EEP: 'A5-10-06'},
+                CONF_COOLING_MODE: {
+                    CONF_SENSOR: {CONF_ID: 'FF-AA-80-18'},
+                    CONF_SENDER: {CONF_ID: 'FF-AA-80-19', CONF_EEP: 'A5-10-06'},
+                },
+            }],
         }
         self.entry = self.Entry(self.devices)
 
@@ -520,6 +563,12 @@ class TestTeachInOfADevice(unittest.IsolatedAsyncioTestCase):
         return connection
 
     async def test_a_bus_device_is_written_into_its_memory(self):
+        """An RS485 actuator is programmed in bus memory, not via a radio telegram.
+
+        This is the bus-only part of the heating/cooling communication documented in
+        ``docs/heating-and-cooling/readme.md``. A wireless thermostat needs a separate
+        radio-capable path; the FAM14 bus operation must not be mistaken for one.
+        """
         from custom_components.eltako.observation import bus_members
 
         with mock.patch.object(bus_members, 'async_teach_in_senders',
@@ -540,6 +589,29 @@ class TestTeachInOfADevice(unittest.IsolatedAsyncioTestCase):
         # the payload of A5-38-08 out of catalog/teach_in.py, sent from the sender address
         self.assertEqual(b'\xff\xaa\x80\x15', self.sent[0].address)
         self.assertEqual(b'\xe0\x40\x0d\x80', self.sent[0].data)
+
+    async def test_a_climate_sends_all_configured_sender_teach_ins(self):
+        """A wireless climate actuator receives every configured A5-10-06 sender.
+
+        The three telegrams represent the Home Assistant command sender, the physical
+        thermostat and the optional cooling sender. A radio-capable gateway or telegram
+        duplicator is responsible for putting these telegrams onto the wireless network.
+        """
+        connection = await self.call('FF-AA-80-06')
+
+        self.assertEqual([], connection.errors)
+        self.assertEqual('telegram', connection.results[0]['kind'])
+        self.assertEqual(3, len(self.sent))
+        self.assertEqual(
+            [b'\xff\xaa\x80\x16', b'\xff\xaa\x80\x17', b'\xff\xaa\x80\x19'],
+            [telegram.address for telegram in self.sent],
+        )
+        self.assertEqual(['ha_sender', 'room_thermostat', 'cooling_sender'],
+                         [result['role'] for result in connection.results[0]['results']])
+        self.assertEqual(['A5-10-06', 'A5-10-06', 'A5-10-06'],
+                         [result['eep'] for result in connection.results[0]['results']])
+        self.assertEqual(1, len({telegram.data for telegram in self.sent}),
+                         'all configured A5-10-06 senders use the same teach-in payload')
 
     async def test_a_sensor_cannot_be_taught_in(self):
         connection = await self.call('FF-AA-DD-81')

@@ -237,6 +237,8 @@ eltako:
             id: 00-00-B0-09
             eep: A5-10-06
           temperature_unit: °C
+          room_sensor: sensor.living_room_temperature
+          off_temperature: 8
 
 logger:
   default: info
@@ -245,3 +247,20 @@ logger:
 
 
 ~~~~~~~~
+
+For climate devices, `room_sensor` is optional and must be the entity ID of a Home
+Assistant temperature sensor. Its value is included as the current temperature in
+outgoing A5-10-06 telegrams. `off_temperature` is optional as well; when set, HVAC
+mode `off` is represented by this anti-frost target temperature instead of an RPS
+mode telegram. It must be between 0 and 40 °C.
+
+All configured climate senders (the Home Assistant sender, `thermostat` and an
+optional `cooling_mode.sender`) can be taught from the Web UI. For RS485 bus
+actuators use **check & teach in configured senders** with the FAM14 connected;
+PCT14/EnOcean Device Manager is not required for these sender-memory entries.
+Wireless actuators must be put into teach-in mode manually before using the device's
+teach-in action. The `room_sensor` itself is a Home Assistant input and does not
+require EnOcean teach-in.
+If a physical `thermostat` is configured, its sender must be taught into the
+actuator separately with PCT14, EnOcean Device Manager, or the device's manual
+teach-in procedure; the integration currently only automates the HA sender.

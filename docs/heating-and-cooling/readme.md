@@ -1,223 +1,288 @@
+# Heating and cooling
 
-# NEED TO BE REVISED!!!
+The integration exposes an Eltako A5-10-06 heating actuator as a native Home
+Assistant `climate` entity. It can control a heating valve, and optionally switch
+between heating and cooling when an Eltako input reports a cooling-mode signal.
 
-# Heating and Cooling -  Setup and Configuration
+The physical thermostat is configured with the YAML/UI key `thermostat` (the UI
+label is **Physical thermostat**).
 
-This documentation is about how to control a heating like a heat pump which is able to heat up in winter and to cool down in summer.
+## What is supported
 
-<img src="./HAClimatePanel.png" alt="Home Assistant Climate Panel" height="250"/>
+| Home Assistant entity | EEP | Purpose |
+| --- | --- | --- |
+| `climate` | `A5-10-06` | Heating/cooling actuator and target temperature control |
+| Climate sender | `A5-10-06` | Sender address used by Home Assistant to command the actuator |
+| Optional room thermostat | `A5-10-06` | Physical thermostat whose telegrams update the same climate entity |
+| Optional cooling sensor | `F6-02-01`, `F6-02-02`, `F6-10-00`, `D5-00-01`, `A5-08-01`, `M5-38-08` | Selects cooling when a recent signal is received |
+| Optional cooling sender | `A5-10-06` | Keeps the actuator in cooling mode when required |
+| Optional HA room sensor | Any HA temperature entity | Supplies the current temperature in outgoing A5-10-06 telegrams |
 
-In the following scenario we have an actuator (like FAE14, FHK14, F4HK14, F2L14, FHK61, FME14) controlling the heating valve dependent on the configured target and current temperature. The target temperature is sent frequently by a room thermostat and the target temperature can be set via control panel (e.g. ELTAKO FTAF55ED) or Home Assistant [Climate Panel](https://developers.home-assistant.io/docs/core/entity/climate).
+The climate entity exposes:
 
-Both control panels can synchronize themself. If both are use together climate panel in HA sends a telegram to the heater actuator and the thermostat will adapt the taget temperature when it changes. This communication is based on EEP A5-10-06.
+- `heat` and `off` by default;
+- `cool` as an additional HVAC mode when `cooling_mode` is configured;
+- target temperature control;
+- presets `home` (normal), `eco` (−2 K) and `sleep` (−4 K);
+- the configured minimum and maximum target temperatures;
+- the current temperature reported by the actuator, physical thermostat or
+  configured Home Assistant room sensor.
 
-Switching between heating and cooling is supported, however it cannot be changed via Climate panel in Home Assistant. You can configure a switch connected via FTS14EM to change between heating and cooling mode and the Climate panel in Home Assistant will the react on it and show the selected mode.
+When `off_temperature` is configured, `off` is represented by an A5-10-06 normal
+telegram with the anti-frost target. This makes the off state visible in actuator
+feedback. In that mode the RPS preset telegrams for `eco` and `sleep` are not sent,
+because the actuator cannot report those RPS-only commands back reliably.
 
-In the following picture you can see many possibility how you can combine all the sensors and actors with Home Assistant.
+## Recommended setup through the Home Assistant Web UI
 
-**Hint**: If you want to use and fully integrate thermostats like FUTH in combination with Home Assistant. Then two gateways are required. You can also simplify the setup by having static configurations.
+The Web UI is the standard setup path; YAML is not required. Open the Eltako panel,
+choose **Devices → Add device**, select **Climate**, and select the heating/cooling
+actuator template. Fill in:
 
-<img src="./heating-and-cooling-setup3.png" alt="Heating and cooling setup" height=600 />
+1. the actuator address and `A5-10-06` EEP;
+2. the Home Assistant sender address and `A5-10-06` sender EEP;
+3. the optional room sensor, target limits and anti-frost temperature;
+4. the optional **Physical thermostat** group;
+5. the optional **Cooling mode** group with the Eltako input and, if needed, an
+   additional A5-10-06 cooling sender.
 
-| Number      | Component   | Description |
-| :---        | :---        | :---        |
-| 1           | Heating and Cooling Actuator | e.g. ELTAKO FHK14, FAE14SSR ... . This actuator is controlling the heating valve (number 6)|
-| 2           | Climate Panel | Virtual temperature controller in Home Assistant. <br/>It requires an own address which needs to be entered in the function group 3 of the actuator e.g. via PCT14 programming software. <br/>It's EEP is "A5-10-06". |
-| 3           | Cooling Mode | Physical switch which is connected to FTS14EM and sends frequently (15min) a signal to stay in cooling mode or is off for heating. <br/>Supported EEPs: F6-02-01, F6-02-02, F6-10-00, D5-00-01, A5-08-01, M5-38-08 (FTS14EM contact signals and rocker switches are supported) <br/>In case of a rocker switch the button needs to be defined. 0x70 = top right, x50 = bottom right, 0x30 = top left, 0x10 = bottom left |
-| 4           | Room Temperature Sensor | Sensor sending periodically (every 50 seconds) the current temperature of the room. |
-| 5           | Thermostat | Physical wall-mounted temperature sensor and controller in one device. |
-| 6           | Valve | Valve letting the water flow! |
-| 7           | EnOcean Transceiver  |  Receives and sends telegrams in wireless network. (In contrast to FAM14 is can send commands into wireless network and synchronized the target temperature of Home Assistant Cliemate Panel and Thermostat e.g. FUTH.) |
-| 8           | Heatpump | Heatpump which delivers warm or cold water to the valve. In the overview picture the switch for changing from warm to cold can be used for both automation and heating. |
+Saving the device creates the climate entity. If Cooling mode is configured, the
+same device also receives the HA switch **Cooling mode**. The form and the YAML
+schema use the same validation, so the fields have the same meaning in both paths.
 
-## Actuator Configuration in Device via PCT14
+After saving, use **Devices → check & teach in configured senders** while the FAM14
+is connected. For a climate device this writes the primary HA sender, the configured
+physical thermostat sender and the optional cooling sender into the bus actuator;
+PCT14 is not needed for those sender-memory entries. For a wireless actuator, open
+the device's teach-in action, put the actuator into learn mode, and send the teach-in
+telegrams through a suitable wireless gateway. The climate sender, thermostat sender
+and cooling sender are sent by the same action.
 
-* **Heating is enabled** as default.
-* **Operating state** instead of switching state is enabled.
-* In **function group 1 a temperature sensor and controller** is entered which sends frequently the current room temperature.
-* **Optionally**: In **function group 2** a hygrostat/humidity sensor is entered.
-* In **function group 3** address for **Home Assistant Climate Panel** is entered.
-* **Optionally**: In **function group 4** a rocker switch is entered for changing the **heating modes** (Normal, Off, Night reduction (-4°K), reduction (-2°K) - Predefined by ELTAKO). Not optional for FUTH. (See below)
-* **Optionally**: In **function group 4** a rocker switch is entered for changing from heating into **cooling mode**. Preferred solution is to use a physical switch connected to FTS14EM. 
+The actuator's operating mode and function-group assignment remain hardware
+configuration. The Web UI cannot change those PCT14 parameters, but it can now teach
+all configured climate senders into the actuator.
 
-## Configuration of temperature controller e.g. FUTH
-You can configure target temperature for rooms in the physical control panel e.g. FUTH.
+## Gateway limitation: RS485 bus and wireless thermostats
 
-**IMPORTANT**: You need to send a teach-in telegram to the physical control panel so that it won't override the settings from climate controller in Home Assistant. (See description below in section for FUTH)
+The gateway path matters when the physical thermostat is wireless. An FAM14 or
+FGW14-USB connected to the RS485 bus can receive telegrams and write sender
+memory in an FHK14 bus actuator, but it cannot transmit EnOcean radio telegrams
+to a wireless thermostat. Consequently, Home Assistant can control the FHK14,
+while target-temperature, current-temperature or heating/cooling telegrams may
+not reach the thermostat. The thermostat can then overwrite the target value
+shown by Home Assistant. The wireless thermostat also needs these telegrams to
+display changes made in Home Assistant, especially a newly selected target
+temperature. Without the wireless return path, the target shown on the
+thermostat can remain unchanged even though Home Assistant has sent a new value
+to the FHK14.
 
-## Home Assistant Configuration
+For this setup, add one of the following to the message path:
 
-You can find the meaning of the numbers in the table above.
+- a telegram duplicator, such as the FTD14, when the relevant telegrams are
+  already available on the bus;
+- a radio-capable gateway/transceiver, such as the FAM-USB or USB300, when Home
+  Assistant must transmit wireless telegrams.
 
-### Example with physical switch connected via FTS14EM (RECOMMENDED)
+The thermostat sends its wireless telegrams to the FTD14 or radio gateway. That
+device forwards them onto the RS485 bus through the FAM14; the thermostat does
+not send them directly to the FHK14. In the opposite direction, messages for a
+wireless thermostat must also pass through the FTD14 or a radio gateway before
+they can reach the thermostat.
+
+An RS485-only gateway is still sufficient for bus actuator control and for
+teaching bus sender memory, but it is not a replacement for a wireless gateway.
+The Web UI can configure and teach the sender entries; it cannot make a
+bus-only gateway transmit radio telegrams.
+
+The complete installation overview is shown below. The diagram uses an FHK14 as
+the actuator example and marks the relevant components and signal paths with
+the numbers 1 to 8.
+
+<img src="./heating-and-cooling-setup3.png" alt="Heating and cooling installation overview with Home Assistant, FAM14, FGW14-USB, FTS14EM, FHK14, thermostat, temperature sensor and heat pump" width="100%">
+
+### Explanation of the numbered points
+
+1. **FHK14 actuator** – The FHK14 switches the heating or cooling output. It
+   receives the `A5-10-06` commands and controls the connected valve or load.
+2. **Home Assistant Climate Panel** – Home Assistant displays the climate
+   entity and sends target-temperature or mode changes through the configured
+   gateway connection.
+3. **Heating/cooling mode input** – This input selects whether the heat pump
+   operates in heating or cooling mode. The signal is evaluated through the
+   configured cooling-mode sensor.
+4. **Temperature sensor** – The sensor sends the current room temperature as an
+   EnOcean telegram, for example `A5-04-02`. The value can be used as the
+   current temperature of the climate entity.
+5. **Physical thermostat** – The thermostat sends `A5-10-06` telegrams with its
+   target/current temperature and status. The FAM14 can receive these telegrams
+   on the RS485 side. It cannot forward Home Assistant's target-temperature
+   changes back to the wireless thermostat; that requires a radio-capable
+   gateway such as FAM-USB or USB300.
+6. **Heating valve / actuator output** – This is the controlled heating or
+   cooling load connected to the FHK14.
+7. **Radio gateway** – The FAM-USB provides the wireless path between Home
+   Assistant and the thermostat. Its network connection is used to synchronize
+   the Home Assistant climate panel with the physical thermostat.
+8. **Heat pump** – The heat pump represents the actual heating/cooling system;
+   its operating mode is selected through point 3 and its output is controlled
+   through point 1.
+
+## Use cases
+
+### 1. Home Assistant controls heating
+
+Configure an A5-10-06 actuator and a free A5-10-06 sender address. Home Assistant
+sends the target and current temperature to the actuator. If no physical thermostat
+is configured, the integration uses controller priority `ACTUATOR_ACK` (`0x0F`),
+which is required by several A5-10-06 actuators.
+
+The sender must be taught into the actuator. For RS485 bus actuators use the
+integration's **check & teach in configured senders** action, PCT14 or the EnOcean
+Device Manager. A wireless actuator must first be put into teach-in mode manually.
+
+```yaml
+climate:
+  - id: 00-00-00-08
+    eep: A5-10-06
+    name: Living room heating
+    sender:
+      id: FF-80-80-08
+      eep: A5-10-06
+    temperature_unit: "°C"
+    min_target_temperature: 17
+    max_target_temperature: 25
 ```
-eltako:
-  gateway:
-  - id: 1
-    device_type: fam-usb
-    base_id: FF-80-80-00
-    devices:
-  ...
 
-      binary_sensor:
-      - id: FF-AA-10-08               # Wired via FTS14EM
-        eep: D5-00-01
-        name: "cooling switch"
-      ...
+### 2. Home Assistant uses a separate room sensor
 
-      climate:
-        - id: FF-AA-00-09             # Address of actuator (1)
-          eep: A5-10-06               # Telegram type of the actuator (1)
+Set `room_sensor` to an existing Home Assistant temperature entity. Its numeric
+state is used as the current temperature in every command sent by Home Assistant,
+including commands caused by a target-temperature change or a sensor update.
 
-          temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
-          min_target_temperature: 17  # Optional field, default value 17 (2)
-          max_target_temperature: 25  # Optional field, default value 25 (2)
-
-          sender:                     # Virtual temperature controller (2)
-            id: FF-AA-00-09           # Sender address (2) needs to be entered .
-            eep: A5-10-06             # 2: Sender EEP
-
-          cooling_mode:               # Optional part - cooling mode
-            sensor:                   # Rocker switch (3) must be specified in binary_sensor
-              id: 00-00-10-08         # Address of switch (3)
+```yaml
+    room_sensor: sensor.living_room_temperature
 ```
 
+The room sensor is a Home Assistant entity and does not require EnOcean teach-in.
+Unavailable, unknown or non-numeric sensor states are ignored until a usable value
+is available.
 
+### 3. Anti-frost temperature when switched off
 
-### Example with rocker switch as cooling switch which must be triggered frequently (each 15min)
-```
-eltako:
-  
-  gateway:
-  - id: 1
-    device_type: fam-usb
-    base_id: FF-80-80-00
-    devices:
-  ...
-      binary_sensor:
-      - id: FF-DD-0A-1B
-        eep: "F6-02-01"
-        name: "cooling switch"
-  ...
+Set `off_temperature` to a value between 0 and 40 °C. Switching the climate entity
+off sends that target temperature and stores the previous target. Switching it back
+on restores the previous target, or the configured minimum temperature if no target
+was previously available.
 
-      climate:
-        - id: FF-AA-00-09             # Address of actuator (1)
-          eep: A5-10-06               # Telegram type of the actuator (1)
-
-          temperature_unit: "°C"      # Displayed temperature unit in Climate Panel (2)
-          min_target_temperature: 17  # Optional field, default value 17 (2)
-          max_target_temperature: 25  # Optional field, default value 25 (2)
-
-          sender:                     # Virtual temperature controller (2)
-            id: FF-80-80-09           # Sender address (2) needs to be entered .
-            eep: A5-10-06             # 2: Sender EEP
-          
-          thermostat:                 # Optional section - physical thermostat for sync.
-            id: FF-EE-55-81           # Sender address of thermostat
-            eep: A5-10-06             # 5: EEP of thermostat
-
-          cooling_mode:               # Optional part - cooling mode
-            sensor:                   # Rocker switch (3) must be specified in binary_sensor
-              id: FF-DD-0A-1B         # Address of switch (3)
-              switch-button: 0x50     # In case of switch button needs to be specified.
-                                      # for rocker switches only
+```yaml
+    off_temperature: 8
 ```
 
-## Information about ELTAKO FLGTF
+### 4. Physical thermostat and Home Assistant together
 
-<img src="./FLGTF55-wg.jpg" height="150">
+Configure the physical thermostat under `thermostat`. Telegrams from its
+configured address are accepted by the climate entity, and the priority select
+entity is created so the user can choose between automatic, Home Assistant and
+thermostat control.
 
-* EEP A5-04-02 for temperature and humidity.
-* EEP A5-09-05 for air quality. (Not yet supported)
-* EEP A5-09-0C for air quality. (Not yet supported)
-
-### Configuration in Home Assistant
-
+```yaml
+    thermostat:
+      id: FF-EE-55-81
+      eep: A5-10-06
 ```
-eltako:
-  ...
 
+With a physical thermostat configured, the climate entity starts with priority
+`AUTO`. The Web UI device teach-in action covers the configured primary Home
+Assistant sender, the physical thermostat sender and an optional
+`cooling_mode.sender`.
+
+### 5. Heating and cooling with an Eltako input
+
+The cooling sensor is an Eltako device configured inside `cooling_mode`. A recent
+signal (15 minutes or less) selects `cool`; when it expires, the entity returns to
+`heat`. For a rocker switch, configure the button that represents the cooling
+signal. If `cooling_mode` is configured, Home Assistant also creates a virtual
+switch named **Cooling mode** for the climate device: `on` selects cooling and
+`off` selects heating. The HA selection temporarily overrides the Eltako input;
+the next input telegram returns control to the Eltako input. If a cooling sender
+is configured, the integration periodically sends the cooling command while the
+cooling signal is active.
+
+```yaml
+binary_sensor:
+  - id: 00-00-10-08
+    eep: D5-00-01
+    name: Cooling mode switch
+
+climate:
+  - id: 00-00-00-08
+    eep: A5-10-06
+    name: Heat pump
+    sender:
+      id: FF-80-80-08
+      eep: A5-10-06
+    cooling_mode:
       sensor:
-      - id: ff-ee-dd-81
-        eep: A5-04-02
-        name: "Temp. and Humidity Sensor - FLGTF"
- ...
+        id: 00-00-10-08
+      sender:
+        id: FF-80-80-09
+        eep: A5-10-06
 ```
 
-<img src="./Temp. Sensor - FLGTF.png" height="135">
+For a rocker switch, add `switch_button`, for example `0x50`, to the nested
+`sensor` configuration. The cooling sensor address and the optional cooling sender
+are validated like the other device addresses.
 
-## Information about ELTAKO FUTH (Temperature Controller)
+## Hardware prerequisites and teach-in
 
-<img src="./FUTH55ED.jpg" height="150">
+The integration configures and controls the HA entities; it does not replace the
+hardware setup in PCT14. The actuator must be configured for the desired operating
+mode and its function groups must contain the relevant room/control addresses.
 
-### Recommendations
-* Purchase the 12-24UC version instead of 230V version because FUTH55ED/230V is squeaking.
+Teach-in requirements are separate for each sender:
 
-### Configuration of FHK/FAE via PCT14
+1. Teach the primary Home Assistant A5-10-06 sender into the actuator. This is
+   supported by the device row's **teach in** action and, when enabled, by the
+   generated Home Assistant teach-in button entity.
+2. If `thermostat` is used, teach that physical thermostat into the actuator.
+3. If `cooling_mode.sender` is configured, teach that additional A5-10-06 sender
+   into the actuator as well.
+4. If a wireless thermostat must receive commands from Home Assistant, use a
+   gateway capable of transmitting into the wireless network and teach the HA
+   sender using the device's teach-in procedure.
 
-| Function Group |  Function | Description | 
-| ---: | ---: | --- |
-| 1 | 64 | Target and Current Temperature (EEP **A5-10-06**) <br/>Room address must be selected. (See below, default = 0x01 offset) | 
-| 3 | 65 | Home Automation SW (Temp Controller SW EEP **A5-10-06**) |
-| 4 | 30 | 4x push button <br/>Mandatory value. Offset 0x11 |
+FAM14/FGW14 bus connections can program RS485 actuator memory, but they do not
+replace a wireless teach-in procedure for a remote device. The room sensor option
+does not add an EnOcean sender and therefore has no teach-in step.
 
-### Configuration in Home Assistant
+## Configuration through the Home Assistant UI
 
-Actually the temperature controller (Climate Entity) in Home Assistant gets its messages from FHK/FAE/... actuator instead of the controller itself. However you can reuse the built-in hygrostat sensor (temp. + humidity with EEP A5-10-12) and the temperature controller with current temperature (EEP A5-04-02) as separate sensor.
+The Eltako device form offers all climate options supported by the schema:
 
-Example Hygrostat Sensor and single Temperature Sensor:
-```
-eltako:
-  ...
+- address, EEP, name and area;
+- sender address and sender EEP;
+- temperature unit and target limits;
+- optional room sensor entity ID;
+- optional anti-frost/off temperature;
+- optional physical room thermostat;
+- optional cooling-mode sensor and sender.
 
-      sensor:
-      - id: FF-EE-55-92
-        eep: A5-10-12
-        name: "Temp. and Humidity Sensor - FUTH"
-      - id: FF-EE-55-81
-        eep: A5-04-02
-        name: "Temp. Sensor - Room 1 FUTH"
- ...
-```
+The YAML schema and the UI use the same validation. `room_sensor` must have a valid
+Home Assistant entity-ID format and `off_temperature` must be between 0 and 40 °C.
 
-<img src="./Temp. and Humidity Sensor - FUTH.png" height="135">
-<img src="./Temp. Sensor - Room 1 FUTH.png" height="100">
+## Related entity codes
 
-## Teach-in FUTH
-You need to teach-in telegram to FUTH so that it takes over the target temperature set in Home Assistant, otherwise FUTH will overwrite its target temperature every 55 seconds. If you have successfully teached-in FUTH, it will receive the target temperature from Home Assistant and apply it. Now both device will sync their target temperatures.
+The important codes used by this integration are:
 
-In Home Assistant you will find in the climate controller device for a button entity to send teach-in telegram to FUTH. Before doing it go into the menu of FUTH `learn -> heating -> controller -> wait for telegram` so it is waiting for the teach-in telegram and then send it.
+| Code | Meaning |
+| --- | --- |
+| `A5-10-06` | Temperature controller telegram: mode, target temperature, current temperature and priority |
+| `ACTUATOR_ACK` / `0x0F` | Priority used without a physical thermostat for compatible actuators |
+| `AUTO` | Priority used when a physical thermostat is configured |
+| `0x70` | RPS normal/heating command |
+| `0x50` | RPS night reduction or cooling keep-alive, depending on the configured function |
+| `0x30` | RPS setback command |
+| `0x10` | RPS off command |
 
-**Hint**: Teach-in button only works when connected with USB transceiver. FAM14 and FGW14-USB do not send tech-in telegrams into the wireless network to FUTH.
-
-<img src="./climate-tech-in-button2.png" height="350">
-
-### Telegrams
-
-| Signal type |	Telegram Org | Address/ID-Offset | EEP | Function in PCT14 |
-| ---- | --- | ---- | ---- | ---- |
-| Room 1 / FKS | (ORG=0x7) |	0x00 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 1 / FHK | (ORG=0x7)	| 0x01 | A5-10-06 | |
-| Room 2 / FKS | (ORG=0x7)	| 0x02 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 2 / FHK | (ORG=0x7)	| 0x03 | A5-10-06 | |
-| Room 3 / FKS | (ORG=0x7)	| 0x04 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 3 / FHK | (ORG=0x7)	| 0x05 | A5-10-06 | |
-| Room 4 / FKS | (ORG=0x7)	| 0x06 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 4 / FHK | (ORG=0x7)	| 0x07 | A5-10-06 | |
-| Room 5 / FKS | (ORG=0x7)	| 0x08 | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 5 / FHK | (ORG=0x7)	| 0x09 | A5-10-06 | |
-| Room 6 / FKS | (ORG=0x7)	| 0x0A | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 6 / FHK | (ORG=0x7)	| 0x0B | A5-10-06 | |
-| Room 7 / FKS | (ORG=0x7)	| 0x0C | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 7 / FHK | (ORG=0x7)	| 0x0D | A5-10-06 | |
-| Room 8 / FKS | (ORG=0x7)	| 0x0E | A5-20-01, A5-20-04 | function group: 1, function: 64 |
-| Room 8 / FHK | (ORG=0x7)	| 0x0F | A5-10-06 | |
-| Pump | (ORG=0x5/0x7)	| 0x10 | F6-02-01 (0x70 = on, 0x50 = off) <br/>A5-38-08 | ? |
-| 4x Push Button |  (ORG=0x5/0x7)| 0x11 | F6-02-01 (0x70 = normal, 0x50 = night reduction (-4°K), 0x30 = reduction (-2°K), 0x10 = off) | function group: 4: function: 30 |
-| Hygrostat/ Sensor | (ORG=0x7)	| 0x12 | EP A5-10-12 | function group: 2: function: 149 |
-| FKS-MD10 | (ORG7)	| 0x13 | A5-20-01/A5-20-04 ? | - |
-| Two point controller FUTH Room1 | (ORG5/7)	| 0x14 | ? | ? |
-
-### Links
-* [FUTH55ED Manual](https://www.eltako.com/fileadmin/downloads/en/_bedienung/FUTH55ED_230V_30055805-3_gb.pdf)
-* [FHEM Forum: Controlling FUTH65D + Address ranges of FUTH****](https://forum.fhem.de/index.php?topic=82303.0)
+The RPS mode commands are only used when `off_temperature` is not configured. The
+A5-10-06 telegram is used for temperature control and for the anti-frost off mode.

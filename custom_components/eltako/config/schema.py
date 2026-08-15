@@ -352,8 +352,10 @@ class ClimateSchema(EltakoPlatformSchema):
                 vol.Optional(CONF_AREA): cv.string,
                 vol.Optional(CONF_ROOM_THERMOSTAT): _get_sender_schema(CONF_CLIMATE_SENDER_EEP),    # physical thermostat like FUTH
                 vol.Optional(CONF_COOLING_MODE): CONF_COOLING_MODE_SCHEMA,                          # if not provided cooling is not supported
-                vol.Optional(CONF_ROOM_SENSOR): cv.string,                                          # entity_id of an HA sensor providing current temperature
-                vol.Optional(CONF_OFF_TEMPERATURE): cv.Number,                                      # anti-frost / off-mode target temperature
+                vol.Optional(CONF_ROOM_SENSOR): cv.entity_id,                                      # entity_id of an HA sensor providing current temperature
+                vol.Optional(CONF_OFF_TEMPERATURE): vol.All(                                       # anti-frost / off-mode target temperature
+                    cv.Number, vol.Range(min=0, max=40)
+                ),
             }
         ),
     )

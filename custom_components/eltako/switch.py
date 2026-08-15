@@ -20,7 +20,8 @@ from .config.config_helpers import DeviceConf
 from .core.entity import (ESP2Message, EltakoEntity, RestoreEntity, State, log_entities_to_be_added,
                           validate_actuators_dev_and_sender_id)
 from .core.gateway import EnOceanGateway
-from .const import CONF_FAST_STATUS_CHANGE, CONF_SENDER, LOGGER
+from .const import (CONF_COOLING_MODE, CONF_FAST_STATUS_CHANGE, CONF_SENDER,
+                    EVENT_CLIMATE_COOLING_SELECTED, EVENT_CLIMATE_COOLING_STATE_CHANGED, LOGGER)
 
 
 async def async_setup_entry(
@@ -47,10 +48,77 @@ async def async_setup_entry(
                 LOGGER.warning("[%s] Could not load configuration", platform)
                 LOGGER.critical(e, exc_info=True)
 
+    # A climate device with an Eltako cooling input also gets a virtual HA switch.
+    # It is deliberately created in the switch platform so it behaves like every
+    # other switch in Home Assistant, while the climate entity remains the owner of
+    # the actual heating/cooling telegrams.
+    if Platform.CLIMATE in config:
+        for entity_config in config[Platform.CLIMATE]:
+            if not entity_config.get(CONF_COOLING_MODE):
+                continue
+            try:
+                dev_config = DeviceConf(entity_config)
+                entities.append(ClimateCoolingSwitch(
+                    platform, gateway, dev_config.id, dev_config.name, dev_config.eep,
+                    dev_config.area,
+                ))
+            except Exception as e:   # noqa: BLE001 - one bad climate must not stop switches
+                LOGGER.warning("[%s] Could not load climate cooling switch", platform)
+                LOGGER.critical(e, exc_info=True)
+
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
+
+
+class ClimateCoolingSwitch(EltakoEntity, SwitchEntity, RestoreEntity):
+    """Virtual HA switch which selects heating or cooling for a climate entity."""
+
+    _attr_is_actuator_entity = False
+
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression,
+                 dev_name: str, dev_eep: EEP, dev_area: str = None):
+        super().__init__(platform, gateway, dev_id, dev_name, dev_eep,
+                         description_key="cooling_mode", dev_area=dev_area)
+        self.name = "Cooling mode"
+        self.event_id = config_helpers.get_bus_event_type(
+            gateway.base_id, EVENT_CLIMATE_COOLING_SELECTED, self.dev_id
+        )
+        self.state_event_id = config_helpers.get_bus_event_type(
+            gateway.base_id, EVENT_CLIMATE_COOLING_STATE_CHANGED, self.dev_id
+        )
+        self._attr_is_on = False
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to climate state changes after restoring the switch state."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.hass.bus.async_listen(self.state_event_id, self._async_climate_state_changed)
+        )
+
+    def load_value_initially(self, latest_state: State):
+        """Restore whether the last selected mode was cooling."""
+        self._attr_is_on = latest_state.state == "on"
+        self.schedule_update_ha_state()
+
+    async def _async_climate_state_changed(self, event) -> None:
+        """Mirror a mode change caused by an Eltako cooling input."""
+        self._attr_is_on = bool(event.data.get("cooling", False))
+        self.schedule_update_ha_state()
+
+    def _select(self, cooling: bool) -> None:
+        self._attr_is_on = cooling
+        self.hass.bus.fire(self.event_id, {"cooling": cooling})
+        self.schedule_update_ha_state()
+
+    def turn_on(self, **kwargs: Any) -> None:
+        """Select cooling mode."""
+        self._select(True)
+
+    def turn_off(self, **kwargs: Any) -> None:
+        """Select heating mode."""
+        self._select(False)
 
 
 class EltakoSwitch(EltakoEntity, SwitchEntity, RestoreEntity):

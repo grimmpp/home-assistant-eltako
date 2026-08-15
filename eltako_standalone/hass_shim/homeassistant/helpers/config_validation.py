@@ -16,6 +16,30 @@ def string(value) -> str:
     return str(value)
 
 
+def entity_id(value) -> str:
+    """Validate a Home Assistant entity ID.
+
+    The standalone runtime only needs the same basic contract as Home
+    Assistant's validator: an entity ID consists of a domain and an object
+    ID separated by one dot.  Keep this validator deliberately independent
+    from the entity registry because schemas are also evaluated before
+    entities are created.
+    """
+    if not isinstance(value, str):
+        raise vol.Invalid(f"invalid entity_id: {value}")
+
+    domain, separator, object_id = value.partition(".")
+    if not separator or not domain or not object_id or "." in object_id:
+        raise vol.Invalid(f"invalid entity_id: {value}")
+
+    if not re.fullmatch(r"[a-z0-9_]+", domain) or not re.fullmatch(
+        r"[a-z0-9_]+", object_id
+    ):
+        raise vol.Invalid(f"invalid entity_id: {value}")
+
+    return value
+
+
 def boolean(value) -> bool:
     if isinstance(value, bool):
         return value

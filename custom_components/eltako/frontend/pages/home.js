@@ -6,9 +6,8 @@
  * things a user actually does - switch it, rename it, remove it. Everything which needs to
  * know what an EEP, a bus position or a base id is stays in the expert mode.
  *
- * The add form is the same backend form descriptor (eltako/devices/form) as in the expert
- * mode, reduced to the fields a user has to fill in - the backend applies its defaults for
- * everything which is left out, so a device created here is identical to one created there.
+ * The add form is the same backend form descriptor and popup workflow as in the expert mode,
+ * so both views create exactly the same device and expose the same options.
  *
  * The page has **no periodic reload**. Switching a light used to look dead until the next
  * refresh of the whole content redrew the card (and that refresh wiped the add form while
@@ -19,15 +18,12 @@
 
 import { activityOf } from "../lib/activity.js";
 import { WS } from "../lib/api.js";
-import { DETAILS_STYLES, bindDetails, deviceDetails, openInHomeAssistant,
-         renderDetails, renderGatewayDetails } from "../lib/details.js";
+import { DETAILS_STYLES, bindDetails, bindModal, deviceDetails, openInHomeAssistant,
+         renderDetails, renderGatewayDetails, renderModal } from "../lib/details.js";
 import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
 import { assignSenderGateway, defaultGatewayChoices, describeAssignResult, gatewayOption,
          isBusGatewayType, senderGatewayOf, senderTargets } from "../lib/sender_gateway.js";
 import { escapeHtml, formatDuration, icon, matchesFilter } from "../lib/utils.js";
-
-/** fields of the backend form which the simple add form shows - the rest keeps its default */
-const SIMPLE_FIELDS = ["id", "eep", "name", "area", "sender"];
 
 /** platforms whose devices Home Assistant controls, so they need a sender address */
 const NEEDS_SENDER = ["light", "switch", "cover", "climate"];
@@ -797,59 +793,59 @@ export const page = {
     // without it `afterRender` would find none of the editor elements and the page would be
     // stuck showing this notice.
     if (!platform) {
-      return `
-        <div class="form-card" id="simple-editor">
-          <div class="notice warn">The backend did not deliver any form definition. Reload the
-            page - if it stays this way, the integration did not start up completely.</div>
-          <div class="form-actions"><button id="simple-cancel" class="action">Close</button></div>
-        </div>`;
+      return renderModal({
+        icon: ["mdi:alert-outline", "!"], title: "Add device",
+        closeId: "simple-close", backdrop: "data-simple-backdrop",
+      }, icon, `
+        <div class="notice warn">The backend did not deliver any form definition. Reload the
+          page - if it stays this way, the integration did not start up completely.</div>
+        <div class="form-actions"><button id="simple-cancel" class="action">Close</button></div>`);
     }
     const gateways = descriptor.gateways || [];
-    const fields = (platform.fields || []).filter((field) => SIMPLE_FIELDS.includes(field.name));
-
-    return `
-      <div class="form-card" id="simple-editor">
-        <h3>Add device</h3>
+    return renderModal({
+      icon: ["mdi:playlist-plus", "+"],
+      title: "Add device",
+      subtitle: platform.label || editor.platform,
+      id: "simple-editor", closeId: "simple-close", backdrop: "data-simple-backdrop",
+      wide: true,
+    }, icon, `
         <div class="form-grid">
-          ${gateways.length > 1 ? `
-            <div class="field">
-              <label for="simple-gateway">Gateway</label>
-              <select id="simple-gateway">
-                ${gateways.map((gateway) => `<option value="${gateway.id}"
-                   ${gateway.id === editor.gatewayId ? "selected" : ""}>${escapeHtml(gateway.name)}</option>`).join("")}
-              </select>
-              <span class="field-help">Which gateway this device talks to.</span>
-            </div>` : ""}
           <div class="field">
-            <label for="simple-platform">What kind of device? *</label>
+            <label for="simple-gateway">Gateway *</label>
+            <select id="simple-gateway">
+              ${gateways.map((gateway) => `<option value="${gateway.id}"
+                 ${gateway.id === editor.gatewayId ? "selected" : ""}>${escapeHtml(gateway.name)}</option>`).join("")}
+            </select>
+            <span class="field-help">Which gateway this device talks to.</span>
+          </div>
+          <div class="field">
+            <label for="simple-platform">Type *</label>
             <select id="simple-platform">
               ${descriptor.platforms.map((entry) => `<option value="${escapeHtml(entry.platform)}"
-                 ${entry.platform === editor.platform ? "selected" : ""}
-                 >${escapeHtml(PLATFORM_LABELS[entry.platform] || entry.label)}</option>`).join("")}
+                 ${entry.platform === editor.platform ? "selected" : ""}>${escapeHtml(entry.label)}</option>`).join("")}
             </select>
             <span class="field-help">${escapeHtml(platform.help || "")}</span>
           </div>
           ${(platform.device_types || []).length ? `
-            <div class="field">
-              <label for="simple-model">Model</label>
-              <select id="simple-model">
-                <option value="">&mdash; I don't know &mdash;</option>
-                ${platform.device_types.map((type) => `<option value="${escapeHtml(type.value)}"
-                   ${type.value === editor.deviceType ? "selected" : ""}>${escapeHtml(type.label)}</option>`).join("")}
-              </select>
-              <span class="field-help">Picking the model fills in the profile (EEP) for you.</span>
-            </div>` : ""}
+          <div class="field">
+            <label for="simple-model">Device</label>
+            <select id="simple-model">
+              <option value="">&mdash; select a device (optional) &mdash;</option>
+              ${platform.device_types.map((type) => `<option value="${escapeHtml(type.value)}"
+                 ${type.value === editor.deviceType ? "selected" : ""}>${escapeHtml(type.label)}</option>`).join("")}
+            </select>
+            <span class="field-help">Selecting a device prefills its EEP and sender EEP - all values stay editable.</span>
+          </div>` : ""}
         </div>
         <div class="form-grid" id="simple-fields">
-          ${renderFields(fields, editor.values || {})}
+          ${renderFields(platform.fields, editor.values || {})}
         </div>
         ${editor.error ? `<div class="form-error">${escapeHtml(editor.error)}</div>` : ""}
         <div class="form-actions">
           <button id="simple-save" class="action primary">Create device</button>
           <button id="simple-cancel" class="action">Cancel</button>
-          <span class="field-help">Everything else keeps its default - the expert mode has all options.</span>
-        </div>
-      </div>`;
+          <span class="field-help">The values are validated by the integration - exactly like in the expert mode.</span>
+        </div>`);
   },
 
   /* ----------------------------------------------------------------- teach-in */
@@ -1118,12 +1114,19 @@ export const page = {
     const editor = ctx.state.simpleEditor;
     if (!editor) return;
 
-    // every lookup below stays optional: the editor can render as a notice without any fields
-    // (no form definition), and a listener missing is never worth losing the whole page
-    root.getElementById("simple-cancel")?.addEventListener("click", () => {
+    const closeEditor = () => {
       ctx.state.simpleEditor = null;
       ctx.requestContentRender(true);
+    };
+    bindModal(root, closeEditor, {
+      closeId: "simple-close", doneId: "simple-cancel", backdrop: "[data-simple-backdrop]",
     });
+
+    // every lookup below stays optional: the editor can render as a notice without any fields
+    // (no form definition), and a listener missing is never worth losing the whole page
+    if (editor.mode === "edit") {
+      root.getElementById("simple-cancel")?.addEventListener("click", closeEditor);
+    }
 
     root.getElementById("simple-platform")?.addEventListener("change", (event) => {
       editor.values = { ...editor.values, ...readFields(root.getElementById("simple-fields")) };

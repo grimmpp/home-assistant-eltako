@@ -4,7 +4,7 @@ eltako14bus==1.0.1
 enocean>=0.60.1
 homeassistant
 termcolor
-StrEnum
+strenum
 esp2-gateway-adapter==0.2.21
 
 # development only - the integration itself needs nothing of this at runtime

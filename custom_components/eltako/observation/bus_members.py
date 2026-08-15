@@ -1220,8 +1220,9 @@ def sender_id_for_gateway(base_id: str, device_address: str) -> str | None:
 
 
 def _collect_teach_in_jobs(hass: HomeAssistant, gateway, only_address: str = None) -> list[dict]:
-    """(position, sender id, sender eep) of every configured bus actuator of this gateway."""
+    """Return every configured sender which belongs in a bus actuator's memory."""
     from homeassistant.const import CONF_ID
+    from ..config.device_config import configured_sender_entries
 
     config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
     devices_config = {}
@@ -1233,19 +1234,20 @@ def _collect_teach_in_jobs(hass: HomeAssistant, gateway, only_address: str = Non
 
     jobs = []
     for platform, devices in devices_config.items():
+        platform_value = platform.value if hasattr(platform, 'value') else str(platform)
         for device in devices or []:
             address = str(device.get(CONF_ID, ''))
-            sender = device.get(CONF_SENDER) or {}
-            sender_id = str(sender.get(CONF_ID, '') or '')
-            sender_eep = str(sender.get(CONF_EEP, '') or '')
             parts = address.upper().split('-')
-            if len(parts) != 4 or parts[:3] != ['00', '00', '00'] or not sender_id or not sender_eep:
+            if len(parts) != 4 or parts[:3] != ['00', '00', '00']:
                 continue
             if only_address and address.upper() != only_address.upper():
                 continue
-            jobs.append({'address': address.upper(), 'position': int(parts[3], 16),
-                         'sender_id': sender_id, 'sender_eep': sender_eep,
-                         'name': device.get('name'), 'platform': str(platform)})
+            for role, sender in configured_sender_entries(platform_value, device):
+                jobs.append({'address': address.upper(), 'position': int(parts[3], 16),
+                             'sender_id': str(sender.get(CONF_ID)),
+                             'sender_eep': str(sender.get(CONF_EEP)),
+                             'role': role, 'name': device.get('name'),
+                             'platform': platform_value})
     return jobs
 
 
@@ -1453,7 +1455,8 @@ def programmed_gateways(hass: HomeAssistant, gateway) -> list[dict]:
     from ..core.websocket import get_gateways
     from eltakobus.util import b2s
 
-    jobs = _collect_teach_in_jobs(hass, gateway)
+    jobs = [job for job in _collect_teach_in_jobs(hass, gateway)
+            if job.get('role') == 'ha_sender']
     if not jobs:
         return []
 
@@ -1521,6 +1524,10 @@ async def async_program_gateway_senders(hass: HomeAssistant, gateway, target_gat
     jobs = []
     skipped = []
     for job in _collect_teach_in_jobs(hass, gateway):
+        # A different gateway can only replace the HA sender address. Physical
+        # thermostat and cooling sender addresses belong to their devices.
+        if job.get('role') != 'ha_sender':
+            continue
         sender_id = sender_id_for_gateway(base_id, job['address'])
         if sender_id is None:
             skipped.append({**job, 'result': 'out_of_range'})

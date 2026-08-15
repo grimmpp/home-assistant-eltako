@@ -721,7 +721,7 @@ export const page = {
             : `<button class="action small primary" data-bus-scan="${escapeHtml(gw.id)}"
                  data-busy-block="bus">scan bus &amp; read memory</button>
                <button class="action small" data-teach-in="${escapeHtml(gw.id)}"
-                 data-busy-block="bus">check &amp; teach in HA senders</button>`}
+                 data-busy-block="bus">check &amp; teach in configured senders</button>`}
           ${/* deliberately offered whether or not something is known to run: a scan whose
                 connection hangs leaves the bus locked while this page shows nothing at all,
                 and then this is the only way back - see lib/bus_scan.BUS_CANCEL_TITLE */
@@ -1287,14 +1287,14 @@ export const page = {
     // verify and teach in the configured home assistant sender ids (standard procedure)
     root.querySelectorAll("button[data-teach-in]").forEach((button) => {
       button.addEventListener("click", async () => {
-        if (!confirm("Verify all configured Home Assistant sender ids of this bus and write the "
-                     + "missing ones into the actuators (PCT14 standard procedure)?\n\n"
+        if (!confirm("Verify all configured sender ids of this bus and write the missing ones "
+                     + "into the actuators (including climate thermostat and cooling senders)?\n\n"
                      + "The bus is locked for a few seconds while writing.")) return;
         button.disabled = true;
         button.textContent = "teaching in…";
         const result = await ctx.api.call(WS.BUS_TEACH_IN, { gateway_id: Number(button.dataset.teachIn) });
         button.disabled = false;
-        button.textContent = "check & teach in HA senders";
+        button.textContent = "check & teach in configured senders";
         if (!result) {
           alert((ctx.api.lastError || {}).message || "Teach-in failed.");
           ctx.api.lastError = null;

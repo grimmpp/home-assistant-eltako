@@ -23,10 +23,10 @@ from homeassistant.components import websocket_api
 
 from eltakobus.util import AddressExpression
 
-from ..const import (CONF_AREA, CONF_BASE_ID, CONF_CORE_ENTRY, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
+from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_CORE_ENTRY, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
                      CONF_GATEWAY_DESCRIPTION, CONF_INVERT_SIGNAL, CONF_MAX_TARGET_TEMPERATURE,
                      CONF_METER_TARIFFS, CONF_MIN_TARGET_TEMPERATURE, CONF_OFF_TEMPERATURE, CONF_ROOM_SENSOR,
-                     CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SIMULATED, CONF_TIME_CLOSES, CONF_TIME_OPENS,
+                     CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SENSOR, CONF_SWITCH_BUTTON, CONF_SIMULATED, CONF_TIME_CLOSES, CONF_TIME_OPENS,
                      CONF_TIME_TILTS, CONF_UI_DEVICES, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, LOGGER,
                      WS_DEVICE_ADD, WS_DEVICE_FORM, WS_DEVICE_LIST, WS_DEVICE_REMOVE, WS_DEVICE_REMOVE_ALL,
                      WS_DEVICE_TEACH_IN, WS_DEVICE_UPDATE)
@@ -54,6 +54,33 @@ SUPPORTED_PLATFORMS: dict[str, type] = {
     Platform.CLIMATE.value: ClimateSchema,
     Platform.FAN.value: FanSchema,
 }
+
+
+def configured_sender_entries(platform: str, device: dict) -> list[tuple[str, dict]]:
+    """Return every sender which must be learned for a configured device.
+
+    Climate devices can have additional senders besides the Home Assistant command
+    sender. Keeping this list in one place makes the device teach-in action cover
+    those senders as well.
+    """
+    entries: list[tuple[str, dict]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(role: str, sender: dict | None) -> None:
+        if not sender:
+            return
+        sender_id = str(sender.get(CONF_ID, '') or '').upper()
+        sender_eep = str(sender.get(CONF_EEP, '') or '').upper()
+        if not sender_id or not sender_eep or (sender_id, sender_eep) in seen:
+            return
+        seen.add((sender_id, sender_eep))
+        entries.append((role, sender))
+
+    add('ha_sender', device.get(CONF_SENDER))
+    if platform == Platform.CLIMATE.value:
+        add('room_thermostat', device.get(CONF_ROOM_THERMOSTAT))
+        add('cooling_sender', (device.get(CONF_COOLING_MODE) or {}).get(CONF_SENDER))
+    return entries
 
 # fields which are offered per platform in the web ui. The EEP lists are taken from the
 # schemas so that they cannot drift apart from the supported EEPs.
@@ -265,6 +292,18 @@ def get_form_descriptor() -> dict:
                      'fields': [
                          {'name': CONF_ID, 'label': 'Thermostat address', 'type': 'address', 'required': True},
                          _eep_field(ClimateSchema.CONF_CLIMATE_SENDER_EEP, 'Thermostat EEP'),
+                     ]},
+                    {'name': CONF_COOLING_MODE, 'label': 'Cooling mode', 'type': 'group', 'required': False,
+                     'help': "Optional Eltako input which selects cooling; an HA switch is created for this climate device",
+                     'fields': [
+                         {'name': CONF_SENSOR, 'label': 'Cooling sensor', 'type': 'group', 'required': True,
+                          'fields': [
+                              {'name': CONF_ID, 'label': 'Sensor address', 'type': 'address', 'required': True},
+                              {'name': CONF_SWITCH_BUTTON, 'label': 'Rocker button', 'type': 'number', 'required': False,
+                               'min': 16, 'max': 112, 'step': 16,
+                               'help': 'Optional button code, e.g. 0x50 for the lower-right rocker button'},
+                          ]},
+                         _sender_field(ClimateSchema.CONF_CLIMATE_SENDER_EEP, required=False),
                      ]},
                 ],
             },
@@ -876,20 +915,29 @@ async def ws_device_teach_in(hass: HomeAssistant, connection, msg) -> None:
 
     address = normalize_address(msg['address'])
     devices = get_devices_of_gateway(hass, msg['gateway_id'])
-    device = next((entry_device for entries in devices.values() for entry_device in entries or []
-                   if normalize_address(str(entry_device.get(CONF_ID, ''))) == address), None)
+    device = None
+    device_platform = None
+    for platform, entries in devices.items():
+        for entry_device in entries or []:
+            if normalize_address(str(entry_device.get(CONF_ID, ''))) == address:
+                device = entry_device
+                device_platform = str(platform)
+                break
+        if device is not None:
+            break
     if device is None:
         connection.send_error(msg['id'], 'unknown_device',
                               f"Gateway {msg['gateway_id']} has no device {address}")
         return
 
-    sender = device.get(CONF_SENDER) or {}
-    sender_id, sender_eep = sender.get(CONF_ID), sender.get(CONF_EEP)
-    if not sender_id or not sender_eep:
+    senders = configured_sender_entries(device_platform, device)
+    if not senders:
         connection.send_error(msg['id'], 'no_sender',
                               f"{address} has no sender - only an actuator is taught in, and it "
                               f"needs the address Home Assistant switches it with.")
         return
+
+    sender_id, sender_eep = senders[0][1][CONF_ID], senders[0][1][CONF_EEP]
 
     # a bus device: write the sender into its memory
     if address.startswith('00-00-00-'):
@@ -903,24 +951,31 @@ async def ws_device_teach_in(hass: HomeAssistant, connection, msg) -> None:
         return
 
     # a wireless actuator: send the teach-in telegram of the sender profile
-    if not supports_teach_in_button(sender_eep):
-        connection.send_error(msg['id'], 'no_teach_in_telegram',
-                              f"There is no teach-in telegram for {sender_eep}. Teach the "
-                              f"sender {sender_id} in at the device itself.")
-        return
     try:
         from eltakobus.message import Regular4BSMessage
         from eltakobus.util import AddressExpression
 
-        payload = get_teach_in_payload(sender_eep)
-        telegram = Regular4BSMessage(AddressExpression.parse(sender_id)[0], 0x80, payload, True)
-        gateway.send_message(telegram)
+        results = []
+        for role, sender in senders:
+            sender_id = sender[CONF_ID]
+            sender_eep = sender[CONF_EEP]
+            if not supports_teach_in_button(sender_eep):
+                results.append({'role': role, 'sender_id': sender_id, 'result': 'unsupported',
+                                'message': f"There is no teach-in telegram for {sender_eep}."})
+                continue
+            telegram = Regular4BSMessage(
+                AddressExpression.parse(sender_id)[0], 0x80,
+                get_teach_in_payload(sender_eep), True
+            )
+            gateway.send_message(telegram)
+            results.append({'role': role, 'sender_id': sender_id, 'eep': sender_eep,
+                            'result': 'written', 'telegram': str(telegram)})
     except Exception as e:  # noqa: BLE001
         connection.send_error(msg['id'], 'teach_in_failed', str(e))
         return
 
-    connection.send_result(msg['id'], {'kind': 'telegram', 'sender_id': sender_id,
-                                       'eep': str(sender_eep), 'telegram': str(telegram)})
+    connection.send_result(msg['id'], {'kind': 'telegram', 'sender_id': senders[0][1][CONF_ID],
+                                       'eep': str(senders[0][1][CONF_EEP]), 'results': results})
 
 
 @websocket_api.require_admin
