@@ -6,6 +6,8 @@
 
 import { escapeHtml } from "./utils.js";
 
+export const MIXED_VALUE = "__ELTAKO_MIXED_VALUE__";
+
 /** One input element for a field descriptor. `prefix` is used for nested groups. */
 function renderField(field, value, prefix = "") {
   const name = prefix ? `${prefix}.${field.name}` : field.name;
@@ -18,15 +20,17 @@ function renderField(field, value, prefix = "") {
   const label = `<label for="${id}">${escapeHtml(field.label)}${field.required ? " *" : ""}${
     field.disabled ? ` <span class="field-lock" title="Cannot be changed here">&#128274;</span>` : ""}</label>`;
   const help = field.help ? `<span class="field-help">${escapeHtml(field.help)}</span>` : "";
-  const current = value === undefined || value === null ? "" : value;
+  const mixed = value === MIXED_VALUE;
+  const current = mixed || value === undefined || value === null ? "" : value;
 
   if (field.type === "group") {
     const groupValue = (value && typeof value === "object") ? value : {};
     return `
-      <fieldset class="field-group" data-group="${escapeHtml(name)}">
+      <fieldset class="field-group${mixed ? " field-mixed" : ""}" data-group="${escapeHtml(name)}">
         <legend>${escapeHtml(field.label)}${field.required ? " *" : ""}</legend>
         ${field.help ? `<span class="field-help">${escapeHtml(field.help)}</span>` : ""}
-        ${field.fields.map((sub) => renderField(sub, groupValue[sub.name], name)).join("")}
+        ${field.fields.map((sub) => renderField(sub,
+          mixed ? MIXED_VALUE : groupValue[sub.name], name)).join("")}
       </fieldset>`;
   }
 
@@ -38,7 +42,8 @@ function renderField(field, value, prefix = "") {
       const text = option && typeof option === "object" ? (option.label || option.value) : option;
       return `<option value="${escapeHtml(value)}" ${String(current) === String(value) ? "selected" : ""}>${escapeHtml(text)}</option>`;
     });
-    input = `<select id="${id}" data-field="${escapeHtml(name)}" data-type="select"${required}${disabled}>
+    input = `<select id="${id}" data-field="${escapeHtml(name)}" data-type="select"${mixed ? ` data-mixed="true"` : ""}${required}${disabled}>
+        ${mixed ? `<option value="" selected>&mdash; different values &mdash;</option>` : ""}
         <option value="">${field.required ? "&mdash; please select &mdash;" : "&mdash; not set &mdash;"}</option>
         ${options.join("")}
       </select>`;
@@ -48,29 +53,30 @@ function renderField(field, value, prefix = "") {
     const options = (field.options || []).map((option) =>
       `<option value="${escapeHtml(option && typeof option === "object" ? option.value : option)}"></option>`);
     input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="combo"
-                    value="${escapeHtml(current)}" list="${listId}"${required}${disabled} />
+                    value="${escapeHtml(current)}" placeholder="${mixed ? "different values" : ""}" list="${listId}"${mixed ? ` data-mixed="true"` : ""}${required}${disabled} />
              <datalist id="${listId}">${options.join("")}</datalist>`;
   } else if (field.type === "boolean") {
     const checked = current === true || current === "true" ? "checked" : "";
-    input = `<input type="checkbox" id="${id}" data-field="${escapeHtml(name)}" data-type="boolean" ${checked}${disabled} />`;
+    input = `<input type="checkbox" id="${id}" data-field="${escapeHtml(name)}" data-type="boolean" ${checked}${mixed ? ` data-mixed="true"` : ""}${disabled} />`;
   } else if (field.type === "number") {
     input = `<input type="number" id="${id}" data-field="${escapeHtml(name)}" data-type="number"
-                    value="${escapeHtml(current)}" ${field.min !== undefined ? `min="${field.min}"` : ""}
+                    value="${escapeHtml(current)}" placeholder="${mixed ? "different values" : ""}"${mixed ? ` data-mixed="true"` : ""} ${field.min !== undefined ? `min="${field.min}"` : ""}
                     ${field.max !== undefined ? `max="${field.max}"` : ""} step="any"${required}${disabled} />`;
   } else if (field.type === "int_list") {
     input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="int_list"
                     value="${escapeHtml(Array.isArray(current) ? current.join(", ") : current)}"
-                    placeholder="e.g. 1, 2"${required}${disabled} />`;
+                    placeholder="${mixed ? "different values" : "e.g. 1, 2"}"${mixed ? ` data-mixed="true"` : ""}${required}${disabled} />`;
   } else {
     // text and address
     const placeholder = field.type === "address" ? "FF-AA-80-01" : "";
     input = `<input type="text" id="${id}" data-field="${escapeHtml(name)}" data-type="${escapeHtml(field.type)}"
-                    value="${escapeHtml(current)}" placeholder="${placeholder}"
+                    value="${escapeHtml(current)}" placeholder="${mixed ? "different values" : placeholder}"
+                    ${mixed ? `data-mixed="true"` : ""}
                     class="${field.type === "address" ? "mono" : ""}"${required}${disabled} />`;
   }
 
   return `<div class="field ${field.type === "boolean" ? "field-inline" : ""}${
-    field.disabled ? " field-disabled" : ""}">${label}${input}${help}</div>`;
+    field.disabled ? " field-disabled" : ""}${mixed ? " field-mixed" : ""}">${label}${input}${help}</div>`;
 }
 
 export function renderFields(fields, values = {}) {

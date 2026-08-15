@@ -2,6 +2,7 @@
 
 ## Version 2.2.1
 
+* **Edit complete device types in one operation.** On the expert *Devices* page, **edit type** lists all instances of the same detected model across the installation. Each entry shows its name, gateway and address; YAML instances remain visible but cannot be changed. After selecting the instances, the normal device form shows mixed values as **different values**. Saving changes only fields which were actually edited, so all untouched fields retain their individual value on every device.
 * **Release candidate `2.2.1rc2`.** This pre-release fixes teach-in EEP prioritisation and opens the Add device form with the selected EEP and device prefilled from the unknown-device popup.
 * Replaced deprecated Home Assistant cover state constants with the `CoverState` enum.
 * Cover position estimates now survive Home Assistant restarts, and the `eltako.invalidate_cover_position` service can explicitly invalidate an estimate after an external movement.

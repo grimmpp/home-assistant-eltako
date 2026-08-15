@@ -11,7 +11,7 @@ import { BUS_SCAN_STYLES, applyBusScans, bindBusCancel, renderBusCancel,
 import { DETAILS_STYLES, bindDetails, bindModal, deviceDetails,
          openInHomeAssistant, renderDetails, renderGatewayDetails,
          renderModal } from "../lib/details.js";
-import { FORM_STYLES, readFields, renderFields } from "../lib/form.js";
+import { FORM_STYLES, MIXED_VALUE, readFields, renderFields } from "../lib/form.js";
 import { SENDER_PICKER_STYLES, bindSenderPickers, describeAssignResult, gatewayOption,
          isBusGatewayType, renderSenderPicker } from "../lib/sender_gateway.js";
 import { card, escapeHtml, formatDateTime, formatNumber, icon, matchesFilter,
@@ -51,6 +51,14 @@ export const page = {
     .program-gateway { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem;
                        font-weight: 400; color: var(--eltako-muted); }
     .program-gateway select { font-size: .76rem; }
+    .field-mixed input, .field-mixed select { border-style: dashed; }
+    .multi-device-list { display: flex; flex-direction: column; gap: 4px; max-height: 50vh;
+                         overflow: auto; margin: 8px 0; }
+    .multi-device-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+                         border: 1px solid var(--eltako-border); border-radius: 6px; }
+    .multi-device-row small { color: var(--eltako-muted); margin-left: auto; }
+    .multi-device-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 2px;
+                         color: var(--eltako-muted); font-size: .8rem; }
 
   ` + SENDER_PICKER_STYLES,
   refreshMs: 15000,
@@ -163,6 +171,7 @@ export const page = {
   },
 
   render(ctx) {
+    this._typeContext = ctx;
     const all = ctx.state.configuredDevices || [];
     const devices = this._sorted(ctx, this._filtered(ctx));
     // which gateway may switch which actuator - read once, used by every row (_deviceRow)
@@ -343,6 +352,8 @@ export const page = {
             title="Everything about this device in one place">details</button>
           ${device.editable ? `
             <button class="action small" data-edit="${escapeHtml(device.platform)}|${escapeHtml(device.address)}|${device.gateway_id}">edit</button>
+            <button class="action small" data-edit-type="${escapeHtml(this._deviceTypeKey(device))}"
+              title="Edit all instances of this device type">edit type</button>
             <button class="action small danger" data-remove="${escapeHtml(device.platform)}|${escapeHtml(device.address)}|${device.gateway_id}">delete</button>`
             : `<span class="hint">edit in yaml</span>`}
         </td>
@@ -1000,9 +1011,47 @@ export const page = {
    * meant scrolling up, filling the form and scrolling back to find the row again. The popup
    * opens where the eye already is and gives the page back unchanged when it closes.
    */
+  _renderTypeSelection(ctx) {
+    const editor = ctx.state.editor;
+    if (!editor || editor.mode !== "type-select") return "";
+    const devices = (ctx.state.configuredDevices || []).filter((device) =>
+      this._deviceTypeKey(device) === editor.typeKey);
+    const editableCount = devices.filter((device) => device.editable).length;
+    return renderModal({
+      icon: ["mdi:playlist-edit", "✎"], title: "Edit device type",
+      subtitle: `${devices.length} instance${devices.length === 1 ? "" : "s"} found`,
+      id: "device-type-selection", closeId: "type-selection-close",
+      backdrop: "data-type-selection-backdrop", wide: true,
+    }, icon, `
+      <p>Select the instances which should receive the changes. Instances which are not selected
+        remain unchanged.</p>
+      <div class="multi-device-list">
+        ${devices.length ? devices.map((device) => `
+          <label class="multi-device-row">
+            <input type="checkbox" data-type-instance="${escapeHtml(this._deviceKey(device))}"
+              ${device.editable ? "" : "disabled"}
+              ${editor.selectedKeys && editor.selectedKeys.has(this._deviceKey(device)) ? "checked" : ""}>
+            <span>
+              <b>${escapeHtml(device.name || "(unnamed device)")}</b>
+              <span class="multi-device-meta">
+                <span>Name: ${escapeHtml(device.name || "(unnamed)")}</span>
+                <span>Gateway: ${escapeHtml(device.gateway_name || device.gateway_id)}</span>
+                <span>Address: ${escapeHtml(device.address)}</span>
+                ${device.editable ? "" : "<span>Source: configuration.yaml</span>"}
+              </span>
+            </span>
+          </label>`).join("") : `<div class="empty">No editable instances of this type found.</div>`}
+      </div>
+      <div class="form-actions">
+        <button class="action primary" id="type-selection-next" ${editableCount ? "" : "disabled"}>Continue to edit</button>
+        <button class="action" id="type-selection-cancel">Cancel</button>
+      </div>`);
+  },
+
   _renderEditor(ctx) {
     const editor = ctx.state.editor;
     if (!editor) return "";
+    if (editor.mode === "type-select") return this._renderTypeSelection(ctx);
 
     const descriptor = ctx.state.deviceForm || { platforms: [], gateways: [] };
     const platform = descriptor.platforms.find((p) => p.platform === editor.platform) || descriptor.platforms[0];
@@ -1021,7 +1070,8 @@ export const page = {
 
     return renderModal({
       icon: ["mdi:playlist-plus", "+"],
-      title: editor.mode === "add" ? "Add device" : `Edit ${editor.values.id || ""}`,
+      title: editor.mode === "add" ? "Add device"
+        : editor.mode === "multi" ? "Edit device type" : `Edit ${editor.values.id || ""}`,
       subtitle: platform.label || editor.platform,
       id: "device-editor", closeId: "editor-close", backdrop: "data-editor-backdrop",
       wide: true,
@@ -1029,7 +1079,7 @@ export const page = {
         <div class="form-grid">
           <div class="field">
             <label for="editor-gateway">Gateway *</label>
-            <select id="editor-gateway" ${editor.mode === "edit" ? "disabled" : ""}>
+            <select id="editor-gateway" ${editor.mode !== "add" ? "disabled" : ""}>
               ${gateways.map((gw) => `<option value="${gw.id}" ${gw.id === editor.gatewayId ? "selected" : ""}>
                  ${escapeHtml(gw.name)}</option>`).join("")}
             </select>
@@ -1037,13 +1087,13 @@ export const page = {
           </div>
           <div class="field">
             <label for="editor-platform">Type *</label>
-            <select id="editor-platform" ${editor.mode === "edit" ? "disabled" : ""}>
+            <select id="editor-platform" ${editor.mode !== "add" ? "disabled" : ""}>
               ${descriptor.platforms.map((p) => `<option value="${escapeHtml(p.platform)}"
                  ${p.platform === editor.platform ? "selected" : ""}>${escapeHtml(p.label)}</option>`).join("")}
             </select>
             <span class="field-help">${escapeHtml(platform.help || "")}</span>
           </div>
-          ${(platform.device_types || []).length ? `
+          ${(platform.device_types || []).length && editor.mode !== "multi" ? `
           <div class="field">
             <label for="editor-device-type">Device</label>
             <select id="editor-device-type">
@@ -1056,7 +1106,8 @@ export const page = {
           </div>` : ""}
         </div>
         <div class="form-grid" id="device-fields">
-          ${renderFields(platform.fields, editor.values || {})}
+          ${renderFields(editor.mode === "multi" ? this._multiFormFields(platform.fields) : platform.fields,
+            editor.values || {})}
         </div>
         ${editor.error ? `<div class="form-error">${escapeHtml(editor.error)}</div>` : ""}
         <div class="form-actions">
@@ -1453,6 +1504,19 @@ export const page = {
       ctx.requestContentRender(true);
     });
 
+    root.querySelectorAll("button[data-edit-type]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const typeKey = button.dataset.editType;
+        const selectedKeys = new Set((ctx.state.configuredDevices || [])
+          .filter((device) => device.editable && this._deviceTypeKey(device) === typeKey)
+          .map((device) => this._deviceKey(device)));
+        ctx.state.editor = { mode: "type-select", typeKey, selectedKeys };
+        ctx.state.deviceDetails = null;
+        ctx.requestContentRender(true);
+      });
+    });
+
     root.querySelectorAll("th[data-sort]").forEach((header) => {
       header.addEventListener("click", () => {
         const column = header.dataset.sort;
@@ -1498,6 +1562,42 @@ export const page = {
 
     const editor = ctx.state.editor;
     if (!editor) return;
+
+    if (editor.mode === "type-select") {
+      root.querySelectorAll("input[data-type-instance]").forEach((input) => {
+        input.addEventListener("change", () => {
+          if (!editor.selectedKeys) editor.selectedKeys = new Set();
+          if (input.checked) editor.selectedKeys.add(input.dataset.typeInstance);
+          else editor.selectedKeys.delete(input.dataset.typeInstance);
+        });
+      });
+      const closeTypeSelection = () => {
+        ctx.state.editor = null;
+        ctx.requestContentRender(true);
+      };
+      bindModal(root, closeTypeSelection, {
+        closeId: "type-selection-close", doneId: "type-selection-cancel",
+        backdrop: "[data-type-selection-backdrop]",
+      });
+      root.getElementById("type-selection-next")?.addEventListener("click", () => {
+        const selected = (ctx.state.configuredDevices || []).filter((device) =>
+          device.editable && editor.selectedKeys && editor.selectedKeys.has(this._deviceKey(device)));
+        if (!selected.length) {
+          alert("Select at least one device instance.");
+          return;
+        }
+        const descriptor = ctx.state.deviceForm || { platforms: [] };
+        const platform = descriptor.platforms.find((entry) => entry.platform === selected[0].platform);
+        editor.mode = "multi";
+        editor.platform = selected[0].platform;
+        editor.gatewayId = selected[0].gateway_id;
+        editor.selectedKeys = new Set(selected.map((device) => this._deviceKey(device)));
+        editor.values = this._multiValues(platform || {}, selected);
+        editor.error = null;
+        ctx.requestContentRender(true);
+      });
+      return;
+    }
 
     const platformSelect = root.getElementById("editor-platform");
     if (platformSelect) {
@@ -1552,8 +1652,46 @@ export const page = {
       closeId: "editor-close", doneId: "editor-cancel", backdrop: "[data-editor-backdrop]",
     });
 
+    if (editor.mode === "multi") {
+      root.querySelectorAll("#device-fields [data-field]").forEach((input) => {
+        input.addEventListener("input", () => { input.dataset.dirty = "true"; });
+        input.addEventListener("change", () => { input.dataset.dirty = "true"; });
+      });
+    }
+
     root.getElementById("editor-save")?.addEventListener("click", async () => {
       const device = readFields(root.getElementById("device-fields"));
+      if (editor.mode === "multi") {
+        const changes = this._readMultiChanges(root.getElementById("device-fields"), editor);
+        const selected = (ctx.state.configuredDevices || []).filter((entry) =>
+          editor.selectedKeys && editor.selectedKeys.has(this._deviceKey(entry)));
+        if (!Object.keys(changes).length) {
+          alert("No fields were changed.");
+          return;
+        }
+        let failed = null;
+        for (const entry of selected) {
+          const result = await ctx.api.call(WS.DEVICE_UPDATE, {
+            gateway_id: entry.gateway_id, platform: entry.platform, address: entry.address,
+            device: this._mergeDevicePatch(entry.config, changes),
+          });
+          if (!result) {
+            failed = (ctx.api.lastError || {}).message || `Could not update ${entry.address}.`;
+            break;
+          }
+          ctx.api.lastError = null;
+        }
+        if (!failed) {
+          ctx.state.editor = null;
+          await this.load(ctx);
+          ctx.requestRender();
+        } else {
+          editor.error = failed;
+          ctx.api.lastError = null;
+          ctx.requestContentRender(true);
+        }
+        return;
+      }
       const payload = {
         gateway_id: editor.gatewayId,
         platform: editor.platform,
@@ -1593,6 +1731,122 @@ export const page = {
     }
     if (template.address_count > 1) parts.push(`occupies ${template.address_count} addresses`);
     return parts.join(" - ");
+  },
+
+  _deviceKey(device) {
+    return `${device.platform}|${device.address}|${device.gateway_id}`;
+  },
+
+  /** A type is the device profile, not the user-editable name or address. */
+  _deviceTypeKey(device) {
+    const ctx = this._typeContext || {};
+    const sender = device.sender || {};
+    const config = device.config || {};
+    const model = config.device_type || this._busDeviceType(ctx, device)
+      || this._catalogDeviceType(ctx, device) || "";
+    return model || [device.platform, device.eep || "", sender.eep || ""].join("|");
+  },
+
+  _busDeviceType(ctx, device) {
+    if (!String(device.address || "").toUpperCase().startsWith("00-00-00-")) return "";
+    const position = parseInt(String(device.address).split("-").pop(), 16);
+    if (!Number.isFinite(position)) return "";
+    const members = ((ctx.state || {}).busMembers || {}).members || [];
+    const candidates = members.filter((member) => String(member.gateway_id) === String(device.gateway_id)
+      && member.device_class && !member.is_fam
+      && position >= Number(member.bus_address || 0)
+      && position < Number(member.bus_address || 0) + Number(member.channel_count || 1));
+    return candidates.length ? String(candidates[0].device_class) : "";
+  },
+
+  _catalogDeviceType(ctx, device) {
+    const name = String(device.name || "").toLowerCase();
+    if (!name) return "";
+    const platform = ((ctx.state || {}).deviceForm || {}).platforms || [];
+    const templates = platform.find((entry) => entry.platform === device.platform)?.device_types || [];
+    const match = templates.filter((template) => template.hw_type
+      && name.includes(String(template.hw_type).toLowerCase()))
+      .sort((left, right) => String(right.hw_type).length - String(left.hw_type).length)[0];
+    return match ? String(match.hw_type) : "";
+  },
+
+  _sameValue(left, right) {
+    if (left === undefined || left === null || left === "") left = null;
+    if (right === undefined || right === null || right === "") right = null;
+    return JSON.stringify(left) === JSON.stringify(right);
+  },
+
+  _mixedFieldValue(field, devices) {
+    const values = devices.map((device) => (device.config || {})[field.name]);
+    if (field.type === "group") {
+      const group = {};
+      for (const child of field.fields || []) {
+        const childValue = this._mixedFieldValue(child, values.map((value) => ({
+          config: value && typeof value === "object" ? value : {},
+        })));
+        if (childValue !== undefined) group[child.name] = childValue;
+      }
+      return Object.keys(group).length ? group : undefined;
+    }
+    const first = values[0];
+    return values.every((value) => this._sameValue(value, first)) ? first : MIXED_VALUE;
+  },
+
+  _multiValues(platform, devices) {
+    const values = {};
+    for (const field of platform.fields || []) {
+      const value = this._mixedFieldValue(field, devices);
+      if (value !== undefined) values[field.name] = value;
+    }
+    return values;
+  },
+
+  _multiFormFields(fields) {
+    return (fields || []).map((field) => field.type === "group"
+      ? { ...field, fields: this._multiFormFields(field.fields) }
+      : field.name === "id" ? { ...field, disabled: true,
+        help: "The address identifies each instance and is not changed in a type edit." } : field);
+  },
+
+  _valueAt(values, path) {
+    return path.reduce((current, key) => current === undefined || current === null
+      ? undefined : current[key], values);
+  },
+
+  _putValue(values, path, value) {
+    let target = values;
+    path.slice(0, -1).forEach((key) => {
+      target[key] = target[key] || {};
+      target = target[key];
+    });
+    target[path[path.length - 1]] = value;
+  },
+
+  _readMultiChanges(root, editor) {
+    const current = readFields(root);
+    const changes = {};
+    root.querySelectorAll("[data-field]").forEach((input) => {
+      const path = input.dataset.field.split(".");
+      if (path[0] === "id") return;
+      const oldValue = this._valueAt(editor.values || {}, path);
+      const newValue = this._valueAt(current, path);
+      const dirty = input.dataset.dirty === "true";
+      if (!dirty && (input.dataset.mixed === "true" || this._sameValue(oldValue, newValue))) return;
+      this._putValue(changes, path, newValue === undefined ? null : newValue);
+    });
+    return changes;
+  },
+
+  _mergeDevicePatch(existing, changes) {
+    const merge = (left, right) => {
+      const result = { ...(left && typeof left === "object" && !Array.isArray(left) ? left : {}) };
+      for (const [key, value] of Object.entries(right || {})) {
+        result[key] = value && typeof value === "object" && !Array.isArray(value)
+          ? merge(result[key], value) : value;
+      }
+      return result;
+    };
+    return merge(existing || {}, changes);
   },
 
   _filtered(ctx) {

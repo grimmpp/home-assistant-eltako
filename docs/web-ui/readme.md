@@ -104,6 +104,19 @@ e.g. `/eltako#/telegrams`. The *View* column says in which of the two views a pa
 | **Help** | `/eltako#/help` | both | Documentation and tutorials, plus every supported device, EEP, gateway and platform. The lists are compiled by the backend from the device catalog, the platform schemas and the EEP registry of `eltakobus`, so they always match the version you run. |
 | **About** | `/eltako#/about` | both | Information about the integration: version, Home Assistant version, gateways, devices/entities, the feature list and the dependencies. |
 
+### Edit all instances of a device type
+
+On the expert **Devices** page, every editable device row has an **edit type** button. It identifies
+the device type from the detected bus model or the device catalogue and opens a list of all matching
+instances across the configured gateways. Every entry shows the device name, gateway and address.
+Devices declared in `configuration.yaml` are included in the list for completeness, but are disabled
+because the YAML configuration remains the source of truth.
+
+After selecting the instances, the usual device edit form opens. A field which has different values
+across the selected devices is shown as **different values**. It is not written when it is left alone,
+so each device keeps its existing value. Only fields which are changed in the form are applied to all
+selected web-ui devices. Device addresses are kept unchanged during a type edit.
+
 ## What runs right now
 
 Some operations of this integration take minutes and block the RS485 bus while they run: an
