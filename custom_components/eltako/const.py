@@ -375,6 +375,7 @@ WS_LOGS_CLEAR: Final = "eltako/logs/clear"
 ### Services of the telegram logger
 SERVICE_CLEAR_TELEGRAM_LOG: Final = "clear_telegram_log"
 SERVICE_EXPORT_TELEGRAM_LOG: Final = "export_telegram_log_to_timeseries"
+SERVICE_INVALIDATE_COVER_POSITION: Final = "invalidate_cover_position"
 
 class LANGUAGE_ABBREVIATION(StrEnum):
     LANG_ENGLISH = 'en'

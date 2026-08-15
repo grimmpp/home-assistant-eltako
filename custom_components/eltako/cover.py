@@ -3,25 +3,40 @@ from __future__ import annotations
 
 from typing import Any
 
+import voluptuous as vol
+
 from eltakobus.util import AddressExpression
 from eltakobus.eep import EEP, G5_3F_7F, H5_3F_7F
 
 from homeassistant import config_entries
 from homeassistant.components.cover import CoverEntity, CoverEntityFeature, CoverState, ATTR_POSITION, ATTR_TILT_POSITION
-from homeassistant.const import CONF_DEVICE_CLASS, Platform, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from homeassistant.const import ATTR_ENTITY_ID, CONF_DEVICE_CLASS, Platform, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
 
 from .core.entity import (EltakoEntity, RestoreEntity, State, log_entities_to_be_added,
                           validate_actuators_dev_and_sender_id)
-from .const import CONF_FAST_STATUS_CHANGE
+from .const import (CONF_FAST_STATUS_CHANGE, DATA_ELTAKO, SERVICE_INVALIDATE_COVER_POSITION)
 from .config import config_helpers
 from .config.config_helpers import DeviceConf
 from .core.gateway import EnOceanGateway
 from .const import CONF_SENDER, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS, LOGGER
 from .core.integration import get_gateway_from_hass, get_device_config_for_gateway
 import asyncio
+
+
+async def _async_invalidate_cover_position(call: ServiceCall, hass: HomeAssistant) -> None:
+    """Invalidate estimated positions for the selected Eltako covers."""
+    # Eltako actuators report movement and elapsed runtime, but not an absolute
+    # position. This service lets users discard an estimate after moving the
+    # cover externally, so the next telegram can establish a new baseline.
+    entities = (hass.data.get(DATA_ELTAKO) or {}).get('cover_entities', {})
+    for entity_id in call.data[ATTR_ENTITY_ID]:
+        entity = entities.get(entity_id)
+        if entity is not None:
+            entity.invalidate_position()
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -54,6 +69,18 @@ async def async_setup_entry(
 
     validate_actuators_dev_and_sender_id(entities)
     log_entities_to_be_added(entities, platform)
+    eltako_data = hass.data.setdefault(DATA_ELTAKO, {})
+    # Keep a lookup by Home Assistant entity ID for the invalidation service.
+    cover_entities = eltako_data.setdefault('cover_entities', {})
+    cover_entities.update({entity.entity_id: entity for entity in entities})
+    # The service is global to the integration, so register it only once when
+    # more than one config entry contains covers.
+    if not hass.services.has_service('eltako', SERVICE_INVALIDATE_COVER_POSITION):
+        hass.services.async_register(
+            'eltako', SERVICE_INVALIDATE_COVER_POSITION,
+            lambda call: _async_invalidate_cover_position(call, hass),
+            schema=vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_ids}),
+        )
     async_add_entities(entities)
 
 class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
@@ -75,11 +102,17 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self._time_opens = time_opens
         self._time_tilts = time_tilts
 
+        # Positions are estimated from the actuator's movement runtime. The
+        # value remains unknown until a telegram or restored state provides a
+        # usable starting point.
         self._attr_supported_features = (CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP)
 
+        # Tilt control is available only when a tilt runtime is configured.
         if time_tilts is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
 
+        # Intermediate positions require both full-travel runtimes to convert
+        # a percentage into a movement duration.
         if time_closes is not None and time_opens is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
 
@@ -88,6 +121,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         # LOGGER.debug(f"[cover {self.dev_id}] latest state: {latest_state.state}")
         # LOGGER.debug(f"[cover {self.dev_id}] latest state attributes: {latest_state.attributes}")
         try:
+            # Restore the numeric attributes first. They are more precise than
+            # the generic open/closed state and must not be overwritten merely
+            # because the cover was moving when Home Assistant restarted.
             # The attributes are not available if the cover was unavailable or unknown before the
             # restart. The state below is authoritative anyway, so a missing position is no error.
             self._attr_current_cover_position = latest_state.attributes.get('current_position')
@@ -97,14 +133,18 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 self._attr_is_opening = False
                 self._attr_is_closing = False
                 self._attr_is_closed = False
-                self._attr_current_cover_position = 100
-                self._attr_current_cover_tilt_position = 100
+                if self._attr_current_cover_position is None:
+                    self._attr_current_cover_position = 100
+                if self._attr_current_cover_tilt_position is None:
+                    self._attr_current_cover_tilt_position = 100
             elif latest_state.state == CoverState.CLOSED:
                 self._attr_is_opening = False
                 self._attr_is_closing = False
                 self._attr_is_closed = True
-                self._attr_current_cover_position = 0
-                self._attr_current_cover_tilt_position = 0
+                if self._attr_current_cover_position is None:
+                    self._attr_current_cover_position = 0
+                if self._attr_current_cover_tilt_position is None:
+                    self._attr_current_cover_tilt_position = 0
             elif latest_state.state == CoverState.CLOSING:
                 self._attr_is_opening = False
                 self._attr_is_closing = True
@@ -127,7 +167,6 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             self._attr_is_closed = None # means undefined state
             LOGGER.warning(f"[cover {self.dev_id}] Cannot restore last state '{latest_state.state}': {e}")
 
-
         self.schedule_update_ha_state()
         LOGGER.debug(f"[cover {self.dev_id}] value initially loaded: ["
                      + f"is_opening: {self.is_opening}, "
@@ -137,9 +176,21 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                      + f"current_tilt_position: {self._attr_current_cover_tilt_position}, "
                      + f"state: {self.state}]")
 
+    def invalidate_position(self) -> None:
+        """Forget estimated positions after an external movement."""
+        # No absolute position is available from the bus, so clear both
+        # estimates. The next status telegram will initialize them again.
+        self._attr_current_cover_position = None
+        self._attr_current_cover_tilt_position = None
+        self._attr_is_opening = False
+        self._attr_is_closing = False
+        self._attr_is_closed = None
+        self.schedule_update_ha_state()
 
     def open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
+        # Driving beyond the configured full runtime reaches the end stop and
+        # gives the actuator a known reference for subsequent estimates.
         # One second more than the configured runtime, so that the cover really reaches its end
         # position (and therefore recalibrates itself). 255 is the maximum the telegram can
         # carry - a bigger value would make the encoding fail.
@@ -169,7 +220,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
 
     def close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
-        # see open_cover: full runtime + 1s, capped at the maximum the telegram can carry
+        # As with opening, the extra second makes the closed end position a
+        # reliable reference; the protocol field is limited to 255.
         if self._time_closes is not None:
             time = min(self._time_closes + 1, 255)
         else:
@@ -219,6 +271,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             time = min(self._time_closes + 1, 255)
         elif position > self._attr_current_cover_position:
             direction = "up"
+            # Convert the percentage difference into the actuator's runtime.
             time = max(1,min(int(((position - self._attr_current_cover_position) / 100.0) * self._time_opens), 255))
             # try to prevent covers moving completely up or down when time = 0
         elif position < self._attr_current_cover_position:
@@ -276,6 +329,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         if self.dev_eep in [G5_3F_7F]:
             LOGGER.debug(f"[cover {self.dev_id}] G5_3F_7F - {decoded.__dict__}")
 
+            # Status telegrams announce direction or an end position. They do
+            # not contain an absolute intermediate position.
             ## is received as response when button pushed (command was sent)
             ## this message is received directly when the cover starts to move
             ## when the cover results in completely open or close one of the following messages (open or closed) will appear
@@ -304,6 +359,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             ## if not close state is always open (close state should be reported with closed message above)
             elif decoded.time is not None and decoded.direction is not None and self._time_closes is not None and self._time_opens is not None:
 
+                # Integrate the reported movement time into the last estimate.
+                # This is intentionally an estimate until an end-stop telegram
+                # resets the position to exactly 0 or 100.
                 time_in_seconds = decoded.time / 10.0
 
                 if decoded.direction == 0x01:  # up
@@ -373,8 +431,9 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             direction = "down"
             tilt_difference = self._attr_current_cover_tilt_position - tilt_position
 
-        # time_tilts is configured in 0.1s (like the runtime the actuator reports), the sleep
-        # needs seconds.
+        # The actuator has no absolute tilt command: run in the right direction
+        # for the calculated duration, then send stop. time_tilts is configured
+        # in 0.1-second units while asyncio.sleep() expects seconds.
         sleeptime = tilt_difference / 100.0 * self._time_tilts / 10.0
 
         if self._sender_eep == H5_3F_7F:

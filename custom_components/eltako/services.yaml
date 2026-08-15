@@ -12,3 +12,11 @@ export_telegram_log_to_timeseries:
     export to be enabled in the general settings. Telegrams recorded from now on are
     exported live anyway - this service is for the history from before.
     Only available if telegram recording is enabled (general_settings -> log_enocean_telegrams).
+
+invalidate_cover_position:
+  name: Invalidate cover position
+  description: Forget the estimated position of one or more Eltako covers after an external movement.
+  target:
+    entity:
+      domain: cover
+      integration: eltako

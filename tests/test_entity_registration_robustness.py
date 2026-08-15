@@ -106,7 +106,23 @@ class TestCoverStateRestoration(TestCase):
 
         cover.load_value_initially(LatestStateMock('open', {'current_position': 42, 'current_tilt_position': 7}))
 
-        self.assertEqual(cover.current_cover_position, 100)   # state 'open' wins over the attribute
+        self.assertEqual(cover.current_cover_position, 42)   # saved estimate survives a restart
+        self.assertEqual(cover.current_cover_tilt_position, 7)
+
+    def test_invalidate_position_forgets_estimated_cover_state(self):
+        cover = self.create_cover()
+        cover._attr_current_cover_position = 42
+        cover._attr_current_cover_tilt_position = 7
+        cover._attr_is_closed = False
+        cover._attr_is_opening = True
+
+        cover.invalidate_position()
+
+        self.assertIsNone(cover.current_cover_position)
+        self.assertIsNone(cover.current_cover_tilt_position)
+        self.assertIsNone(cover.is_closed)
+        self.assertFalse(cover.is_opening)
+        self.assertFalse(cover.is_closing)
 
     def test_restoring_partially_available_attributes(self):
         cover = self.create_cover()
