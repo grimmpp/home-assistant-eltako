@@ -3,6 +3,7 @@
 ## Version 2.2.1
 
 * **Release candidate `2.2.1rc2`.** This pre-release fixes teach-in EEP prioritisation and opens the Add device form with the selected EEP and device prefilled from the unknown-device popup.
+* Replaced deprecated Home Assistant cover state constants with the `CoverState` enum.
 * **Release candidate `2.2.1rc1`.** This pre-release is intended for final testing before the stable `2.2.1` release.
 * Updated the `eltako14bus` dependency to version `1.0.1`.
 * Added twilight sensor support for EEP `A5-06-01`.
