@@ -4,6 +4,7 @@ eltako:
     show_dev_id_in_dev_name: True
     enable_frontend: True       # The 'Eltako' panel in the sidebar (overview, control, devices, telegram log,
                                 # statistics, settings, help, about). Default: True - set it to False to hide it.
+    enable_test_page: False      # Keep the experimental test page disabled in normal operation.
     # EnOcean telegram logging and analysis (see docs/telegram-analysis/readme.md)
     log_enocean_telegrams: True                     # True: records all incoming and outgoing telegrams
     telegram_log_filename: enocean_telegrams.jsonl  # if set, telegrams are written into this file (relative paths are located in the HA config folder)
@@ -25,11 +26,13 @@ eltako:
     device_type: esp2-network-reverse-bridge
     address: homeassistant.local
     port: 12345
+    auto_reconnect: true
 
   - id: 1
     device_type: fgw14usb            # Supported gateways: gam14, fgw14usb
     base_id: FF-AA-80-00
     name: FGW14-USB
+    auto_reconnect: true
     devices:
       sensor:
       - id: 05-EE-88-15
