@@ -2,7 +2,25 @@
 
 ## Version 2.2.1
 
+### Main features at a glance
+
+The v2.2.x release adds a web-based setup and diagnostics workflow for Eltako
+installations. The main features are:
+
+* device and gateway setup through the web UI;
+* automatic device discovery, bus scanning and sender teach-in;
+* sender/gateway assignment for bus and wireless actuators;
+* visibility of taught-in senders and targeted re-teach-in;
+* manual EEP, raw and teach-in telegrams;
+* multi-gateway support;
+* heating and cooling support with thermostat and room-sensor options;
+* improved device editing, including editing all instances of a device type;
+* standalone and CLI support, plus simulation without hardware.
+
+The detailed changes are listed below.
+
 * **Release candidate `2.2.1rc3` prepared.** This candidate contains the current Expert-Devices type editing and documentation changes on top of the `2.2.1rc2` release candidate.
+* Added a documented migration path from v1.x to v2.2.x, including sender teach-in, gateway conflicts and actuator troubleshooting.
 * **Edit complete device types in one operation.** On the expert *Devices* page, **edit type** lists all instances of the same detected model across the installation. Each entry shows its name, gateway and address; YAML instances remain visible but cannot be changed. After selecting the instances, the normal device form shows mixed values as **different values**. Saving changes only fields which were actually edited, so all untouched fields retain their individual value on every device.
 * **Release candidate `2.2.1rc2`.** This pre-release fixes teach-in EEP prioritisation and opens the Add device form with the selected EEP and device prefilled from the unknown-device popup.
 * Replaced deprecated Home Assistant cover state constants with the `CoverState` enum.

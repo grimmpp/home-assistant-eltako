@@ -16,6 +16,8 @@
 * **Installation**
   * [Basic Installation Instruction (on main page)](../README.md)
   * [Manual Installation or Installation of a Specific Version/Git-Branch](./install-specific-version-or-branch.md)
+  * [Migration from v1.x to v2.2.x](./migration-v1-to-v2.2.md)
+  * [Frequently Asked Questions](./faq.md)
   * [Manual Installation Script `install_custom_component_eltako.sh`](../install_custom_component_eltako.sh)
 
 * **Configuration in Files** (optional &ndash; everything below can be done in the web ui instead)
