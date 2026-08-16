@@ -156,6 +156,7 @@ eltako:
           id: 00-00-B0-06
           eep: H5-3F-7F     # cover command (only supported sender EEP)
         device_class: shutter   # shutter, blind, awning, curtain, ... . Changes icon and wording in HA
+        invert_direction: false  # set true when the actuator's physical open/close direction is reversed
         time_closes: 24     # seconds for closing completely (1..255)
         time_opens: 25      # seconds for opening completely (1..255)
       - id: 00-00-00-07
@@ -166,6 +167,7 @@ eltako:
           id: 00-00-B0-07
           eep: H5-3F-7F
         device_class: shutter
+        invert_direction: false  # set true when the actuator's physical open/close direction is reversed
         time_closes: 24
         time_opens: 25
         time_tilts: 5       # optional: runtime of a complete tilt in tenths of a second (1..255).
