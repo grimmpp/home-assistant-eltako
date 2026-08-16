@@ -18,7 +18,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .core.entity import (EltakoEntity, RestoreEntity, State, log_entities_to_be_added,
                           validate_actuators_dev_and_sender_id)
-from .const import (CONF_FAST_STATUS_CHANGE, DATA_ELTAKO, SERVICE_INVALIDATE_COVER_POSITION)
+from .const import (CONF_FAST_STATUS_CHANGE, CONF_INVERT_DIRECTION, DATA_ELTAKO, SERVICE_INVALIDATE_COVER_POSITION)
 from .config import config_helpers
 from .config.config_helpers import DeviceConf
 from .core.gateway import EnOceanGateway
@@ -54,13 +54,13 @@ async def async_setup_entry(
         for entity_config in config[platform]:
 
             try:
-                dev_conf = DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS])
+                dev_conf = DeviceConf(entity_config, [CONF_DEVICE_CLASS, CONF_INVERT_DIRECTION, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS])
                 sender_config = config_helpers.get_device_conf(entity_config, CONF_SENDER)
 
                 entities.append(EltakoCover(platform, gateway, dev_conf.id, dev_conf.name, dev_conf.eep,
                                             sender_config.id, sender_config.eep,
                                             dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_TIME_CLOSES), dev_conf.get(CONF_TIME_OPENS), dev_conf.get(CONF_TIME_TILTS),
-                                            dev_conf.area))
+                                            dev_conf.area, dev_conf.get(CONF_INVERT_DIRECTION, False)))
 
             except Exception as e:   # noqa: BLE001 - one bad device configuration must not stop the platform
                 LOGGER.warning("[%s] Could not load configuration", platform)
@@ -86,7 +86,7 @@ async def async_setup_entry(
 class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
     """Representation of an Eltako cover device."""
 
-    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens, time_tilts, dev_area: str=None):
+    def __init__(self, platform:str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str, dev_eep: EEP, sender_id: AddressExpression, sender_eep: EEP, device_class: str, time_closes, time_opens, time_tilts, dev_area: str=None, invert_direction: bool=False):
         """Initialize the Eltako cover device."""
         super().__init__(platform, gateway, dev_id, dev_name, dev_eep, dev_area=dev_area)
         self._sender_id = sender_id
@@ -101,6 +101,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         self._time_closes = time_closes
         self._time_opens = time_opens
         self._time_tilts = time_tilts
+        self._invert_direction = bool(invert_direction)
 
         # Positions are estimated from the actuator's movement runtime. The
         # value remains unknown until a telegram or restored state provides a
@@ -115,6 +116,28 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         # a percentage into a movement duration.
         if time_closes is not None and time_opens is not None:
             self._attr_supported_features |= CoverEntityFeature.SET_POSITION
+
+
+    def _to_physical_direction(self, direction: str) -> str:
+        """Translate a logical Home Assistant direction to the actuator direction."""
+        if not self._invert_direction:
+            return direction
+        return "down" if direction == "up" else "up"
+
+
+    def _to_logical_direction(self, direction: str) -> str:
+        """Translate an actuator direction to the logical Home Assistant direction."""
+        return self._to_physical_direction(direction)
+
+
+    def _set_moving_state(self, direction: str) -> None:
+        """Set the logical moving state from a logical up/down direction."""
+        if direction == "up":
+            self._attr_is_opening = True
+            self._attr_is_closing = False
+        else:
+            self._attr_is_opening = False
+            self._attr_is_closing = True
 
 
     def load_value_initially(self, latest_state:State):
@@ -202,7 +225,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         address, _ = self._sender_id
 
         if self._sender_eep == H5_3F_7F:
-            msg = H5_3F_7F(time, 0x01, 1).encode_message(address)
+            command = 0x01 if self._to_physical_direction("up") == "up" else 0x02
+            msg = H5_3F_7F(time, command, 1).encode_message(address)
             self.send_message(msg)
 
         else:
@@ -230,7 +254,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         address, _ = self._sender_id
 
         if self._sender_eep == H5_3F_7F:
-            msg = H5_3F_7F(time, 0x02, 1).encode_message(address)
+            command = 0x01 if self._to_physical_direction("down") == "up" else 0x02
+            msg = H5_3F_7F(time, command, 1).encode_message(address)
             self.send_message(msg)
 
         else:
@@ -280,9 +305,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             # try to prevent covers moving completely up or down when time = 0
 
         if self._sender_eep == H5_3F_7F:
-            if direction == "up":
+            physical_direction = self._to_physical_direction(direction)
+            if physical_direction == "up":
                 command = 0x01
-            elif direction == "down":
+            else:
                 command = 0x02
 
             msg = H5_3F_7F(time, command, 1).encode_message(address)
@@ -335,25 +361,23 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
             ## this message is received directly when the cover starts to move
             ## when the cover results in completely open or close one of the following messages (open or closed) will appear
             if decoded.state == 0x02: # down
-                self._attr_is_closing = True
-                self._attr_is_opening = False
+                self._set_moving_state(self._to_logical_direction("down"))
                 self._attr_is_closed = False
             elif decoded.state == 0x50: # closed
                 self._attr_is_opening = False
                 self._attr_is_closing = False
-                self._attr_is_closed = True
-                self._attr_current_cover_position = 0
-                self._attr_current_cover_tilt_position = 0
+                self._attr_is_closed = not self._invert_direction
+                self._attr_current_cover_position = 0 if not self._invert_direction else 100
+                self._attr_current_cover_tilt_position = 0 if not self._invert_direction else 100
             elif decoded.state == 0x01: # up
-                self._attr_is_opening = True
-                self._attr_is_closing = False
+                self._set_moving_state(self._to_logical_direction("up"))
                 self._attr_is_closed = False
             elif decoded.state == 0x70: # open
                 self._attr_is_opening = False
                 self._attr_is_closing = False
-                self._attr_is_closed = False
-                self._attr_current_cover_position = 100
-                self._attr_current_cover_tilt_position = 100
+                self._attr_is_closed = self._invert_direction
+                self._attr_current_cover_position = 100 if not self._invert_direction else 0
+                self._attr_current_cover_tilt_position = 100 if not self._invert_direction else 0
 
             ## is received when cover stops at the desired intermediate position
             ## if not close state is always open (close state should be reported with closed message above)
@@ -364,7 +388,8 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                 # resets the position to exactly 0 or 100.
                 time_in_seconds = decoded.time / 10.0
 
-                if decoded.direction == 0x01:  # up
+                physical_direction = "up" if decoded.direction == 0x01 else "down"
+                if self._to_logical_direction(physical_direction) == "up":
                     # If the latest state is unknown, the cover position
                     # will be set to None, therefore we have to guess
                     # the initial position.
@@ -375,7 +400,7 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
                     if self._time_tilts is not None:
                         self._attr_current_cover_tilt_position = min(self._attr_current_cover_tilt_position + int(decoded.time / self._time_tilts * 100.0), 100)
 
-                else:  # down
+                else:  # logical down
                     # If the latest state is unknown, the cover position
                     # will be set to None, therefore we have to guess
                     # the initial position.
@@ -437,9 +462,10 @@ class EltakoCover(EltakoEntity, CoverEntity, RestoreEntity):
         sleeptime = tilt_difference / 100.0 * self._time_tilts / 10.0
 
         if self._sender_eep == H5_3F_7F:
-            if direction == "up":
+            physical_direction = self._to_physical_direction(direction)
+            if physical_direction == "up":
                 command = 0x01
-            elif direction == "down":
+            else:
                 command = 0x02
 
             msg = H5_3F_7F(0, command, 1).encode_message(address)

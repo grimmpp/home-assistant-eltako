@@ -24,7 +24,7 @@ from homeassistant.components import websocket_api
 from eltakobus.util import AddressExpression
 
 from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_CORE_ENTRY, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
-                     CONF_GATEWAY_DESCRIPTION, CONF_INVERT_SIGNAL, CONF_MAX_TARGET_TEMPERATURE,
+                     CONF_GATEWAY_DESCRIPTION, CONF_INVERT_DIRECTION, CONF_INVERT_SIGNAL, CONF_MAX_TARGET_TEMPERATURE,
                      CONF_METER_TARIFFS, CONF_MIN_TARGET_TEMPERATURE, CONF_OFF_TEMPERATURE, CONF_ROOM_SENSOR,
                      CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SENSOR, CONF_SWITCH_BUTTON, CONF_SIMULATED, CONF_TIME_CLOSES, CONF_TIME_OPENS,
                      CONF_TIME_TILTS, CONF_UI_DEVICES, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, LOGGER,
@@ -257,6 +257,8 @@ def get_form_descriptor() -> dict:
                     FIELD_NAME, FIELD_AREA,
                     {'name': CONF_DEVICE_CLASS, 'label': 'Device class', 'type': 'text', 'required': False,
                      'help': "shutter, blind, awning, curtain, ..."},
+                    {'name': CONF_INVERT_DIRECTION, 'label': 'Invert direction', 'type': 'boolean', 'required': False,
+                     'help': "Swap logical open/close direction for this cover"},
                     {'name': CONF_TIME_CLOSES, 'label': 'Time closes (s)', 'type': 'number', 'required': False,
                      'min': 1, 'max': 255, 'help': "Seconds for closing completely (from PCT14)"},
                     {'name': CONF_TIME_OPENS, 'label': 'Time opens (s)', 'type': 'number', 'required': False,

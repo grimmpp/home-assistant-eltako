@@ -18,7 +18,7 @@ class TestCover(unittest.TestCase):
     def mock_send_message(self, msg):
         self.last_sent_command = msg
 
-    def create_cover(self) -> EltakoCover:
+    def create_cover(self, invert_direction=False) -> EltakoCover:
         settings = DEFAULT_GENERAL_SETTINGS
         settings[CONF_FAST_STATUS_CHANGE] = True
         gateway = GatewayMock(settings)
@@ -36,7 +36,8 @@ class TestCover(unittest.TestCase):
         dev_eep = EEP.find(eep_string)
         sender_eep = EEP.find(sender_eep_string)
 
-        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts)
+        ec = EltakoCover(Platform.COVER, gateway, dev_id, dev_name, dev_eep, sender_id, sender_eep, device_class, time_closes, time_opens, time_tilts,
+                         invert_direction=invert_direction)
         ec.send_message = self.mock_send_message
 
         self.assertEqual(ec._attr_is_closing, False)
@@ -167,6 +168,12 @@ class TestCover(unittest.TestCase):
         self.assertEqual(ec._attr_is_closed, False)
         self.assertEqual(ec._attr_current_cover_position, 10)
 
+        inverted = self.create_cover(invert_direction=True)
+        inverted._attr_current_cover_position = 50
+        msg = Regular4BSMessage(address=b'\x00\x00\x00\x01', status=b'\x20', data=b'\x00\x0a\x01\x0a', outgoing=False)
+        inverted.value_changed(msg)
+        self.assertEqual(inverted.current_cover_position, 40)
+
         msg = Regular4BSMessage(address=b'\x00\x00\x00\x01', status=b'\x20', data=b'\x00\x5a\x02\x0a', outgoing=False)
         ec._attr_current_cover_position = 100
         ec.value_changed(msg)
@@ -192,6 +199,25 @@ class TestCover(unittest.TestCase):
         self.assertEqual(
             self.last_sent_command.body,
             b'k\x07\x00\x0b\x02\x08\x00\x00\xb1\x06\x00')
+
+    def test_inverted_direction_translates_commands_and_status(self):
+        ec = self.create_cover(invert_direction=True)
+
+        ec.open_cover()
+        self.assertEqual(self.last_sent_command.body[4], 0x02)  # logical open -> physical down
+
+        ec.close_cover()
+        self.assertEqual(self.last_sent_command.body[4], 0x01)  # logical close -> physical up
+
+        closed = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x50', outgoing=False)
+        ec.value_changed(closed)
+        self.assertFalse(ec.is_closed)
+        self.assertEqual(ec.current_cover_position, 100)
+
+        opened = RPSMessage(address=b'\x00\x00\x00\x01', status=b'\x30', data=b'\x70', outgoing=False)
+        ec.value_changed(opened)
+        self.assertTrue(ec.is_closed)
+        self.assertEqual(ec.current_cover_position, 0)
 
     def test_stop_cover(self):
         ec = self.create_cover()
@@ -392,12 +418,13 @@ class TestCoverTilt(unittest.IsolatedAsyncioTestCase):
     def mock_send_message(self, msg):
         self.sent_commands.append(msg)
 
-    def create_blind(self, time_tilts=15) -> EltakoCover:
+    def create_blind(self, time_tilts=15, invert_direction=False) -> EltakoCover:
         settings = DEFAULT_GENERAL_SETTINGS
         settings[CONF_FAST_STATUS_CHANGE] = True
         ec = EltakoCover(Platform.COVER, GatewayMock(settings), AddressExpression.parse('00-00-00-01'),
                          'device name', EEP.find("G5-3F-7F"), AddressExpression.parse("00-00-B1-07"),
-                         EEP.find("H5-3F-7F"), "blind", 10, 10, time_tilts)
+                         EEP.find("H5-3F-7F"), "blind", 10, 10, time_tilts,
+                         invert_direction=invert_direction)
         self.sent_commands = []
         ec.send_message = self.mock_send_message
         return ec
@@ -441,6 +468,15 @@ class TestCoverTilt(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.sent_commands[0].body[4], 0x02)   # down
         sleep_mock.assert_awaited_once_with(0.75)
 
+    async def test_inverted_tilt_translates_direction(self):
+        ec = self.create_blind(invert_direction=True)
+        ec._attr_current_cover_tilt_position = 0
+
+        with mock.patch('asyncio.sleep'):
+            await ec.async_set_cover_tilt_position(tilt_position=100)
+
+        self.assertEqual(self.sent_commands[0].body[4], 0x02)  # logical up -> physical down
+
     async def test_tilt_to_current_position_does_nothing(self):
         ec = self.create_blind()
         ec._attr_current_cover_tilt_position = 40
@@ -464,6 +500,4 @@ class TestCoverTilt(unittest.IsolatedAsyncioTestCase):
         ec = self.create_blind(time_tilts=None)
         await ec.async_set_cover_tilt_position(tilt_position=100)
         self.assertEqual(self.sent_commands, [])
-
-
 
