@@ -19,6 +19,8 @@ installations. The main features are:
 
 The detailed changes are listed below.
 
+* **Release candidate `2.2.1rc5` prepared.** The example configuration now enables gateway auto-reconnect explicitly and disables the experimental test page for normal operation.
+* **Release candidate `2.2.1rc4`.** This release adds per-cover `invert_direction` support for FSB/shutter actuators, including commands, status telegrams, intermediate positions, tilt handling and runtime-based position estimates. It also prepares the device registry lookups for the newer Home Assistant config-entry-scoped API while retaining compatibility with older Home Assistant versions.
 * **Release candidate `2.2.1rc3` prepared.** This candidate contains the current Expert-Devices type editing and documentation changes on top of the `2.2.1rc2` release candidate.
 * Added a documented migration path from v1.x to v2.2.x, including sender teach-in, gateway conflicts and actuator troubleshooting.
 * **Edit complete device types in one operation.** On the expert *Devices* page, **edit type** lists all instances of the same detected model across the installation. Each entry shows its name, gateway and address; YAML instances remain visible but cannot be changed. After selecting the instances, the normal device form shows mixed values as **different values**. Saving changes only fields which were actually edited, so all untouched fields retain their individual value on every device.
