@@ -18,6 +18,7 @@ from eltakobus.util import b2s
 from ..const import (DATA_ELTAKO, DOMAIN, INTEGRATION_DIR, LOGGER, WS_ACTIVITY, WS_HELP_CATALOG,
                      WS_INTEGRATION_INFO, WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM, is_prerelease)
 from .gateway import detect, EnOceanGateway
+from .entity import get_device_by_identifier
 
 
 async def register_websockets(hass: HomeAssistant, config: ConfigEntry):
@@ -100,7 +101,11 @@ def _get_gateway_ha_device_id(hass: HomeAssistant, gateway: EnOceanGateway) -> s
     gateway._register_device().
     """
     try:
-        device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, gateway.serial_path)})
+        device = get_device_by_identifier(
+            dr.async_get(hass),
+            (DOMAIN, gateway.serial_path),
+            getattr(gateway, "config_entry_id", None),
+        )
         return device.id if device else None
     except Exception:   # noqa: BLE001 - registry not available (e.g. in tests)
         return None

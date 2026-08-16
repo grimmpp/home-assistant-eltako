@@ -29,6 +29,15 @@ SUPPORTED_MESSAGE_TYPES = (
 )
 
 
+def get_device_by_identifier(device_registry, identifier: tuple[str, str], config_entry_id: str | None):
+    """Find a device scoped to its config entry when supported by Home Assistant."""
+    scoped_lookup = getattr(device_registry, "async_get_device_by_identifier", None)
+    if scoped_lookup is not None and config_entry_id is not None:
+        return scoped_lookup(identifier, config_entry_id)
+    # Compatibility with Home Assistant versions before the scoped registry API.
+    return device_registry.async_get_device(identifiers={identifier})
+
+
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
 
@@ -84,16 +93,27 @@ class EltakoEntity(Entity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
-        return DeviceInfo(
-            identifiers={
+        device_info = {
+            "identifiers": {
                 (DOMAIN, b2s(self.dev_id) )
             },
-            name=self.dev_name,
-            manufacturer=MANUFACTURER,
-            model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.serial_path),
-            suggested_area=self._attr_dev_area,
+            "name": self.dev_name,
+            "manufacturer": MANUFACTURER,
+            "model": self.dev_eep.eep_string,
+            "suggested_area": self._attr_dev_area,
+        }
+        gateway_identifier = (DOMAIN, self.gateway.serial_path)
+        device_registry = dr.async_get(self.hass)
+        gateway_device = get_device_by_identifier(
+            device_registry, gateway_identifier, getattr(self.gateway, "config_entry_id", None)
         )
+        if gateway_device is not None:
+            device_info["via_device_id"] = gateway_device.id
+        elif not hasattr(device_registry, "async_get_device_by_identifier"):
+            # Older Home Assistant versions only support the identifier-based
+            # DeviceInfo field. Keep it as a compatibility fallback there.
+            device_info["via_device"] = gateway_identifier
+        return DeviceInfo(**device_info)
 
 
     async def async_added_to_hass(self) -> None:
@@ -141,7 +161,11 @@ class EltakoEntity(Entity):
             area = area_reg.async_create(area_name)
 
         device_reg = dr.async_get(self.hass)
-        device = device_reg.async_get_device(identifiers={(DOMAIN, b2s(self.dev_id))})
+        device = get_device_by_identifier(
+            device_reg,
+            (DOMAIN, b2s(self.dev_id)),
+            getattr(self.gateway, "config_entry_id", None),
+        )
         if device is not None and device.area_id != area.id:
             device_reg.async_update_device(device.id, area_id=area.id)
             LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] Assigned device to area '{area_name}' (id={area.id}).")
