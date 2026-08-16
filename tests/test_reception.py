@@ -273,7 +273,14 @@ class TestTheWebsocketCommand(TestCase):
             handler = handler.__wrapped__
         with mock.patch('custom_components.eltako.observation.enocean_logger.get_telegram_logger',
                         return_value=logger if records is not None else None):
-            handler(mock.Mock(), connection, {'id': 1, 'window': 60, **payload})
+            # Keep the websocket path deterministic as well.  The pure survey
+            # tests pass ``now`` explicitly; this path exercises survey's
+            # default clock and therefore patches it instead of using a real
+            # wall-clock timestamp in the fixture.
+            with mock.patch('custom_components.eltako.observation.reception.datetime') as datetime_mock:
+                datetime_mock.now.return_value = NOW
+                datetime_mock.fromisoformat.side_effect = datetime.fromisoformat
+                handler(mock.Mock(), connection, {'id': 1, 'window': 60, **payload})
         return connection.results[0]
 
     def test_it_answers_from_the_recorded_telegrams(self):

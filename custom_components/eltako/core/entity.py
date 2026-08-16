@@ -19,6 +19,16 @@ from .gateway import EnOceanGateway
 from ..config import config_helpers
 
 
+SUPPORTED_MESSAGE_TYPES = (
+    EltakoWrappedRPS,
+    EltakoWrapped1BS,
+    EltakoWrapped4BS,
+    RPSMessage,
+    Regular1BSMessage,
+    Regular4BSMessage,
+)
+
+
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
 
@@ -196,9 +206,7 @@ class EltakoEntity(Entity):
         """Handle incoming messages."""
         msg = data['esp2_msg']
 
-        msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
-
-        if type(msg) in msg_types:
+        if isinstance(msg, SUPPORTED_MESSAGE_TYPES):
             adr = AddressExpression((msg.address, None))
             if adr.is_local_address():
                 adr = adr.add(self.gateway.base_id)

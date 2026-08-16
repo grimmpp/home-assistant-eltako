@@ -5,7 +5,7 @@ from tests.mocks import GatewayMock, LatestStateMock
 from unittest import mock
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import Platform
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import HVACMode, PRESET_ECO, PRESET_HOME
 from custom_components.eltako.climate import ClimateController, _get_cooling_components
 from custom_components.eltako.config.config_helpers import CONF_EEP, CONF_ID, DeviceConf
 from custom_components.eltako.core.entity import EltakoEntity
@@ -98,6 +98,7 @@ class TestClimate(unittest.TestCase):
         self.assertIsNotNone(cc.thermostat)
         self.assertEqual(cc.hvac_mode, HVACMode.OFF)
         self.assertEqual(cc._attr_actuator_mode, A5_10_06.HeaterMode.NORMAL)
+        self.assertEqual(cc.listen_to_addresses, [cc._external_dev_id[0], cc.thermostat.id[0]])
 
         self.assertIsNone(cc.target_temperature)
         self.assertIsNone(cc.current_temperature)
@@ -112,6 +113,19 @@ class TestClimate(unittest.TestCase):
         self.assertEqual( cc._attr_actuator_mode, mode)
         self.assertEqual( round(cc.current_temperature), current_temperature)
         self.assertEqual( round(cc.target_temperature), target_temp)
+
+
+    def test_missing_current_temperature_logs_warning_and_uses_protocol_fallback(self):
+        cc = create_climate_entity()
+        EltakoEntity.send_message.reset_mock()
+
+        with self.assertLogs('eltako', level='WARNING') as logs:
+            cc._send_command(A5_10_06.HeaterMode.NORMAL, 21, cc._attr_priority)
+
+        self.assertTrue(any('No valid current temperature' in message for message in logs.output))
+        message = EltakoEntity.send_message.call_args.args[0]
+        decoded = A5_10_06.decode_message(message)
+        self.assertAlmostEqual(decoded.current_temperature, 40, delta=0.2)
 
 
     def test_climate_cooling_switch(self):
@@ -248,6 +262,50 @@ class TestClimate(unittest.TestCase):
         self.assertEqual(_get_cooling_components({}), (None, None))
 
 class TestClimateAsync(unittest.IsolatedAsyncioTestCase):
+
+    async def test_hvac_mode_waits_for_actuator_status(self):
+        cc = create_climate_entity()
+        cc._attr_hvac_mode = HVACMode.HEAT
+        EltakoEntity.send_message.reset_mock()
+
+        await cc.async_set_hvac_mode(HVACMode.OFF)
+
+        # The command is sent, but the displayed state remains the last
+        # confirmed actuator state until a status telegram arrives.
+        self.assertEqual(EltakoEntity.send_message.call_count, 1)
+        self.assertEqual(cc.hvac_mode, HVACMode.HEAT)
+
+        status = A5_10_06(
+            A5_10_06.HeaterMode.OFF,
+            21,
+            20,
+            A5_10_06.ControllerPriority.ACTUATOR_ACK,
+        ).encode_message(cc.dev_id[0])
+        cc.value_changed(status)
+
+        self.assertEqual(cc.hvac_mode, HVACMode.OFF)
+        self.assertEqual(cc._attr_actuator_mode, A5_10_06.HeaterMode.OFF)
+
+    async def test_preset_sends_only_mode_command(self):
+        cc = create_climate_entity()
+        cc._attr_target_temperature = 21
+        EltakoEntity.send_message.reset_mock()
+
+        await cc.async_set_preset_mode(PRESET_ECO)
+
+        # The requested preset is sent, but the entity state is updated only
+        # after the actuator confirms it with a telegram.
+        self.assertEqual(EltakoEntity.send_message.call_count, 1)
+        self.assertEqual(cc.preset_mode, PRESET_HOME)
+
+        status = A5_10_06(
+            A5_10_06.HeaterMode.STAND_BY_2_DEGREES,
+            21,
+            20,
+            A5_10_06.ControllerPriority.ACTUATOR_ACK,
+        ).encode_message(cc.dev_id[0])
+        cc.value_changed(status)
+        self.assertEqual(cc.preset_mode, PRESET_ECO)
 
     async def test_climate_cooling_switch(self):
         cooling_switch = DeviceConf({

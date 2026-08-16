@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import time
 
 from eltakobus.util import AddressExpression, b2s
@@ -118,7 +119,22 @@ def validate_ids_of_climate(entities:list[EltakoEntity]):
         if hasattr(e, "cooling_sender_id"):
             e.validate_sender_id(e.cooling_sender_id)
 class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
-    """Representation of an Eltako heating and cooling actor."""
+    """Representation of an Eltako heating and cooling actor.
+
+    An A5-10-06 controller is supervised by the actuator. A status telegram
+    carries both the requested operating mode and the current relay/heating
+    information; a single telegram is therefore not interchangeable with a
+    separate mode command. When no physical thermostat (for example a FUTH) is
+    configured, Home Assistant takes over the thermostat role and must send the
+    status telegram periodically. If those telegrams stop, the actuator
+    eventually disables home-automation control. The periodic update below is
+    intentional and is not merely a state-refresh optimisation.
+
+    Commands sent by Home Assistant are requests only. The entity must wait
+    for the actuator's status telegram before applying the resulting HVAC mode,
+    preset, target temperature, or actuator mode. This keeps the displayed
+    state truthful when the actuator does not receive or accept a command.
+    """
 
     _update_frequency = 55 # sec
     _attr_actuator_mode: A5_10_06.HeaterMode = None
@@ -157,10 +173,13 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         self._sender_eep = sender_eep
         self.off_temperature = off_temperature
         self._last_on_temp = None
+        self._current_temperature_warning_logged = False
 
         self.thermostat = thermostat
         if self.thermostat:
-            self.listen_to_addresses.append(self.thermostat.id)
+            # AddressExpression is the official (raw address, discriminator)
+            # tuple-like address object. The dispatcher compares raw bytes.
+            self.listen_to_addresses.append(self.thermostat.id[0])
 
         self.room_sensor_entity_id = room_sensor_entity_id
         self._room_sensor_temp = None
@@ -281,7 +300,10 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
                     await self._async_send_mode_cooling()
 
-                # send frequently status update if not connected with thermostat.
+                # Without a physical thermostat, HA must act as the thermostat:
+                # the A5-10-06 status telegram carries the mode and the heating/
+                # cooling relay information and is also the actuator keep-alive.
+                # The actuator disables HA control when this telegram stops.
                 if self.thermostat is None:
                     await self._async_send_command(self._attr_actuator_mode, self.target_temperature, self._attr_priority)
 
@@ -316,7 +338,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
 
     async def async_set_hvac_mode(self, hvac_mode):
-        """Set new target hvac mode on the panel."""
+        """Request a new HVAC mode; the actuator status confirms the state."""
 
         # We use off button as toggle switch
         if hvac_mode == HVACMode.OFF:
@@ -333,6 +355,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         # mode can only be selected when active. e.g. heating can be selected if in heating mode. cooling would be inactive. cooling and heating mode needs to be switched via rocker swtich.
         elif hvac_mode == self._get_mode():
+            # Heating/cooling selection is derived from the dedicated cooling
+            # input. The A5-10-06 status telegram confirms the actuator mode,
+            # but cannot distinguish the external cooling selection.
             self._attr_hvac_mode = hvac_mode
             self._send_set_normal_mode()
 
@@ -359,16 +384,70 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     def _send_command(self, mode: A5_10_06.HeaterMode, target_temp: float, priority:A5_10_06.ControllerPriority) -> None:
         """Send command to set target temperature."""
         address, _ = self._sender_id
-        if target_temp is not None and 0 <= target_temp <= 40:
-            current_temp = 40
-            if self._room_sensor_temp is not None:
-                current_temp = self._room_sensor_temp
+        try:
+            target_temp = float(target_temp)
+        except (TypeError, ValueError):
+            target_temp = None
 
-            LOGGER.debug(f"[climate {self.dev_id}] Send status update: target temp: {target_temp}, current temp: {current_temp}, mode: {mode}, priority: '{priority.description}'")
+        if target_temp is not None and math.isfinite(target_temp) and 0 <= target_temp <= 40:
+            # Prefer the configured HA room sensor, otherwise use the last
+            # valid temperature reported by the actuator/thermostat itself.
+            current_temp = self._room_sensor_temp
+            if current_temp is None:
+                current_temp = self.current_temperature
+            if current_temp is None:
+                # A5-10-06 requires an encoded current temperature even when
+                # HA has not received a sensor/thermostat telegram yet. Keep
+                # the protocol-compatible legacy value, but make the missing
+                # measurement visible instead of presenting it as real data.
+                current_temp = 40
+                if not self._current_temperature_warning_logged:
+                    LOGGER.warning(
+                        "[climate %s] No valid current temperature is available; "
+                        "using the protocol fallback of %s °C for the outgoing "
+                        "A5-10-06 telegram.",
+                        self.dev_id,
+                        current_temp,
+                    )
+                    self._current_temperature_warning_logged = True
+            else:
+                try:
+                    current_temp = float(current_temp)
+                except (TypeError, ValueError):
+                    current_temp = None
+
+                if current_temp is None or not math.isfinite(current_temp) or not 0 <= current_temp <= 40:
+                    if not self._current_temperature_warning_logged:
+                        LOGGER.warning(
+                            "[climate %s] Invalid current temperature %r; "
+                            "using the protocol fallback of 40 °C for the outgoing "
+                            "A5-10-06 telegram.",
+                            self.dev_id,
+                            self._room_sensor_temp,
+                        )
+                        self._current_temperature_warning_logged = True
+                    current_temp = 40
+                else:
+                    self._current_temperature_warning_logged = False
+
+            LOGGER.debug(
+                "[climate %s] Send status update: target temp: %s, current temp: %s, "
+                "mode: %s, priority: '%s'",
+                self.dev_id,
+                target_temp,
+                current_temp,
+                mode,
+                priority.description,
+            )
             msg = A5_10_06(mode, target_temp, current_temp=current_temp, priority=priority).encode_message(address)
             self.send_message(msg)
         else:
-            LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
+            LOGGER.debug(
+                "[climate %s] Cannot send A5-10-06 telegram: invalid target "
+                "temperature %r; waiting for a valid state.",
+                self.dev_id,
+                target_temp,
+            )
             #This is always the case when there was no sensor signal after HA started.
 
 
@@ -480,22 +559,26 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 self.change_temperature_values(msg)
 
 
-    def _send_command_to_change_mode_(self):
+    def _send_command_to_change_mode_(self, preset_mode=None):
+        preset_mode = preset_mode if preset_mode is not None else self.preset_mode
         if self.hvac_mode != HVACMode.OFF:
-            if self.preset_mode == PRESET_HOME:
+            if preset_mode == PRESET_HOME:
                 self._send_set_normal_mode()
-            elif self.preset_mode == PRESET_ECO:
+            elif preset_mode == PRESET_ECO:
                 self._send_mode_setback()
-            elif self.preset_mode == PRESET_SLEEP:
+            elif preset_mode == PRESET_SLEEP:
                 self._send_mode_night()
         else:
             self._send_mode_off()
 
     async def async_set_preset_mode(self, preset_mode):
-        """Set new target preset mode."""
+        """Request a new preset; the actuator status confirms the state."""
 
-        self._attr_preset_mode = preset_mode
-        self._send_command_to_change_mode_()
+        if preset_mode not in (PRESET_HOME, PRESET_ECO, PRESET_SLEEP):
+            LOGGER.warning("[climate %s] Unsupported preset mode %r", self.dev_id, preset_mode)
+            return
+        # Keep the displayed preset unchanged until the actuator confirms it.
+        self._send_command_to_change_mode_(preset_mode)
 
 
     def change_temperature_values(self, msg: ESP2Message) -> None:
