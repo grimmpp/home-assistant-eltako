@@ -64,7 +64,11 @@ class TestTheBuffer(LogTestCase):
         be the serial thread of a gateway. The bug is shown instead of hidden."""
         # noqa: the broken call is the subject of this test - ruff finding it in real code is
         # exactly the point of having the rule switched on
-        self.logger.warning("two placeholders %s %s", "only one argument")  # noqa: PLE1206
+        self.logger.propagate = False
+        try:
+            self.logger.warning("two placeholders %s %s", "only one argument")  # noqa: PLE1206
+        finally:
+            self.logger.propagate = True
 
         entries = integration_log.get_entries(self.hass)['entries']
 

@@ -50,7 +50,7 @@ from datetime import datetime, timedelta, timezone
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
-from homeassistant.const import CONF_ID, CONF_NAME, Platform
+from homeassistant.const import CONF_ID, CONF_NAME, EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import HomeAssistant, callback
 
 from ..const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_ADDRESS,
@@ -1398,13 +1398,16 @@ async def async_setup_detection(hass: HomeAssistant, general_settings: dict) -> 
     if not is_enabled(general_settings):
         return
 
-    async def _initial_run() -> None:
+    async def _initial_run(event=None) -> None:
         # the gateways of the configuration connect first - their bus positions are needed to
         # decide which bus still has to be read
         await asyncio.sleep(STARTUP_DELAY)
         await async_run(hass)
 
-    hass.async_create_task(_initial_run())
+    if hass.is_running:
+        hass.async_create_task(_initial_run())
+    else:
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _initial_run)
 
 
 ### ---------------------------------------------------------------------------
