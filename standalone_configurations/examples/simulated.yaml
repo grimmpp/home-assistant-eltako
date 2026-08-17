@@ -1,0 +1,20 @@
+# Hardware-free example for the standalone runtime.
+# It can be used as a starting point for development and UI testing.
+description: Hardware-free standalone simulation for UI and integration tests
+eltako:
+  general_settings:
+    enable_frontend: True
+    log_enocean_telegrams: True
+  gateway:
+    - id: 1
+      device_type: fam14
+      name: Simulated FAM14
+      simulated: True
+      devices:
+        light:
+          - id: 00-00-00-01
+            eep: M5-38-08
+            name: Simulated light
+            sender:
+              id: 00-00-B0-01
+              eep: A5-38-08

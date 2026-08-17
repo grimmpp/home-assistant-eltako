@@ -68,11 +68,12 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_EEP, CONF_
                      CONF_TELEGRAM_LOG_BUFFER_SIZE, CONF_TELEGRAM_LOG_DECODE_EEP, CONF_TELEGRAM_LOG_FILENAME,
                      CONF_TELEGRAM_LOG_FORMAT, CONF_TELEGRAM_LOG_INCLUDE_POLLING,
                      CONF_TELEGRAM_LOG_MAX_FILE_SIZE_MB, CONF_TELEGRAM_LOG_ROTATE_DAYS,
-                     CONF_TIMESERIES_ENABLED, DATA_ELTAKO, DATA_TELEGRAM_LOGGER, DOMAIN, ELTAKO_CONFIG,
+                     CONF_TIMESERIES_ENABLED, DATA_ELTAKO, DATA_TELEGRAM_LOGGER, DATA_UNKNOWN_DEVICES, DOMAIN, ELTAKO_CONFIG,
                      LOGGER, SERVICE_CLEAR_TELEGRAM_LOG, SERVICE_EXPORT_TELEGRAM_LOG, TELEGRAM_LOGGER_NAME,
                      TelegramDirection, TelegramLogFormat, TelegramLogLevel, WS_GRAFANA_SYNC,
                      WS_RADIO_COMPARISON, WS_RADIO_COMPARISON_CLEAR,
-                     WS_TELEGRAM_LOG_CLEAR, WS_TELEGRAM_LOG_INFO, WS_TELEGRAM_LOG_RECENT,
+                     WS_TELEGRAM_LOG_CLEAR, WS_TELEGRAM_LOG_IMPORT, WS_TELEGRAM_LOG_INFO,
+                     WS_TELEGRAM_LOG_RECENT,
                      WS_TELEGRAM_LOG_REFRESH_DEVICES, WS_TELEGRAM_LOG_STATISTICS,
                      WS_TELEGRAM_LOG_SUBSCRIBE, WS_TELEGRAM_LOG_SUGGESTIONS)
 
@@ -1184,8 +1185,14 @@ class EnOceanTelegramLogger:
         # for the ui: they are shown at their bus position, where the key function names the
         # EEP reliably instead of guessing it from the data.
         detected = self._addresses_detected_in_memories()
+        configured_unknown = {
+            str(device.get('id', '')).upper()
+            for device in ((self.hass.data.get('eltako', {}) or {}).get(DATA_UNKNOWN_DEVICES) or [])
+            if device.get('id')
+        }
         unknown_for_ui = [device for device in unknown_devices
-                          if str(device['address']).upper() not in detected]
+                          if str(device['address']).upper() not in detected
+                          and str(device['address']).upper() not in configured_unknown]
 
         return {
             'summary': info,
@@ -1252,6 +1259,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_telegram_log_suggestions)
     websocket_api.async_register_command(hass, ws_telegram_log_subscribe)
     websocket_api.async_register_command(hass, ws_telegram_log_clear)
+    websocket_api.async_register_command(hass, ws_telegram_log_import)
     websocket_api.async_register_command(hass, ws_telegram_log_refresh_devices)
     websocket_api.async_register_command(hass, ws_radio_comparison)
     websocket_api.async_register_command(hass, ws_radio_comparison_clear)
@@ -1417,6 +1425,145 @@ def ws_telegram_log_clear(hass: HomeAssistant, connection, msg) -> None:
     if telegram_logger is not None:
         telegram_logger.clear()
     connection.send_result(msg['id'], {'cleared': telegram_logger is not None})
+
+
+def _import_telegram_rows(content: str) -> list[dict]:
+    """Read the JSONL or CSV produced by the live telegram view and log file writer."""
+    text = str(content or '').lstrip('\ufeff').strip()
+    if not text:
+        return []
+    if text.startswith('{') or text.startswith('['):
+        try:
+            parsed = json.loads(text)
+            rows = parsed if isinstance(parsed, list) else [parsed]
+            return [row for row in rows if isinstance(row, dict)]
+        except json.JSONDecodeError:
+            # JSONL contains one complete JSON object per line and is therefore not one
+            # JSON document. Parse the lines independently so exported live telegram streams
+            # can be replayed without first converting them to an array.
+            rows = []
+            for line_number, line in enumerate(text.splitlines(), start=1):
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError as err:
+                    raise ValueError(f'invalid JSONL at line {line_number}: {err}') from err
+                if isinstance(row, dict):
+                    rows.append(row)
+            return rows
+
+    sample = text[:4096]
+    delimiter = ';' if sample.splitlines()[0].count(';') >= sample.splitlines()[0].count(',') else ','
+    return list(csv.DictReader(io.StringIO(text), delimiter=delimiter))
+
+
+def _hex_bytes(value: Any) -> bytes:
+    return bytes.fromhex(str(value or '').strip().replace(' ', '').replace('-', '').replace('0x', ''))
+
+
+def _import_raw_message(value: Any, row: dict | None = None) -> ESP2Message:
+    raw = str(value or '').strip().replace(' ', '').replace('-', '')
+    if raw.lower().startswith('0x'):
+        raw = raw[2:]
+    if raw:
+        if len(raw) != 28:
+            raise ValueError('raw must contain one complete 14-byte ESP2 telegram')
+        return ESP2Message.parse(bytes.fromhex(raw))
+
+    # Older JSONL/CSV log files did not persist `raw`, but they did persist the fields needed
+    # for ordinary RPS/1BS/4BS radio telegrams. Rebuild the ESP2 frame so those recordings use
+    # the same receive-side path as newer exports.
+    row = row or {}
+    address = _hex_bytes(row.get('address'))
+    data = _hex_bytes(row.get('data'))
+    status = str(row.get('status') or '0').strip().replace('0x', '')
+    if len(address) != 4 or len(data) > 4:
+        raise ValueError('raw is missing and address/data cannot form an ESP2 radio telegram')
+    msg_type = str(row.get('msg_type') or '')
+    org = str(row.get('org') or '').replace('0x', '')
+    if org:
+        org_byte = int(org, 16)
+    elif 'RPS' in msg_type:
+        org_byte = 0x05
+    elif '1BS' in msg_type:
+        org_byte = 0x06
+    elif '4BS' in msg_type or 'TeachIn' in msg_type:
+        org_byte = 0x07
+    else:
+        raise ValueError(f'raw is missing and message type {msg_type!r} is not reconstructable')
+    data = data.ljust(4, b'\x00')
+    direction = str(row.get('direction') or TelegramDirection.INCOMING.value)
+    header = 0x6B if direction == TelegramDirection.OUTGOING.value else 0x0B
+    try:
+        status_byte = int(status, 16)
+    except ValueError as err:
+        raise ValueError(f'invalid status {row.get("status")!r}') from err
+    body = bytes([header, org_byte]) + data + address + bytes([status_byte & 0xFF])
+    return ESP2Message.parse(b'\xA5\x5A' + body + bytes([sum(body) % 256]))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
+    vol.Required('type'): WS_TELEGRAM_LOG_IMPORT,
+    vol.Required('content'): str,
+})
+@websocket_api.async_response
+async def ws_telegram_log_import(hass: HomeAssistant, connection, msg) -> None:
+    """Replay exported telegrams through the same receive path as a real gateway.
+
+    No telegram is transmitted. The selected raw ESP2 frames are passed to the gateway's
+    receive-side recorder, which updates the live buffer, statistics, configured EEP decoding,
+    unknown-device suggestions, bus-member registry and activity tracker.
+    """
+    telegram_logger = get_telegram_logger(hass)
+    if telegram_logger is None:
+        connection.send_error(msg['id'], 'not_enabled', _disabled_response()['hint'])
+        return
+
+    from ..core.gateway import EnOceanGateway
+
+    gateways = {
+        str(getattr(value, 'dev_id')): value
+        for value in (hass.data.get(DATA_ELTAKO, {}) or {}).values()
+        if isinstance(value, EnOceanGateway)
+    }
+    if not gateways:
+        connection.send_error(msg['id'], 'no_gateway', 'Import requires at least one configured gateway.')
+        return
+
+    try:
+        rows = _import_telegram_rows(msg['content'])
+    except (TypeError, ValueError, json.JSONDecodeError, csv.Error) as err:
+        connection.send_error(msg['id'], 'invalid_import', str(err))
+        return
+
+    imported = 0
+    errors = []
+    default_gateway = next(iter(gateways.values())) if len(gateways) == 1 else None
+    for index, row in enumerate(rows, start=2):
+        try:
+            gateway = gateways.get(str(row.get('gateway_id', '')).strip()) or default_gateway
+            if gateway is None:
+                raise ValueError(f"gateway_id '{row.get('gateway_id', '')}' is not configured")
+            message = _import_raw_message(row.get('raw'), row)
+            try:
+                direction = TelegramDirection(str(row.get('direction', TelegramDirection.INCOMING.value)))
+            except ValueError:
+                direction = TelegramDirection.INCOMING
+            gateway._record_telegram(message, direction)
+            imported += 1
+        except Exception as err:  # noqa: BLE001 - one malformed imported row must not stop the batch
+            if len(errors) < 50:
+                errors.append(f'row {index}: {err}')
+
+    statistics = telegram_logger.get_statistics()
+    connection.send_result(msg['id'], {
+        'imported': imported,
+        'skipped': len(rows) - imported,
+        'errors': errors,
+        'unknown_device_count': len(statistics.get('unknown_devices', [])),
+    })
 
 
 @websocket_api.require_admin

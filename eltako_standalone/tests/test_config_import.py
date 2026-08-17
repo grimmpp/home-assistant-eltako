@@ -51,6 +51,25 @@ def test_parse_demo_eodm():
     assert any(device["id"] == "FE-DB-0A-1B" for device in all_binary)
 
 
+def test_export_includes_persisted_unknown_devices():
+    """Unknown metadata must be present in the YAML backup even when added after startup."""
+    import yaml
+
+    from custom_components.eltako.config.config_import import async_export
+    from custom_components.eltako.const import DATA_ELTAKO, DATA_UNKNOWN_DEVICES, ELTAKO_CONFIG
+
+    class Hass:
+        data = {DATA_ELTAKO: {
+            ELTAKO_CONFIG: {"general_settings": {}},
+            DATA_UNKNOWN_DEVICES: [{"id": "FF-AA-80-01", "eep": "A5-04-02", "platform": "sensor"}],
+        }}
+
+    exported = asyncio.run(async_export(Hass()))
+    config = yaml.safe_load(exported)
+    assert config["eltako"]["unknown"] == [{
+        "id": "FF-AA-80-01", "eep": "A5-04-02", "platform": "sensor"}]
+
+
 def test_parse_pct14_export():
     """A PCT14 export becomes the FAM14 bus with its actuators and its taught-in senders."""
     from custom_components.eltako.config.config_import import parse_import

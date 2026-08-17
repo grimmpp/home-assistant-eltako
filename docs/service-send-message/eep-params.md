@@ -63,7 +63,7 @@ in [version 1.0.1](https://pypi.org/project/eltako14bus/) from unit-test `TestSe
 * `A5-20-04`: status, temperature, valve_position
 * `A5-30-01`: battery_status, contact_status, learn_button
 * `A5-30-03`: alarm_status, profile_marker, temperature
-* `D2-00-01`:
+* `D2-00-01`: 
 * `D2-14-40`: acceleration_status, acceleration_x, acceleration_y, acceleration_z, contact, humidity, illumination, temperature
 * `D2-14-41`: acceleration_status, acceleration_x, acceleration_y, acceleration_z, contact, humidity, illumination, temperature
 * `D5-00-01`: contact, learn_button

@@ -398,6 +398,7 @@ export const page = {
               + "they are in the list below already. More appear while the search runs."
             : "Every device which is identified is added right away - you do not have to wait "
               + "for the end of the search."}</p>
+          <p><button class="action danger" id="simple-detect-cancel">Cancel search</button></p>
         </div>`;
     }
 
@@ -1017,6 +1018,13 @@ export const page = {
     });
     root.getElementById("simple-detect-empty")?.addEventListener("click", () => this._startDetection(ctx));
     root.getElementById("simple-detect-again")?.addEventListener("click", () => this._startDetection(ctx));
+    root.getElementById("simple-detect-cancel")?.addEventListener("click", async () => {
+      if (!confirm("Cancel the running search and release all bus operations?")) return;
+      const result = await ctx.api.call(WS.PNP_CANCEL);
+      const status = result?.status || await ctx.api.call(WS.PNP_STATUS);
+      if (status) ctx.state.plugAndPlay = status;
+      ctx.requestContentRender(true);
+    });
     // step 2 of the instruction does the same thing as the toolbar button
     root.getElementById("step-detect")?.addEventListener("click", () => this._startDetection(ctx));
     root.getElementById("step-apply-gateway")?.addEventListener("click",

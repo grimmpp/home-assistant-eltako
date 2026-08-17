@@ -23,6 +23,8 @@ by the `--demo` flag of the standalone runtime.
 
 from __future__ import annotations
 
+import copy
+
 import voluptuous as vol
 import yaml
 
@@ -33,15 +35,60 @@ from homeassistant.components import websocket_api
 from ..const import (CONF_BASE_ID, CONF_COMMENT, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY,
                      CONF_GATEWAY_ADDRESS, CONF_GATEWAY_DESCRIPTION, CONF_MAX_TARGET_TEMPERATURE,
                      CONF_MIN_TARGET_TEMPERATURE, CONF_REGISTERED_IN, CONF_SENDER, CONF_SERIAL_PATH,
-                     CONF_TIME_CLOSES, CONF_TIME_OPENS, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG,
-                     GatewayDeviceType, LOGGER, Platform, SOURCE_UI_GATEWAY)
+                     CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_UNKNOWN, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG,
+                     GatewayDeviceType, LOGGER, Platform, SOURCE_UI_GATEWAY,
+                     WS_CONFIG_EXPORT, WS_CONFIG_REMOVE_ALL)
 from . import device_config
 from ..catalog import device_catalog
-from . import gateway_config
+from . import config_helpers, gateway_config
 
 LOG_PREFIX_IMPORT = "Config Import"
 
 WS_CONFIG_IMPORT: str = "eltako/config/import"
+
+
+def _plain(value):
+    """Make the validated configuration safe for YAML serialization."""
+    if isinstance(value, dict):
+        return {str(key): _plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(item) for item in value]
+    if hasattr(value, 'value'):
+        return _plain(value.value)
+    return value
+
+
+async def async_export(hass: HomeAssistant) -> str:
+    """Export gateways, UI devices and unknown metadata as a restorable YAML backup."""
+    config = hass.data.get(DATA_ELTAKO, {}).get(ELTAKO_CONFIG, {}) or {}
+    exported = copy.deepcopy(config)
+    # Unknown devices are kept in the UI store as well as in the in-memory configuration.
+    # Build this section explicitly so a device added after startup cannot be lost from an
+    # export because the cached YAML configuration has not been rebuilt yet.
+    unknown = list(exported.get(CONF_UNKNOWN, []) or [])
+    known_unknown = {str(device.get(CONF_ID, "")).upper() for device in unknown
+                     if isinstance(device, dict) and device.get(CONF_ID)}
+    for device in device_config.get_unknown_devices(hass):
+        address = str(device.get(CONF_ID, "")).upper()
+        if address and address not in known_unknown:
+            unknown.append(copy.deepcopy(device))
+            known_unknown.add(address)
+    if unknown:
+        exported[CONF_UNKNOWN] = unknown
+    for gateway in exported.get(CONF_GATEWAY, []) or []:
+        try:
+            entry = device_config._find_gateway_entry(hass, int(gateway[CONF_ID]))
+        except (KeyError, TypeError, ValueError):
+            entry = None
+        if entry is None:
+            continue
+        ui_devices = device_config.get_ui_devices(entry)
+        devices = gateway.setdefault(CONF_DEVICES, {})
+        for platform, entries in ui_devices.items():
+            existing = {str(device.get(CONF_ID, "")).upper() for device in devices.get(platform, [])}
+            devices.setdefault(platform, []).extend(
+                device for device in entries if str(device.get(CONF_ID, "")).upper() not in existing)
+    return yaml.safe_dump({'eltako': _plain(exported)}, sort_keys=False, allow_unicode=True)
 
 # platforms a device of an import may use (same set the web ui offers)
 _SUPPORTED_PLATFORMS = set(device_config.SUPPORTED_PLATFORMS.keys())
@@ -515,11 +562,21 @@ def yaml_to_config(content: str) -> tuple[list[dict], list[str]]:
     raw = yaml.safe_load(content) or {}
     if not isinstance(raw, dict):
         raise vol.Invalid("The file does not contain a yaml mapping.")
-    section = raw.get(DOMAIN, raw)
+    section = raw.get(DOMAIN, raw) or {}
     gateways = section.get(CONF_GATEWAY, []) or []
-    if not gateways:
+    if not gateways and not section.get(CONF_UNKNOWN):
         raise vol.Invalid(f"No '{CONF_GATEWAY}:' list found in the file.")
     return [dict(g) for g in gateways], []
+
+
+def yaml_unknown_devices(content: str) -> list[dict]:
+    """Return the metadata-only ``eltako: unknown`` section of a YAML import."""
+    raw = yaml.safe_load(content) or {}
+    section = raw.get(DOMAIN, raw) or {}
+    unknown = section.get(CONF_UNKNOWN, []) or []
+    if not isinstance(unknown, list):
+        raise vol.Invalid(f"'{CONF_UNKNOWN}:' must be a list.")
+    return [dict(device) for device in unknown if isinstance(device, dict)]
 
 
 def parse_import(content: str) -> tuple[list[dict], list[str], str]:
@@ -694,12 +751,21 @@ async def async_import(hass: HomeAssistant, content: str, dry_run: bool,
     serial ports).
     """
     gateways, warnings, detected_format = parse_import(content)
+    unknown = yaml_unknown_devices(content) if detected_format == "yaml" else []
     if gateway_overrides:
         for gateway in gateways:
             gateway.update(gateway_overrides)
     if dry_run:
-        return {"format": detected_format, "dry_run": True, **_plan(hass, gateways, warnings)}
+        result = {"format": detected_format, "dry_run": True, **_plan(hass, gateways, warnings)}
+        result["unknown_count"] = len(unknown)
+        return result
     result = await async_apply_import(hass, gateways, warnings)
+    for device in unknown:
+        try:
+            await device_config.async_add_unknown_device(hass, device)
+        except (vol.Invalid, ValueError) as err:
+            result["warnings"].append(f"Unknown device '{device.get(CONF_ID, '?')}': {err}")
+    result["imported_unknown"] = len(unknown)
     return {"format": detected_format, "dry_run": False, **result}
 
 
@@ -709,6 +775,8 @@ async def async_import(hass: HomeAssistant, content: str, dry_run: bool,
 
 def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_config_import)
+    websocket_api.async_register_command(hass, ws_config_export)
+    websocket_api.async_register_command(hass, ws_config_remove_all)
 
 
 @websocket_api.require_admin
@@ -725,3 +793,38 @@ async def ws_config_import(hass: HomeAssistant, connection, msg) -> None:
         connection.send_error(msg["id"], "invalid_file", str(e))
         return
     connection.send_result(msg["id"], result)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): WS_CONFIG_EXPORT})
+@websocket_api.async_response
+async def ws_config_export(hass: HomeAssistant, connection, msg) -> None:
+    connection.send_result(msg["id"], {'filename': 'eltako-backup.yaml',
+                                       'content': await async_export(hass)})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): WS_CONFIG_REMOVE_ALL})
+@websocket_api.async_response
+async def ws_config_remove_all(hass: HomeAssistant, connection, msg) -> None:
+    """Remove UI-owned devices and gateways, while leaving configuration.yaml untouched."""
+    from . import device_config, gateway_config
+
+    devices = await device_config.async_remove_all_ui_devices(hass)
+    removed_gateways = []
+    for gateway in list(gateway_config.get_ui_gateways(hass)):
+        gateway_id = int(gateway[CONF_ID])
+        for entry in list(hass.config_entries.async_entries(DOMAIN)):
+            try:
+                entry_id = config_helpers.get_id_from_gateway_name(
+                    entry.data[CONF_GATEWAY_DESCRIPTION])
+            except Exception:  # noqa: BLE001 - unrelated config entries are ignored
+                continue
+            if entry_id == gateway_id:
+                await hass.config_entries.async_remove(entry.entry_id)
+        if await gateway_config.async_remove_gateway(hass, gateway_id):
+            removed_gateways.append(gateway_id)
+    connection.send_result(msg["id"], {
+        'removed_devices': devices['removed'], 'removed_gateways': removed_gateways,
+        'yaml_untouched': True,
+    })

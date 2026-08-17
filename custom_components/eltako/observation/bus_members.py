@@ -946,6 +946,21 @@ def get_scan_progress(gateway_id: int = None):
     return list(SCAN_PROGRESS.values())
 
 
+def cancel_all_bus_operations(hass: HomeAssistant) -> list[dict]:
+    """Cancel every gateway bus operation for a caller which has no websocket message id."""
+    from ..core.websocket import get_gateways
+
+    results = []
+    for gateway in get_gateways(hass):
+        try:
+            results.append(gateway.cancel_bus_operation())
+        except Exception as e:  # noqa: BLE001 - cancellation must reach the other gateways
+            LOGGER.error(f"[{LOG_PREFIX_BUS}] Cannot cancel gateway {gateway.dev_id}: {e}",
+                         exc_info=True)
+            results.append({'gateway_id': gateway.dev_id, 'error': str(e), 'released': False})
+    return results
+
+
 def describe_scan_progress(progress: dict) -> str:
     """One readable line, e.g. 'position 11/14, memory 23/56'.
 

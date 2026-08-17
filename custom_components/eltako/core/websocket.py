@@ -16,7 +16,8 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 from eltakobus.util import b2s
 
 from ..const import (DATA_ELTAKO, DOMAIN, INTEGRATION_DIR, LOGGER, WS_ACTIVITY, WS_HELP_CATALOG,
-                     WS_INTEGRATION_INFO, WS_SEND_TELEGRAM, WS_SEND_TELEGRAM_FORM, is_prerelease)
+                     WS_FRONTEND_VERSION, WS_INTEGRATION_INFO, WS_SEND_TELEGRAM,
+                     WS_SEND_TELEGRAM_FORM, is_prerelease)
 from .gateway import detect, EnOceanGateway
 from .entity import get_device_by_identifier
 
@@ -26,6 +27,7 @@ async def register_websockets(hass: HomeAssistant, config: ConfigEntry):
     websocket_api.async_register_command(hass, ws_usb_ports)
     websocket_api.async_register_command(hass, ws_configured_gateways)
     websocket_api.async_register_command(hass, ws_integration_info)
+    websocket_api.async_register_command(hass, ws_frontend_version)
     websocket_api.async_register_command(hass, ws_activity)
     websocket_api.async_register_command(hass, ws_help_catalog)
     websocket_api.async_register_command(hass, ws_send_telegram_form)
@@ -166,6 +168,28 @@ async def ws_info(hass: HomeAssistant, connection, msg):
 
     # Send the response back
     connection.send_message(websocket_api.result_message(msg['id'], response))
+
+
+def _frontend_source_version() -> str:
+    """Return a cheap version of all mounted frontend files for development reloads."""
+    newest = 0
+    frontend = os.path.join(INTEGRATION_DIR, "frontend")
+    for root, _directories, files in os.walk(frontend):
+        for filename in files:
+            try:
+                newest = max(newest, os.stat(os.path.join(root, filename)).st_mtime_ns)
+            except OSError:
+                continue
+    return str(newest)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_FRONTEND_VERSION})
+@websocket_api.async_response
+async def ws_frontend_version(hass: HomeAssistant, connection, msg):
+    """Expose the mounted source version so the dev container can reload changed modules."""
+    version = await hass.async_add_executor_job(_frontend_source_version)
+    connection.send_result(msg['id'], {'version': version})
 
 
 @websocket_api.websocket_command({

@@ -1,0 +1,20 @@
+# Minimal standalone configuration.
+# Replace the serial path and device addresses before connecting real hardware.
+description: Minimal standalone configuration for one light
+eltako:
+  general_settings:
+    enable_frontend: True
+    log_enocean_telegrams: True
+  gateway:
+    - id: 1
+      device_type: fgw14usb
+      serial_path: /dev/ttyUSB0
+      base_id: FF-AA-80-00
+      devices:
+        light:
+          - id: 00-00-00-01
+            eep: M5-38-08
+            name: Example light
+            sender:
+              id: 00-00-B0-01
+              eep: A5-38-08

@@ -39,6 +39,48 @@ pip install -r eltako_standalone/requirements-standalone.txt
 python -m eltako_standalone serve
 ```
 
+For configurations kept next to a repository checkout, use the ignored workspace
+`standalone_configurations/local/`:
+
+```bash
+cp standalone_configurations/examples/ha.yaml standalone_configurations/local/configuration.yaml
+python -m eltako_standalone --config standalone_configurations/local serve
+```
+
+The examples in [`standalone_configurations/examples/`](../../standalone_configurations/examples/)
+are tracked and safe to copy. The `local/` directory is ignored because it can contain real
+gateway addresses, device ids and credentials. Named profiles created in the Standalone
+**Configurations** page are stored below the selected configuration folder.
+By default that folder is the repository's `standalone_configurations/` directory; the page lets
+you select another folder and remembers the choice. It lists all YAML files there, shows their
+optional top-level `description` plus a gateway/device/platform summary, and provides **Load**,
+**Save as** and **View details** actions. The details popup displays the plain YAML file.
+**Choose folder...** uses the browser's native `showDirectoryPicker()` and manages the selected
+folder through a browser file handle. Loading sends the selected YAML to the standalone runtime;
+Save as, View details and Delete operate directly on that selected folder. If the browser does
+not support the API, or the server is headless, use the server path field instead.
+Each saved configuration can also be deleted after confirmation; the active
+`configuration.yaml` is protected.
+The same page can save the active YAML as a file in that folder and load it again; loading
+replaces `configuration.yaml` and restarts the standalone runtime.
+Loading is a clean replacement: persisted UI-created gateways and devices from the previous
+configuration are removed first, so only entities from the loaded configuration are started.
+The saved configuration is copied into the active `--config/configuration.yaml`; the selected
+storage folder itself is not used as the runtime configuration folder.
+
+## Replay recorded telegrams
+
+The live telegram page can export the current buffer as CSV or JSONL. Use **Import telegrams**
+to replay either format. Each raw ESP2 frame is passed through the same receive-side gateway
+processing as a real incoming telegram: it is decoded with the configured EEP, added to the
+statistics and live buffer, and used for unknown-device, activity and bus-member detection.
+Replay never sends a telegram to the hardware. The imported file must contain the `raw` field
+from an ELTAKO export; the gateway id is used when more than one gateway is configured.
+
+Loading a configuration can take several seconds because the runtime restarts and initializes
+all configured gateways and entities. The configuration page shows a blocking progress screen
+until the restart has completed.
+
 `eet`, `eltako-enocean-tool` and `python -m eltako_standalone` are the same command line -
 the installed ones work in any folder, the module has to run in the repository root. `eet`
 is the short name to type; the long one exists because three letters are cheap and taken

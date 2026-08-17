@@ -1,0 +1,47 @@
+eltako:
+  gateway:
+  - device_type: fam14
+    serial_path: /dev/cu.usbserial-AQ028YCS
+    id: 0
+    name: FAM Test
+    base_id: FF-A2-24-00
+    message_delay: 0.002
+    auto_reconnect: true
+    simulated: false
+    port: 5100
+  - id: 1
+    device_type: fam14
+    base_id: FF-CD-60-80
+    name: FAM14
+    serial_path: /dev/cu.usbserial-AL00FF9B
+    message_delay: 0.01
+    simulated: false
+    port: 5100
+    auto_reconnect: true
+  - id: 2
+    device_type: fam-usb
+    base_id: FF-BC-C8-00
+    name: FAM-USB
+    serial_path: /dev/cu.usbserial-FT7YTP3Y1
+    message_delay: 0.01
+    simulated: false
+    port: 5100
+    auto_reconnect: true
+  - id: 3
+    device_type: fam-usb
+    base_id: FF-A5-FE-80
+    name: FAM-USB
+    serial_path: /dev/cu.usbserial-FTAMHS601
+    message_delay: 0.01
+    simulated: false
+    port: 5100
+    auto_reconnect: true
+  - id: 4
+    device_type: enocean-usb300
+    base_id: FF-D6-30-00
+    name: USB300
+    serial_path: /dev/cu.usbserial-FT5XDBOW
+    message_delay: 0.01
+    simulated: false
+    port: 5100
+    auto_reconnect: true

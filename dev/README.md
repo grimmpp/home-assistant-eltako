@@ -30,8 +30,12 @@ Then open **<http://localhost:8123>** and log in with **admin / admin**.
   (temperature curve, weather station, switching cycles, an unknown wall button) for the
   pandas examples in [docs/telegram-analysis](../docs/telegram-analysis/readme.md) and for
   the timeseries backfill service.
-* **Live code**: `custom_components/eltako` is mounted from the repository. After a code
-  change: `docker compose restart homeassistant`.
+* **Live code**: `custom_components/eltako` is mounted from the repository. After the first
+  restart of Home Assistant, the panel checks the mounted frontend source every five seconds
+  and reloads itself when a file changes. If the panel is already open with an older cached
+  entry module, run `docker compose restart homeassistant` once and reload the browser panel;
+  subsequent frontend changes are detected automatically. The integration also adds a
+  source-file cache key and serves frontend files with `no-store`.
 
 There is no physical gateway in the container, so the serial connection keeps retrying and
 the demo devices stay unavailable / "never reported" - the configuration pages, the device

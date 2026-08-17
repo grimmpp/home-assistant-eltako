@@ -20,6 +20,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_DEVICES, CONF_ID, CONF_NAME, CONF_TEMPERATURE_UNIT, Platform, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.components import websocket_api
+from homeassistant.helpers.storage import Store
 
 from eltakobus.util import AddressExpression
 
@@ -28,7 +29,7 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_CORE_ENTRY
                      CONF_METER_TARIFFS, CONF_MIN_TARGET_TEMPERATURE, CONF_OFF_TEMPERATURE, CONF_ROOM_SENSOR,
                      CONF_ROOM_THERMOSTAT, CONF_SENDER, CONF_SENSOR, CONF_SWITCH_BUTTON, CONF_SIMULATED, CONF_TIME_CLOSES, CONF_TIME_OPENS,
                      CONF_TIME_TILTS, CONF_UI_DEVICES, DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, LOGGER,
-                     WS_DEVICE_ADD, WS_DEVICE_FORM, WS_DEVICE_LIST, WS_DEVICE_REMOVE, WS_DEVICE_REMOVE_ALL,
+                     CONF_UNKNOWN, DATA_UNKNOWN_DEVICES, WS_DEVICE_ADD, WS_DEVICE_ADD_UNKNOWN, WS_DEVICE_FORM, WS_DEVICE_LIST, WS_DEVICE_REMOVE, WS_DEVICE_REMOVE_ALL,
                      WS_DEVICE_TEACH_IN, WS_DEVICE_UPDATE)
 from . import config_helpers
 from ..catalog.device_catalog import get_device_templates
@@ -43,6 +44,51 @@ from .schema import (
 )
 
 LOG_PREFIX_DEVICE_CONFIG = "Device Config"
+UNKNOWN_STORAGE_KEY = f"{DOMAIN}_unknown_devices"
+UNKNOWN_STORAGE_VERSION = 1
+
+
+def _unknown_store(hass: HomeAssistant) -> Store:
+    return Store(hass, UNKNOWN_STORAGE_VERSION, UNKNOWN_STORAGE_KEY)
+
+
+async def async_load_unknown_devices(hass: HomeAssistant) -> list[dict]:
+    """Load UI-added unknown devices before the effective YAML config is assembled."""
+    store = _unknown_store(hass)
+    stored = await store.async_load()
+    devices = stored.get("devices", []) if isinstance(stored, dict) else []
+    result = [dict(device) for device in devices if isinstance(device, dict) and device.get(CONF_ID)]
+    data = hass.data.setdefault(DATA_ELTAKO, {})
+    data["_unknown_device_store"] = store
+    data[DATA_UNKNOWN_DEVICES] = result
+    return result
+
+
+def get_unknown_devices(hass: HomeAssistant) -> list[dict]:
+    return list((hass.data.get(DATA_ELTAKO, {}) or {}).get(DATA_UNKNOWN_DEVICES, []) or [])
+
+
+async def async_add_unknown_device(hass: HomeAssistant, device: dict) -> dict:
+    """Persist metadata for a device without creating a Home Assistant entity."""
+    address = normalize_address(str(device.get(CONF_ID, "")))
+    candidate = {key: value for key, value in device.items() if value not in (None, "")}
+    candidate[CONF_ID] = address
+    existing = get_unknown_devices(hass)
+    if any(str(item.get(CONF_ID, "")).upper() == address.upper() for item in existing):
+        return candidate
+    existing.append(candidate)
+    data = hass.data.setdefault(DATA_ELTAKO, {})
+    data[DATA_UNKNOWN_DEVICES] = existing
+    store = data.get("_unknown_device_store") or _unknown_store(hass)
+    data["_unknown_device_store"] = store
+    await store.async_save({"devices": existing})
+    config = data.get(ELTAKO_CONFIG)
+    if isinstance(config, dict):
+        configured = list(config.get(CONF_UNKNOWN, []) or [])
+        known = {str(item.get(CONF_ID, "")).upper() for item in configured if isinstance(item, dict)}
+        config[CONF_UNKNOWN] = configured + [item for item in existing
+                                             if str(item.get(CONF_ID, "")).upper() not in known]
+    return candidate
 
 # platforms for which devices can be created through the web ui
 SUPPORTED_PLATFORMS: dict[str, type] = {
@@ -830,6 +876,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_device_form)
     websocket_api.async_register_command(hass, ws_device_list)
     websocket_api.async_register_command(hass, ws_device_add)
+    websocket_api.async_register_command(hass, ws_device_add_unknown)
     websocket_api.async_register_command(hass, ws_device_update)
     websocket_api.async_register_command(hass, ws_device_remove)
     websocket_api.async_register_command(hass, ws_device_remove_all)
@@ -1010,6 +1057,22 @@ async def ws_device_add(hass: HomeAssistant, connection, msg) -> None:
 
 @websocket_api.require_admin
 @websocket_api.websocket_command({
+    vol.Required('type'): WS_DEVICE_ADD_UNKNOWN,
+    vol.Required('device'): dict,
+})
+@websocket_api.async_response
+async def ws_device_add_unknown(hass: HomeAssistant, connection, msg) -> None:
+    """Remember an unknown address under ``eltako: unknown`` without creating an entity."""
+    try:
+        device = await async_add_unknown_device(hass, msg['device'])
+    except (vol.Invalid, ValueError) as err:
+        connection.send_error(msg['id'], 'invalid_unknown_device', str(err))
+        return
+    connection.send_result(msg['id'], {'device': _plain(device), 'entity_created': False})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({
     vol.Required('type'): WS_DEVICE_UPDATE,
     vol.Required('gateway_id'): vol.Coerce(int),
     vol.Required('platform'): str,
@@ -1048,7 +1111,10 @@ async def ws_device_remove(hass: HomeAssistant, connection, msg) -> None:
     except vol.Invalid as e:
         connection.send_error(msg['id'], 'invalid_device', str(e))
         return
-    connection.send_result(msg['id'], {'removed': True})
+    # The options are updated synchronously, but Home Assistant reloads the gateway in a
+    # background listener. Return the freshly calculated configuration as well so the Devices
+    # page can update immediately instead of rendering the old gateway object once more.
+    connection.send_result(msg['id'], {'removed': True, 'devices': _describe_devices(hass)})
 
 
 @websocket_api.require_admin
@@ -1067,4 +1133,5 @@ async def ws_device_remove_all(hass: HomeAssistant, connection, msg) -> None:
     except vol.Invalid as e:
         connection.send_error(msg['id'], 'unknown_gateway', str(e))
         return
+    result['devices'] = _describe_devices(hass)
     connection.send_result(msg['id'], result)

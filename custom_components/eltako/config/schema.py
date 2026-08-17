@@ -35,7 +35,7 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_DEPRECATED
                      CONF_TELEGRAM_LOG_ROTATE_DAYS, CONF_TIMESERIES_BUCKET, CONF_TIMESERIES_ENABLED,
                      CONF_TIMESERIES_MEASUREMENT, CONF_TIMESERIES_ORG, CONF_TIMESERIES_TOKEN,
                      CONF_TIMESERIES_URL, CONF_TIME_CLOSES, CONF_TIME_OPENS, CONF_TIME_TILTS,
-                     CONF_VOC_TYPE_INDEXES, DOMAIN, LANGUAGE_ABBREVIATION, TelegramLogFormat,
+                     CONF_UNKNOWN, CONF_VOC_TYPE_INDEXES, DOMAIN, LANGUAGE_ABBREVIATION, TelegramLogFormat,
                      TelegramLogLevel)
 from ..core.gateway import GatewayDeviceType
 
@@ -77,6 +77,14 @@ CONF_EEP_SUPPORTED_BINARY_SENSOR = [F6_01_01.eep_string,
                                     A5_14_0A.eep_string,
                                     F6_05_01.eep_string,
                                     F6_05_02.eep_string]
+
+UNKNOWN_DEVICE_SCHEMA = vol.Schema({
+    vol.Required(CONF_ID): cv.matches_regex(CONF_ID_REGEX),
+    vol.Optional(CONF_EEP): cv.string,
+    vol.Optional(CONF_NAME, default=""): cv.string,
+    vol.Optional("platform", default=""): cv.string,
+    vol.Optional("gateway_id"): cv.Number,
+}, extra=vol.ALLOW_EXTRA)
 CONF_EEP_SUPPORTED_SENSOR_ROCKER_SWITCH = [F6_02_01.eep_string, F6_02_02.eep_string]
 
 def _get_sender_schema(supported_sender_eep) -> vol.Schema:
@@ -418,6 +426,8 @@ class GatewaySchema(EltakoPlatformSchema):
 
 CONFIG_SCHEMA = vol.Schema(
     {
+        # Optional metadata used by the standalone configuration browser.
+        vol.Optional("description", default=""): cv.string,
         # An `eltako:` line with nothing under it is a valid configuration - and a useful one:
         # Home Assistant loads a custom integration only for a config entry or for a yaml key,
         # so that single line is the shortest way to get the web ui into the sidebar without
@@ -426,6 +436,8 @@ CONFIG_SCHEMA = vol.Schema(
         DOMAIN: vol.All(lambda section: {} if section is None else section, vol.Schema({
             vol.Optional(CONF_GERNERAL_SETTINGS): GeneralSettings.get_schema(),
             vol.Optional(CONF_GATEWAY): vol.All(cv.ensure_list, [GatewaySchema.ENTITY_SCHEMA]),
+            # Metadata only. Entries in this section are never passed to an entity platform.
+            vol.Optional(CONF_UNKNOWN, default=[]): vol.All(cv.ensure_list, [UNKNOWN_DEVICE_SCHEMA]),
         })),
     },
     extra=vol.ALLOW_EXTRA,

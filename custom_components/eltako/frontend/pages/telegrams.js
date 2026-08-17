@@ -113,6 +113,9 @@ export const page = {
               title="Push the dashboards shipped with the integration into the configured Grafana">
         Sync dashboards</button>
       <button id="export" class="action">Export CSV</button>
+      <button id="export-jsonl" class="action">Export JSONL</button>
+      <button id="import-telegrams" class="action">Import telegrams</button>
+      <input id="import-telegram-file" type="file" accept=".csv,.json,.jsonl,.txt" hidden>
       <button id="clear" class="action danger">Clear</button>`;
   },
 
@@ -163,6 +166,28 @@ export const page = {
     root.getElementById("export").addEventListener("click", () => {
       download(`eltako_telegrams_${timestampForFilename()}.csv`,
         toCsv(CSV_COLUMNS, this._filtered(ctx)), "text/csv");
+    });
+    root.getElementById("export-jsonl").addEventListener("click", () => {
+      const content = this._filtered(ctx).map((telegram) => JSON.stringify(telegram)).join("\n");
+      download(`eltako_telegrams_${timestampForFilename()}.jsonl`, content,
+        "application/x-ndjson");
+    });
+    const importButton = root.getElementById("import-telegrams");
+    const importFile = root.getElementById("import-telegram-file");
+    importButton.addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", async () => {
+      const selected = importFile.files?.[0];
+      importFile.value = "";
+      if (!selected) return;
+      if (!confirm(`Replay '${selected.name}' as received telegrams?\n\nNo telegrams will be transmitted. The imported frames will be decoded and used for device recognition.`)) return;
+      const result = await ctx.api.call(WS.LOG_IMPORT, { content: await selected.text() });
+      if (!result) return;
+      await Promise.all([ctx.loadLogInfo(), ctx.loadRecentTelegrams(), ctx.loadStatistics()]);
+      ctx.requestRender();
+      const message = `${result.imported} telegram(s) imported, ${result.skipped} skipped.`
+        + `${result.unknown_device_count ? `\nUnknown devices: ${result.unknown_device_count}` : ""}`
+        + `${result.errors?.length ? `\n\n${result.errors.slice(0, 5).join("\n")}` : ""}`;
+      alert(message);
     });
     root.getElementById("clear").addEventListener("click", async () => {
       await ctx.api.call(WS.LOG_CLEAR);
@@ -227,12 +252,13 @@ export const page = {
           <td class="mono">${escapeHtml(eep.value || "-")}
             ${eep.hint ? `<span class="hint">${escapeHtml(eep.hint)}</span>` : ""}</td>
           <td>${escapeHtml(telegram.msg_type)}</td>
+          <td class="mono" title="ESP2/ESP3 status byte">${escapeHtml(telegram.status || "-")}</td>
           <td class="mono">${escapeHtml(telegram.data || telegram.payload || "-")}</td>
           <td class="mono signal" title="Signal strength (only reported by ESP3 transceivers)">
             ${telegram.rssi_dbm != null ? `${escapeHtml(String(telegram.rssi_dbm))} dBm` : "-"}</td>
           <td class="decoded">${this._values(telegram, eep)}</td>
         </tr>
-        <tr class="detail" id="${detailId}"><td colspan="10"><pre>${escapeHtml(JSON.stringify(telegram, null, 2))}</pre></td></tr>`;
+        <tr class="detail" id="${detailId}"><td colspan="11"><pre>${escapeHtml(JSON.stringify(telegram, null, 2))}</pre></td></tr>`;
     }).join("");
 
     return `
@@ -242,7 +268,7 @@ export const page = {
         <table class="clickable">
           <thead><tr>
             <th>Time</th><th>Dir</th><th>Gateway</th><th>Address</th><th>Device / Entity</th>
-            <th>EEP</th><th>Message type</th><th>Data</th><th>Signal</th><th>Values</th>
+            <th>EEP</th><th>Message type</th><th>Status</th><th>Data</th><th>Signal</th><th>Values</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>

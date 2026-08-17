@@ -1,0 +1,37 @@
+# Standalone copy of the repository's example configuration format.
+# The complete development-container example is kept at ../../ha.yaml; this smaller copy is
+# safe to use as a standalone starting point and does not contain installation-specific ids.
+description: Example standalone installation with one bus gateway
+eltako:
+  general_settings:
+    enable_frontend: True
+    enable_test_page: False
+    log_enocean_telegrams: True
+    telegram_log_filename: enocean_telegrams.jsonl
+  gateway:
+    - id: 1
+      device_type: fgw14usb
+      name: Example FGW14-USB
+      serial_path: /dev/ttyUSB0
+      base_id: FF-AA-80-00
+      devices:
+        sensor:
+          - id: FF-AA-DD-81
+            eep: A5-04-02
+            name: Example temperature and humidity sensor
+        light:
+          - id: 00-00-00-01
+            eep: M5-38-08
+            name: Example light
+            sender:
+              id: 00-00-B0-01
+              eep: A5-38-08
+        cover:
+          - id: 00-00-00-06
+            eep: G5-3F-7F
+            name: Example cover
+            sender:
+              id: 00-00-B0-06
+              eep: H5-3F-7F
+            time_closes: 24
+            time_opens: 25

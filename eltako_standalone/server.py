@@ -35,6 +35,9 @@ class StandaloneServer:
         self.token = token
         self._runner: web.AppRunner | None = None
 
+    def _current_hass(self):
+        return getattr(self, "runtime", None).hass if getattr(self, "runtime", None) else self.hass
+
     # ------------------------------------------------------------------ http
     def build_app(self) -> web.Application:
         app = web.Application(middlewares=[self._no_cache_middleware])
@@ -46,7 +49,7 @@ class StandaloneServer:
         # web ui was disabled in the settings, serve the frontend folder anyway -
         # running the standalone server IS the opt-in.
         static_paths = {config.url_path: config.path
-                        for config in getattr(self.hass.http, "static_paths", [])}
+                        for config in getattr(self._current_hass().http, "static_paths", [])}
         if not static_paths:
             from custom_components.eltako.const import PANEL_STATIC_URL
             import custom_components.eltako as integration_pkg
@@ -107,7 +110,7 @@ class StandaloneServer:
 
         def send(message: dict) -> None:
             if not ws.closed:
-                self.hass.async_create_task(ws.send_str(json.dumps(message, default=str)))
+                self._current_hass().async_create_task(ws.send_str(json.dumps(message, default=str)))
 
         try:
             async for msg in ws:
@@ -128,7 +131,7 @@ class StandaloneServer:
                                             "message": "invalid access token"})
                         break
                     authenticated = True
-                    connection = ActiveConnection(self.hass, send)
+                    connection = ActiveConnection(self._current_hass(), send)
                     await ws.send_json({"type": "auth_ok",
                                         "ha_version": "eltako-standalone"})
                     continue
@@ -148,7 +151,10 @@ class StandaloneServer:
                     send({"id": data.get("id", 0), "type": "pong"})
                     continue
 
-                await async_handle_message(self.hass, connection, data)
+                current_hass = self._current_hass()
+                if getattr(connection, "hass", current_hass) is not current_hass:
+                    connection.hass = current_hass
+                await async_handle_message(current_hass, connection, data)
         finally:
             if connection is not None:
                 connection.async_handle_close()

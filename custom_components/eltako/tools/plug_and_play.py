@@ -57,7 +57,8 @@ from ..const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP, CONF_GATEWAY, CON
                      CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_PORT, CONF_PLUG_AND_PLAY,
                      CONF_PLUG_AND_PLAY_INTERVAL, CONF_SENDER, CONF_SERIAL_PATH, DATA_ELTAKO,
                      DATA_PLUG_AND_PLAY, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, SOURCE_UI_GATEWAY,
-                     WS_PLUG_AND_PLAY_PROBE, WS_PLUG_AND_PLAY_RUN, WS_PLUG_AND_PLAY_STATUS)
+                     WS_PLUG_AND_PLAY_CANCEL, WS_PLUG_AND_PLAY_PROBE, WS_PLUG_AND_PLAY_RUN,
+                     WS_PLUG_AND_PLAY_STATUS)
 from ..config import config_helpers
 from ..catalog.device_catalog import describe_gateway_type
 from . import gateway_identity
@@ -731,6 +732,9 @@ def get_state(hass: HomeAssistant) -> dict:
     return domain_data.setdefault(DATA_PLUG_AND_PLAY, {
         'running': False, 'step': None, 'stage': None, 'started_at': None,
         'last_run': None, 'last_report': None, 'scanned_gateways': [], 'unsubscribe': None,
+        # The task is deliberately kept in memory only.  It lets the websocket cancel the
+        # actual run instead of merely changing the progress indicator.
+        'task': None, 'cancel_requested': False,
     })
 
 
@@ -814,7 +818,7 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
         LOGGER.debug(f"[{LOG_PREFIX_PNP}] A detection is already running - skipped.")
         return dict(state.get('last_report') or {}, skipped='already_running')
 
-    state.update({'running': True, 'started_at': _utc_now_iso(),
+    state.update({'running': True, 'cancel_requested': False, 'started_at': _utc_now_iso(),
                   'stage': STAGE_PORTS if detect_gateways else STAGE_BUS,
                   'step': "Scanning serial ports" if detect_gateways else "Reading the bus"})
     report = {
@@ -834,6 +838,9 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
             _set_step(hass, STAGE_PORTS, "Probing the free serial ports and listening for "
                                          "LAN gateways (mDNS) in parallel")
             detection = await async_detect_gateways(hass)
+            if state.get('cancel_requested'):
+                report['cancelled'] = True
+                return report
             candidates = list(detection['gateways_detected'])
             report['ports_probed'] = detection['ports_probed']
             report['mdns_found'] = detection['mdns_found']
@@ -844,6 +851,9 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
 
             ### 2) create the gateways which were identified beyond doubt
             for candidate in candidates:
+                if state.get('cancel_requested'):
+                    report['cancelled'] = True
+                    return report
                 if not candidate['confident']:
                     continue
                 where = candidate.get('serial_path') or \
@@ -880,6 +890,9 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
             finally:
                 watcher.cancel()
                 adopter.cancel()
+            if state.get('cancel_requested'):
+                report['cancelled'] = True
+                return report
             for gateway, read in zip(bus_targets, reads):
                 report['buses_read'].append(read)
                 if read.get('finished'):
@@ -894,6 +907,9 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
         ### in by now (they were adopted during the scan); this pass catches what became clear
         ### only with the last memory row and everything outside the bus.
         _set_step(hass, STAGE_DEVICES, "Collecting the devices which can be identified")
+        if state.get('cancel_requested'):
+            report['cancelled'] = True
+            return report
         await _async_collect_and_add(hass, report, add_devices)
 
         ### 5) teach the sender addresses of Home Assistant into the actuators which were just
@@ -917,13 +933,16 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
         report['warnings'].append(f"The detection failed: {e}")
         return report
     finally:
+        if state.get('cancel_requested'):
+            report['cancelled'] = True
+            report['finished_at'] = report.get('finished_at') or _utc_now_iso()
         # The buses are free again, so the gateways whose reload was postponed while they were
         # being read get it now - that is what turns the devices which were added during the
         # scan into entities. Still *before* running=False: a reload sets the gateway up again,
         # and the automatic bus scan of a new gateway steps aside while a detection runs.
         from ..core.integration import async_flush_pending_reloads
         await async_flush_pending_reloads(hass)
-        state.update({'running': False, 'step': None, 'stage': None,
+        state.update({'running': False, 'step': None, 'stage': None, 'task': None,
                       'last_run': _utc_now_iso(), 'last_report': report})
 
 
@@ -1421,6 +1440,7 @@ def register_websocket_commands(hass: HomeAssistant) -> None:
         return
     websocket_api.async_register_command(hass, ws_plug_and_play_status)
     websocket_api.async_register_command(hass, ws_plug_and_play_run)
+    websocket_api.async_register_command(hass, ws_plug_and_play_cancel)
     websocket_api.async_register_command(hass, ws_plug_and_play_probe)
     domain_data[WS_PNP_REGISTERED] = True
 
@@ -1493,8 +1513,37 @@ async def ws_plug_and_play_run(hass: HomeAssistant, connection, msg) -> None:
                                            'status': get_status(hass)})
         return
 
-    hass.async_create_task(async_run(hass, rescan_bus=bool(msg.get('rescan_bus'))))
+    task = hass.async_create_task(async_run(hass, rescan_bus=bool(msg.get('rescan_bus'))))
+    state['task'] = task
     connection.send_result(msg['id'], {'started': True, 'status': get_status(hass)})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required('type'): WS_PLUG_AND_PLAY_CANCEL})
+@websocket_api.async_response
+async def ws_plug_and_play_cancel(hass: HomeAssistant, connection, msg) -> None:
+    """Cancel detection, including a bus read which is currently blocking a gateway.
+
+    Releasing only the UI lock is insufficient: the serial worker and the plug-and-play task
+    would otherwise continue in the background and a subsequent search could overlap it.
+    Cancel the gateway operations first, then cancel the asyncio task and wait for it to finish.
+    """
+    from ..observation import bus_members
+
+    state = get_state(hass)
+    task = state.get('task')
+    if not state.get('running') and not (task and not task.done()):
+        connection.send_result(msg['id'], {'cancelled': False, 'reason': 'not_running',
+                                           'status': get_status(hass)})
+        return
+
+    state['cancel_requested'] = True
+    cancelled_buses = bus_members.cancel_all_bus_operations(hass)
+    if task and not task.done() and task is not asyncio.current_task():
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    connection.send_result(msg['id'], {'cancelled': True, 'bus_operations': cancelled_buses,
+                                       'status': get_status(hass)})
 
 
 @websocket_api.require_admin

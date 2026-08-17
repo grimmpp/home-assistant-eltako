@@ -342,6 +342,7 @@ export const page = {
         ${running ? this._renderRunningBar(ctx, pnp) : ""}
 
         <div class="pnp-actions">
+          ${running ? `<button id="pnp-cancel" class="action danger">Cancel detection</button>` : ""}
           <button id="pnp-run" class="action ${report.started_at ? "" : "primary"}"
                   data-busy-block="detection" ${running ? "disabled" : ""}>
             ${running ? "Detecting&hellip;" : report.started_at ? "Detect again" : "Detect now"}</button>
@@ -899,6 +900,20 @@ export const page = {
 
     const run = root.getElementById("pnp-run");
     if (run) run.addEventListener("click", () => start({}, "Detecting"));
+
+    const cancel = root.getElementById("pnp-cancel");
+    if (cancel) {
+      cancel.addEventListener("click", async () => {
+        if (!confirm("Cancel the running detection and release all bus operations?")) return;
+        cancel.disabled = true;
+        const result = await ctx.api.call(WS.PNP_CANCEL);
+        const status = result?.status || await ctx.api.call(WS.PNP_STATUS);
+        if (status) ctx.state.plugAndPlay = status;
+        if (!result) alert((ctx.api.lastError || {}).message || "Could not cancel detection.");
+        ctx.requestContentRender(true);
+        await ctx.refreshActivity?.();
+      });
+    }
 
     const rescan = root.getElementById("pnp-rescan");
     if (rescan) {

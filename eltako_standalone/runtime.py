@@ -18,6 +18,7 @@ The config folder works like the Home Assistant one:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -26,6 +27,7 @@ LOGGER = logging.getLogger("eltako_standalone")
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _SHIM_DIR = os.path.join(_REPO_ROOT, "eltako_standalone", "hass_shim")
+DEFAULT_STORAGE_DIR = os.path.join(_REPO_ROOT, "standalone_configurations")
 
 ENTRY_STORE_KEY = "eltako_standalone.config_entries"
 ENTRY_STORE_VERSION = 1
@@ -63,10 +65,36 @@ def install_shim() -> None:
 class EltakoRuntime:
     def __init__(self, config_dir: str):
         self.config_dir = os.path.abspath(os.path.expanduser(config_dir))
+        self.workspace_dir = self.config_dir
+        self._storage_settings_path = os.path.join(self.config_dir, ".storage",
+                                                   "eltako_standalone_settings.json")
+        self.storage_dir = self._read_storage_dir()
+        self.active_name = "default"
         self.hass = None
         self._integration = None
         self._entry_store = None
         self.seeded_settings = {}
+
+    def _read_storage_dir(self) -> str:
+        """Return the configured browser folder, defaulting to the repository workspace."""
+        try:
+            with open(self._storage_settings_path, encoding="utf-8") as handle:
+                configured = json.load(handle).get("storage_dir")
+            if configured:
+                return os.path.abspath(os.path.expanduser(configured))
+        except (OSError, ValueError, TypeError):
+            pass
+        return os.path.abspath(DEFAULT_STORAGE_DIR)
+
+    def set_storage_dir(self, path: str) -> str:
+        """Select and create the folder used by the standalone configuration browser."""
+        selected = os.path.abspath(os.path.expanduser(path))
+        os.makedirs(selected, exist_ok=True)
+        self.storage_dir = selected
+        os.makedirs(os.path.dirname(self._storage_settings_path), exist_ok=True)
+        with open(self._storage_settings_path, "w", encoding="utf-8") as handle:
+            json.dump({"storage_dir": selected}, handle, indent=2)
+        return selected
 
     # ------------------------------------------------------------------ boot
     async def async_start(self) -> None:
@@ -93,6 +121,7 @@ class EltakoRuntime:
             on_change=self._async_persist_entries,
         )
         self.hass = hass
+        hass.data.setdefault("eltako_standalone", {})["runtime"] = self
 
         # last known entity states (RestoreEntity)
         await restore_state.async_load_restore_state(hass)
@@ -121,6 +150,8 @@ class EltakoRuntime:
         # device tests are registered by the integration itself now
         from eltako_standalone import entity_api
         entity_api.register_websocket_commands(hass)
+        from eltako_standalone import configurations
+        configurations.register_websocket_commands(hass)
 
         # one config entry per configured gateway (Home Assistant needs a manual step
         # here - standalone creates them automatically)
@@ -262,3 +293,55 @@ class EltakoRuntime:
                 LOGGER.exception("Cannot unload entry '%s'", entry.title)
         await self.hass.async_stop()
         LOGGER.info("Bye.")
+
+    async def async_switch_configuration(self, name: str) -> None:
+        """Stop the current installation and start another profile in this process."""
+        from eltako_standalone.configurations import _profile_dir
+
+        target = _profile_dir(self, name)
+        if not target.is_dir():
+            raise ValueError(f"Unknown configuration '{name}'")
+        if os.path.abspath(self.config_dir) == os.path.abspath(str(target)):
+            return
+        await self.async_stop()
+        self.config_dir = os.path.abspath(str(target))
+        self.active_name = name
+        await self.async_start()
+
+    async def async_reload_configuration(self) -> None:
+        """Restart after loading YAML and discard entities from the previous UI configuration.
+
+        Standalone stores UI-created gateways and devices in Home Assistant config entries. If
+        those entries were restored after loading another YAML file, the old entities would be
+        merged into the new configuration again. Loading a file is therefore a clean replacement:
+        stop the old runtime, clear its persisted UI entries, and let the new YAML create only the
+        gateways and entities it declares.
+        """
+        current = self.config_dir
+        active_name = self.active_name
+        await self.async_stop()
+        # ``async_stop`` unloads the entries but deliberately keeps them in the in-memory
+        # ConfigEntries manager. Remove them as well; otherwise the next start can reuse the
+        # gateways from the previous setup even though the persisted store is empty.
+        for entry in list(self.hass.config_entries.async_entries()):
+            await self.hass.config_entries.async_remove(entry.entry_id)
+        await self._async_clear_persisted_ui_configuration()
+        self.config_dir = current
+        self.active_name = active_name
+        await self.async_start()
+
+    async def _async_clear_persisted_ui_configuration(self) -> None:
+        """Remove standalone UI gateways/devices before a YAML configuration replacement."""
+        if self._entry_store is not None:
+            await self._entry_store.async_save({"entries": []})
+
+        # Gateways created in the UI have their own store; UI devices live in the options of
+        # the config entries above. Clearing both stores is what makes loading a configuration
+        # a replacement instead of an additive merge.
+        from custom_components.eltako.config.gateway_config import STORAGE_KEY, STORAGE_VERSION
+        from custom_components.eltako.config.device_config import UNKNOWN_STORAGE_KEY, UNKNOWN_STORAGE_VERSION
+        from homeassistant.helpers.storage import Store
+
+        await Store(self.hass, STORAGE_VERSION, STORAGE_KEY).async_save({"gateways": []})
+        await Store(self.hass, UNKNOWN_STORAGE_VERSION, UNKNOWN_STORAGE_KEY).async_save({"devices": []})
+        LOGGER.info("Cleared persisted standalone UI gateways and devices before configuration reload.")

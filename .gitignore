@@ -165,3 +165,8 @@ cython_debug/
 # The web ui is part of the integration and must be shipped with it. The python
 # packaging rules above (e.g. "lib/", "src") would otherwise exclude parts of it.
 !custom_components/eltako/frontend/**
+
+# Local standalone configurations may contain gateway addresses, device ids and credentials.
+# Keep the directory itself available as a documented workspace, but never commit its contents.
+/standalone_configurations/local/*
+!/standalone_configurations/local/.gitkeep

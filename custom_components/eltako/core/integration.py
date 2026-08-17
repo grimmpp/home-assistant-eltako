@@ -55,10 +55,16 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
     # Gateways which were created in the web ui. Must be loaded before the configuration is
     # read, because they are merged into it.
     await gateway_config.async_load_ui_gateways(hass)
+    # Unknown devices are configuration metadata only. Load them before the effective config
+    # is assembled so imports/exports survive a restart without creating entities.
+    await device_config.async_load_unknown_devices(hass)
 
     # Read the config
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] Load Config")
     config = await config_helpers.async_get_home_assistant_config(hass, CONFIG_SCHEMA)
+    stored_unknown = device_config.get_unknown_devices(hass)
+    if stored_unknown:
+        config["unknown"] = list(config.get("unknown", []) or []) + stored_unknown
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] Config: {config}")
     hass.data[DATA_ELTAKO] = hass.data.setdefault(DATA_ELTAKO, {})
     hass.data[DATA_ELTAKO][ELTAKO_CONFIG] = config
@@ -150,8 +156,12 @@ class EltakoFrontendView(HomeAssistantView):
         if not os.path.isfile(target):
             return web.Response(status=404)
 
+        # ES modules are cached by URL inside the browser. `no-cache` still allows a browser
+        # to reuse a module during development; no-store makes the live-mounted dev frontend
+        # observe a changed file after a reload as well.
         return web.FileResponse(target, headers={
-            'Cache-Control': 'no-cache, must-revalidate',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Pragma': 'no-cache',
         })
 
 
@@ -194,6 +204,24 @@ def async_panel_exists(hass: HomeAssistant) -> bool:
     return PANEL_URL_PATH in (hass.data.get(DATA_PANELS) or {})
 
 
+def _frontend_module_url() -> str:
+    """Return the panel entry point with a cache key derived from the mounted source files.
+
+    The development container bind-mounts the frontend without a build step. A changed
+    JavaScript module has to get a new URL after Home Assistant restarts; otherwise the browser
+    can keep the old ES module in its module cache even though the file is mounted live.
+    """
+    newest = 0
+    frontend = os.path.join(INTEGRATION_DIR, "frontend")
+    for root, _directories, files in os.walk(frontend):
+        for filename in files:
+            try:
+                newest = max(newest, os.stat(os.path.join(root, filename)).st_mtime_ns)
+            except OSError:
+                continue
+    return f"{PANEL_STATIC_URL}/{PANEL_JS_FILE}?v={newest}"
+
+
 async def async_register_panel(hass: HomeAssistant, general_settings: dict) -> None:
     """Put the web ui into Home Assistant. Does nothing when it is already there.
 
@@ -207,6 +235,9 @@ async def async_register_panel(hass: HomeAssistant, general_settings: dict) -> N
         # panel"). async_setup_entry calls this directly, so the check has to live here.
         return
     if async_panel_exists(hass):
+        # The panel can already exist when Home Assistant restores its panel registry. Refresh
+        # the module URL anyway so the development cache key reflects changed source files.
+        async_apply_panel_visibility(hass, general_settings)
         return
 
     await panel_custom.async_register_panel(
@@ -215,7 +246,7 @@ async def async_register_panel(hass: HomeAssistant, general_settings: dict) -> N
         webcomponent_name=PANEL_WEBCOMPONENT,
         sidebar_title=PANEL_TITLE,
         sidebar_icon=PANEL_ICON,
-        module_url=f"{PANEL_STATIC_URL}/{PANEL_JS_FILE}",
+        module_url=_frontend_module_url(),
         embed_iframe=False,
         require_admin=True,
     )
@@ -258,7 +289,7 @@ def _custom_panel_config() -> dict:
             'name': PANEL_WEBCOMPONENT,
             'embed_iframe': False,
             'trust_external': False,
-            'module_url': f"{PANEL_STATIC_URL}/{PANEL_JS_FILE}",
+            'module_url': _frontend_module_url(),
         },
     }
 

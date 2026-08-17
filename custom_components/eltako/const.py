@@ -59,6 +59,7 @@ DATA_SETTINGS_STORE: Final = "settings_store"
 # "gateway_<id>" and are collected by prefix in several places.
 DATA_UI_GATEWAYS: Final = "ui_gateway_definitions"
 DATA_GATEWAY_STORE: Final = "ui_gateway_store"
+DATA_UNKNOWN_DEVICES: Final = "unknown_devices"
 DATA_BUS_MEMBERS: Final = "bus_members"
 # virtual devices of the simulator gateways (see simulator.py)
 DATA_SIMULATOR: Final = "simulator_registry"
@@ -289,15 +290,30 @@ CONF_UI_DEVICES: Final = "ui_devices"
 
 ### Websocket commands
 WS_INTEGRATION_INFO: Final = "eltako/integration_info"
+WS_FRONTEND_VERSION: Final = "eltako/frontend/version"
 # what the integration is busy with right now - polled by every page of the web ui
 WS_ACTIVITY: Final = "eltako/activity"
 WS_DEVICE_FORM: Final = "eltako/devices/form"
 WS_DEVICE_LIST: Final = "eltako/devices/list"
 WS_DEVICE_ADD: Final = "eltako/devices/add"
+WS_DEVICE_ADD_UNKNOWN: Final = "eltako/devices/add_unknown"
 WS_DEVICE_UPDATE: Final = "eltako/devices/update"
 WS_DEVICE_REMOVE: Final = "eltako/devices/remove"
 # drop every device created in the web ui - the counterpart of a fresh detection run
 WS_DEVICE_REMOVE_ALL: Final = "eltako/devices/remove_all"
+WS_CONFIG_EXPORT: Final = "eltako/config/export"
+WS_CONFIG_REMOVE_ALL: Final = "eltako/config/remove_all"
+WS_STANDALONE_CONFIG_LIST: Final = "eltako/standalone/configurations/list"
+WS_STANDALONE_CONFIG_IMPORT: Final = "eltako/standalone/configurations/import"
+WS_STANDALONE_CONFIG_EXPORT: Final = "eltako/standalone/configurations/export"
+WS_STANDALONE_CONFIG_SWITCH: Final = "eltako/standalone/configurations/switch"
+WS_STANDALONE_CONFIG_SAVE: Final = "eltako/standalone/configurations/save"
+WS_STANDALONE_CONFIG_LOAD: Final = "eltako/standalone/configurations/load"
+WS_STANDALONE_CONFIG_LOAD_CONTENT: Final = "eltako/standalone/configurations/load_content"
+WS_STANDALONE_CONFIG_LOAD_EMPTY: Final = "eltako/standalone/configurations/load_empty"
+WS_STANDALONE_CONFIG_DETAILS: Final = "eltako/standalone/configurations/details"
+WS_STANDALONE_CONFIG_STORAGE: Final = "eltako/standalone/configurations/storage"
+WS_STANDALONE_CONFIG_DELETE: Final = "eltako/standalone/configurations/delete"
 WS_DEVICE_TEACH_IN: Final = "eltako/devices/teach_in"
 # which gateway switches an actuator: writes the sender address of the chosen gateway into
 # the actuator *and* stores it as the sender of the device in Home Assistant, for one device
@@ -319,6 +335,7 @@ WS_GATEWAY_REMOVE: Final = "eltako/gateways/remove"
 WS_GATEWAY_REPAIR: Final = "eltako/gateways/repair"
 WS_PLUG_AND_PLAY_STATUS: Final = "eltako/plug_and_play/status"
 WS_PLUG_AND_PLAY_RUN: Final = "eltako/plug_and_play/run"
+WS_PLUG_AND_PLAY_CANCEL: Final = "eltako/plug_and_play/cancel"
 # only detects, and creates nothing - the counterpart of RUN for a test of the detection
 WS_PLUG_AND_PLAY_PROBE: Final = "eltako/plug_and_play/probe"
 # serial bridge: publish a serial port over tcp / attach a published port as a pty
@@ -364,6 +381,7 @@ WS_TELEGRAM_LOG_SUGGESTIONS: Final = "eltako/telegram_log/suggestions"
 WS_RECEPTION_SURVEY: Final = "eltako/reception/survey"
 WS_TELEGRAM_LOG_SUBSCRIBE: Final = "eltako/telegram_log/subscribe"
 WS_TELEGRAM_LOG_CLEAR: Final = "eltako/telegram_log/clear"
+WS_TELEGRAM_LOG_IMPORT: Final = "eltako/telegram_log/import"
 WS_TELEGRAM_LOG_REFRESH_DEVICES: Final = "eltako/telegram_log/refresh_devices"
 # one radio telegram as *every* gateway received it: who heard it, where the bytes differ and
 # how strong the signal was (observation/radio_comparison.py)

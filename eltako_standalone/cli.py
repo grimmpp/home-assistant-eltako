@@ -659,6 +659,7 @@ async def _cmd_serve(runtime, args) -> int:
     from .server import StandaloneServer
 
     server = StandaloneServer(runtime.hass, host=args.host, port=args.port, token=args.token)
+    server.runtime = runtime
     await server.async_start()
     print(f"Eltako web ui: http://{args.host}:{args.port}/  (Ctrl+C to stop)")
     await _wait_for_shutdown_signal()

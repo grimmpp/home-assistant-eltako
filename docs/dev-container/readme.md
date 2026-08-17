@@ -42,7 +42,11 @@ The container starts with a finished installation - no onboarding, no manual set
   binary sensors), several areas, telegram recording and the web ui switched on.
 * **Example telegram history**: `enocean_telegrams.jsonl` holds 24 h of demo telegrams
   (temperature curve, weather station, switching cycles, an unknown wall button).
-* **The integration code is mounted live** from the repository.
+* **The integration code is mounted live** from the repository. After the first restart of Home
+  Assistant, the panel checks the mounted frontend source every five seconds and reloads itself
+  when a file changes. If the browser still has an older cached entry module, restart Home
+  Assistant once and reload the panel; subsequent frontend changes are detected automatically.
+  The integration also adds a source-file cache key and serves frontend files with `no-store`.
 
 The seed is only copied when the config volume is empty (first start or after
 `./stop.sh reset`) - a running installation is never overwritten.
@@ -51,7 +55,7 @@ The seed is only copied when the config volume is empty (first start or after
 
 | changed | needed |
 | --- | --- |
-| Frontend (`custom_components/eltako/frontend/**`) | reload the browser page - the files are read from disk per request and served with `no-cache` |
+| Frontend (`custom_components/eltako/frontend/**`) | `docker compose restart homeassistant`, then reload the browser panel |
 | Backend (`custom_components/eltako/**/*.py`) | `docker compose restart homeassistant` |
 | Settings in the web ui | nothing, they are applied immediately (except `enable_frontend`) |
 | `ha.yaml` | `docker compose restart homeassistant` |

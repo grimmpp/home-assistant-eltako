@@ -28,6 +28,7 @@ import { page as statisticsPage } from "./pages/statistics.js";
 import { page as logsPage } from "./pages/logs.js";
 import { page as testsPage } from "./pages/tests.js";
 import { page as simulationPage } from "./pages/simulation.js";
+import { page as configurationsPage } from "./pages/configurations.js";
 import { page as settingsPage } from "./pages/settings.js";
 import { page as helpPage } from "./pages/help.js";
 import { page as aboutPage } from "./pages/about.js";
@@ -38,7 +39,7 @@ import { page as aboutPage } from "./pages/about.js";
 // 'unknown devices' has no page of its own anymore - the addresses which are not configured
 // yet are the last block of the device page, next to everything else which exists on the bus.
 const PAGES = /** @type {import("./types.js").Page[]} */ (
-  [homePage, overviewPage, controlPage, devicesConfigPage, telegramsPage, radioPage,
+  [homePage, overviewPage, controlPage, devicesConfigPage, configurationsPage, telegramsPage, radioPage,
    statisticsPage, receptionPage, logsPage, testsPage, simulationPage, settingsPage,
    helpPage, aboutPage])
   .filter((page) => !page.standaloneOnly || window.eltakoStandalone);
@@ -94,6 +95,8 @@ class EltakoPanel extends HTMLElement {
     this._pageId = this._pageIdFromLocation();
     this._unsubscribeTelegrams = null;
     this._refreshTimer = null;
+    this._frontendVersionTimer = null;
+    this._frontendVersion = null;
     this._activityTimer = null;
     this._renderScheduled = false;
     this._contentRenderScheduled = false;
@@ -132,7 +135,6 @@ class EltakoPanel extends HTMLElement {
       configuredDevices: [],
       configFilter: "",
       configSort: "address",
-      deviceView: "hierarchy",
       configSortDescending: false,
       onlySilent: false,
       // simple device page of the user mode (pages/home.js)
@@ -152,6 +154,7 @@ class EltakoPanel extends HTMLElement {
       gatewayEditor: null,
       // plug & play: status, progress and report of the last detection run
       plugAndPlay: null,
+      standaloneConfigurations: [],
       gatewayError: null,
       gatewayMessage: null,
       portScanRunning: false,
@@ -213,6 +216,8 @@ class EltakoPanel extends HTMLElement {
     window.removeEventListener("hashchange", this._onHashChange);
     this._leavePage();
     this._stopRefreshTimer();
+    clearInterval(this._frontendVersionTimer);
+    this._frontendVersionTimer = null;
     clearTimeout(this._activityTimer);
     this._activityTimer = null;
     if (this._unsubscribeTelegrams) {
@@ -227,6 +232,8 @@ class EltakoPanel extends HTMLElement {
     // the activity is loaded before the first render: a bus scan which was started somewhere
     // else has to be visible the moment the panel opens, not ten seconds later
     await Promise.all([this.loadLogInfo(), this.loadIntegrationInfo(), this.loadActivity()]);
+    await this._checkFrontendVersion();
+    this._frontendVersionTimer = setInterval(() => this._checkFrontendVersion(), 5000);
     this._subscribeTelegrams();
     await this._enterPage();
     this._pollActivity();
@@ -349,6 +356,18 @@ class EltakoPanel extends HTMLElement {
     const info = await this._api.call(WS.INTEGRATION_INFO);
     if (info) this.state.integrationInfo = info;
     return this.state.integrationInfo;
+  }
+
+  async _checkFrontendVersion() {
+    const result = await this._api.call(WS.FRONTEND_VERSION);
+    if (!result?.version) return;
+    if (this._frontendVersion !== null && this._frontendVersion !== result.version) {
+      // The dev container bind-mounts the source without a build step. A full reload is needed
+      // because ES modules imported by eltako-panel.js are cached as a module graph.
+      window.location.reload();
+      return;
+    }
+    this._frontendVersion = result.version;
   }
 
   async loadLogInfo() {
@@ -762,6 +781,9 @@ ${STYLES}${BUS_SCAN_STYLES}${ACTIVITY_STYLES}${PAGES.map((page) => page.styles |
           ...content.querySelectorAll("aside.detail-drawer, aside.modal-overlay"));
       }
       if (page.afterRender) page.afterRender(this._context(), this.shadowRoot);
+      // Page binders use shadowRoot.getElementById(), like the existing afterRender hooks.
+      // Pass the panel root rather than the content div (HTMLElement has no getElementById()).
+      if (page.bind) page.bind(this._context(), this.shadowRoot);
       this._restoreScroll(content, captured);
       // last, so a button which a page just rendered (toolbar included) is locked as well
       this._applyBusyLocks();

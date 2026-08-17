@@ -899,7 +899,12 @@ export interface RadioComparisonReport {
  * which uses them.
  */
 export interface WsResults {
+  "eltako/devices/add_unknown": { device: Record<string, unknown>; entity_created: false };
+  "eltako/standalone/configurations/load_content": { loaded: true; reload_required: true };
+  "eltako/standalone/configurations/load_empty": { loaded: true; reload_required: true };
   "eltako/integration_info": IntegrationInfo;
+  "eltako/frontend/version": { version: string };
+  "eltako/standalone/configurations/delete": { deleted: true; filename: string };
   "eltako/activity": Activity;
   "eltako/configured_gateways": Gateway[];
   /** core/gateway.detect(): candidate serial paths */
@@ -1037,6 +1042,7 @@ export interface WsResults {
   "eltako/reception/survey": ReceptionSurvey;
   "eltako/telegram_log/subscribe": undefined;
   "eltako/telegram_log/clear": { cleared: boolean };
+  "eltako/telegram_log/import": { imported: number; skipped: number; errors: string[] };
   "eltako/telegram_log/refresh_devices": { known_address_count: number };
 
   "eltako/radio_comparison/report": RadioComparisonReport;

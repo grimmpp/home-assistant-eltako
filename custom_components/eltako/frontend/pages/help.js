@@ -23,10 +23,64 @@ const HELP_STYLES = `
   .help-link-text { font-size: .78rem; color: var(--eltako-muted); margin-top: 2px; }
   .help-link-path { font-size: .7rem; color: var(--eltako-muted); font-family: "Roboto Mono", monospace; }
   .help-empty { font-size: .8rem; color: var(--eltako-muted); padding: 10px 0; }
+  .help-toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding-left: 20px; }
+  .help-toc a, .help-page-doc { color: var(--eltako-accent); }
+  .help-page-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 10px; }
+  .help-page-card { padding: 12px 14px; border: 1px solid var(--eltako-border);
+                    border-radius: var(--eltako-radius); background: var(--eltako-card); }
+  .help-page-card h3 { margin: 0 0 4px; font-size: .95rem; }
+  .help-page-card p { margin: 0 0 7px; font-size: .8rem; color: var(--eltako-muted); }
+  .help-page-card .help-page-links { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: .75rem; }
   /* a cell can hold dozens of chips (the devices of a central command profile), so they
      need room to wrap into several lines */
   td .chip { margin: 2px 4px 2px 0; }
 `;
+
+const PAGE_GUIDE = [
+  { id: "home", title: "Simple view", icon: "mdi:view-grid-outline",
+    text: "Everyday view of your devices, grouped by room. Add devices, edit names and operate them.",
+    docs: ["docs/01_getting_started/readme.md"] },
+  { id: "overview", title: "Overview", icon: "mdi:view-dashboard-outline",
+    text: "Shows gateway connections, bus activity and Plug & Play detection. Start or cancel searches here.",
+    docs: ["docs/gateways/readme.md", "docs/plug-and-play/readme.md"] },
+  { id: "control", title: "Control", icon: "mdi:remote",
+    text: "Standalone-only control panel for operating entities without a Home Assistant dashboard.",
+    standaloneOnly: true, docs: ["docs/standalone/readme.md"] },
+  { id: "devices", title: "Devices", icon: "mdi:format-list-bulleted",
+    text: "Configure devices and gateways, inspect bus relations, teach in senders and import or export YAML.",
+    docs: ["docs/update_home_assistant_configuration.md", "docs/supported-devices.md"] },
+  { id: "configurations", title: "Configurations", icon: "mdi:folder-cog-outline",
+    text: "Standalone-only profiles for switching between test environments or installations, with YAML import and export.",
+    standaloneOnly: true, docs: ["docs/standalone/readme.md"] },
+  { id: "telegrams", title: "Telegrams", icon: "mdi:message-text-outline",
+    text: "Live incoming and outgoing EnOcean telegrams with decoded EEP values and filters.",
+    docs: ["docs/telegram-analysis/readme.md"] },
+  { id: "radio", title: "Radio", icon: "mdi:radio-tower",
+    text: "Compare reception of the same radio telegram across gateways and inspect signal quality.",
+    docs: ["docs/reception/readme.md"] },
+  { id: "reception", title: "Reception", icon: "mdi:signal",
+    text: "Measure gateway reception and identify weak or missing radio paths.",
+    docs: ["docs/reception/readme.md"] },
+  { id: "statistics", title: "Statistics", icon: "mdi:chart-line",
+    text: "Review activity, unknown senders and reporting frequency of configured devices.",
+    docs: ["docs/telegram-analysis/readme.md"] },
+  { id: "logs", title: "Logs", icon: "mdi:text-box-search-outline",
+    text: "Inspect integration log messages and adjust diagnostic log levels.",
+    docs: ["docs/logging/readme.md"] },
+  { id: "tests", title: "Tests", icon: "mdi:test-tube",
+    text: "Run configuration, teach-in, link and cover travel-time tests. Some tests communicate with real hardware.",
+    docs: ["docs/device-tests/readme.md"] },
+  { id: "simulation", title: "Simulation", icon: "mdi:flask-outline",
+    text: "Create virtual gateways and devices for development and testing without hardware.",
+    docs: ["docs/simulation/readme.md"] },
+  { id: "settings", title: "Settings", icon: "mdi:cog-outline",
+    text: "View and change general integration settings. YAML-only values remain controlled by configuration.yaml.",
+    docs: ["docs/update_home_assistant_configuration.md"] },
+  { id: "about", title: "About", icon: "mdi:information-outline",
+    text: "Shows the installed version, supported features, entity counts and release information.",
+    docs: ["docs/version-2-introduction.md"] },
+];
 
 /** @type {import("../types.js").Page} */
 export const page = {
@@ -67,10 +121,26 @@ export const page = {
           running, not a list someone kept up to date by hand.</p>
       </div>
 
-      <h2>Documentation and tutorials</h2>
+      <h2 id="help-contents">Contents</h2>
+      <ol class="help-toc">
+        <li><a href="#/help" data-help-anchor="help-pages">Panel pages</a></li>
+        <li><a href="#/help" data-help-anchor="help-documents">Documentation and tutorials</a></li>
+        <li><a href="#/help" data-help-anchor="help-links">External links</a></li>
+        <li><a href="#/help" data-help-anchor="help-gateways">Supported gateways</a></li>
+        <li><a href="#/help" data-help-anchor="help-platforms">Supported platforms</a></li>
+        <li><a href="#/help" data-help-anchor="help-devices">Supported devices</a></li>
+        <li><a href="#/help" data-help-anchor="help-eeps">EEP profiles</a></li>
+      </ol>
+
+      <h2 id="help-pages">Panel pages</h2>
+      <p class="field-help">Select a page in the navigation or use one of the links below. Pages marked
+        standalone are available only when running <code>python -m eltako_standalone serve</code>.</p>
+      ${this._renderPageGuide(catalog)}
+
+      <h2 id="help-documents">Documentation and tutorials</h2>
       ${this._renderDocuments(catalog)}
 
-      <h2>Links</h2>
+      <h2 id="help-links">Links</h2>
       <div class="help-links">
         ${(catalog.links || []).map((link) => `
           <a class="help-link" href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">
@@ -82,13 +152,13 @@ export const page = {
           </a>`).join("")}
       </div>
 
-      <h2>Supported gateways</h2>
+      <h2 id="help-gateways">Supported gateways</h2>
       ${this._renderGateways(catalog)}
 
-      <h2>Supported platforms</h2>
+      <h2 id="help-platforms">Supported platforms</h2>
       ${this._renderPlatforms(catalog)}
 
-      <h2>Supported devices</h2>
+      <h2 id="help-devices">Supported devices</h2>
       <div class="toolbar help-search">
         <input type="search" id="help-filter" placeholder="Filter devices and EEPs&hellip;"
                value="${escapeHtml(ctx.state.helpFilter || "")}">
@@ -96,7 +166,7 @@ export const page = {
       </div>
       ${this._renderDevices(catalog, filter)}
 
-      <h2>EEP profiles</h2>
+      <h2 id="help-eeps">EEP profiles</h2>
       ${this._renderEeps(catalog, filter)}
     `;
   },
@@ -119,6 +189,24 @@ export const page = {
           </span>
         </a>`).join("")}
     </div>`;
+  },
+
+  _renderPageGuide(catalog) {
+    const standalone = typeof window !== "undefined" && window.eltakoStandalone;
+    const pages = PAGE_GUIDE.filter((page) => !page.standaloneOnly || standalone);
+    return `<div class="help-page-grid">${pages.map((page) => `
+      <div class="help-page-card">
+        <h3>${icon(page.icon, "▤")} <a href="#/${page.id}">${escapeHtml(page.title)}</a></h3>
+        <p>${escapeHtml(page.text)}</p>
+        <div class="help-page-links">
+          <a href="#/${page.id}">Open page</a>
+          ${page.docs.map((path) => {
+            const document = (catalog.documentation || []).find((entry) => entry.path === path);
+            return document ? `<a class="help-page-doc" href="${escapeHtml(document.url)}"
+              target="_blank" rel="noreferrer">${escapeHtml(document.title)}</a>` : "";
+          }).join("")}
+        </div>
+      </div>`).join("")}</div>`;
   },
 
   _renderGateways(catalog) {
@@ -233,6 +321,12 @@ export const page = {
   },
 
   afterRender(ctx, root) {
+    root.querySelectorAll("[data-help-anchor]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        root.getElementById(link.dataset.helpAnchor)?.scrollIntoView({ behavior: "smooth" });
+      });
+    });
     const search = /** @type {HTMLInputElement} */ (root.getElementById("help-filter"));
     if (!search) return;
 

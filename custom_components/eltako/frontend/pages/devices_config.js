@@ -96,10 +96,6 @@ export const page = {
     return `
       <input id="filter" type="search" placeholder="Filter address, name, EEP, platform&hellip;"
              value="${escapeHtml(ctx.state.configFilter)}" />
-      <select id="device-view">
-        <option value="hierarchy" ${ctx.state.deviceView !== "flat" ? "selected" : ""}>hierarchy (bus / radio)</option>
-        <option value="flat" ${ctx.state.deviceView === "flat" ? "selected" : ""}>flat table</option>
-      </select>
       <label class="check"><input id="only-silent" type="checkbox" ${ctx.state.onlySilent ? "checked" : ""}/>
              only never reported</label>
       <span class="spacer"></span>
@@ -107,7 +103,40 @@ export const page = {
               title="Import gateways and devices from an EnOcean Device Manager project (.eodm), a PCT14 export (.xml) or an eltako yaml">
         Import&hellip;</button>
       <input id="import-file" type="file" accept=".eodm,.xml,.yaml,.yml,.txt" style="display:none" />
+      <button id="remove-all-config" class="action danger"
+              title="Remove all devices and gateways created in this web UI">
+        Remove all devices &amp; gateways</button>
       <button id="add-device" class="action primary">+ Add device</button>`;
+  },
+
+  async _removeAllConfiguration(ctx) {
+    if (!confirm("Remove all devices and gateways created in this web UI?\n\n"
+                 + "Entries declared in configuration.yaml will not be changed.")) return;
+
+    const backup = confirm("Save a YAML backup of the current effective configuration first?");
+    if (backup) {
+      const exported = await ctx.api.call(WS.CONFIG_EXPORT);
+      if (!exported) {
+        alert(`Backup failed:\n${(ctx.api.lastError || {}).message || "unknown error"}`);
+        return;
+      }
+      const blob = new Blob([exported.content], { type: "application/yaml;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = exported.filename || "eltako-backup.yaml";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    const result = await ctx.api.call(WS.CONFIG_REMOVE_ALL);
+    if (!result) {
+      alert(`Removal failed:\n${(ctx.api.lastError || {}).message || "unknown error"}`);
+      return;
+    }
+    alert(`Removed ${result.removed_devices} device(s) and ${result.removed_gateways.length} gateway(s).\n\n`
+          + "configuration.yaml was left unchanged.");
+    await this.load(ctx);
+    ctx.requestRender();
   },
 
   async _importConfigFile(ctx, file) {
@@ -135,7 +164,8 @@ export const page = {
     }
     const resultWarnings = result.warnings.length
       ? `\n\nNotes:\n${result.warnings.map((warning) => `- ${warning}`).join("\n")}` : "";
-    alert(`Imported ${result.created_gateways} gateway(s) and ${result.created_devices} device(s).` +
+    alert(`Imported ${result.created_gateways} gateway(s), ${result.created_devices} device(s) and `
+          + `${result.imported_unknown || 0} unknown device(s).` +
           `${resultWarnings}`);
     await this.load(ctx);
     ctx.requestRender();
@@ -144,10 +174,6 @@ export const page = {
   bindToolbar(ctx, root) {
     root.getElementById("filter").addEventListener("input", (event) => {
       ctx.state.configFilter = event.target.value;
-      ctx.requestContentRender(true);
-    });
-    root.getElementById("device-view").addEventListener("change", (event) => {
-      ctx.state.deviceView = event.target.value;
       ctx.requestContentRender(true);
     });
     root.getElementById("only-silent").addEventListener("change", (event) => {
@@ -168,6 +194,8 @@ export const page = {
       importFile.value = "";      // allow importing the same file again
       if (file) await this._importConfigFile(ctx, file);
     });
+    root.getElementById("remove-all-config").addEventListener("click", () =>
+      this._removeAllConfiguration(ctx));
   },
 
   render(ctx) {
@@ -214,14 +242,9 @@ export const page = {
             or a device which does not exist anymore. The counters below are persisted, so they also
             survive a restart of Home Assistant.</p>
         </div>` : ""}
-      ${ctx.state.deviceView === "flat"
-        ? (devices.length ? this._renderTable(ctx, devices) : `
-           <div class="empty">${all.length ? "No device matches the current filter."
-             : "No devices configured yet. Use <b>+ Add device</b> or declare them in <code>configuration.yaml</code>."}</div>`)
-        : this._renderHierarchy(ctx, devices)}
+      ${this._renderHierarchy(ctx, devices)}
 
-      ${/* always the last block of the page, in both views: what exists but is not
-            configured yet belongs below everything which is configured */ ""}
+      ${/* what exists but is not configured yet belongs below everything which is configured */ ""}
       ${this._renderUnknownSection(ctx)}
 
       <div class="footnote">Devices of <code>configuration.yaml</code> cannot be edited here - they are
@@ -866,7 +889,7 @@ export const page = {
           <td><span class="tag role">telegram</span></td>
           <td class="actions"><button class="action small primary"
             data-add-unknown="${escapeHtml(device.address)}|${escapeHtml(best.eep || "")}|${escapeHtml(best.platform || "")}"
-            >+ add device</button>
+            >+ keep as unknown</button>
             <button class="action small" data-unknown-yaml="${encodeURIComponent(device.yaml || '')}"
               >copy yaml</button></td>
         </tr>`;
@@ -1445,16 +1468,18 @@ export const page = {
     });
 
     root.querySelectorAll("button[data-add-unknown]").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         const [address, eep, platform] = button.dataset.addUnknown.split("|");
-        ctx.state.editor = {
-          mode: "add",
-          platform: platform || "binary_sensor",
-          gatewayId: this._defaultGatewayId(ctx),
-          values: { id: address, eep: eep || "", name: `Device ${address}` },
-          error: null,
-        };
-        // the form is a popup - it opens in front of the page, nothing has to be scrolled to
+        if (!confirm(`Keep ${address} as an unknown device in the configuration?\n\n`
+                    + "It will be remembered under 'unknown' and will not create a Home Assistant entity.")) return;
+        const result = await ctx.api.call(WS.DEVICE_ADD_UNKNOWN, {
+          device: { id: address, eep: eep || "", platform: platform || "" },
+        });
+        if (!result) {
+          alert((ctx.api.lastError || {}).message || "The unknown device could not be saved.");
+          return;
+        }
+        await this.load(ctx);
         ctx.requestContentRender(true);
       });
     });
@@ -1554,7 +1579,7 @@ export const page = {
         });
         if (result) {
           ctx.state.deviceDetails = null;         // it is gone - its popup has to go as well
-          await this.load(ctx);
+          if (Array.isArray(result.devices)) ctx.state.configuredDevices = result.devices;
           ctx.requestRender();
         }
       });
