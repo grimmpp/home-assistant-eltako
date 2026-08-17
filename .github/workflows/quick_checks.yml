@@ -19,3 +19,6 @@ jobs:
 
       - name: Validate strict JSON
         run: python -m unittest tests.test_json_files -v
+
+      - name: Validate GitHub Actions workflows
+        uses: raven-actions/actionlint@v2
