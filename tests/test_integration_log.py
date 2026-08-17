@@ -62,9 +62,19 @@ class TestTheBuffer(LogTestCase):
     def test_a_broken_format_string_does_not_raise(self):
         """A logging handler which throws takes the thread which logged with it - and that can
         be the serial thread of a gateway. The bug is shown instead of hidden."""
-        # noqa: the broken call is the subject of this test - ruff finding it in real code is
-        # exactly the point of having the rule switched on
-        self.logger.warning("two placeholders %s %s", "only one argument")  # noqa: PLE1206
+        # Send the malformed record directly to the integration handler. Pytest's own capture
+        # handler also formats logger records and would raise before this handler can prove its
+        # error handling.
+        record = logging.LogRecord(
+            self.logger.name,
+            logging.WARNING,
+            __file__,
+            65,
+            "two placeholders %s %s",
+            ("only one argument",),
+            None,
+        )
+        self.handler.handle(record)
 
         entries = integration_log.get_entries(self.hass)['entries']
 

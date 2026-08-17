@@ -35,16 +35,17 @@ class TestSendMessageService(unittest.IsolatedAsyncioTestCase):
         # Mock send_message
         g.send_message = lambda *args: None
 
-        for eep_name in self.get_all_eep_names():
+        from custom_components.eltako.core.websocket import get_eep_descriptors
 
-            if eep_name in self.NOT_SUPPORTED_EEPS:
+        for descriptor in get_eep_descriptors():
+            if (not descriptor['sendable'] or
+                    descriptor['eep'] in self.NOT_SUPPORTED_EEPS):
                 continue
 
             event = EventMock('service_name', {
                 'id': 'FF-DD-CC-BB',
-                'eep': eep_name,
-                'command': 1,
-                'identifier': 1
+                'eep': descriptor['eep'],
+                **descriptor['defaults'],
             })
 
             await g.async_service_send_message(event, True)
@@ -151,6 +152,4 @@ class TestSendMessageService(unittest.IsolatedAsyncioTestCase):
         file='./docs/service-send-message/eep-params.md'
         with open(file, 'w') as filetowrite:
             filetowrite.write(text)
-
-
 

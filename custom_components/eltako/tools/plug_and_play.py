@@ -807,8 +807,6 @@ async def async_run(hass: HomeAssistant, rescan_bus: bool = False,
     gateways the user never asked for.
     """
     from ..observation import bus_members
-    from ..config import device_config
-    from .. import simulation
     from ..core.websocket import get_gateways
 
     state = get_state(hass)

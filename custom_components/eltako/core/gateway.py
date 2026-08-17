@@ -738,6 +738,29 @@ class EnOceanGateway:
         eep_args = knargs
         eep_args.update(uknargs)
 
+        # The protocol library models these two A5-10-06 fields as enums. Service data comes
+        # from YAML/JSON and therefore contains primitive numbers; convert them at the boundary
+        # instead of requiring callers to know the library's internal Python types.
+        if sender_eep_str == 'A5-10-06':
+            from eltakobus import A5_10_06
+
+            for field, enum_type in (
+                ('mode', A5_10_06.HeaterMode),
+                ('priority', A5_10_06.ControllerPriority),
+            ):
+                if field in eep_args and not isinstance(eep_args[field], enum_type):
+                    try:
+                        eep_args[field] = enum_type(eep_args[field])
+                    except ValueError:
+                        # ControllerPriority uses a protocol ``code`` which is intentionally
+                        # different from the enum value. Keep unknown values unchanged so the
+                        # normal encoder error handling below reports them without raising here.
+                        eep_args[field] = next(
+                            (member for member in enum_type
+                             if getattr(member, 'code', None) == eep_args[field]),
+                            eep_args[field],
+                        )
+
         try:
             eep:EEP = sender_eep(**eep_args)
         except Exception as e:

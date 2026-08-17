@@ -115,7 +115,8 @@ class TestEveryDeviceCanBeSentTo(TestCase):
         self.assertEqual([], missing,
                          msg="devices of these profiles would have no input fields")
 
-        without_fields = sorted(eep for eep in catalog_eeps if not descriptors[eep]['fields'])
+        without_fields = sorted(eep for eep in catalog_eeps
+                                if descriptors[eep]['sendable'] and not descriptors[eep]['fields'])
         self.assertEqual([], without_fields)
 
     def test_every_field_has_a_start_value(self):
@@ -128,7 +129,9 @@ class TestEveryDeviceCanBeSentTo(TestCase):
 
     # the library can only decode these - `encode_message` raises. They carry sendable=False
     # so that no form is offered for them instead of one which always fails.
-    DECODE_ONLY = {'A5-09-0C'}
+    # These profiles are intentionally recording-only in eltako14bus. They can be decoded, but
+    # the library does not provide a safe encoder for them, so the UI must not offer a send form.
+    DECODE_ONLY = {'A5-09-0C', 'A5-13-02', 'A5-13-04', 'D2-00-01', 'D2-14-40', 'D2-14-41'}
 
     def test_the_start_values_produce_a_telegram_which_can_be_sent(self):
         for descriptor in websocket.get_eep_descriptors():

@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 from typing import Any
 
 from custom_components.eltako.config.config_helpers import AddressExpression, DEFAULT_GENERAL_SETTINGS
@@ -38,6 +39,8 @@ class BusMock():
 class HassMock():
 
     def __init__(self) -> None:
+        self.data = {}
+        self.config = SimpleNamespace(config_dir='/tmp')
         self.bus = BusMock()
         try:
             self.loop = asyncio.get_event_loop()
@@ -100,4 +103,3 @@ class LatestStateMock():
     def __init__(self, state:str=None, attributes:dict[str:str]={}):
         self.state = state
         self.attributes = attributes
-

@@ -51,11 +51,21 @@ in [version 1.0.1](https://pypi.org/project/eltako14bus/) from unit-test `TestSe
 * `A5-12-02`: data_type, divisor, learn_button, measurement_channel, meter_reading
 * `A5-12-03`: data_type, divisor, learn_button, measurement_channel, meter_reading
 * `A5-13-01`: dawn_sensor, day_night, hemisphere, identifier, learn_button, rain_indication, sun_east, sun_south, sun_west, temperature, wind_speed
+* `A5-13-02`: dawn_sensor, day_night, hemisphere, identifier, learn_button, rain_indication, sun_east, sun_south, sun_west, temperature, wind_speed
+* `A5-13-04`: am_pm, hour, learn_button, minute, second, time_format, weekday
+* `A5-14-01`: contact, error_code, learn_button, supply_voltage
+* `A5-14-03`: contact, error_code, learn_button, supply_voltage, vibration
+* `A5-14-05`: contact, error_code, learn_button, supply_voltage, vibration
+* `A5-14-07`: door_contact, error_code, learn_button, lock_contact, supply_voltage
+* `A5-14-08`: door_contact, error_code, learn_button, lock_contact, supply_voltage, vibration
 * `A5-14-09`: alarm, supply_voltage, window_state
 * `A5-14-0A`: alarm, supply_voltage, window_state
 * `A5-20-04`: status, temperature, valve_position
 * `A5-30-01`: battery_status, contact_status, learn_button
 * `A5-30-03`: alarm_status, profile_marker, temperature
+* `D2-00-01`:
+* `D2-14-40`: acceleration_status, acceleration_x, acceleration_y, acceleration_z, contact, humidity, illumination, temperature
+* `D2-14-41`: acceleration_status, acceleration_x, acceleration_y, acceleration_z, contact, humidity, illumination, temperature
 * `D5-00-01`: contact, learn_button
 * `F6-01-01`: button_pushed
 * `F6-02-01`: energy_bow, rocker_first_action, rocker_second_action, second_action

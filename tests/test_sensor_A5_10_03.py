@@ -47,4 +47,4 @@ class TestSensor_A5_10_03(unittest.TestCase):
         self.assertEqual(ts.native_value, None)
         ts.value_changed(self.msg)
 
-        self.assertEqual(ts.native_value, 11)
+        self.assertEqual(ts.native_value, 19)

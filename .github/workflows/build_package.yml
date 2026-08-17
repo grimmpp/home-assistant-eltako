@@ -161,9 +161,44 @@ jobs:
           grep -q "^cover\." devices.txt
           test -f ./smoke-config/.storage/eltako_gateways
 
+  # A package must not be published merely because it builds.  Run the same repository
+  # gates used for changes on every release event and make publish depend on all of them.
+  release-gate:
+    name: Validate release
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_to != 'nowhere')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check custom_components tests
+
+      - name: Run unit tests
+        run: python -m unittest discover tests -v
+
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
   publish:
     name: Publish to ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to || 'pypi' }}
-    needs: [build, smoke-test]
+    needs: [build, smoke-test, release-gate]
     if: >-
       github.event_name == 'release' ||
       (github.event_name == 'workflow_dispatch' && inputs.publish_to != 'nowhere')

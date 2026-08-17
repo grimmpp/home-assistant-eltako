@@ -32,6 +32,11 @@
       "section": "telegram-analysis"
     },
     {
+      "title": "Frequently Asked Questions",
+      "path": "docs/faq.md",
+      "section": "faq.md"
+    },
+    {
       "title": "Gateways",
       "path": "docs/gateways/readme.md",
       "section": "gateways"
@@ -40,6 +45,11 @@
       "title": "Getting Started - Example Setup",
       "path": "docs/01_getting_started/readme.md",
       "section": "01_getting_started"
+    },
+    {
+      "title": "Heating and cooling",
+      "path": "docs/heating-and-cooling/readme.md",
+      "section": "heating-and-cooling"
     },
     {
       "title": "How to configure ELTAKO FLGTF",
@@ -72,14 +82,14 @@
       "section": "logging"
     },
     {
+      "title": "Migration from v1.x to v2.2.x",
+      "path": "docs/migration-v1-to-v2.2.md",
+      "section": "migration-v1-to-v2.2.md"
+    },
+    {
       "title": "Multiple Gateway Support",
       "path": "docs/multiple-gateway-support/readme.md",
       "section": "multiple-gateway-support"
-    },
-    {
-      "title": "NEED TO BE REVISED!!!",
-      "path": "docs/heating-and-cooling/readme.md",
-      "section": "heating-and-cooling"
     },
     {
       "title": "Plug & Play",

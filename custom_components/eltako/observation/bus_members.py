@@ -37,7 +37,7 @@ from eltakobus.error import TimeoutError as BusTimeoutError
 from eltakobus.message import EltakoDiscoveryReply, EltakoMemoryResponse
 from eltakobus.util import b2s
 
-from ..const import (CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION, CONF_SENDER, DATA_BUS_MEMBERS,
+from ..const import (CONF_EEP, CONF_GATEWAY, CONF_GATEWAY_DESCRIPTION, DATA_BUS_MEMBERS,
                      DATA_ELTAKO, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, WS_BUS_CANCEL,
                      WS_BUS_DELETE_MEMORY_LINE, WS_BUS_MEMBERS, WS_BUS_PROGRAM_GATEWAY,
                      WS_BUS_READ_MEMORY, WS_BUS_TEACH_IN_SENDERS)

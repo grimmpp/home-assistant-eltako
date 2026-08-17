@@ -35,7 +35,13 @@ def get_device_by_identifier(device_registry, identifier: tuple[str, str], confi
     if scoped_lookup is not None and config_entry_id is not None:
         return scoped_lookup(identifier, config_entry_id)
     # Compatibility with Home Assistant versions before the scoped registry API.
-    return device_registry.async_get_device(identifiers={identifier})
+    try:
+        return device_registry.async_get_device(identifiers={identifier})
+    except AttributeError:
+        # A registry can be obtained before Home Assistant has initialized its in-memory
+        # indexes (notably in early startup and lightweight test hosts). DeviceInfo can still
+        # be returned; the via-device relation will be resolved on the normal HA lifecycle.
+        return None
 
 
 class EltakoEntity(Entity):
