@@ -1,0 +1,13 @@
+eltako:
+  unknown: []
+  gateway:
+  - device_type: enocean-usb300
+    serial_path: /dev/cu.usbserial-FT5XDBOW
+    id: 0
+    name: USB300-1
+    base_id: FF-D6-30-00
+    port: 5100
+    auto_reconnect: true
+    message_delay: 0.01
+    simulated: false
+    devices: {}

@@ -132,3 +132,19 @@ class TestBinarySensor_F6_02_01(unittest.TestCase):
             last_el = len(bs.hass.bus.fired_events)-1
             pressed_buttons = bs.hass.bus.fired_events[last_el]['event_data']['pressed_buttons']
             self.assertEqual(pressed_buttons, test_data[1])
+
+    def test_release_without_previous_push_still_turns_sensor_off(self):
+        bs = TestBinarySensor().create_binary_sensor()
+        switch_address = b'\xfe\xdb\xb6\x40'
+        bs.LAST_RECEIVED_TELEGRAMS.clear()
+
+        # A release can be the first telegram after startup, or the push history
+        # can have been lost. It must still update the entity and fire an event.
+        msg = RPSMessage(switch_address, status=b'\x20', data=b'\x00')
+        bs.value_changed(msg)
+
+        self.assertEqual(bs._attr_is_on, False)
+        self.assertEqual(len(bs.hass.bus.fired_events), 1)
+        event_data = bs.hass.bus.fired_events[0]['event_data']
+        self.assertFalse(event_data['pressed'])
+        self.assertEqual(event_data['push_duration_in_sec'], -1)

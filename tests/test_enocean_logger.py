@@ -857,15 +857,24 @@ class TestTelegramLogLevels(TestCase):
         self.assertIn('Temp Sensor', captured.output[0])
         self.assertIn('current_temperature', captured.output[0])
 
-    def test_polling_is_logged_even_when_it_is_filtered_from_the_recording(self):
-        """Polling floods the log, so it is logged without being buffered."""
+    def test_polling_is_never_written_to_the_home_assistant_log(self):
+        """Polling is internal bus housekeeping and must not flood the log."""
         logger = self.create_logger(**{CONF_LOG_LEVEL_POLLING: 'debug'})
 
-        with self.assertLogs('eltako.telegrams', level='DEBUG') as captured:
+        with self.assertNoLogs('eltako.telegrams', level='DEBUG'):
             logger.record_message(self.gateway, EltakoPoll(3), 'incoming')
 
-        self.assertIn('polling', captured.output[0])
         self.assertEqual(logger.get_recent_telegrams(), [])     # not buffered
+
+    def test_polling_is_not_logged_even_when_it_is_recorded(self):
+        """The include_polling recording option must not re-enable log output."""
+        logger = self.create_logger(**{CONF_LOG_LEVEL_POLLING: 'debug',
+                                       CONF_TELEGRAM_LOG_INCLUDE_POLLING: True})
+
+        with self.assertNoLogs('eltako.telegrams', level='DEBUG'):
+            logger.record_message(self.gateway, EltakoPoll(3), 'incoming')
+
+        self.assertEqual(logger.get_recent_telegrams()[0]['msg_type'], 'EltakoPoll')
 
     def test_decode_error_points_to_a_wrong_eep(self):
         logger = self.create_logger(**{CONF_LOG_LEVEL_DECODE_ERRORS: 'warning'})

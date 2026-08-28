@@ -404,18 +404,26 @@ class EltakoBinarySensor(AbstractBinarySensor):
             event_data['prev_pressed_buttons'] = prev_pressed_buttons
         # when button released
         if not event_data['pressed'] and self.dev_eep in [F6_02_01, F6_02_02]:
-            push_telegram_received_time = self.LAST_RECEIVED_TELEGRAMS.get(b2s(self.dev_id), {'push_telegram_received_time_in_sec': -1})['push_telegram_received_time_in_sec']
+            push_telegram_received_time = self.LAST_RECEIVED_TELEGRAMS.get(
+                b2s(self.dev_id), {}
+            ).get('push_telegram_received_time_in_sec', -1)
             release_telegram_received_time = telegram_received_time
-            pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
 
             if push_telegram_received_time == -1:
-                raise Exception(f"[{Platform.BINARY_SENSOR} {b2s(self.dev_id)}] EEP {self.dev_eep.eep_string}: No information about previouse event.")
-
-            event_data.update({
-                "push_telegram_received_time_in_sec": push_telegram_received_time,
-                "release_telegram_received_time_in_sec": release_telegram_received_time,
-                "push_duration_in_sec": pushed_duration,
-            })
+                LOGGER.warning(
+                    "[%s %s] EEP %s: No previous push telegram found; "
+                    "push duration is unavailable.",
+                    Platform.BINARY_SENSOR,
+                    b2s(self.dev_id),
+                    self.dev_eep.eep_string,
+                )
+            else:
+                pushed_duration = float(release_telegram_received_time - push_telegram_received_time)
+                event_data.update({
+                    "push_telegram_received_time_in_sec": push_telegram_received_time,
+                    "release_telegram_received_time_in_sec": release_telegram_received_time,
+                    "push_duration_in_sec": pushed_duration,
+                })
 
         self.LAST_RECEIVED_TELEGRAMS[b2s(self.dev_id)] = event_data
         self.hass.bus.fire(event_id, event_data)

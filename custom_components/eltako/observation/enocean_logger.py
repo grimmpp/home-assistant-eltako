@@ -632,8 +632,8 @@ class EnOceanTelegramLogger:
         """Record one telegram. Can be called from any thread (e.g. the serial bus thread)."""
         try:
             if isinstance(msg, POLLING_MESSAGE_TYPES):
-                # polling is logged without building a whole record, it can be very frequent
-                self._log_polling(gateway, msg)
+                # Polling is internal bus housekeeping. It may still be recorded when explicitly
+                # requested, but it must never flood the Home Assistant log.
                 if not self.include_polling:
                     self._filtered_count += 1
                     return
@@ -690,12 +690,6 @@ class EnOceanTelegramLogger:
 
     ### logging into the home assistant log
 
-    def _log_polling(self, gateway: "EnOceanGateway", msg: ESP2Message) -> None:
-        level = self.log_levels.get('polling')
-        if level is None:
-            return
-        TELEGRAM_LOGGER.log(level, "polling  gw=%s %s", getattr(gateway, 'dev_id', '?'), msg)
-
     def _category_of(self, record: dict) -> str:
         if record.get('role') == 'bus_message' or record.get('bus_address') is not None:
             return 'bus'
@@ -707,6 +701,11 @@ class EnOceanTelegramLogger:
 
     def _log_record(self, record: dict) -> None:
         """One log line per telegram, if its category is configured to be logged."""
+        # Polling can be kept in the live/file recording for diagnostics, but never in the
+        # regular Home Assistant log. The old dedicated polling logger was especially noisy
+        # because every bus position is polled repeatedly.
+        if record.get('msg_type') in {message_type.__name__ for message_type in POLLING_MESSAGE_TYPES}:
+            return
         if self._lowest_log_level is None:
             return
 
