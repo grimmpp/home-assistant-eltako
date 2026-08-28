@@ -116,6 +116,8 @@ class EnOceanGateway:
         self.baud_rate = baud_rate
         self._auto_reconnect = auto_reconnect
         self._message_delay = message_delay
+        self._send_lock = asyncio.Lock()
+        self._last_send_time = 0.0
         self.port = port
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
@@ -819,6 +821,28 @@ class EnOceanGateway:
             self._bus.send_repeater_mode(mode)
         )
 
+    async def _send_message_with_delay(self, msg):
+        """Send one telegram, serialised against the other outgoing telegrams.
+
+        ``hass.create_task`` schedules every outgoing telegram as its own task, so
+        several of them can reach ``self._bus.send`` concurrently. The lock puts them
+        back in order, and ``message_delay`` is honoured between them.
+
+        Until now ``message_delay`` was only passed on to ``RS485SerialInterfaceV2``
+        further down, so it had no effect at all for the ESP3 gateways: neither
+        ``ESP3SerialCommunicator`` nor ``TCP2SerialCommunicator`` takes a delay
+        argument. Those gateways are half duplex - while one telegram is going out
+        the gateway cannot receive, so a burst of commands drowns the status
+        telegrams the actuators send back.
+        """
+        async with self._send_lock:
+            wait = (self._message_delay or 0) - (self._loop.time() - self._last_send_time)
+            if wait > 0:
+                await asyncio.sleep(wait)
+            await self._bus.send(msg)
+            self._last_send_time = self._loop.time()
+
+
     def _callback_send_message_to_serial_bus(self, msg):
         """Send one telegram. Called from the dispatcher and by the deferred queue.
 
@@ -841,7 +865,7 @@ class EnOceanGateway:
                 # put message on serial bus
                 # TODO: maybe it makes sense to filter for matching base id. currently all gateways try to send message but only those where base id matches do actually send. FAM14 and FGW14-USB will receive any message.
                 self.hass.create_task(
-                    self._bus.send(msg)
+                    self._send_message_with_delay(msg)
                 )
                 dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': msg})
         else:
