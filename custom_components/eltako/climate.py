@@ -134,7 +134,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
         self.thermostat = thermostat
         if self.thermostat:
-            self.listen_to_addresses.append(self.thermostat.id)
+            self.listen_to_addresses.append(self.thermostat.id[0])
 
         self.cooling_switch = cooling_switch
         self.cooling_switch_last_signal_timestamp = 0

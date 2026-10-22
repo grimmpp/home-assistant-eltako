@@ -96,6 +96,25 @@ class TestClimate(unittest.TestCase):
         self.assertEqual( round(cc.target_temperature), target_temp)
 
 
+    def test_climate_thermostat_address_is_registered_as_bytes(self):
+        """A configured thermostat must be registered as plain 4-byte address.
+
+        EltakoEntity.value_changed() dispatches incoming telegrams by comparing
+        msg.address (plain bytes) against listen_to_addresses. Registering the
+        AddressExpression tuple instead made that comparison never match, so the
+        thermostat was never evaluated and the entity kept re-sending its own
+        target temperature every 55 seconds - overriding the wall controllers.
+        """
+        thermostat = DeviceConf({
+            CONF_ID: 'FF-FF-FF-01',
+            CONF_EEP: 'A5-10-06',
+        })
+        cc = create_climate_entity(thermostat)
+        self.assertIn(b'\xff\xff\xff\x01', cc.listen_to_addresses)
+        for address in cc.listen_to_addresses:
+            self.assertIsInstance(address, bytes)
+
+
     def test_climate_cooling_switch(self):
         cooling_switch = DeviceConf({
             CONF_ID: 'FF-FF-FF-01',
