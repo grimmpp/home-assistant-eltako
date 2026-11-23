@@ -70,6 +70,7 @@ def _get_configured_gateways(hass: HomeAssistant):
             "model": gw.model,
             "auto_reconnect": gw.is_auto_reconnect_enabled,
             "message_delay": gw.message_delay,
+            "reconnect_timeout": gw.reconnect_timeout,
             "native_protocol": gw.native_protocol,
             "connected": _is_gateway_connected(gw),
             "ha_device_id": _get_gateway_ha_device_id(hass, gw),

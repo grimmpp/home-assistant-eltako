@@ -4,6 +4,7 @@ from custom_components.eltako.config.config_helpers import DeviceConf, async_get
 from custom_components.eltako.config.schema import CONFIG_SCHEMA, GatewaySchema
 from custom_components.eltako.const import (CONF_AREA, CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP,
                                             CONF_FAST_STATUS_CHANGE, CONF_GATEWAY, CONF_GATEWAY_ID,
+                                            CONF_GATEWAY_RECONNECT_TIMEOUT,
                                             CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS,
                                             CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE,
                                             CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT, DOMAIN,
@@ -328,3 +329,12 @@ gateway:
 
         g_conf = config_helpers.find_gateway_config_by_id(config[DOMAIN], 1)
         GatewaySchema.ENTITY_SCHEMA(g_conf)
+
+    def test_gateway_reconnect_timeout_defaults_to_ten_seconds(self):
+        gateway = GatewaySchema.ENTITY_SCHEMA({
+            'id': 1,
+            'device_type': GatewayDeviceType.GatewayEltakoFAM14.value,
+            'base_id': 'FF-AA-00-00',
+        })
+
+        self.assertEqual(gateway[CONF_GATEWAY_RECONNECT_TIMEOUT], 10.0)

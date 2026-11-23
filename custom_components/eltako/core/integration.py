@@ -16,7 +16,8 @@ from .gateway import AddressExpression, DOMAIN, EnOceanGateway, GATEWAY_DEFAULT_
 from ..const import (BAUD_RATE_DEVICE_TYPE_MAPPING, CONF_BASE_ID, CONF_CORE_ENTRY, CONF_DEVICE_TYPE,
                      CONF_ENABLE_FRONTEND, CONF_ENABLE_TEACH_IN_BUTTONS, CONF_GATEWAY_ADDRESS,
                      CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
-                     CONF_GATEWAY_PORT, CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS, CONF_SERIAL_PATH,
+                     CONF_GATEWAY_PORT, CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_GERNERAL_SETTINGS,
+                     CONF_LOG_ENOCEAN_TELEGRAMS, CONF_SERIAL_PATH,
                      CORE_TITLE, DATA_ADDITIONAL_SENDERS, DATA_ELTAKO, DATA_ENTITIES, DATA_INITIAL_DETECTION,
                      DATA_PENDING_RELOADS, DATA_YAML_CONFIGURED, ELTAKO_CONFIG, INTEGRATION_DIR, OLD_CORE_TITLES,
                      OLD_GATEWAY_DEFAULT_NAME, PANEL_ICON, PANEL_JS_FILE, PANEL_STATIC_URL, PANEL_TITLE,
@@ -556,6 +557,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     auto_reconnect = gateway_conf.get(CONF_GATEWAY_AUTO_RECONNECT, True)
     gateway_base_id = AddressExpression.parse(gateway_conf[CONF_BASE_ID])
     message_delay = gateway_conf.get(CONF_GATEWAY_MESSAGE_DELAY, None)
+    reconnect_timeout = gateway_conf.get(CONF_GATEWAY_RECONNECT_TIMEOUT, 10.0)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
 
     if is_simulated:
@@ -567,7 +569,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     elif gateway_device_type == GatewayDeviceType.VirtualNetworkAdapter:
         gateway = VirtualNetworkGateway(general_settings_values, hass, gateway_id, port, config_entry)
     else:
-        gateway = EnOceanGateway(general_settings_values, hass, gateway_id, gateway_device_type, gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name, auto_reconnect, message_delay, config_entry)
+        gateway = EnOceanGateway(
+            general_settings_values, hass, gateway_id, gateway_device_type,
+            gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name,
+            auto_reconnect, message_delay, config_entry,
+            reconnect_timeout=reconnect_timeout,
+        )
 
 
     # gateways query their base id from the hardware after the connection is up - persist

@@ -67,7 +67,7 @@ const device = (overrides = {}) => ({
 const gateway = (overrides = {}) => ({
   id: 1, name: 'FAM14', type: 'fam14', connected: True_, serial_path: '/dev/ttyUSB0',
   base_id: 'FF-AA-80-00', ha_device_id: 'gw-abc', model: 'FAM14', native_protocol: 'ESP2',
-  baud_rate: 57600, auto_reconnect: True_, message_delay: null, simulated: False_,
+  baud_rate: 57600, auto_reconnect: True_, message_delay: null, reconnect_timeout: 10, simulated: False_,
   config_entry_id: 'entry', unique_id: 'u1', ...overrides,
 });
 

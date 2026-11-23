@@ -107,7 +107,7 @@ class EnOceanGateway:
 
     def __init__(self, general_settings:dict, hass: HomeAssistant,
                  dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None,
-                 config_entry: ConfigEntry = None):
+                 config_entry: ConfigEntry = None, reconnect_timeout: float = 10.0):
 
         """Initialize the Eltako gateway."""
 
@@ -116,6 +116,7 @@ class EnOceanGateway:
         self.baud_rate = baud_rate
         self._auto_reconnect = auto_reconnect
         self._message_delay = message_delay
+        self._reconnect_timeout = reconnect_timeout
         self.port = port
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
@@ -371,19 +372,22 @@ class EnOceanGateway:
                                                baud_rate=baud_rate,
                                                callback=self._callback_receive_message_from_serial_bus,
                                                delay_message=self._message_delay,
-                                               auto_reconnect=self._auto_reconnect)
+                                               auto_reconnect=self._auto_reconnect,
+                                               reconnection_timeout=self._reconnect_timeout)
 
         elif GatewayDeviceType.is_lan_gateway(self.dev_type) and not GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = TCP2SerialCommunicator(host=self.serial_path,
                                                port=self.port,
                                                callback=self._callback_receive_message_from_serial_bus,
                                                esp2_translation_enabled=True,
-                                               auto_reconnect=self._auto_reconnect)
+                                               auto_reconnect=self._auto_reconnect,
+                                               reconnection_timeout=self._reconnect_timeout)
         else:
             self._bus = ESP3SerialCommunicator(filename=self.serial_path,
                                                callback=self._callback_receive_message_from_serial_bus,
                                                esp2_translation_enabled=True,
-                                               auto_reconnect=self._auto_reconnect)
+                                               auto_reconnect=self._auto_reconnect,
+                                               reconnection_timeout=self._reconnect_timeout)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
 
@@ -972,6 +976,11 @@ class EnOceanGateway:
     def is_auto_reconnect_enabled(self) -> str:
         """Return if auto connected is enabled."""
         return str(self._auto_reconnect)
+
+    @property
+    def reconnect_timeout(self) -> str:
+        """Return the delay before an automatic reconnect is attempted."""
+        return str(self._reconnect_timeout)
 
 
 def detect() -> list[str]:

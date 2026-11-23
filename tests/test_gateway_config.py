@@ -9,7 +9,8 @@ from tests.test_enocean_logger import HassDataMock
 from custom_components.eltako.config import config_helpers, gateway_config
 from custom_components.eltako.const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_GATEWAY,
                                             CONF_GATEWAY_ADDRESS, CONF_GATEWAY_AUTO_RECONNECT,
-                                            CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_PORT, CONF_SERIAL_PATH,
+                                            CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_PORT,
+                                            CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_SERIAL_PATH,
                                             DATA_ELTAKO, DATA_GATEWAY_STORE, DOMAIN, ELTAKO_CONFIG,
                                             GatewayDeviceType)
 
@@ -366,6 +367,14 @@ class TestUpdate(IsolatedAsyncioTestCase):
         self.assertTrue(editable[3])         # created in the web ui
         self.assertIn(CONF_NAME, descriptor['editable_fields'])
         self.assertNotIn(CONF_ID, descriptor['editable_fields'])
+
+    async def test_reconnect_timeout_can_be_updated(self):
+        hass = await self._hass(entries=[])
+
+        updated = await gateway_config.async_update_gateway(
+            hass, 3, {CONF_GATEWAY_RECONNECT_TIMEOUT: 2.5})
+
+        self.assertEqual(updated[CONF_GATEWAY_RECONNECT_TIMEOUT], 2.5)
 
 
 class TestReportedBaseId(IsolatedAsyncioTestCase):

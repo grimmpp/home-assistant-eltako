@@ -266,6 +266,7 @@ export interface Gateway {
   model: string | null;
   auto_reconnect: boolean;
   message_delay: number | null;
+  reconnect_timeout: number;
   native_protocol: string | null;
   /** null when the connection state cannot be read */
   connected: boolean | null;

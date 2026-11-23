@@ -20,7 +20,8 @@ from ..const import (CONF_AREA, CONF_BASE_ID, CONF_COOLING_MODE, CONF_DEPRECATED
                      CONF_DEVICE_TYPE, CONF_EEP, CONF_ENABLE_FRONTEND, CONF_ENABLE_TEST_PAGE,
                      CONF_FAST_STATUS_CHANGE, CONF_GATEWAY, CONF_GATEWAY_ADDRESS,
                      CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_ID, CONF_GATEWAY_MESSAGE_DELAY,
-                     CONF_GATEWAY_PORT, CONF_GERNERAL_SETTINGS, CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL,
+                     CONF_GATEWAY_PORT, CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_GERNERAL_SETTINGS,
+                     CONF_GRAFANA_TOKEN, CONF_GRAFANA_URL,
                      CONF_ID_REGEX, CONF_INVERT_DIRECTION, CONF_INVERT_SIGNAL, CONF_LOG_ENOCEAN_TELEGRAMS,
                      CONF_LOG_LEVEL, CONF_LOG_LEVEL_BUS_MESSAGES, CONF_LOG_LEVEL_DECODE_ERRORS,
                      CONF_LOG_LEVEL_INCOMING,
@@ -403,6 +404,9 @@ class GatewaySchema(EltakoPlatformSchema):
             vol.Optional(CONF_GATEWAY_AUTO_RECONNECT, default=True): cv.boolean,
             vol.Optional(CONF_GATEWAY_ADDRESS): cv.string,
             vol.Optional(CONF_GATEWAY_MESSAGE_DELAY, default=0.01): cv.Number,
+            vol.Optional(CONF_GATEWAY_RECONNECT_TIMEOUT, default=10.0): vol.All(
+                vol.Coerce(float), vol.Range(min=0)
+            ),
             vol.Optional(CONF_GATEWAY_PORT, default=5100): cv.Number,
             # A gateway of this type whose hardware does not exist: nothing is opened, its
             # devices are simulated in this process (see simulation/). Everything else about
