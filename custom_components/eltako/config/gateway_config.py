@@ -23,7 +23,7 @@ from homeassistant.helpers.storage import Store
 
 from ..const import (CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_GATEWAY, CONF_GATEWAY_ADDRESS,
                      CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
-                     CONF_GATEWAY_PORT, CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_SERIAL_PATH, CONF_SIMULATED,
+                     CONF_GATEWAY_BUS_ID, CONF_GATEWAY_PORT, CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_SERIAL_PATH, CONF_SIMULATED,
                      DATA_ELTAKO, DATA_GATEWAY_STORE,
                      DATA_UI_GATEWAYS, DOMAIN, ELTAKO_CONFIG, GatewayDeviceType, LOGGER, SOURCE_UI_GATEWAY,
                      WS_GATEWAY_ADD, WS_GATEWAY_FORM, WS_GATEWAY_REMOVE, WS_GATEWAY_REPAIR, WS_GATEWAY_UPDATE)
@@ -227,7 +227,7 @@ async def async_update_gateway_base_id(hass: HomeAssistant, gateway_id: int, bas
 ### the gateway, so changing it would orphan all devices and entities of that gateway.
 EDITABLE_FIELDS = [CONF_NAME, CONF_DEVICE_TYPE, CONF_BASE_ID, CONF_SERIAL_PATH,
                    CONF_GATEWAY_ADDRESS, CONF_GATEWAY_PORT, CONF_GATEWAY_AUTO_RECONNECT,
-                   CONF_GATEWAY_MESSAGE_DELAY, CONF_GATEWAY_RECONNECT_TIMEOUT]
+                   CONF_GATEWAY_MESSAGE_DELAY, CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_GATEWAY_BUS_ID]
 
 
 async def async_update_gateway(hass: HomeAssistant, gateway_id: int, changes: dict) -> dict:
@@ -437,6 +437,7 @@ def get_form_descriptor(hass: HomeAssistant) -> dict:
             'auto_reconnect': gateway.get(CONF_GATEWAY_AUTO_RECONNECT, True),
             'message_delay': gateway.get(CONF_GATEWAY_MESSAGE_DELAY),
             'reconnect_timeout': gateway.get(CONF_GATEWAY_RECONNECT_TIMEOUT, 10.0),
+            'bus_gateway_id': gateway.get(CONF_GATEWAY_BUS_ID),
             'source': 'ui' if from_ui else 'yaml',
             # a gateway without hardware: its devices are simulated (see simulation/). Every
             # list of the web ui marks it, so a simulated device is never mistaken for a real one.

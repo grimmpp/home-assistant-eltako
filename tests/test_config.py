@@ -4,7 +4,7 @@ from custom_components.eltako.config.config_helpers import DeviceConf, async_get
 from custom_components.eltako.config.schema import CONFIG_SCHEMA, GatewaySchema
 from custom_components.eltako.const import (CONF_AREA, CONF_BASE_ID, CONF_DEVICE_TYPE, CONF_EEP,
                                             CONF_FAST_STATUS_CHANGE, CONF_GATEWAY, CONF_GATEWAY_ID,
-                                            CONF_GATEWAY_RECONNECT_TIMEOUT,
+                                            CONF_GATEWAY_BUS_ID, CONF_GATEWAY_RECONNECT_TIMEOUT,
                                             CONF_GERNERAL_SETTINGS, CONF_LOG_ENOCEAN_TELEGRAMS,
                                             CONF_MAX_TARGET_TEMPERATURE, CONF_MIN_TARGET_TEMPERATURE,
                                             CONF_TELEGRAM_LOG_FILENAME, CONF_TELEGRAM_LOG_FORMAT, DOMAIN,
@@ -338,3 +338,13 @@ gateway:
         })
 
         self.assertEqual(gateway[CONF_GATEWAY_RECONNECT_TIMEOUT], 10.0)
+
+    def test_gateway_bus_gateway_id_is_coerced_to_integer(self):
+        gateway = GatewaySchema.ENTITY_SCHEMA({
+            'id': 2,
+            'device_type': GatewayDeviceType.LAN_ESP2.value,
+            'address': '192.168.1.50',
+            'bus_gateway_id': '1',
+        })
+
+        self.assertEqual(gateway[CONF_GATEWAY_BUS_ID], 1)

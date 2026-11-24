@@ -217,6 +217,7 @@ export const page = {
         auto_reconnect: gateway.auto_reconnect !== false,
         message_delay: gateway.message_delay,
         reconnect_timeout: gateway.reconnect_timeout ?? 10,
+        bus_gateway_id: gateway.bus_gateway_id ?? null,
       },
     };
     ctx.state.gatewayError = null;
@@ -668,7 +669,9 @@ export const page = {
         { name: "message_delay", label: "Message delay (s)", type: "number", required: false,
           help: "Pause between two telegrams sent to this gateway. Default 0.01 s." },
         { name: "reconnect_timeout", label: "Reconnect timeout (s)", type: "number", required: false,
-          min: 0, help: "Wait time before an automatic reconnect is attempted. Default 10 s." });
+          min: 0, help: "Wait time before an automatic reconnect is attempted. Default 10 s." },
+        { name: "bus_gateway_id", label: "Bus gateway ID", type: "number", required: false,
+          min: 1, help: "Route received telegrams to the address space of this gateway, e.g. the FAM14." });
     }
 
     return `
@@ -986,6 +989,7 @@ export const page = {
           ["Auto reconnect", escapeHtml(gateway.auto_reconnect)],
           ["Message delay", `${escapeHtml(gateway.message_delay)} s`],
           ["Reconnect timeout", `${escapeHtml(gateway.reconnect_timeout)} s`],
+          ["Bus gateway ID", gateway.bus_gateway_id == null ? "&ndash;" : escapeHtml(gateway.bus_gateway_id)],
           ["Recorded telegrams", formatNumber(telegramCount)],
           ["Source", this._gatewaySource(ctx, gateway)
             + (gateway.simulated ? ` <span class="hint">simulated - no hardware</span>` : "")],

@@ -7,6 +7,12 @@ There are two types of gateways supported:
 2. Mordern Enocean gateways based ESP3 protocol (new) which is e.g. **EnOcean USB300**, **MGW**, ...
 
 All gateways (hubs) need explicitely configured and devices connected through this gateway to Home Assistant need to be listed below the gateway section. Every gateway needs to have an unique id whicht is an arbritatry number which can be changed and exchanged. This number will be part of the device identifiers. If you want to change a gateway you can keep the id of the previouse gateway and with it all ids and histories of its devices can be kept.
+
+Several physical gateways can share one RS485 bus. For an FGW14 connected through a raw
+TCP-to-serial bridge, use `device_type: lan-gw-esp2` and set `bus_gateway_id` to the id of the
+FAM14 which defines the bus address space. The devices can stay configured below the FAM14;
+incoming local telegrams from the FGW14 are then forwarded using the FAM14 address space so
+their responses update the existing Home Assistant entities.
 After you provided the configuration + restart of Home Assistant you can add the gateways as hubs in Home Assistant.
 
 ## Example

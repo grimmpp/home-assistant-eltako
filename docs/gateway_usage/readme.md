@@ -20,6 +20,7 @@ To get familiar with the ELTAKO Integration configuration check out [Update Home
 | `serial_path` | optional string | for serial paths which won't be auto detected. Can be also used for serial over tcp. |
 | `message_delay` | optional number in seconds | delays messages to prevent buffer overflow in gateways for sending many commands at once. Due to different baud rates for serial connection and RS485 bus, which is slower buffer overflow can happen. Default value is 0.01 seconds = 10ms. |
 | `auto_reconnect` | True / False | for disabling auto-reconnect function. If not specified: True |
+| `bus_gateway_id` | Number | optional id of the canonical bus gateway (usually the FAM14). Received local telegrams from this gateway are translated into that gateway's address space, so devices configured under the FAM14 can also be updated through an FGW14 connected over TCP. |
 | `address` | IPv4 or IPv6 | only required for TCP/LAN gateway |
 | `port` | Number | only used for TCP/LAN gateway. If not specified: 5100 |
 
@@ -44,6 +45,39 @@ eltako:
           id: 00-00-B0-01
           eep: A5-38-08
 ```
+
+### Several gateways on one RS485 bus
+
+The FAM14 can be used to read the bus while an FGW14 is used as an additional runtime
+connection. Configure the FGW14 as `lan-gw-esp2` when it is reached through a raw TCP-to-
+serial bridge and point it at the FAM14 gateway with `bus_gateway_id`. The devices may remain
+configured below the FAM14; received local telegrams from the FGW14 are then translated with
+the FAM14 base id before they are dispatched to Home Assistant.
+
+```yaml
+  gateway:
+  - id: 1
+    device_type: fam14
+    serial_path: /dev/ttyUSB0
+    devices:
+      light:
+      - id: 00-00-00-04
+        eep: M5-38-08
+        name: Living room
+        sender:
+          id: 00-00-B0-04
+          eep: A5-38-08
+
+  - id: 2
+    device_type: lan-gw-esp2
+    address: 192.168.1.50
+    port: 5100
+    bus_gateway_id: 1
+```
+
+The referenced gateway must be connected and must have reported its base id. The TCP bridge
+must use 57600 baud on the FGW14 side. A second bus gateway can be mapped to the same FAM14 by
+using the same `bus_gateway_id`.
 
 ## Gateway Features
 

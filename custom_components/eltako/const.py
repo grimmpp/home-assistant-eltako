@@ -156,6 +156,7 @@ CONF_SERIAL_PATH: Final = "serial_path"
 CONF_GATEWAY_ADDRESS: Final = "address"
 CONF_GATEWAY_MESSAGE_DELAY: Final = "message_delay"
 CONF_GATEWAY_RECONNECT_TIMEOUT: Final = "reconnect_timeout"
+CONF_GATEWAY_BUS_ID: Final = "bus_gateway_id"
 
 CONF_GATEWAY_AUTO_RECONNECT: Final = "auto_reconnect"
 CONF_GATEWAY_PORT: Final = "port"

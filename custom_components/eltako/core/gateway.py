@@ -29,7 +29,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.config_entries import ConfigEntry
 
-from ..const import (DOMAIN, ELTAKO_GLOBAL_EVENT_BUS_ID, GATEWAY_DEFAULT_NAME, GatewayDeviceType, LOGGER,
+from ..const import (DATA_ELTAKO, DOMAIN, ELTAKO_GLOBAL_EVENT_BUS_ID, GATEWAY_DEFAULT_NAME, GatewayDeviceType, LOGGER,
                      MANUFACTURER, SIGNAL_RECEIVE_MESSAGE, SIGNAL_SEND_MESSAGE, SIGNAL_SEND_MESSAGE_SERVICE,
                      TelegramDirection)
 from ..config import config_helpers
@@ -107,7 +107,8 @@ class EnOceanGateway:
 
     def __init__(self, general_settings:dict, hass: HomeAssistant,
                  dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None,
-                 config_entry: ConfigEntry = None, reconnect_timeout: float = 10.0):
+                 config_entry: ConfigEntry = None, reconnect_timeout: float = 10.0,
+                 bus_gateway_id: int | None = None):
 
         """Initialize the Eltako gateway."""
 
@@ -117,6 +118,7 @@ class EnOceanGateway:
         self._auto_reconnect = auto_reconnect
         self._message_delay = message_delay
         self._reconnect_timeout = reconnect_timeout
+        self._bus_gateway_id = bus_gateway_id
         self.port = port
         self._attr_dev_type = dev_type
         self._attr_serial_path = serial_path
@@ -893,8 +895,14 @@ class EnOceanGateway:
                 LOGGER.debug("[Gateway] [Id: %d] Received Repeater mode: Filter %s, Repeater Level %s", self.dev_id, b2s(message.body[2:3]), b2s(message.body[3:4]))
                 self._fire_repeater_mode_change_handlers( int.from_bytes(message.body[3:4]) )
 
-            # only send messages to HA when base id is known
-            if int.from_bytes(self.base_id[0]) != 0:
+            # A serial/TCP bridge attached to an FGW14 cannot report a base id. When it is
+            # configured as a member of another bus gateway, use that gateway as the canonical
+            # address space so entities configured under the FAM14 can consume the telegram.
+            global_gateway = self._bus_gateway_for_global_events()
+            global_base_id = global_gateway.base_id if global_gateway is not None else self.base_id
+
+            # only send messages to HA when the canonical base id is known
+            if int.from_bytes(global_base_id[0]) != 0:
 
                 # Send message on local bus. Only devices configure to this gateway will receive those message.
                 event_id = config_helpers.get_bus_event_type(gateway_id=self.dev_id, function_id=SIGNAL_RECEIVE_MESSAGE)
@@ -909,16 +917,26 @@ class EnOceanGateway:
                         address = AddressExpression((message.body[-5:-1], None))
                         if address.is_local_address():
                             local_message = message
-                            address = address.add(self.base_id)
+                            address = address.add(global_base_id)
                             body = bytearray(message.body)
                             body[-5:-1] = bytearray(address[0])
                             global_msg = prettify(ESP2Message( bytes(body) ))
 
                     LOGGER.debug("[Gateway] [Id: %d] Forwared message (%s) in global bus", self.dev_id, global_msg)
-                    dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway':self, 'esp2_msg': global_msg})
+                    dispatcher_send(self.hass, ELTAKO_GLOBAL_EVENT_BUS_ID,
+                                    {'gateway': global_gateway or self, 'esp2_msg': global_msg})
 
                     # events are only fired for frontend
                     self.hass.bus.fire(ELTAKO_GLOBAL_EVENT_BUS_ID, {'gateway': {'name': self.dev_name, 'id': self.dev_id}, 'msg': config_helpers.telegram2json(global_msg, local_message)})
+
+    def _bus_gateway_for_global_events(self):
+        """Return the gateway whose address space owns this gateway's bus telegrams."""
+        if self._bus_gateway_id is None:
+            return None
+        candidate = self.hass.data.get(DATA_ELTAKO, {}).get(f"gateway_{self._bus_gateway_id}")
+        if candidate is self or not isinstance(candidate, EnOceanGateway):
+            return None
+        return candidate
 
 
     @property
@@ -981,6 +999,11 @@ class EnOceanGateway:
     def reconnect_timeout(self) -> str:
         """Return the delay before an automatic reconnect is attempted."""
         return str(self._reconnect_timeout)
+
+    @property
+    def bus_gateway_id(self) -> int | None:
+        """Return the gateway whose address space receives this gateway's bus telegrams."""
+        return self._bus_gateway_id
 
 
 def detect() -> list[str]:

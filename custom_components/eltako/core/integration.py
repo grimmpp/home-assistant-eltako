@@ -15,7 +15,7 @@ from ..const import GatewayDeviceType
 from .gateway import AddressExpression, DOMAIN, EnOceanGateway, GATEWAY_DEFAULT_NAME, LOGGER, b2s
 from ..const import (BAUD_RATE_DEVICE_TYPE_MAPPING, CONF_BASE_ID, CONF_CORE_ENTRY, CONF_DEVICE_TYPE,
                      CONF_ENABLE_FRONTEND, CONF_ENABLE_TEACH_IN_BUTTONS, CONF_GATEWAY_ADDRESS,
-                     CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
+                     CONF_GATEWAY_AUTO_RECONNECT, CONF_GATEWAY_BUS_ID, CONF_GATEWAY_DESCRIPTION, CONF_GATEWAY_MESSAGE_DELAY,
                      CONF_GATEWAY_PORT, CONF_GATEWAY_RECONNECT_TIMEOUT, CONF_GERNERAL_SETTINGS,
                      CONF_LOG_ENOCEAN_TELEGRAMS, CONF_SERIAL_PATH,
                      CORE_TITLE, DATA_ADDITIONAL_SENDERS, DATA_ELTAKO, DATA_ENTITIES, DATA_INITIAL_DETECTION,
@@ -558,6 +558,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     gateway_base_id = AddressExpression.parse(gateway_conf[CONF_BASE_ID])
     message_delay = gateway_conf.get(CONF_GATEWAY_MESSAGE_DELAY, None)
     reconnect_timeout = gateway_conf.get(CONF_GATEWAY_RECONNECT_TIMEOUT, 10.0)
+    bus_gateway_id = gateway_conf.get(CONF_GATEWAY_BUS_ID)
     LOGGER.debug(f"[{LOG_PREFIX_INIT}] id: {gateway_id}, device type: {gateway_device_type}, serial path: {gateway_serial_path}, baud rate: {baud_rate}, base id: {gateway_base_id}")
 
     if is_simulated:
@@ -574,6 +575,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             gateway_serial_path, baud_rate, port, gateway_base_id, gateway_name,
             auto_reconnect, message_delay, config_entry,
             reconnect_timeout=reconnect_timeout,
+            bus_gateway_id=bus_gateway_id,
         )
 
 

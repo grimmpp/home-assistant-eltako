@@ -267,6 +267,7 @@ export interface Gateway {
   auto_reconnect: boolean;
   message_delay: number | null;
   reconnect_timeout: number;
+  bus_gateway_id: number | null;
   native_protocol: string | null;
   /** null when the connection state cannot be read */
   connected: boolean | null;
